@@ -1,0 +1,182 @@
+erDiagram
+    %% Core & RBAC Domain
+    Workspace ||--o{ WorkspaceMembership : "has"
+    User ||--o{ WorkspaceMembership : "belongs_to"
+    Role ||--o{ WorkspaceMembership : "assigned"
+    User ||--o{ UserRole : "holds"
+    Role ||--o{ UserRole : "defined_as"
+
+    %% Retail Domain
+    Workspace ||--o{ Category : "owns"
+    Category ||--o{ Product : "contains"
+    Workspace ||--o{ Product : "owns"
+    Workspace ||--o{ Branch : "operates"
+    Workspace ||--o{ Customer : "serves"
+    Customer ||--o{ Order : "places"
+    Branch ||--o{ Order : "fulfills"
+    Workspace ||--o{ Order : "records"
+    Order ||--|{ OrderItem : "contains"
+    Product ||--o{ OrderItem : "ordered_in"
+
+    %% Service Operations Domain
+    Workspace ||--o{ Service : "offers"
+    Workspace ||--o{ SLA : "defines"
+    Workspace ||--o{ Employee : "employs"
+    Customer ||--o{ ServiceRequest : "requests"
+    Service ||--o{ ServiceRequest : "categorized_by"
+    SLA ||--o{ ServiceRequest : "governed_by"
+    Workspace ||--o{ ServiceRequest : "manages"
+    ServiceRequest ||--o{ Task : "breaks_down_into"
+    Employee ||--o{ Task : "assigned_to"
+    Task ||--o{ Schedule : "scheduled_in"
+    Employee ||--o{ Schedule : "allocated_to"
+
+    %% Ingestion & Mapping Domain
+    Workspace ||--o{ DataSource : "configures"
+    DataSource ||--o{ ImportJob : "executes"
+    DataSource ||--o{ MappingRule : "maps_via"
+
+    %% Knowledge & RAG Domain
+    Workspace ||--o{ KnowledgeBase : "owns"
+    KnowledgeBase ||--o{ Document : "indexes"
+    Document ||--|{ DocumentChunk : "chunked_into"
+
+    %% AI, Forecasting & Decision Domain
+    Workspace ||--o{ ForecastModelConfig : "configures"
+    ForecastModelConfig ||--o{ ForecastRun : "trains"
+    ForecastRun ||--|{ ForecastResult : "predicts"
+    Workspace ||--o{ BusinessRule : "enforces"
+    Workspace ||--o{ Recommendation : "generates"
+    Recommendation ||--o{ ApprovalRequest : "requires"
+    User ||--o{ ApprovalRequest : "approves_or_rejects"
+
+    %% System, Notifications & Audit
+    User ||--o{ Notification : "receives"
+    Workspace ||--o{ AuditLog : "audits"
+    User ||--o{ AuditLog : "actors"
+
+    %% Entity Field Definitions
+    Workspace {
+        uuid id PK
+        string name
+        string code UK
+        string workspace_type
+        boolean is_active
+        timestamp created_at
+    }
+
+    User {
+        bigint id PK
+        string username UK
+        string email UK
+        string password
+        boolean is_active
+    }
+
+    Branch {
+        bigint id PK
+        uuid workspace_id FK
+        string code
+        string name
+        string region
+        geometry location "Point SRID 4326"
+    }
+
+    Customer {
+        bigint id PK
+        uuid workspace_id FK
+        string code
+        string name
+        string phone
+        geometry location "Point SRID 4326"
+    }
+
+    Order {
+        bigint id PK
+        uuid workspace_id FK
+        string order_number
+        bigint customer_id FK
+        bigint branch_id FK
+        date order_date
+        decimal total_amount "Canonical Revenue"
+        string status
+    }
+
+    ServiceRequest {
+        bigint id PK
+        uuid workspace_id FK
+        string request_number
+        bigint customer_id FK
+        bigint service_id FK
+        bigint sla_id FK
+        geometry location "Point SRID 4326"
+        string priority
+        string status
+        timestamp deadline_at
+    }
+
+    Employee {
+        bigint id PK
+        uuid workspace_id FK
+        string code
+        string full_name
+        json skills
+        geometry current_location "Point SRID 4326"
+        float current_workload_score
+    }
+
+    Task {
+        bigint id PK
+        bigint service_request_id FK
+        bigint assigned_to_id FK
+        string status
+        int estimated_duration_minutes
+    }
+
+    DocumentChunk {
+        bigint id PK
+        uuid document_id FK
+        int chunk_index
+        text content
+        vector embedding "dim 768 / 1536"
+    }
+
+    ForecastRun {
+        uuid id PK
+        bigint model_config_id FK
+        float mae
+        float rmse
+        float baseline_mae
+        string artifact_path
+    }
+
+    Recommendation {
+        uuid id PK
+        uuid workspace_id FK
+        string title
+        text rationale
+        string action_type
+        json action_payload
+        string status
+    }
+
+    ApprovalRequest {
+        uuid id PK
+        uuid recommendation_id FK
+        string action_type
+        json payload
+        string status
+        bigint reviewed_by_id FK
+    }
+
+    AuditLog {
+        bigint id PK
+        uuid workspace_id FK
+        bigint actor_user_id FK
+        string actor_type
+        string action
+        string entity_type
+        string entity_id
+        json changes
+        timestamp timestamp
+    }
