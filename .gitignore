@@ -47,6 +47,7 @@ ml_models/*.bin
 # IDE & OS
 .vscode/
 .idea/
+.agents/
 *.swp
 *.swo
 *~
