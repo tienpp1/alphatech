@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}System Health & Environment Status | AI Business Platform{% endblock %}
+
+{% block content %}
+<div class="dashboard-hero">
+    <div class="hero-badge {% if health.status == 'healthy' %}badge-success{% else %}badge-warning{% endif %}">
+        <span class="pulse-dot"></span> {{ health.status|upper }}
+    </div>
+    <h1 class="hero-title">Platform Bootstrap & Inspection</h1>
+    <p class="hero-subtitle">Phase 0 Gate: Single Django modular monolith with PostgreSQL + PostGIS connectivity verified.</p>
+</div>
+
+<div class="grid-container">
+    <!-- Status Overview Card -->
+    <div class="card glass-card">
+        <div class="card-header">
+            <div class="card-icon">🖥️</div>
+            <h3>Runtime Environment</h3>
+        </div>
+        <div class="card-body">
+            <div class="info-row">
+                <span class="label">Python Version:</span>
+                <span class="value code">{{ health.environment.python_version }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Django Version:</span>
+                <span class="value code">{{ health.environment.django_version }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Debug Mode:</span>
+                <span class="value badge {% if health.environment.debug_mode %}badge-warning{% else %}badge-info{% endif %}">
+                    {{ health.environment.debug_mode|yesno:"Enabled,Disabled" }}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="label">System Time:</span>
+                <span class="value">{{ health.timestamp }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Card -->
+    <div class="card glass-card">
+        <div class="card-header">
+            <div class="card-icon">🗄️</div>
+            <h3>PostgreSQL & PostGIS</h3>
+        </div>
+        <div class="card-body">
+            <div class="info-row">
+                <span class="label">Database Connection:</span>
+                <span class="value badge {% if health.database.status == 'connected' %}badge-success{% else %}badge-danger{% endif %}">
+                    {{ health.database.status|upper }}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="label">Database Name:</span>
+                <span class="value code">{{ health.database.name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Host & Port:</span>
+                <span class="value code">{{ health.database.host }}:{{ health.database.port }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">PostGIS Status:</span>
+                <span class="value badge {% if 'available' in health.database.postgis %}badge-success{% else %}badge-warning{% endif %}">
+                    {{ health.database.postgis }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase Roadmap Card -->
+    <div class="card glass-card span-2">
+        <div class="card-header">
+            <div class="card-icon">🚀</div>
+            <h3>Architecture & Development Phase Roadmap</h3>
+        </div>
+        <div class="card-body">
+            <div class="phase-timeline">
+                <div class="phase-step active">
+                    <div class="step-circle">0</div>
+                    <div class="step-content">
+                        <strong>Phase 0: Bootstrap & Environment</strong>
+                        <span class="step-desc">Repo skeleton, Postgres connection, docs, health-check smoke test (COMPLETED).</span>
+                    </div>
+                </div>
+                <div class="phase-step next">
+                    <div class="step-circle">1</div>
+                    <div class="step-content">
+                        <strong>Phase 1: Architecture & ERD Spec</strong>
+                        <span class="step-desc">ERD design, domain models, API conventions, workspace scope lock.</span>
+                    </div>
+                </div>
+                <div class="phase-step">
+                    <div class="step-circle">2</div>
+                    <div class="step-content">
+                        <strong>Phase 2: Core & RBAC</strong>
+                        <span class="step-desc">Accounts, Workspace scope (Retail vs Service), JWT/Session auth.</span>
+                    </div>
+                </div>
+                <div class="phase-step">
+                    <div class="step-circle">3-5</div>
+                    <div class="step-content">
+                        <strong>Phases 3-5: Retail, Service & GIS</strong>
+                        <span class="step-desc">Sales/Orders, Service requests/SLA, GeoDjango spatial queries & Leaflet maps.</span>
+                    </div>
+                </div>
+                <div class="phase-step">
+                    <div class="step-circle">6-10</div>
+                    <div class="step-content">
+                        <strong>Phases 6-10: Integration, RAG, XGBoost & AI Tools</strong>
+                        <span class="step-desc">CSV/API mapping, RAG + pgvector, XGBoost forecasting, human approval audit.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,2 @@
+# Keep ml_models directory in version control.
+# Model weights and artifacts (.pkl, .bin) are ignored by .gitignore.

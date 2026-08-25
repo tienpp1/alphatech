@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Intelligent Business Operations Platform with AI-Powered Analytics, Forecasting and Decision Support">
+    <title>{% block title %}AI Business Operations Platform{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-dark text-light">
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand">
+                    <div class="brand-logo">
+                        <span class="logo-icon">⚡</span>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">AI Business Platform</span>
+                        <span class="brand-badge">Phase 0: Bootstrap</span>
+                    </div>
+                </div>
+                <nav class="header-nav">
+                    <a href="/" class="nav-link active">System Status</a>
+                    <a href="/api/health/" target="_blank" class="nav-link">JSON Health API ↗</a>
+                    <a href="/admin/" target="_blank" class="nav-link">Django Admin ↗</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p>© 2026 Intelligent Business Operations Platform. Core Architecture & Environment Lock.</p>
+                <div class="footer-tags">
+                    <span class="tag">Django 6.0</span>
+                    <span class="tag">PostgreSQL 18</span>
+                    <span class="tag">PostGIS 3.6</span>
+                    <span class="tag">pgvector</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
