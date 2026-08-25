@@ -9,7 +9,7 @@ $$\mathbf{Base\ URL}: \texttt{/api/v1/}$$
 ### Global Headers
 - `Content-Type: application/json`
 - `Accept: application/json`
-- `Authorization: Bearer <jwt_or_token>` (or Django Session Cookie)
+- `Authorization: Token <token_key>` (for DRF Token Auth) OR standard Session Cookie (for Web UI / AJAX calls)
 - `X-Workspace-ID: <workspace_uuid>` (Mandatory header to explicitly scope tenancy)
 
 ---
@@ -71,7 +71,28 @@ $$\mathbf{Base\ URL}: \texttt{/api/v1/}$$
 }
 ```
 
-### 3.3 Standardized Error Response (`400 Bad Request` / `422 Unprocessable`)
+### 3.3 AI Tool Mutation & Approval Request Response (`202 Accepted` / `200 OK`)
+When an AI assistant or user action initiates a mutating operation that requires human review:
+```json
+{
+  "success": true,
+  "requires_approval": true,
+  "message": "Action proposed by AI requires human manager approval.",
+  "data": {
+    "approval_request_id": "c7a81234-5678-4321-abcd-ef0123456789",
+    "action_type": "DISPATCH_TECHNICIAN",
+    "status": "PENDING",
+    "payload": {
+      "service_request_id": 104,
+      "employee_id": 12,
+      "technician_name": "Nguyen Van Nam",
+      "distance_km": 3.2
+    }
+  }
+}
+```
+
+### 3.4 Standardized Error Response (`400 Bad Request` / `422 Unprocessable`)
 ```json
 {
   "success": false,

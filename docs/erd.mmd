@@ -1,24 +1,23 @@
 erDiagram
-    %% Core & RBAC Domain
-    Workspace ||--o{ WorkspaceMembership : "has"
+    %% Tier 1 & Tier 2: Global Identity, Roles and Scoping Bridge
     User ||--o{ WorkspaceMembership : "belongs_to"
-    Role ||--o{ WorkspaceMembership : "assigned"
-    User ||--o{ UserRole : "holds"
-    Role ||--o{ UserRole : "defined_as"
+    Role ||--o{ WorkspaceMembership : "assigned_in"
+    Workspace ||--o{ WorkspaceMembership : "has_members"
+    Role ||--o{ Permission : "grants"
 
-    %% Retail Domain
+    %% Tier 3: Retail Domain (Workspace Scoped)
     Workspace ||--o{ Category : "owns"
     Category ||--o{ Product : "contains"
     Workspace ||--o{ Product : "owns"
     Workspace ||--o{ Branch : "operates"
-    Workspace ||--o{ Customer : "serves"
+    Workspace ||--o{ Customer : "manages"
     Customer ||--o{ Order : "places"
     Branch ||--o{ Order : "fulfills"
     Workspace ||--o{ Order : "records"
     Order ||--|{ OrderItem : "contains"
     Product ||--o{ OrderItem : "ordered_in"
 
-    %% Service Operations Domain
+    %% Tier 3: Service Operations Domain (Workspace Scoped)
     Workspace ||--o{ Service : "offers"
     Workspace ||--o{ SLA : "defines"
     Workspace ||--o{ Employee : "employs"
@@ -31,31 +30,53 @@ erDiagram
     Task ||--o{ Schedule : "scheduled_in"
     Employee ||--o{ Schedule : "allocated_to"
 
-    %% Ingestion & Mapping Domain
+    %% Tier 3: Ingestion & Mapping Domain
     Workspace ||--o{ DataSource : "configures"
     DataSource ||--o{ ImportJob : "executes"
     DataSource ||--o{ MappingRule : "maps_via"
 
-    %% Knowledge & RAG Domain
+    %% Tier 3: Knowledge & RAG Domain
     Workspace ||--o{ KnowledgeBase : "owns"
     KnowledgeBase ||--o{ Document : "indexes"
     Document ||--|{ DocumentChunk : "chunked_into"
 
-    %% AI, Forecasting & Decision Domain
+    %% Tier 3: AI, Forecasting & Decision Domain
     Workspace ||--o{ ForecastModelConfig : "configures"
     ForecastModelConfig ||--o{ ForecastRun : "trains"
     ForecastRun ||--|{ ForecastResult : "predicts"
     Workspace ||--o{ BusinessRule : "enforces"
     Workspace ||--o{ Recommendation : "generates"
     Recommendation ||--o{ ApprovalRequest : "requires"
-    User ||--o{ ApprovalRequest : "approves_or_rejects"
+    User ||--o{ ApprovalRequest : "reviews"
 
     %% System, Notifications & Audit
     User ||--o{ Notification : "receives"
+    Workspace ||--o{ Notification : "optional_scope"
     Workspace ||--o{ AuditLog : "audits"
     User ||--o{ AuditLog : "actors"
 
-    %% Entity Field Definitions
+    %% Entity Structure Definitions
+    User {
+        bigint id PK
+        string username UK
+        string email UK
+        string password
+        boolean is_active
+    }
+
+    Role {
+        bigint id PK
+        string name UK
+        string description
+    }
+
+    Permission {
+        bigint id PK
+        string codename UK
+        string name
+        string module
+    }
+
     Workspace {
         uuid id PK
         string name
@@ -65,12 +86,12 @@ erDiagram
         timestamp created_at
     }
 
-    User {
+    WorkspaceMembership {
         bigint id PK
-        string username UK
-        string email UK
-        string password
-        boolean is_active
+        uuid workspace_id FK
+        bigint user_id FK
+        bigint role_id FK
+        boolean is_default
     }
 
     Branch {
@@ -125,12 +146,12 @@ erDiagram
         float current_workload_score
     }
 
-    Task {
-        bigint id PK
-        bigint service_request_id FK
-        bigint assigned_to_id FK
-        string status
-        int estimated_duration_minutes
+    KnowledgeBase {
+        uuid id PK
+        uuid workspace_id FK
+        string name
+        string embedding_model
+        int embedding_dimension
     }
 
     DocumentChunk {
@@ -138,7 +159,7 @@ erDiagram
         uuid document_id FK
         int chunk_index
         text content
-        vector embedding "dim 768 / 1536"
+        vector embedding "dim derived from model"
     }
 
     ForecastRun {
@@ -162,6 +183,7 @@ erDiagram
 
     ApprovalRequest {
         uuid id PK
+        uuid workspace_id FK
         uuid recommendation_id FK
         string action_type
         json payload
@@ -171,7 +193,7 @@ erDiagram
 
     AuditLog {
         bigint id PK
-        uuid workspace_id FK
+        uuid workspace_id "FK (Nullable)"
         bigint actor_user_id FK
         string actor_type
         string action

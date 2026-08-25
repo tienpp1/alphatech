@@ -17,14 +17,14 @@ In V1, the AI subsystem is built on **explainability, determinism, and controlle
 The RAG pipeline provides context-grounded answers to business users without hallucinations.
 
 ```text
-[PDF/DOCX/TXT] ──> [Text Extraction] ──> [Recursive Chunking]
-                                                  │
-                                                  ▼
-[pgvector DB] <── [Vector Embedding API] <── [500-Token Text Chunks]
+[PDF/DOCX/TXT] ──> [Text Extraction] ──> [Recursive Chunking (chunk_size, chunk_overlap)]
+                                                              │
+                                                              ▼
+[pgvector DB] <── [Vector Embedding API] <── [Text Chunks (dim derived from model)]
       │
       │ (User Query ──> Query Embedding ──> Cosine Similarity Search)
       ▼
-[Top-K Grounded Chunks (Score >= 0.70)]
+[Top-K Grounded Chunks (Similarity >= similarity_threshold)]
       │
       ▼
 [Prompt Template: Grounded Context + User Query + Workspace Scope]
@@ -33,11 +33,22 @@ The RAG pipeline provides context-grounded answers to business users without hal
 [LLM API (Gemini / OpenAI)] ──> [Grounded Answer + Document Citations]
 ```
 
-### Key Implementation Invariants
-- **Chunk Size**: $500 - 800$ tokens with a $100$-token sliding overlap.
-- **Embedding Model**: Text embedding model (e.g., `text-embedding-004` / 768 dimensions).
-- **Workspace Isolation**: Vector queries strictly filter on `workspace_id = active_workspace_id`.
-- **Fallback Rule**: If similarity score of retrieved chunks is below threshold ($0.70$), the assistant explicitly responds: *"Dữ liệu tài liệu hiện tại không đủ thông tin để trả lời chính xác câu hỏi này"* rather than guessing.
+### 2.1 Configurable RAG Experimental Parameters
+
+RAG hyperparameters are **configurable system parameters** rather than fixed constants. Default values provide a starting baseline and must be tuned empirically against a benchmark test set during Phase 8.
+
+| Parameter | Configuration Key | Default Value | Description / Tuning Rationale |
+|---|---|---|---|
+| **Chunk Size** | `RAG_CHUNK_SIZE` | `500` tokens | Target token length per chunk. Adjusted based on document density (e.g. 300–1000 tokens). |
+| **Chunk Overlap** | `RAG_CHUNK_OVERLAP`| `100` tokens | Sliding window overlap to prevent context clipping across boundary sentences. |
+| **Top K Chunks** | `RAG_TOP_K` | `5` chunks | Number of highest-similarity chunks passed into prompt context window. |
+| **Similarity Threshold** | `RAG_SIMILARITY_THRESHOLD` | `0.70` (cosine) | Minimum cosine similarity required to consider a chunk relevant. Tuned per embedding model geometry. |
+| **Embedding Model** | `EMBEDDING_MODEL` | `text-embedding-004` | Active embedding provider model (e.g., Google `text-embedding-004`, OpenAI `text-embedding-3-small`). |
+| **Embedding Dimension**| `EMBEDDING_DIMENSION` | `768` (dynamic) | Vector dimension **derived directly from the active embedding model** (e.g. 768 or 1536). |
+
+### 2.2 Grounding & Fallback Invariant
+- **Fallback Rule**: If no retrieved chunk meets `similarity_threshold`, the assistant is strictly instructed to respond: *"Dữ liệu tài liệu hiện tại không đủ thông tin để trả lời chính xác câu hỏi này"* rather than hallucinating.
+- **Tenant Boundary**: All vector queries join with `knowledge_base__workspace_id = active_workspace_id`.
 
 ---
 
@@ -67,6 +78,7 @@ XGBoost is selected for its state-of-the-art performance on structured tabular d
 ### Evaluation Protocol
 - **Metrics**: MAE (Mean Absolute Error), RMSE (Root Mean Squared Error), MAPE.
 - **Baseline Comparison**: Every model run must be benchmarked against a Naive Persistence Baseline ($y_t = y_{t-1}$ or $y_t = y_{t-7}$).
+- **Offline / Background Execution**: Model training is executed via Django management commands or background workers, never inside synchronous HTTP request loops.
 
 ---
 
@@ -89,43 +101,49 @@ $$\mathbf{Forecast\ Trend} + \mathbf{Real\text{-}time\ Business\ State} + \mathb
 
 ---
 
-## 5. Pillar 4: Controlled Tool Calling & Approval Flow
+## 5. Pillar 4: Controlled Tool Calling & Safe Execution Flow
 
-AI Agents never execute raw database mutations or arbitrary SQL. All agentic actions pass through predefined, typed tools.
+AI Agents never execute raw database mutations or arbitrary SQL. All agentic actions pass through a multi-stage security pipeline:
 
 ```text
-[User Request in AI Chat]
+[User Intent in AI Chat]
            │
            ▼
-[LLM Tool Selection (JSON Schema)]
+[LLM Tool Selection (Schema-Validated)]
            │
            ▼
-[Backend Permission & Validation Gate]
-    ├── 1. Check Caller RBAC Permissions
-    ├── 2. Validate Tool Parameter Schema
-    └── 3. Check Action Mutation Severity
+[Step 1: Tool Permission Check (Caller RBAC)]
            │
-      ┌────┴──────────────────────────────┐
-      │                                   │
-[Read-Only Tool (e.g. read_orders)]  [Mutating Tool (e.g. dispatch_technician)]
-      │                                   │
-      │                                   ▼
-      │                             [Generate ApprovalRequest (Status: PENDING)]
-      │                                   │
-      │                             [Manager Review: APPROVE / REJECT]
-      │                                   │
-      └───────────────────────────────────┤ (Upon Approval)
-                                          ▼
-                                   [Execute Tool Action]
-                                          │
-                                          ▼
-                                   [Write to Immutable AuditLog]
+           ▼
+[Step 2: Business Rule Validation]
+           │
+      ┌────┴───────────────────────────────────────┐
+      │ (Read-Only Query Tool)                     │ (Mutating / High-Impact Tool)
+      │                                            │
+      ▼                                            ▼
+[Execute Read Operation]            [Generate ApprovalRequest (Status: PENDING)]
+      │                                            │
+      │                                     [Manager Review: APPROVE / REJECT]
+      │                                            │
+      │                                            ▼ (If Approved)
+      │                                     [Execute State Mutation]
+      │                                            │
+      └─────────────────────┬──────────────────────┘
+                            ▼
+               [Write Immutable AuditLog]
 ```
 
-### Whitelisted Tool Registry (V1)
-- `read_sales_summary(start_date, end_date, branch_id)`
-- `query_nearby_technicians(incident_location, radius_km, required_skill)`
-- `retrieve_policy_documents(query_topic)`
-- `get_forecast_trends(domain, horizon_days)`
-- `submit_technician_dispatch(service_request_id, employee_id, notes)` *(Requires Approval)*
-- `update_order_status(order_number, new_status)` *(Requires Approval)*
+### 5.1 Tool Categorization & Permission Tiers
+
+| Tool Name | Tool Category | Required RBAC Permission | Side Effects / Mutation | Human Approval Required? |
+|---|---|---|---|:---:|
+| `read_sales_summary` | Read-Only Query | `retail.view_order` | None | **NO** |
+| `query_nearby_technicians` | Read-Only GIS Query | `service.view_employee` | None | **NO** |
+| `retrieve_policy_documents`| Read-Only Knowledge | `knowledge.view_document` | None | **NO** |
+| `get_forecast_trends` | Read-Only ML Query | `forecasting.view_forecast`| None | **NO** |
+| `dispatch_technician` | Mutating Action | `service.assign_task` | Updates Task assignment | **YES (Manager)** |
+| `update_order_status` | Mutating Action | `retail.change_order` | Modifies financial status | **YES (Manager)** |
+| `apply_promotional_rule` | Mutating Action | `retail.change_product` | Changes product pricing | **YES (Admin)** |
+
+### 5.2 Zero Unchecked Mutations Invariant
+**No high-impact mutation may execute directly from an LLM-generated tool call.** Every state change requires explicit human manager confirmation through an `ApprovalRequest` record.

@@ -47,12 +47,12 @@
 
 ---
 
-## ADR-008: Adoption of pgvector for Document RAG Retrieval
-- **Status**: Accepted (Phase 1)
-- **Context**: RAG requires storing vector embeddings of organizational SOPs and performing semantic cosine similarity search.
-- **Decision**: Use the `pgvector` PostgreSQL extension instead of deploying external vector databases like Pinecone, Weaviate, or Milvus.
-- **Reason**: Keeps all document chunks, relational metadata, and vector embeddings in the exact same database engine with transactional consistency, zero extra infrastructure costs, and native workspace tenancy joins.
-- **Consequences**: Queries use HNSW or IVFFlat indexes directly inside PostgreSQL.
+## ADR-008: Adoption of pgvector for RAG with Configurable Parameters
+- **Status**: Accepted (Phase 1 / Corrected)
+- **Context**: RAG requires storing vector embeddings of organizational documents and performing semantic similarity search with fine-tuned hyperparameters.
+- **Decision**: Use `pgvector` with **configurable experimental parameters** (`RAG_CHUNK_SIZE`, `RAG_CHUNK_OVERLAP`, `RAG_SIMILARITY_THRESHOLD`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION`).
+- **Reason**: Embedding dimension must be dynamically derived from the selected embedding model (e.g. 768 for `text-embedding-004`, 1536 for OpenAI); similarity thresholds must be tuned empirically against domain test benchmarks rather than hardcoded.
+- **Consequences**: Vector field dimensions and similarity thresholds are managed via Django settings and environment variables.
 
 ---
 
@@ -89,3 +89,24 @@
 - **Decision**: Establish the Standard Data Model (SDM) and Data Mapping Engine as fundamental architectural components.
 - **Reason**: Decouples domain logic, GIS pipelines, and ML models from messy external schemas; ensures the platform can ingest any client dataset via configuration without code modifications.
 - **Consequences**: Every ingestion pipeline must produce validated SDM records before database persistence.
+
+---
+
+## ADR-013: Session & DRF Token Authentication Over Complex JWT for V1 Monolith
+- **Status**: Accepted (Phase 1 / Corrected)
+- **Context**: Need a secure, simple, and maintainable authentication mechanism for Django templates and REST API endpoints.
+- **Decision**: Standardize on **Django Session Authentication** for the server-rendered Web UI and **DRF Token Authentication** (`rest_framework.authtoken`) for programmatic API clients. Avoid complex JWT refresh token rotation workflows in V1.
+- **Reason**: Session cookies with `HttpOnly`, `SameSite=Lax`, and CSRF protection are natively robust for Django web applications. Simple tokens suffice for external client integrations without adding distributed revocation complexity.
+- **Consequences**: JWT is treated as a future optional extension for external mobile/partner APIs.
+
+---
+
+## ADR-014: Three-Tier Entity Ownership & Workspace Scoping Hierarchy
+- **Status**: Accepted (Phase 1 / Corrected)
+- **Context**: An earlier draft indiscriminately placed `workspace_id` on all tables, incorrectly coupling global identity entities with tenant boundaries.
+- **Decision**: Enforce a **Three-Tier Entity Ownership Hierarchy**:
+  1. *Global Entities*: `User`, `Role`, `Permission` (No `workspace_id`).
+  2. *Scoping Bridge*: `WorkspaceMembership` (Maps `User` $\leftrightarrow$ `Workspace` $\leftrightarrow$ `Role`).
+  3. *Workspace-Scoped Entities*: Direct tenant models (`Order`, `ServiceRequest`, `Product`, `DataSource`, `ForecastModelConfig`) and child entities inheriting tenancy via parent FK (`OrderItem`, `Task`, `DocumentChunk`, `ForecastResult`).
+- **Reason**: Allows users to belong to multiple workspaces with distinct roles without duplicating credentials, while ensuring absolute logical data segregation for business transactions.
+- **Consequences**: Querysets for tenant models must always filter via `workspace_id` or parent relationships.
