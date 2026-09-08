@@ -40,28 +40,35 @@ def _bootstrap_production():
         )
         if is_cloud_prod:
             try:
-                call_command("migrate", interactive=False, verbosity=0)
+                print("==> [WSGI BOOTSTRAP] Running database migrations...", flush=True)
+                call_command("migrate", interactive=False)
             except Exception as mig_err:
-                logger.warning(f"Production migrate warning: {mig_err}")
+                print(f"==> [WSGI BOOTSTRAP] Migrate warning: {mig_err}", flush=True)
 
-            # Check if products exist; if not, run seed_demo
+            # Check if products exist; if less than 10, run seed_demo
             try:
                 from apps.retail.models import Product
-                if Product.objects.count() == 0:
-                    logger.info("Seeding initial demo dataset (ABC Tech & XYZ IT)...")
-                    call_command("seed_demo", verbosity=0)
+                prod_count = Product.objects.count()
+                print(f"==> [WSGI BOOTSTRAP] Current Product count in database: {prod_count}", flush=True)
+                if prod_count < 10:
+                    print("==> [WSGI BOOTSTRAP] Seeding demo dataset (ABC Tech & XYZ IT)...", flush=True)
+                    call_command("seed_demo")
+                    print("==> [WSGI BOOTSTRAP] Demo dataset successfully seeded!", flush=True)
             except Exception as seed_err:
-                logger.warning(f"Production seed_demo warning: {seed_err}")
+                import traceback
+                print(f"==> [WSGI BOOTSTRAP ERROR] seed_demo failed: {seed_err}", flush=True)
+                traceback.print_exc()
 
             # Ensure student admin accounts exist
             try:
-                call_command("seed_student_admin", verbosity=0)
+                call_command("seed_student_admin")
             except Exception as stu_err:
-                logger.warning(f"Production seed_student_admin warning: {stu_err}")
+                print(f"==> [WSGI BOOTSTRAP] seed_student_admin note: {stu_err}", flush=True)
 
     except Exception as exc:
-        import logging
-        logging.getLogger("config.wsgi").error(f"Production bootstrap exception: {exc}")
+        import traceback
+        print(f"==> [WSGI BOOTSTRAP CRITICAL] Exception: {exc}", flush=True)
+        traceback.print_exc()
 
 _bootstrap_production()
 

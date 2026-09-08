@@ -83,6 +83,7 @@ def get_health_status():
             "error": db_error,
             "postgis": postgis_status,
         },
+        "metrics": {},
         "phase": {
             "current": "Production readiness baseline (local verified)",
             "status": "LOCAL VERIFIED / EXTERNAL GATES PENDING",
@@ -91,6 +92,30 @@ def get_health_status():
             "next": "Staging, credential rotation, HTTPS OAuth/email, observability and restore evidence",
         },
     }
+
+    try:
+        from apps.retail.models import Product, Category
+        from apps.service_ops.models import Service
+        from apps.workspaces.models import Workspace
+        p_count = Product.objects.count()
+        c_count = Category.objects.count()
+        s_count = Service.objects.count()
+        ws_list = list(Workspace.objects.values("code", "workspace_type"))
+        status_data["metrics"] = {
+            "products": p_count,
+            "categories": c_count,
+            "services": s_count,
+            "workspaces": ws_list,
+        }
+        if p_count == 0:
+            from django.core.management import call_command
+            call_command("seed_demo")
+            call_command("seed_student_admin")
+            status_data["metrics"]["products_after_seed"] = Product.objects.count()
+            status_data["metrics"]["services_after_seed"] = Service.objects.count()
+    except Exception as exc:
+        status_data["metrics"]["error"] = str(exc)
+
     return status_data
 
 
