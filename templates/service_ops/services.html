@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Danh mục Dịch vụ CNTT — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">Danh mục Dịch vụ Kỹ thuật CNTT</h1>
+        <p class="text-secondary">Định nghĩa dịch vụ chuẩn hóa, cam kết SLA và mức phí cơ sở giữa các phân loại kỹ thuật</p>
+    </div>
+    <div class="header-actions">
+        <a href="/api/v1/service-ops/services/" target="_blank" class="btn btn-secondary">API JSON ↗</a>
+    </div>
+</div>
+
+<!-- Category Filter Pills -->
+<div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <a href="/services/services/" class="btn {% if not current_category %}btn-primary{% else %}btn-secondary{% endif %}" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+        Tất cả Phân loại
+    </a>
+    {% for cat_key, cat_label in categories %}
+    <a href="/services/services/?category={{ cat_key }}" class="btn {% if current_category == cat_key %}btn-primary{% else %}btn-secondary{% endif %}" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+        {% if cat_key == 'INSTALLATION' %}Cài đặt hệ thống
+        {% elif cat_key == 'MAINTENANCE' %}Bảo trì hệ thống
+        {% elif cat_key == 'DATABASE_CONSULTING' %}Tư vấn CSDL
+        {% elif cat_key == 'DEVICE_REPAIR' %}Sửa chữa thiết bị
+        {% else %}{{ cat_label }}{% endif %}
+    </a>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Phân loại</th>
+                    <th>Tên dịch vụ</th>
+                    <th>Thời lượng chuẩn</th>
+                    <th>Phí cơ bản</th>
+                    <th>Trạng thái</th>
+                    <th>Mô tả</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in services %}
+                <tr>
+                    <td><code>{{ s.code }}</code></td>
+                    <td>
+                        <span class="badge" style="font-size: 0.75rem; background: rgba(139, 92, 246, 0.15); color: #c084fc;">
+                            {% if s.category == 'INSTALLATION' %}Cài đặt hệ thống
+                            {% elif s.category == 'MAINTENANCE' %}Bảo trì hệ thống
+                            {% elif s.category == 'DATABASE_CONSULTING' %}Tư vấn CSDL
+                            {% elif s.category == 'DEVICE_REPAIR' %}Sửa chữa thiết bị
+                            {% else %}{{ s.get_category_display }}{% endif %}
+                        </span>
+                    </td>
+                    <td><strong>{{ s.name }}</strong></td>
+                    <td>{{ s.standard_duration_minutes }} phút</td>
+                    <td><strong style="color: #34d399;">{{ s.base_fee|floatformat:0 }} VND</strong></td>
+                    <td>
+                        <span class="badge {% if s.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                            {% if s.is_active %}ĐANG HOẠT ĐỘNG{% else %}NGỪNG HOẠT ĐỘNG{% endif %}
+                        </span>
+                    </td>
+                    <td class="text-secondary" style="font-size: 0.85rem; max-width: 320px;">{{ s.description }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-secondary">Không có dịch vụ nào trong phân loại này.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

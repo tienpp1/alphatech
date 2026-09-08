@@ -1,0 +1,314 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}Tài khoản của tôi | Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block content %}
+<!-- Page Hero Banner -->
+<div class="page-hero-banner">
+    <div class="page-hero-grid">
+        <div class="page-breadcrumb">
+            <a href="{% url 'public_home' %}">Trang chủ</a>
+            <span>/</span>
+            <span>Tài khoản của tôi</span>
+        </div>
+        <div style="margin-bottom: 0.75rem;">
+            <span class="page-domain-tag general">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Cổng Khách Hàng
+            </span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="width: 58px; height: 58px; background: linear-gradient(135deg, #2563EB, #4F46E5); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; color: #FFFFFF; font-weight: 800; font-family: var(--pub-font-mono); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
+                    {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}
+                </div>
+                <div>
+                    <h1 class="page-hero-title" style="margin: 0 0 4px; font-size: 1.85rem;">
+                        Xin chào, {{ request.user.first_name|default:request.user.username }}!
+                    </h1>
+                    <div style="display: flex; gap: 12px; font-size: 0.88rem; color: #64748B; flex-wrap: wrap;">
+                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                            <span>{{ request.user.email }}</span>
+                        </span>
+                        {% if customer and customer.phone %}
+                        <span>•</span>
+                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            <span>{{ customer.phone }}</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="{% url 'public_service_request' %}" class="pub-btn-primary" style="font-size: 0.88rem; padding: 10px 18px; display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>Gửi yêu cầu IT mới</span>
+                </a>
+                <a href="{% url 'public_products' %}" class="pub-btn-secondary" style="font-size: 0.88rem; padding: 10px 18px; display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    <span>Mua sắm sản phẩm</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="pub-section" style="padding-top: 2.5rem;">
+    <!-- Notices -->
+    {% if registered_notice %}
+    <div style="background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; padding: 16px 20px; border-radius: 12px; font-size: 0.92rem; margin-bottom: 2rem; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span><strong>Chào mừng bạn gia nhập!</strong> Tài khoản khách hàng của bạn đã được khởi tạo thành công.</span>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if email_warning %}
+    <div style="background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:14px 18px;border-radius:12px;margin-bottom:1.5rem;">
+        Yêu cầu đã được ghi nhận, nhưng email xác nhận chưa gửi được. Bạn có thể thử gửi lại bên dưới.
+    </div>
+    {% endif %}
+    {% for delivery in failed_email_deliveries %}
+    <form method="post" action="{% url 'public_customer_email_resend' delivery.public_id %}" style="margin-bottom:.75rem;">
+        {% csrf_token %}
+        <button type="submit" class="pub-btn-secondary">Gửi lại email {{ delivery.get_event_type_display }}</button>
+    </form>
+    {% endfor %}
+
+    {% if request.user.is_superuser or request.user.is_staff %}
+    <div class="pub-card" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #3b82f6; padding: 1.25rem 1.75rem; border-radius: 12px; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
+        <div>
+            <div style="font-weight: 700; color: #f8fafc; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.2rem;">🛡️</span>
+                <span>Tài khoản Quản trị viên / Nhân sự Nội bộ</span>
+            </div>
+            <p style="margin: 4px 0 0; font-size: 0.88rem; color: #94a3b8;">
+                Bạn có toàn quyền truy cập Hệ sinh thái Quản trị Nội bộ, Kho Sản phẩm, Dịch vụ Kỹ thuật và Trung tâm AI &amp; Dữ liệu.
+            </p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="/noibo/" class="pub-btn-primary" style="padding: 9px 18px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem;">
+                ⚡ Cổng Quản Trị /noibo/ →
+            </a>
+            <a href="/noibo/retail/products/" style="padding: 9px 14px; font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 0.85rem; background: rgba(99,102,241,0.2); border: 1px solid #6366f1; color: #a5b4fc; display: inline-flex; align-items: center; gap: 4px;">
+                💻 Sản phẩm
+            </a>
+            <a href="/noibo/services/" style="padding: 9px 14px; font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 0.85rem; background: rgba(245,158,11,0.2); border: 1px solid #f59e0b; color: #fcd34d; display: inline-flex; align-items: center; gap: 4px;">
+                ⚙️ Dịch vụ
+            </a>
+            <a href="/noibo/ai/" style="padding: 9px 14px; font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 0.85rem; background: rgba(168,85,247,0.2); border: 1px solid #a855f7; color: #d8b4fe; display: inline-flex; align-items: center; gap: 4px;">
+                🧠 AI &amp; Data
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if customer_only_notice and not request.user.is_superuser and not request.user.is_staff %}
+    <div style="background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; padding: 14px 18px; border-radius: 12px; font-size: 0.92rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 12px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        <span><strong>Thông báo:</strong> Cổng Quản trị Nội bộ (/noibo/) dành riêng cho nhân viên và ban quản lý. Tài khoản khách hàng của bạn được quản trị tại trang này.</span>
+    </div>
+    {% endif %}
+
+    <!-- Profile Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
+        <!-- Left: Customer Info Card -->
+        <div class="pub-card" style="padding: 1.75rem; border-top: 3px solid #2563EB;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--pub-border);">
+                <div style="width: 36px; height: 36px; background: rgba(37, 99, 235, 0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #2563EB;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0; letter-spacing: -0.01em;">
+                    Hồ sơ khách hàng
+                </h3>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1.15rem; font-size: 0.92rem;">
+                <div>
+                    <div style="color: var(--pub-text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Họ và tên</div>
+                    <div style="font-weight: 700; color: var(--pub-text-heading); font-size: 0.98rem;">
+                        {{ customer.name|default:request.user.first_name|default:request.user.username }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="color: var(--pub-text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Email liên hệ</div>
+                    <div style="font-weight: 600; color: var(--pub-text-heading);">
+                        {{ request.user.email }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="color: var(--pub-text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Số điện thoại</div>
+                    <div style="font-weight: 600; color: var(--pub-text-heading); font-family: var(--pub-font-mono);">
+                        {{ customer.phone|default:"Chưa cập nhật" }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="color: var(--pub-text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Địa chỉ nhận hàng / hỗ trợ</div>
+                    <div style="font-weight: 600; color: var(--pub-text-heading); line-height: 1.45;">
+                        {{ customer.address|default:"Chưa cập nhật" }}
+                    </div>
+                </div>
+
+                <div style="padding-top: 0.75rem; border-top: 1px solid var(--pub-border);">
+                    <div style="color: var(--pub-text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Mã khách hàng</div>
+                    <div style="font-family: var(--pub-font-mono); font-size: 0.9rem; color: var(--pub-primary); font-weight: 800; background: #EFF6FF; padding: 4px 10px; border-radius: 6px; display: inline-block;">
+                        {{ customer.code|default:"CUST-ONLINE" }}
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--pub-border);">
+                <a href="{% url 'public_logout' %}" style="color: var(--pub-danger); font-size: 0.88rem; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    <span>Đăng xuất tài khoản</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Right: Activity History (Service Requests & Orders) -->
+        <div>
+            <!-- Service Requests Section -->
+            <div class="pub-card" style="padding: 1.75rem; margin-bottom: 1.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 34px; height: 34px; background: rgba(13, 148, 136, 0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #0D9488;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                        </div>
+                        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0; letter-spacing: -0.01em;">
+                            Yêu cầu dịch vụ IT đã gửi
+                        </h3>
+                    </div>
+                    <a href="{% url 'public_service_request' %}" style="font-size: 0.85rem; color: var(--pub-primary); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <span>+ Gửi yêu cầu mới</span>
+                    </a>
+                </div>
+
+                {% if service_requests %}
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    {% for req in service_requests %}
+                    <div style="border: 1px solid var(--pub-border); border-radius: 12px; padding: 14px 16px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; transition: border-color 0.2s;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <span style="font-family: var(--pub-font-mono); font-size: 0.82rem; font-weight: 700; color: var(--pub-primary); background: #EFF6FF; padding: 2px 8px; border-radius: 6px;">
+                                    {{ req.request_number }}
+                                </span>
+                                <span style="font-weight: 700; font-size: 0.95rem; color: var(--pub-text-heading);">
+                                    {{ req.title }}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.84rem; color: var(--pub-text-muted);">
+                                <span>Gói DV: <strong>{{ req.service.name }}</strong></span>
+                                <span style="margin: 0 6px;">•</span>
+                                <span style="font-family: var(--pub-font-mono);">{{ req.created_at|date:"H:i, d/m/Y" }}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            {% if req.status == 'OPEN' %}
+                            <span style="background: #FEF3C7; color: #92400E; font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; border: 1px solid #FDE68A;">
+                                Đang chờ tiếp nhận
+                            </span>
+                            {% elif req.status == 'IN_PROGRESS' %}
+                            <span style="background: #EFF6FF; color: #1D4ED8; font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; border: 1px solid #BFDBFE;">
+                                Đang xử lý
+                            </span>
+                            {% elif req.status == 'RESOLVED' or req.status == 'COMPLETED' %}
+                            <span style="background: #ECFDF5; color: #065F46; font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; border: 1px solid #A7F3D0;">
+                                Đã hoàn tất
+                            </span>
+                            {% else %}
+                            <span style="background: #F1F5F9; color: #475569; font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; border: 1px solid #E2E8F0;">
+                                {{ req.get_status_display|default:req.status }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="pub-empty-state" style="padding: 2.25rem 1rem; margin: 0;">
+                    <div class="pub-empty-icon" style="width: 40px; height: 40px; margin-bottom: 0.75rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                    </div>
+                    <div class="pub-empty-title" style="font-size: 1.05rem;">Chưa có yêu cầu dịch vụ nào</div>
+                    <div class="pub-empty-desc" style="font-size: 0.88rem; margin-bottom: 1.25rem;">Quý khách có thể gửi yêu cầu cài đặt, bảo trì hoặc sửa chữa IT bất cứ lúc nào.</div>
+                    <a href="{% url 'public_service_request' %}" class="pub-btn-primary" style="font-size: 0.85rem; padding: 8px 16px;">
+                        Gửi yêu cầu dịch vụ ngay
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Retail Orders Section -->
+            <div class="pub-card" style="padding: 1.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 34px; height: 34px; background: rgba(37, 99, 235, 0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #2563EB;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        </div>
+                        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0; letter-spacing: -0.01em;">
+                            Đơn hàng công nghệ đã mua
+                        </h3>
+                    </div>
+                    <a href="{% url 'public_customer_orders' %}" style="font-size: 0.85rem; color: var(--pub-primary); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <span>Xem toàn bộ đơn hàng →</span>
+                    </a>
+                </div>
+
+                {% if orders %}
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    {% for ord in orders %}
+                    <div style="border: 1px solid var(--pub-border); border-radius: 12px; padding: 14px 16px; background: #FFFFFF; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.98rem; color: var(--pub-text-heading); margin-bottom: 4px;">
+                                <a href="{% url 'public_customer_order_detail' ord.order_number %}" style="color: inherit; text-decoration: none; font-family: var(--pub-font-mono);">
+                                    #{{ ord.order_number }}
+                                </a>
+                            </div>
+                            <div style="font-size: 0.84rem; color: var(--pub-text-muted);">
+                                <span>Chi nhánh: {{ ord.branch.name|default:"ABC Tech Store (Giao tận nơi)" }}</span>
+                                <span style="margin: 0 6px;">•</span>
+                                <span style="font-family: var(--pub-font-mono);">Ngày đặt: {{ ord.order_date|date:"d/m/Y" }}</span>
+                            </div>
+                        </div>
+
+                        <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+                            <div>
+                                <div style="font-weight: 800; color: var(--pub-primary); font-size: 1.05rem; margin-bottom: 2px; font-family: var(--pub-font-mono);">
+                                    {{ ord.total_amount|floatformat:0 }} VNĐ
+                                </div>
+                                <span style="background: #ECFDF5; color: #065F46; font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 9999px; border: 1px solid #A7F3D0;">
+                                    {{ ord.get_status_display|default:ord.status }}
+                                </span>
+                            </div>
+                            <a href="{% url 'public_customer_order_detail' ord.order_number %}" class="pub-btn-secondary" style="padding: 7px 14px; font-size: 0.82rem; font-weight: 700;">
+                                Chi tiết
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="pub-empty-state" style="padding: 2.25rem 1rem; margin: 0;">
+                    <div class="pub-empty-icon" style="width: 40px; height: 40px; margin-bottom: 0.75rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    </div>
+                    <div class="pub-empty-title" style="font-size: 1.05rem;">Chưa có đơn hàng nào</div>
+                    <div class="pub-empty-desc" style="font-size: 0.88rem; margin-bottom: 1.25rem;">Khám phá các thiết bị công nghệ chính hãng tại ABC Tech Store.</div>
+                    <a href="{% url 'public_products' %}" class="pub-btn-secondary" style="font-size: 0.85rem; padding: 8px 16px;">
+                        Khám phá sản phẩm
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

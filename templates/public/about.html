@@ -1,0 +1,183 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}Giới thiệu | Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block content %}
+<!-- Page Hero Banner -->
+<div class="page-hero-banner">
+    <div class="page-hero-grid">
+        <div class="page-breadcrumb">
+            <a href="{% url 'public_home' %}">Trang chủ</a>
+            <span>/</span>
+            <span>Về chúng tôi</span>
+        </div>
+        <div style="margin-bottom: 0.75rem;">
+            <span class="page-domain-tag general">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                Hệ Sinh Thái Hợp Nhất
+            </span>
+        </div>
+        <h1 class="page-hero-title">
+            Kiến Tạo Giá Trị Công Nghệ Cho Doanh Nghiệp
+        </h1>
+        <p class="page-hero-subtitle">
+            Sự kết hợp đồng bộ giữa bán lẻ thiết bị công nghệ chính hãng và dịch vụ kỹ thuật CNTT chuyên sâu, đáp ứng tiêu chuẩn vận hành tin cậy và khắt khe nhất.
+        </p>
+    </div>
+</div>
+
+<div class="pub-section" style="padding-top: 3rem;">
+    <!-- Mission & Dual-Domain Architecture -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 2rem; margin-bottom: 3.5rem;">
+        <!-- Retail Domain -->
+        <div class="pub-card" style="padding: 2.25rem; position: relative; overflow: hidden; border-top: 3px solid #2563EB;">
+            <div style="width: 48px; height: 48px; background: rgba(37, 99, 235, 0.08); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #2563EB; margin-bottom: 1.25rem; border: 1px solid rgba(37, 99, 235, 0.15);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #2563EB; background: #EFF6FF; padding: 3px 8px; border-radius: 4px;">Khối Bán Lẻ Thiết Bị</span>
+            </div>
+            <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.85rem; letter-spacing: -0.02em;">
+                ABC Tech Store
+            </h2>
+            <p style="color: var(--pub-text-body); font-size: 0.95rem; line-height: 1.65; margin-bottom: 1.5rem;">
+                Thành lập với sứ mệnh phân phối thiết bị công nghệ chính hãng 100% đến khách hàng cá nhân và tổ chức. Chúng tôi cung ứng giải pháp trọn gói từ máy trạm làm việc, laptop doanh nghiệp, linh kiện phần cứng hiệu năng cao đến hạ tầng mạng văn phòng.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; border-top: 1px solid var(--pub-border); padding-top: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--pub-text-heading); font-weight: 600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>100% sản phẩm CO/CQ và bảo hành chính hãng</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--pub-text-heading); font-weight: 600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Chính sách 1 đổi 1 trong 30 ngày đối với lỗi nhà sản xuất</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--pub-text-heading); font-weight: 600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Tư vấn cấu hình chuyên sâu theo ngân sách và nhu cầu</span>
+                </div>
+            </div>
+            <div style="margin-top: 1.75rem;">
+                <a href="{% url 'public_products' %}" class="pub-btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <span>Khám phá sản phẩm</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- Service Domain -->
+        <div class="pub-card" style="padding: 2.25rem; position: relative; overflow: hidden; border-top: 3px solid #0D9488;">
+            <div style="width: 48px; height: 48px; background: rgba(13, 148, 136, 0.08); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #0D9488; margin-bottom: 1.25rem; border: 1px solid rgba(13, 148, 136, 0.15);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #0D9488; background: #F0FDFA; padding: 3px 8px; border-radius: 4px;">Khối Kỹ Thuật CNTT</span>
+            </div>
+            <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.85rem; letter-spacing: -0.02em;">
+                XYZ IT Technical Services
+            </h2>
+            <p style="color: var(--pub-text-body); font-size: 0.95rem; line-height: 1.65; margin-bottom: 1.5rem;">
+                Đơn vị giải pháp kỹ thuật chuyên nghiệp hỗ trợ vận hành hạ tầng số cho doanh nghiệp. Chúng tôi cung cấp dịch vụ triển khai máy chủ, bảo trì mạng định kỳ, tư vấn tối ưu cơ sở dữ liệu và xử lý sự cố thiết bị phần cứng tận nơi.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; border-top: 1px solid var(--pub-border); padding-top: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--pub-text-heading); font-weight: 600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Kỹ sư đạt chứng chỉ quốc tế (Cisco, Microsoft, AWS, Oracle)</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--pub-text-heading); font-weight: 600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Cam kết SLA phản hồi sự cố khẩn cấp trong 15 - 30 phút</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--pub-text-heading); font-weight: 600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Bảo mật dữ liệu tuyệt đối theo tiêu chuẩn ISO 27001</span>
+                </div>
+            </div>
+            <div style="margin-top: 1.75rem;">
+                <a href="{% url 'public_services' %}" class="pub-btn-secondary" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <span>Xem dịch vụ IT</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operating Metrics -->
+    <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border-radius: 16px; padding: 2.5rem 2rem; color: #FFFFFF; margin-bottom: 3.5rem;">
+        <div style="text-align: center; max-width: 600px; margin: 0 auto 2.25rem;">
+            <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #38BDF8;">Năng Lực Vận Hành</span>
+            <h3 style="font-size: 1.75rem; font-weight: 800; margin: 0.35rem 0 0.5rem; letter-spacing: -0.02em;">Các chỉ số khẳng định uy tín</h3>
+            <p style="color: #94A3B8; font-size: 0.92rem; margin: 0;">Số liệu thực tế ghi nhận qua hơn 5 năm phát triển và phục vụ khách hàng trên toàn quốc.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; text-align: center;">
+            <div style="padding: 1.25rem; background: rgba(255, 255, 255, 0.04); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="font-size: 2.2rem; font-weight: 900; color: #38BDF8; font-family: var(--pub-font-mono); letter-spacing: -0.03em;">10,000+</div>
+                <div style="font-size: 0.88rem; color: #E2E8F0; font-weight: 600; margin-top: 0.35rem;">Thiết bị đã cung ứng</div>
+                <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 0.2rem;">Chính hãng 100%</div>
+            </div>
+            <div style="padding: 1.25rem; background: rgba(255, 255, 255, 0.04); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="font-size: 2.2rem; font-weight: 900; color: #34D399; font-family: var(--pub-font-mono); letter-spacing: -0.03em;">99.8%</div>
+                <div style="font-size: 0.88rem; color: #E2E8F0; font-weight: 600; margin-top: 0.35rem;">SLA hoàn thành đúng hạn</div>
+                <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 0.2rem;">Theo hợp đồng dịch vụ</div>
+            </div>
+            <div style="padding: 1.25rem; background: rgba(255, 255, 255, 0.04); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="font-size: 2.2rem; font-weight: 900; color: #FBBF24; font-family: var(--pub-font-mono); letter-spacing: -0.03em;">&lt; 30'</div>
+                <div style="font-size: 0.88rem; color: #E2E8F0; font-weight: 600; margin-top: 0.35rem;">Thời gian tiếp ứng</div>
+                <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 0.2rem;">Sự cố kỹ thuật khẩn cấp</div>
+            </div>
+            <div style="padding: 1.25rem; background: rgba(255, 255, 255, 0.04); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="font-size: 2.2rem; font-weight: 900; color: #A78BFA; font-family: var(--pub-font-mono); letter-spacing: -0.03em;">2,400+</div>
+                <div style="font-size: 0.88rem; color: #E2E8F0; font-weight: 600; margin-top: 0.35rem;">Khách hàng doanh nghiệp</div>
+                <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 0.2rem;">Hài lòng và gắn bó</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Values -->
+    <div style="text-align: center; margin-bottom: 3.5rem;">
+        <span class="pub-section-tag">Giá trị cốt lõi</span>
+        <h2 class="pub-section-title" style="margin-bottom: 0.5rem;">4 Tiêu chuẩn chất lượng vàng</h2>
+        <p style="color: var(--pub-text-muted); font-size: 0.95rem; max-width: 600px; margin: 0 auto 2.25rem;">
+            Kim chỉ nam định hình mọi tương tác từ tư vấn, mua sắm đến xử lý sự cố kỹ thuật hạ tầng.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; text-align: left;">
+            <div class="pub-card" style="padding: 1.75rem;">
+                <div style="width: 44px; height: 44px; background: rgba(37, 99, 235, 0.08); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #2563EB; margin-bottom: 1rem;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+                </div>
+                <h4 style="font-size: 1.1rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.5rem;">Chuyên môn vượt trội</h4>
+                <p style="font-size: 0.9rem; color: var(--pub-text-muted); margin: 0; line-height: 1.55;">
+                    Đội ngũ kỹ thuật viên được đào tạo bài bản, liên tục cập nhật công nghệ và giải pháp CNTT hiện đại nhất.
+                </p>
+            </div>
+            <div class="pub-card" style="padding: 1.75rem;">
+                <div style="width: 44px; height: 44px; background: rgba(16, 185, 129, 0.08); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #10B981; margin-bottom: 1rem;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <h4 style="font-size: 1.1rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.5rem;">Bảo mật an toàn</h4>
+                <p style="font-size: 0.9rem; color: var(--pub-text-muted); margin: 0; line-height: 1.55;">
+                    Bảo vệ dữ liệu khách hàng theo các nguyên tắc an ninh thông tin nghiêm ngặt, ký kết thỏa thuận bảo mật NDA đầy đủ.
+                </p>
+            </div>
+            <div class="pub-card" style="padding: 1.75rem;">
+                <div style="width: 44px; height: 44px; background: rgba(245, 158, 11, 0.08); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #F59E0B; margin-bottom: 1rem;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <h4 style="font-size: 1.1rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.5rem;">Đồng hành tận tâm</h4>
+                <p style="font-size: 0.9rem; color: var(--pub-text-muted); margin: 0; line-height: 1.55;">
+                    Cam kết hỗ trợ liên tục sau triển khai, tư vấn giải pháp dài hạn giúp doanh nghiệp tối ưu hóa chi phí hạ tầng.
+                </p>
+            </div>
+            <div class="pub-card" style="padding: 1.75rem;">
+                <div style="width: 44px; height: 44px; background: rgba(139, 92, 246, 0.08); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8B5CF6; margin-bottom: 1rem;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                </div>
+                <h4 style="font-size: 1.1rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.5rem;">Tốc độ & Hiệu quả</h4>
+                <p style="font-size: 0.9rem; color: var(--pub-text-muted); margin: 0; line-height: 1.55;">
+                    Tiết kiệm tối đa thời gian xử lý sự cố với quy trình chuẩn hóa, giúp hệ thống hoạt động liên tục và bền bỉ.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

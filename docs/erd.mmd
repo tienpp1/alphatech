@@ -24,11 +24,14 @@ erDiagram
     Customer ||--o{ ServiceRequest : "requests"
     Service ||--o{ ServiceRequest : "categorized_by"
     SLA ||--o{ ServiceRequest : "governed_by"
+    Employee ||--o{ ServiceRequest : "assigned_to"
     Workspace ||--o{ ServiceRequest : "manages"
     ServiceRequest ||--o{ Task : "breaks_down_into"
     Employee ||--o{ Task : "assigned_to"
     Task ||--o{ Schedule : "scheduled_in"
     Employee ||--o{ Schedule : "allocated_to"
+    Task ||--o{ LaborEntry : "tracks_labor_in"
+    Employee ||--o{ LaborEntry : "performed_by"
 
     %% Tier 3: Ingestion & Mapping Domain
     Workspace ||--o{ DataSource : "configures"
@@ -109,6 +112,7 @@ erDiagram
         string code
         string name
         string phone
+        string customer_segment
         geometry location "Point SRID 4326"
     }
 
@@ -119,8 +123,19 @@ erDiagram
         bigint customer_id FK
         bigint branch_id FK
         date order_date
+        timestamp order_timestamp
         decimal total_amount "Canonical Revenue"
         string status
+    }
+
+    Service {
+        bigint id PK
+        uuid workspace_id FK
+        string code
+        string name
+        string category
+        decimal base_fee
+        int standard_duration_minutes
     }
 
     ServiceRequest {
@@ -130,10 +145,12 @@ erDiagram
         bigint customer_id FK
         bigint service_id FK
         bigint sla_id FK
+        bigint assigned_employee_id FK
         geometry location "Point SRID 4326"
         string priority
         string status
-        timestamp deadline_at
+        timestamp response_deadline_at
+        timestamp resolution_deadline_at
     }
 
     Employee {
@@ -141,9 +158,21 @@ erDiagram
         uuid workspace_id FK
         string code
         string full_name
+        decimal hourly_labor_rate
         json skills
         geometry current_location "Point SRID 4326"
         float current_workload_score
+    }
+
+    LaborEntry {
+        bigint id PK
+        bigint task_id FK
+        bigint employee_id FK
+        timestamp started_at
+        timestamp ended_at
+        int duration_minutes
+        decimal hourly_rate_snapshot
+        decimal labor_cost
     }
 
     KnowledgeBase {

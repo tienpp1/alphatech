@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Trình hướng dẫn Nhập Dữ liệu — {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
+    <!-- Header -->
+    <div style="margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <a href="/integration/" style="color: #60a5fa; text-decoration: none; font-size: 0.9rem;">&larr; Quay lại Bảng điều khiển Tích hợp</a>
+        </div>
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin: 0;">Trình Hướng dẫn Nhập Dữ liệu (Ingestion Wizard)</h1>
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 4px;">Tải lên tệp CSV hoặc Excel ngoài, hoặc lấy dữ liệu từ Mock REST API với tính năng xem trước cấu trúc tức thì.</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; {% if message.tags == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;{% else %}background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+        <!-- Left Column: Form Controls -->
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #f8fafc; margin-top: 0; margin-bottom: 18px;">1. Cấu hình Nhập liệu</h3>
+            
+            {% if can_import %}<form id="import-form" method="POST" action="/integration/import/" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Nguồn Dữ liệu *</label>
+                    <select name="data_source_id" id="data_source_select" onchange="onSourceChanged(this)" required style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.9rem;">
+                        <option value="">-- Chọn Nguồn Dữ liệu Đích --</option>
+                        {% for ds in sources %}
+                        <option value="{{ ds.id }}" data-type="{{ ds.source_type }}" {% if request.GET.data_source_id == ds.id|stringformat:"s" %}selected{% endif %}>
+                            {{ ds.name }} ({{ ds.source_type }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Phân loại Miền Thực thể</label>
+                    <select name="entity_type" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.9rem;">
+                        {% for code, label in entity_types %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="file-upload-block" style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Tải lên Tệp (.csv, .xlsx) *</label>
+                    <input type="file" name="file" id="file_input" accept=".csv, .xlsx, .xls" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 8px; color: #f8fafc; font-size: 0.85rem;">
+                </div>
+
+                <div id="sheet-name-block" style="margin-bottom: 16px; display: none;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Tên Trang tính (Tùy chọn)</label>
+                    <input type="text" name="sheet_name" id="sheet_name_input" placeholder="Trang1" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.9rem;">
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 24px;">
+                    <button type="button" onclick="runPreview()" id="preview-btn" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid #3b82f6; padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        🔍 Xem trước Cấu trúc & Dữ liệu
+                    </button>
+                    <button type="submit" id="execute-btn" style="background: #10b981; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem;">
+                        🚀 Thực thi Nhập Dữ liệu
+                    </button>
+                </div>
+            </form>{% else %}<p style="color: #94a3b8;">Bạn không có quyền thực thi nhập dữ liệu.</p>{% endif %}
+        </div>
+
+        <!-- Right Column: Interactive Preview Panel -->
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; min-height: 480px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 12px;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: #f8fafc; margin: 0;">2. Xem trước Cấu trúc & Dữ liệu Mẫu</h3>
+                <span id="preview-status" style="font-size: 0.85rem; color: #94a3b8;">Đang chờ kiểm tra xem trước...</span>
+            </div>
+
+            <!-- Empty State -->
+            <div id="preview-empty" style="text-align: center; padding: 60px 20px; color: #64748b;">
+                <div style="font-size: 3rem; margin-bottom: 12px;">📊</div>
+                <h4 style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 6px;">Chưa có Dữ liệu Xem trước</h4>
+                <p style="font-size: 0.85rem; max-width: 420px; margin: 0 auto;">Chọn nguồn dữ liệu hoặc tệp ở bên trái và nhấp <strong>"Xem trước Cấu trúc & Dữ liệu"</strong> để kiểm tra các cột, dữ liệu mẫu và kiểu dữ liệu thô.</p>
+            </div>
+
+            <!-- Preview Results Container (Hidden initially) -->
+            <div id="preview-results" style="display: none;">
+                <!-- Summary Chips -->
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;">
+                    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 16px;">
+                        <span style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase;">Tổng số dòng phát hiện</span>
+                        <div id="res-total-rows" style="font-size: 1.35rem; font-weight: 800; color: #60a5fa; margin-top: 2px;">0</div>
+                    </div>
+                    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 16px;">
+                        <span style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase;">Tổng số cột</span>
+                        <div id="res-total-cols" style="font-size: 1.35rem; font-weight: 800; color: #34d399; margin-top: 2px;">0</div>
+                    </div>
+                </div>
+
+                <!-- Detected Columns & Types -->
+                <div style="margin-bottom: 18px;">
+                    <h5 style="color: #cbd5e1; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; text-transform: uppercase;">Các Cột Cấu trúc Phát hiện</h5>
+                    <div id="res-columns-chips" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                </div>
+
+                <!-- Warnings (if any) -->
+                <div id="res-warnings-box" style="display: none; margin-bottom: 18px; padding: 12px 16px; background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; border-radius: 8px; color: #fbbf24; font-size: 0.85rem;"></div>
+
+                <!-- Sample Table -->
+                <h5 style="color: #cbd5e1; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; text-transform: uppercase;">Dòng Dữ liệu Mẫu (5 bản ghi đầu tiên)</h5>
+                <div style="overflow-x: auto; background: #0f172a; border: 1px solid #334155; border-radius: 8px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+                        <thead id="res-table-head" style="background: rgba(255,255,255,0.05); color: #cbd5e1; border-bottom: 1px solid #334155;"></thead>
+                        <tbody id="res-table-body" style="color: #f8fafc;"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function onSourceChanged(selectEl) {
+    const selectedOpt = selectEl.options[selectEl.selectedIndex];
+    const type = selectedOpt.getAttribute('data-type');
+    const fileBlock = document.getElementById('file-upload-block');
+    const sheetBlock = document.getElementById('sheet-name-block');
+
+    if (type === 'MOCK_API') {
+        fileBlock.style.display = 'none';
+        sheetBlock.style.display = 'none';
+    } else if (type === 'EXCEL') {
+        fileBlock.style.display = 'block';
+        sheetBlock.style.display = 'block';
+    } else {
+        fileBlock.style.display = 'block';
+        sheetBlock.style.display = 'none';
+    }
+}
+
+async function runPreview() {
+    const form = document.getElementById('import-form');
+    const formData = new FormData(form);
+    const previewStatus = document.getElementById('preview-status');
+    const previewEmpty = document.getElementById('preview-empty');
+    const previewResults = document.getElementById('preview-results');
+    const previewBtn = document.getElementById('preview-btn');
+
+    previewStatus.innerText = 'Đang phân tích cấu trúc dữ liệu...';
+    previewBtn.disabled = true;
+
+    try {
+        const response = await fetch('/api/v1/integration/imports/preview/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+
+        const json = await response.json();
+        previewBtn.disabled = false;
+
+        if (json.status === 'success' && json.data && json.data.is_valid) {
+            const data = json.data;
+            previewStatus.innerHTML = '<span style="color: #34d399;">✓ Đã sẵn sàng xem trước</span>';
+            previewEmpty.style.display = 'none';
+            previewResults.style.display = 'block';
+
+            document.getElementById('res-total-rows').innerText = data.total_rows;
+            document.getElementById('res-total-cols').innerText = data.columns.length;
+
+            // Render columns chips
+            const chipsDiv = document.getElementById('res-columns-chips');
+            chipsDiv.innerHTML = '';
+            data.columns.forEach(col => {
+                const t = data.detected_types[col] || 'STRING';
+                const chip = document.createElement('span');
+                chip.style.cssText = 'background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;';
+                chip.innerHTML = `<strong>${col}</strong> <span style="font-size: 0.7rem; color: #60a5fa; background: rgba(59,130,246,0.2); padding: 1px 4px; border-radius: 4px;">${t}</span>`;
+                chipsDiv.appendChild(chip);
+            });
+
+            // Warnings
+            const warnBox = document.getElementById('res-warnings-box');
+            if (data.warnings && data.warnings.length > 0) {
+                warnBox.style.display = 'block';
+                warnBox.innerHTML = '<strong>Cảnh báo:</strong><ul style="margin: 4px 0 0 16px; padding: 0;">' + data.warnings.map(w => `<li>${w}</li>`).join('') + '</ul>';
+            } else {
+                warnBox.style.display = 'none';
+            }
+
+            // Render Sample Table
+            const head = document.getElementById('res-table-head');
+            const body = document.getElementById('res-table-body');
+            head.innerHTML = '<tr><th style="padding: 10px 12px; border-bottom: 1px solid #334155;">#</th>' + data.columns.map(c => `<th style="padding: 10px 12px; border-bottom: 1px solid #334155;">${c}</th>`).join('') + '</tr>';
+            
+            body.innerHTML = '';
+            data.sample_rows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.style.cssText = 'border-bottom: 1px solid rgba(255,255,255,0.05);';
+                let rowHtml = `<td style="padding: 8px 12px; color: #64748b;">${r.row_number}</td>`;
+                data.columns.forEach(col => {
+                    rowHtml += `<td style="padding: 8px 12px;">${r.raw_data[col] !== undefined ? r.raw_data[col] : ''}</td>`;
+                });
+                tr.innerHTML = rowHtml;
+                body.appendChild(tr);
+            });
+
+        } else {
+            previewStatus.innerHTML = `<span style="color: #f87171;">✗ ${json.message || (json.data && json.data.error_message) || 'Lỗi khi phân tích tệp'}</span>`;
+            alert('Xem trước thất bại: ' + (json.message || (json.data && json.data.error_message) || 'Vui lòng kiểm tra định dạng tệp'));
+        }
+
+    } catch (e) {
+        previewBtn.disabled = false;
+        previewStatus.innerHTML = '<span style="color: #f87171;">✗ Yêu cầu xem trước thất bại</span>';
+        alert('Lỗi mạng hoặc máy chủ khi xem trước: ' + e.message);
+    }
+}
+
+// Trigger initial change if pre-selected
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('data_source_select');
+    if (sel.value) {
+        onSourceChanged(sel);
+    }
+});
+</script>
+{% endblock %}

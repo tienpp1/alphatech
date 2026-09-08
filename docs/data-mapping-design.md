@@ -130,3 +130,47 @@ When an administrator uploads a new, unknown CSV/Excel sheet, the AI assistant i
     "errors": []
 }
 ```
+
+---
+
+## 4. Phase 6 (Ingestion) vs Phase 7 (Data Mapping) Architectural Demarcation
+
+```text
++----------------------------------------------------------------------------------------------------+
+| PHASE 6: DATA INGESTION (`apps.integration`)                                                      |
+| - DataSource configuration (CSV / Excel / Mock REST API)                                           |
+| - Pre-import schema detection, preview, type inference, warning detection                         |
+| - Multipart upload & fault-tolerant parsing                                                        |
+| - Raw staging into RawImportRecord (raw JSON payload preserved, no domain mutations)               |
+| - ImportJob lifecycle & statistics (COMPLETED / PARTIAL / FAILED)                                  |
++----------------------------------------------------------------------------------------------------+
+                                                │
+                                                ▼ (Phase boundary)
++----------------------------------------------------------------------------------------------------+
+| PHASE 7: DATA MAPPING ENGINE (`apps.mapping`)                                                      |
+| - MappingRule & ColumnMapping definitions                                                          |
+| - Field renaming, Type conversion, Value normalization, Business transformation                    |
+| - Canonical entity loading into Retail & Service domain tables                                     |
+| - AI-assisted schema matching (Phase 7 extension)                                                  |
++----------------------------------------------------------------------------------------------------+
+```
+
+---
+
+## 5. Implemented REST API Endpoints & Interfaces
+
+| Method | Endpoint | Description | Access Control |
+|---|---|---|---|
+| `GET` | `/api/v1/mapping/profiles/` | List mapping profiles in active workspace | Authenticated Member |
+| `POST` | `/api/v1/mapping/profiles/` | Create a new workspace mapping profile | Manager / Admin |
+| `GET` | `/api/v1/mapping/profiles/{id}/` | Retrieve profile details and rules | Authenticated Member |
+| `PATCH` | `/api/v1/mapping/profiles/{id}/` | Update profile configuration | Manager / Admin |
+| `DELETE`| `/api/v1/mapping/profiles/{id}/` | Delete mapping profile | Manager / Admin |
+| `GET` | `/api/v1/mapping/profiles/{id}/fields/` | Discover source columns and canonical target fields | Authenticated Member |
+| `POST` | `/api/v1/mapping/profiles/{id}/rules/` | Add transformation rule to profile | Manager / Admin |
+| `PATCH` | `/api/v1/mapping/profiles/{id}/rules/{r_id}/` | Update rule or trigger `ACCEPT_AI` / `REJECT_AI` | Manager / Admin |
+| `DELETE`| `/api/v1/mapping/profiles/{id}/rules/{r_id}/` | Delete transformation rule | Manager / Admin |
+| `POST` | `/api/v1/mapping/preview/` | Execute non-mutating simulation preview | Authenticated Member |
+| `POST` | `/api/v1/mapping/apply/` | Atomically commit canonical data into domain tables | Manager / Admin / Employee |
+| `POST` | `/api/v1/mapping/ai-suggest/` | AI-assisted mapping recommendation engine | Authenticated Member |
+

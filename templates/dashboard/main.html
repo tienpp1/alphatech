@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}Trung tâm Quản trị Nội bộ Hợp nhất | Bảng điều khiển Điều hành{% endblock %}
+
+{% block content %}
+<!-- Unified Header Hero -->
+<div class="dashboard-hero" style="margin-bottom: 2rem;">
+    <div class="hero-badge {% if health.status == 'healthy' %}badge-success{% else %}badge-warning{% endif %}">
+        <span class="pulse-dot"></span> {% if health.status == 'healthy' %}HỆ THỐNG HOẠT ĐỘNG TỐT{% else %}CẢNH BÁO HỆ THỐNG{% endif %} — TRUNG TÂM QUẢN TRỊ HỢP NHẤT
+    </div>
+    <h1 class="hero-title" style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #f8fafc, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Trung tâm Quản trị & Điều hành Nội bộ Tập trung
+    </h1>
+    <p class="hero-subtitle" style="max-width: 900px; color: #94a3b8; font-size: 1.05rem;">
+        Hệ sinh thái quản trị hợp nhất 2 miền kinh doanh: <strong>Cửa hàng Công nghệ ABC Tech Store</strong> & <strong>Dịch vụ Kỹ thuật CNTT XYZ IT Technical Services</strong>. Toàn bộ chỉ số, sự kiện nghiệp vụ và cảnh báo được tổng hợp tập trung mà không cần chuyển đổi không gian làm việc.
+    </p>
+</div>
+
+<!-- Unified Management & Domain Authorization Status Bar -->
+<div class="card glass-card" style="padding: 1.25rem 1.75rem; margin-bottom: 2rem; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #6366f1, #4f46e5); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 20px rgba(99,102,241,0.4);">
+            🛡️
+        </div>
+        <div>
+            <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">
+                Phạm vi Quản trị Hợp nhất
+            </div>
+            <div style="font-size: 1.15rem; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 3px;">
+                {% for ws in authorized_workspaces %}
+                <span class="badge {% if ws.workspace_type == 'SERVICE' %}bg-warning{% else %}bg-primary{% endif %}" style="font-size: 0.78rem; font-weight: 600;">
+                    {% if ws.workspace_type == 'SERVICE' %}⚙️ {{ ws.name }}{% else %}🛒 {{ ws.name }}{% endif %}
+                </span>
+                {% empty %}
+                <span class="badge bg-secondary" style="font-size: 0.78rem;">Toàn bộ Không gian Hệ thống</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <a href="/noibo/bao-cao-dieu-hanh/" id="btn-quick-report" class="btn btn-primary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; background: #2563eb; border-color: #1d4ed8; color: #ffffff;">
+            📄 Báo cáo Điều hành (PDF)
+        </a>
+        <a href="/noibo/retail/products/" id="btn-quick-products" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; border-color: rgba(99,102,241,0.4); color: #818cf8;">
+            💻 Sản phẩm Bán lẻ
+        </a>
+        <a href="/noibo/services/" id="btn-quick-services" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; border-color: rgba(245,158,11,0.4); color: #fbbf24;">
+            ⚙️ Dịch vụ Kỹ thuật
+        </a>
+        <a href="/noibo/ai/" id="btn-quick-ai" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; border-color: rgba(168,85,247,0.4); color: #c084fc;">
+            🧠 AI & Dữ liệu
+        </a>
+        <a href="/noibo/telemetry/" id="btn-quick-telemetry" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">
+            ⚡ Giám sát AI & GIS
+        </a>
+        <a href="/noibo/thong-bao/" id="btn-quick-notifs" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+            🔔 Thông báo
+        </a>
+        <a href="/noibo/retail/orders/" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+            🛒 Đơn hàng
+        </a>
+        <a href="/noibo/services/requests/" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+            🎫 Phiếu Dịch vụ
+        </a>
+    </div>
+</div>
+
+<!-- Dual Business Domains Overview (2 Columns) -->
+<p>Chỉ tổng hợp dữ liệu trong phạm vi quyền được cấp. Dấu — nghĩa là chưa có quyền xem nhóm chỉ số, không phải giá trị bằng không.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Retail Domain Card -->
+    <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; border-top: 4px solid #6366f1;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+            <div>
+                <span style="font-size: 0.75rem; color: #818cf8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Miền Nghiệp vụ Bán lẻ</span>
+                <h3 style="font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">
+                    🛒 Cửa hàng Công nghệ ABC Tech Store
+                </h3>
+                <p style="font-size: 0.85rem; color: #94a3b8;">Phân phối thiết bị công nghệ cao cấp, linh kiện & phụ kiện chính hãng</p>
+            </div>
+            <span class="badge bg-primary" style="font-size: 0.75rem;">abc-retail</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
+            <a href="/noibo/retail/products/" id="card-retail-products-link" style="text-decoration: none; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 8px; border-radius: 10px; text-align: center; transition: all 0.2s; display: block;" onmouseover="this.style.background='rgba(99,102,241,0.15)'; this.style.borderColor='#6366f1';" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.06)';">
+                <div style="font-size: 0.72rem; color: #818cf8; font-weight: 600;">Sản phẩm ↗</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">{{ retail.products_count }}</div>
+                <div style="font-size: 0.68rem; color: #64748b;">Đang kinh doanh</div>
+            </a>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 8px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">Đơn Mới / Chờ</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: #fbbf24; margin-top: 2px;">{{ retail.new_orders_count }}</div>
+                <div style="font-size: 0.68rem; color: #64748b;">/ {{ retail.total_orders_count }} tổng đơn</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 8px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">Doanh thu Hoàn tất</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: #34d399; margin-top: 4px; word-break: break-all;">{{ retail.total_revenue|floatformat:0 }} <span style="font-size: 0.7rem;">VND</span></div>
+                <div style="font-size: 0.68rem; color: #64748b;">Đơn đã xác nhận/giao</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 8px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">Chi nhánh</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: #38bdf8; margin-top: 2px;">{{ retail.branches_count }}</div>
+                <div style="font-size: 0.68rem; color: #64748b;">Cửa hàng vật lý</div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="/noibo/retail/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                📊 Bảng điều khiển Bán lẻ
+            </a>
+            <a href="/noibo/retail/products/" id="btn-retail-products-card" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none; background: rgba(99,102,241,0.25); border-color: #6366f1; color: #f8fafc;">
+                💻 Quản lý Sản phẩm
+            </a>
+            <a href="/noibo/retail/orders/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                📦 Đơn hàng
+            </a>
+            <a href="/noibo/retail/customers/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                👥 Khách hàng
+            </a>
+            <a href="/noibo/retail/gis/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                🗺️ Bản đồ GIS Bán lẻ
+            </a>
+        </div>
+    </div>
+
+    <!-- Service Domain Card -->
+    <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; border-top: 4px solid #f59e0b;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+            <div>
+                <span style="font-size: 0.75rem; color: #fbbf24; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Miền Nghiệp vụ Dịch vụ Kỹ thuật</span>
+                <h3 style="font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">
+                    ⚙️ Dịch vụ Kỹ thuật XYZ IT Technical Services
+                </h3>
+                <p style="font-size: 0.85rem; color: #94a3b8;">Cài đặt hệ thống, bảo trì định kỳ, tư vấn CSDL & sửa chữa thiết bị công nghệ</p>
+            </div>
+            <span class="badge bg-warning" style="font-size: 0.75rem;">xyz-service</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.6rem; margin-bottom: 1.5rem;">
+            <a href="/noibo/services/services/" id="card-service-services-link" style="text-decoration: none; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center; transition: all 0.2s; display: block;" onmouseover="this.style.background='rgba(245,158,11,0.15)'; this.style.borderColor='#f59e0b';" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.06)';">
+                <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 600;">Dịch vụ ↗</div>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">{{ service.services_count }}</div>
+                <div style="font-size: 0.65rem; color: #64748b;">Gói dịch vụ</div>
+            </a>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">Phiếu Mới</div>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #38bdf8; margin-top: 2px;">{{ service.new_requests_count }}</div>
+                <div style="font-size: 0.65rem; color: #64748b;">Chờ tiếp nhận</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">Đang xử lý</div>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #a78bfa; margin-top: 2px;">{{ service.in_progress_count }}</div>
+                <div style="font-size: 0.65rem; color: #64748b;">Kỹ sư đang làm</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">Rủi ro SLA</div>
+                <div style="font-size: 1.35rem; font-weight: 700; color: {% if service.sla_risk_count > 0 %}#f87171{% else %}#34d399{% endif %}; margin-top: 2px;">
+                    {{ service.sla_risk_count }}
+                </div>
+                <div style="font-size: 0.65rem; color: #64748b;">Gần / Quá hạn</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">Kỹ sư</div>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #34d399; margin-top: 2px;">{{ service.technicians_count }}</div>
+                <div style="font-size: 0.65rem; color: #64748b;">Hiện trường</div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="/noibo/services/" id="btn-service-dash-card" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                📊 Bảng điều khiển Dịch vụ
+            </a>
+            <a href="/noibo/services/services/" id="btn-service-catalog-card" class="btn btn-warning" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none; background: rgba(245,158,11,0.25); border-color: #f59e0b; color: #f8fafc;">
+                🛠️ Danh mục Dịch vụ
+            </a>
+            <a href="/noibo/services/requests/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                🎫 Phiếu Sự cố Ticket
+            </a>
+            <a href="/noibo/services/employees/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                👨‍🔧 Kỹ sư Hiện trường
+            </a>
+            <a href="/noibo/services/slas/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                ⏱️ Cam kết SLA
+            </a>
+            <a href="/noibo/services/gis/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                🗺️ Bản đồ GIS Dịch vụ
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Unified Recent Business Activity Stream -->
+<div class="card glass-card" style="padding: 1.75rem; border-radius: 16px; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-bottom: 2px;">
+                ⚡ Dòng Sự kiện & Hoạt động Nghiệp vụ Gần đây
+            </h3>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">
+                Tổng hợp sự kiện mới nhất từ Đơn hàng, Phiếu Sự cố Dịch vụ, Khách hàng và Liên hệ trực tuyến
+            </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a href="/noibo/thong-bao/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; text-decoration: none;">
+                Xem Tất cả Thông báo ↗
+            </a>
+        </div>
+    </div>
+
+    {% if recent_activities %}
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+        {% for act in recent_activities %}
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; transition: background 0.15s ease;"
+             onmouseover="this.style.background='rgba(255,255,255,0.05)'"
+             onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+            <div style="display: flex; align-items: center; gap: 14px; min-width: 0;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+                    {{ act.badge_icon }}
+                </div>
+                <div style="min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-size: 0.95rem; font-weight: 600; color: #f8fafc;">
+                            {{ act.title }}
+                        </span>
+                        <span class="badge {% if act.domain_code == 'xyz-service' %}bg-warning{% else %}bg-primary{% endif %}" style="font-size: 0.7rem;">
+                            {{ act.domain_name }}
+                        </span>
+                        <span class="badge {{ act.status_badge }}" style="font-size: 0.7rem;">
+                            {{ act.status_label }}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 2px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                        {{ act.description }}
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0; margin-left: 12px;">
+                <span style="font-size: 0.78rem; color: #64748b;">
+                    {{ act.timestamp|date:"d/m/Y H:i" }}
+                </span>
+                <a href="{{ act.url }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.78rem; border-radius: 6px; text-decoration: none;">
+                    Chi tiết ↗
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 2rem; color: #64748b; font-size: 0.9rem;">
+        Chưa có hoạt động nghiệp vụ nào được ghi nhận.
+    </div>
+    {% endif %}
+</div>
+
+<!-- 4 Core AI & Advanced Capability Engines -->
+<h2 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-bottom: 1rem;">
+    Động cơ Trí tuệ Nhân tạo & Phân tích Chuyên sâu
+</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem;">
+    <!-- GIS Card -->
+    <div class="card glass-card" style="padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div style="font-size: 28px; margin-bottom: 0.75rem;">🗺️</div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.4rem;">Không gian GIS PostGIS</h4>
+            <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.5;">
+                Vùng phủ sóng chi nhánh, mật độ doanh thu không gian và thuật toán điều phối kỹ sư theo khoảng cách trắc địa thực tế.
+            </p>
+        </div>
+        <div style="margin-top: 1rem; pt: 1rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 8px;">
+            <a href="/noibo/retail/gis/" class="text-primary" style="font-size: 0.8rem; font-weight: 600; text-decoration: none;">Bán lẻ ↗</a>
+            <span style="color: #475569;">|</span>
+            <a href="/noibo/services/gis/" class="text-primary" style="font-size: 0.8rem; font-weight: 600; text-decoration: none;">Dịch vụ ↗</a>
+        </div>
+    </div>
+
+    <!-- Forecasting Card -->
+    <div class="card glass-card" style="padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div style="font-size: 28px; margin-bottom: 0.75rem;">📈</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin: 0;">Dự báo XGBoost</h4>
+                <span class="badge bg-primary" style="font-size: 0.7rem;">{{ ai_insights.active_forecasts_count }} Mô hình</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.5;">
+                Mô hình hồi quy XGBoost với đặc trưng độ trễ (Lag 1, 7, 14), dự báo doanh thu và khối lượng công việc chu kỳ 14 ngày.
+            </p>
+        </div>
+        <div style="margin-top: 1rem; pt: 1rem; border-top: 1px solid rgba(255,255,255,0.06);">
+            <a href="/noibo/forecasting/" class="text-primary" style="font-size: 0.8rem; font-weight: 600; text-decoration: none;">Bảng điều khiển Dự báo ↗</a>
+        </div>
+    </div>
+
+    <!-- RAG & AI Assistant Card -->
+    <div class="card glass-card" style="padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div style="font-size: 28px; margin-bottom: 0.75rem;">🤖</div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.4rem;">Trợ lý AI & RAG Tri thức</h4>
+            <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.5;">
+                Neo đậu tri thức tài liệu nội bộ với pgvector, trích dẫn minh bạch nguồn tham khảo và kích hoạt công cụ viễn trắc an toàn.
+            </p>
+        </div>
+        <div style="margin-top: 1rem; pt: 1rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 8px;">
+            <a href="/noibo/ai/" class="text-primary" style="font-size: 0.8rem; font-weight: 600; text-decoration: none;">Trò chuyện AI ↗</a>
+            <span style="color: #475569;">|</span>
+            <a href="/noibo/knowledge/" class="text-primary" style="font-size: 0.8rem; font-weight: 600; text-decoration: none;">Kho Tri thức ↗</a>
+        </div>
+    </div>
+
+    <!-- Recommendations & Approvals Card -->
+    <div class="card glass-card" style="padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div style="font-size: 28px; margin-bottom: 0.75rem;">🛡️</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin: 0;">Khuyến nghị & Duyệt</h4>
+                <span class="badge bg-warning" style="font-size: 0.7rem;">{{ ai_insights.pending_recommendations_count }} Đề xuất</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.5;">
+                Động cơ đề xuất vận hành tường minh, quy trình phê duyệt tác vụ 2 cấp (Human-in-the-loop) và nhật ký kiểm toán bất biến.
+            </p>
+        </div>
+        <div style="margin-top: 1rem; pt: 1rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 8px;">
+            <a href="/noibo/recommendations/" class="text-primary" style="font-size: 0.8rem; font-weight: 600; text-decoration: none;">Khuyến nghị ({{ ai_insights.pending_recommendations_count }}) ↗</a>
+            <span style="color: #475569;">|</span>
+            <a href="/noibo/approvals/" class="text-primary" style="font-size: 0.8rem; font-weight: 600; text-decoration: none;">Phê duyệt ({{ ai_insights.pending_approvals_count }}) ↗</a>
+        </div>
+    </div>
+
+    <!-- Data Integration & Standard Mapping Studio Card -->
+    <div class="card glass-card" style="padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div style="font-size: 28px; margin-bottom: 0.75rem;">🔄</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin: 0;">Tích hợp & Ánh xạ Chuẩn</h4>
+                <span class="badge bg-primary" style="font-size: 0.7rem;">ETL + AI Mapping</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.5;">
+                Bộ chuyển đổi dữ liệu nguồn (CSV/Excel/API Mock), cơ chế AI-assisted Mapping gợi ý ánh xạ trường tự động và chuẩn hóa về Standard Data Model.
+            </p>
+        </div>
+        <div style="margin-top: 1rem; pt: 1rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 8px;">
+            <a href="/noibo/integration/" class="text-primary" style="font-size: 0.8rem; font-weight: 600; text-decoration: none;">Nguồn & Nhập dữ liệu ↗</a>
+            <span style="color: #475569;">|</span>
+            <a href="/noibo/mapping/" class="text-primary" style="font-size: 0.8rem; font-weight: 600; text-decoration: none;">Ánh xạ Dữ liệu ↗</a>
+        </div>
+    </div>
+</div>
+
+<!-- Runtime & Infrastructure Status Summary -->
+<div class="card glass-card" style="padding: 1.5rem 1.75rem; border-radius: 14px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.25rem;">
+                Hạ tầng Kỹ thuật & Độ sẵn sàng Nền tảng
+            </h3>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem; color: #94a3b8;">
+                <span>Python: <strong style="color: #cbd5e1;">{{ health.environment.python_version }}</strong></span>
+                <span>Django: <strong style="color: #cbd5e1;">{{ health.environment.django_version }}</strong></span>
+                <span>CSDL: <strong style="color: #34d399;">PostgreSQL (Đã kết nối)</strong></span>
+                <span>Không gian: <strong style="color: #38bdf8;">{{ health.database.postgis }}</strong></span>
+                <span>Hiện trạng: <strong style="color: #a78bfa;">{{ health.phase.current }}</strong></span>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="/noibo/status/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                🔍 Chi tiết Trạng thái Kỹ thuật
+            </a>
+            <a href="/health/" target="_blank" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                JSON Health API ↗
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Trung tâm Phê duyệt — {{ active_workspace.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.app-container {
+    padding: 1.5rem;
+    color: #f8fafc;
+}
+
+.studio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+}
+
+.studio-title h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+}
+
+.studio-title p {
+    color: #94a3b8;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.kpi-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+}
+
+.kpi-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.kpi-val {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #38bdf8;
+    margin-top: 0.25rem;
+}
+
+.custom-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+}
+
+.custom-table th {
+    background: rgba(15, 23, 42, 0.8);
+    color: #94a3b8;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.custom-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #cbd5e1;
+}
+
+.custom-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.badge-risk {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.risk-HIGH, .risk-CRITICAL { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+.risk-MEDIUM { background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4); }
+.risk-LOW { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.4); }
+
+.status-PENDING { color: #c084fc; font-weight: 600; }
+.status-EXECUTED { color: #34d399; font-weight: 600; }
+.status-REJECTED { color: #94a3b8; font-weight: 600; }
+
+.btn-approve {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-reject {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-container">
+    <div class="studio-header">
+        <div class="studio-title">
+            <h1>🛡️ Trung tâm Phê duyệt &amp; Hành động Có kiểm soát</h1>
+            <p>Quy trình phê duyệt hai bước có sự tham gia của con người (Human-in-the-loop), thực thi kiểm soát RBAC, xác thực cấu trúc và chống trùng lặp (idempotency).</p>
+        </div>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Không gian làm việc</div>
+            <div class="kpi-val">{{ active_workspace.code }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Yêu cầu Chờ duyệt</div>
+            <div class="kpi-val" style="color: #c084fc;">{{ pending_count }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Tổng số Yêu cầu</div>
+            <div class="kpi-val" style="color: #38bdf8;">{{ total_count }}</div>
+        </div>
+    </div>
+
+    <div style="background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.25rem; overflow-x: auto;">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Mã YC</th>
+                    <th>Hành động (Công cụ)</th>
+                    <th>Người yêu cầu</th>
+                    <th>Mức rủi ro</th>
+                    <th>Tham số / Chi tiết</th>
+                    <th>Lý do</th>
+                    <th>Trạng thái</th>
+                    <th>Thời điểm gửi</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in approval_requests %}
+                <tr>
+                    <td>#{{ req.id }}</td>
+                    <td><strong style="color: #38bdf8;">{{ req.proposed_action }}</strong></td>
+                    <td>{{ req.requester.get_full_name|default:req.requester.username }}</td>
+                    <td>
+                        <span class="badge-risk risk-{{ req.risk_level }}">
+                            {% if req.risk_level == 'CRITICAL' %}Khẩn cấp
+                            {% elif req.risk_level == 'HIGH' %}Cao
+                            {% elif req.risk_level == 'MEDIUM' %}Trung bình
+                            {% else %}Thấp{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <pre style="margin: 0; font-size: 0.75rem; color: #cbd5e1; background: rgba(0,0,0,0.3); padding: 0.3rem 0.5rem; border-radius: 4px; max-width: 250px; overflow-x: auto;">{{ req.parameters }}</pre>
+                    </td>
+                    <td>{{ req.reason|truncatechars:60 }}</td>
+                    <td>
+                        <span class="status-{{ req.status }}">
+                            {% if req.status == 'PENDING' %}Chờ phê duyệt
+                            {% elif req.status == 'APPROVED' %}Đã phê duyệt
+                            {% elif req.status == 'EXECUTED' %}Đã thực hiện
+                            {% elif req.status == 'REJECTED' %}Đã từ chối
+                            {% else %}{{ req.status }}{% endif %}
+                        </span>
+                    </td>
+                    <td>{{ req.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        {% if req.status == 'PENDING' and can_approve %}
+                        <div style="display: flex; gap: 0.35rem;">
+                            <button class="btn-approve" onclick="decideApproval({{ req.id }}, 'APPROVED')">Phê duyệt</button>
+                            <button class="btn-reject" onclick="decideApproval({{ req.id }}, 'REJECTED')">Từ chối</button>
+                        </div>
+                        {% else %}
+                        <span style="font-size: 0.75rem; color: #64748b;">
+                            {% if req.status == 'EXECUTED' %}Thực hiện bởi {{ req.reviewer.username|default:"Hệ thống" }}{% else %}-{% endif %}
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        ℹ️ Không có yêu cầu phê duyệt nào đang chờ trong không gian làm việc này.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function decideApproval(id, decision) {
+    const promptText = decision === 'APPROVED' ? 'Xác nhận Phê duyệt' : 'Xác nhận Từ chối';
+    const reason = prompt(`${promptText}: Nhập lý do quyết định cho Yêu cầu #${id}:`, decision === 'APPROVED' ? 'Đã duyệt qua Trung tâm Phê duyệt' : 'Từ chối qua Trung tâm Phê duyệt');
+    if (reason === null) return;
+
+    fetch(`/api/v1/approvals/${id}/decision/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ decision: decision, decision_reason: reason })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Yêu cầu phê duyệt #${id} đã được ${decision === 'APPROVED' ? 'phê duyệt' : 'từ chối'} thành công!`);
+            location.reload();
+        } else {
+            alert('Thao tác thất bại: ' + (data.error || 'Lỗi không xác định'));
+        }
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

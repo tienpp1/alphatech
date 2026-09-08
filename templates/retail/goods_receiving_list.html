@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Nhập hàng & Phiếu nhập kho - Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block extra_head %}
+<style>
+.kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+.kpi-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    transition: transform 0.2s, border-color 0.2s;
+}
+.kpi-box:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+.kpi-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+}
+.kpi-num {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+.filter-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+.select-input, .text-input {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f8fafc;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    outline: none;
+}
+.select-input:focus, .text-input:focus {
+    border-color: #6366f1;
+}
+.btn-primary {
+    background: #6366f1;
+    color: #ffffff;
+    padding: 0.55rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-primary:hover {
+    background: #4f46e5;
+}
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    padding: 0.55rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+.table-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow-x: auto;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.data-table th, .data-table td {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.data-table th {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.badge {
+    padding: 0.25rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+}
+.badge-draft { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+.badge-confirmed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+.badge-received { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+.badge-cancelled { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">Quản lý Nhập hàng & Phiếu nhập kho</h1>
+        <p style="color: #94a3b8;">
+            Quy trình nhập kho chuẩn hóa: Bản nháp &rarr; Đã xác nhận &rarr; Nhập kho thực tế (tăng tồn chi nhánh).
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="/retail/stockout-risk/" class="btn-secondary">
+            <span>⚠️</span>
+            <span>Dự báo Nguy cơ Hết hàng</span>
+        </a>
+        {% if can_manage %}<a href="/retail/goods-receiving/create/" class="btn-primary" id="btn-create-receipt">
+            <span>➕</span>
+            <span>Tạo Phiếu Nhập Mới</span>
+        </a>{% endif %}
+    </div>
+</div>
+
+<!-- KPI Row -->
+<div class="kpi-row">
+    <div class="kpi-box">
+        <div class="kpi-label">Bản nháp (DRAFT)</div>
+        <div class="kpi-num" style="color: #cbd5e1;">{{ draft_count }}</div>
+    </div>
+    <div class="kpi-box">
+        <div class="kpi-label">Đã xác nhận (CONFIRMED)</div>
+        <div class="kpi-num" style="color: #60a5fa;">{{ confirmed_count }}</div>
+    </div>
+    <div class="kpi-box">
+        <div class="kpi-label">Đã nhập kho (RECEIVED)</div>
+        <div class="kpi-num" style="color: #4ade80;">{{ received_count }}</div>
+    </div>
+    <div class="kpi-box">
+        <div class="kpi-label">Tổng số phiếu</div>
+        <div class="kpi-num" style="color: #c084fc;">{{ receipts.count }}</div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-card">
+    <form method="get" class="filter-form">
+        <input type="text" name="q" value="{{ search_q }}" placeholder="Tìm mã phiếu..." class="text-input" style="width: 180px;">
+        
+        <select name="status" class="select-input">
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="DRAFT" {% if status_filter == 'DRAFT' %}selected{% endif %}>Bản nháp (DRAFT)</option>
+            <option value="CONFIRMED" {% if status_filter == 'CONFIRMED' %}selected{% endif %}>Đã xác nhận (CONFIRMED)</option>
+            <option value="RECEIVED" {% if status_filter == 'RECEIVED' %}selected{% endif %}>Đã nhập kho (RECEIVED)</option>
+            <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>Đã hủy (CANCELLED)</option>
+        </select>
+
+        <select name="branch_id" class="select-input">
+            <option value="">-- Tất cả chi nhánh --</option>
+            {% for b in branches %}
+            <option value="{{ b.id }}" {% if selected_branch == b.id %}selected{% endif %}>{{ b.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="supplier_id" class="select-input">
+            <option value="">-- Tất cả nhà cung cấp --</option>
+            {% for s in suppliers %}
+            <option value="{{ s.id }}" {% if selected_supplier == s.id %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">Lọc</button>
+        {% if search_q or status_filter or selected_branch or selected_supplier %}
+        <a href="/retail/goods-receiving/" class="btn-secondary" style="padding: 0.5rem 0.85rem;">Xóa lọc</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Table Card -->
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Mã phiếu</th>
+                <th>Ngày nhập</th>
+                <th>Nhà cung cấp</th>
+                <th>Chi nhánh nhận</th>
+                <th>Trạng thái</th>
+                <th>Số mặt hàng</th>
+                <th>Tổng tiền nhập</th>
+                <th>Người tạo</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in receipts %}
+            <tr>
+                <td><strong>{{ r.receipt_number }}</strong></td>
+                <td>{{ r.receipt_date|date:"Y-m-d" }}</td>
+                <td>{{ r.supplier.name }}<br><small style="color: #64748b;">{{ r.supplier.code }}</small></td>
+                <td>{{ r.branch.name }}</td>
+                <td>
+                    <span class="badge badge-{{ r.status|lower }}">
+                        {% if r.status == 'DRAFT' %}Bản nháp
+                        {% elif r.status == 'CONFIRMED' %}Đã xác nhận
+                        {% elif r.status == 'RECEIVED' %}Đã nhập kho
+                        {% elif r.status == 'CANCELLED' %}Đã hủy
+                        {% else %}{{ r.status }}{% endif %}
+                    </span>
+                </td>
+                <td>{{ r.items.count }} mặt hàng</td>
+                <td style="font-weight: 700; color: #38bdf8;">{{ r.total_amount|floatformat:0 }} VND</td>
+                <td>{{ r.created_by.username|default:"System" }}</td>
+                <td>
+                    <a href="/retail/goods-receiving/{{ r.id }}/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Chi tiết &rarr;</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" style="text-align: center; color: #64748b; padding: 2.5rem 1rem;">
+                    Chưa có phiếu nhập hàng nào phù hợp với điều kiện tìm kiếm.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

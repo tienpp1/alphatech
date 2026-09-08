@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+
+{% block title %}Bản đồ GIS Vận hành Dịch vụ & Điều phối Khoảng cách — {{ active_workspace.name }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    .gis-layout {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 1.5rem;
+        height: calc(100vh - 180px);
+        min-height: 600px;
+    }
+    .gis-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+    .map-container {
+        position: relative;
+        height: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    #service-map {
+        height: 100%;
+        width: 100%;
+        background: #111827;
+    }
+    .leaflet-popup-content-wrapper {
+        background: #1f2937 !important;
+        color: #f3f4f6 !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+    }
+    .leaflet-popup-tip {
+        background: #1f2937 !important;
+    }
+    .tech-pin {
+        background: #2563eb;
+        color: white;
+        border: 2px solid white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        box-shadow: 0 0 10px rgba(37, 99, 235, 0.8);
+    }
+    .ticket-pin {
+        border: 2px solid white;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        color: white;
+    }
+    .ticket-crit { background: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.9); }
+    .ticket-high { background: #f97316; box-shadow: 0 0 10px rgba(249, 115, 22, 0.8); }
+    .ticket-med  { background: #eab308; box-shadow: 0 0 8px rgba(234, 179, 8, 0.8); }
+    .ticket-low  { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.8); }
+    .legend-box {
+        background: rgba(31, 41, 55, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.35rem;
+    }
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .proximity-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 8px;
+        transition: transform 0.15s ease;
+    }
+    .proximity-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #3b82f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 1rem;">
+    <div class="header-left">
+        <h1 class="page-title">🗺️ Vận hành GIS & Điều phối Khoảng cách Tối ưu</h1>
+        <p class="page-subtitle">Service GIS Operations — Động cơ Không gian PostGIS: Vị trí kỹ thuật viên hiện trường, Tọa độ sự cố & Khoảng cách trắc địa</p>
+    </div>
+    <div class="header-actions">
+        <span class="badge bg-warning" id="kpi-tech-count">{{ technician_count }} Kỹ sư trực tuyến</span>
+        <span class="badge bg-primary" id="kpi-ticket-count">{{ ticket_count }} Phiếu sự cố</span>
+        <span class="badge bg-info" id="kpi-coverage-radius">Bán kính phủ sóng 5.0 km</span>
+    </div>
+</div>
+
+<div class="gis-layout">
+    <!-- Sidebar: Spatial Filter Controls & Proximity Inspector -->
+    <div class="gis-sidebar">
+        <!-- Ticket Filter Controls -->
+        <div class="card bg-gray-900 border-gray-800 p-4">
+            <h3 class="font-bold text-sm text-gray-400 uppercase tracking-wider mb-3">🎯 Bộ lọc Vận hành</h3>
+            
+            <div class="mb-3">
+                <label class="text-xs text-gray-400 mb-1 block">Phân loại dịch vụ CNTT</label>
+                <select id="filter-category" class="form-control text-sm">
+                    <option value="">Tất cả 4 Phân loại CNTT</option>
+                    {% for code, label in categories %}
+                    <option value="{{ code }}">
+                        {% if code == 'INSTALLATION' %}Cài đặt hệ thống
+                        {% elif code == 'MAINTENANCE' %}Bảo trì hệ thống
+                        {% elif code == 'DATABASE_CONSULTING' %}Tư vấn CSDL
+                        {% elif code == 'DEVICE_REPAIR' %}Sửa chữa thiết bị
+                        {% else %}{{ label }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <label class="text-xs text-gray-400 mb-1 block">Ưu tiên</label>
+                    <select id="filter-priority" class="form-control text-sm">
+                        <option value="">Tất cả Ưu tiên</option>
+                        {% for code, label in priorities %}
+                        <option value="{{ code }}">
+                            {% if code == 'CRITICAL' %}Khẩn cấp
+                            {% elif code == 'HIGH' %}Cao
+                            {% elif code == 'MEDIUM' %}Trung bình
+                            {% else %}Thấp{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 mb-1 block">Trạng thái</label>
+                    <select id="filter-status" class="form-control text-sm">
+                        <option value="">Tất cả Trạng thái</option>
+                        {% for code, label in statuses %}
+                        <option value="{{ code }}">
+                            {% if code == 'OPEN' %}Mở
+                            {% elif code == 'ASSIGNED' %}Đã phân công
+                            {% elif code == 'IN_PROGRESS' %}Đang xử lý
+                            {% elif code == 'RESOLVED' %}Đã giải quyết
+                            {% elif code == 'CLOSED' %}Đã đóng
+                            {% elif code == 'CANCELLED' %}Đã hủy
+                            {% else %}{{ label }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Layer Toggles -->
+            <div class="flex flex-col gap-2 pt-2 border-t border-gray-800 text-xs">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="toggle-tickets" checked class="form-checkbox">
+                    <span>Hiện Phiếu sự cố</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="toggle-technicians" checked class="form-checkbox">
+                    <span>Hiện Kỹ thuật viên</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="toggle-coverage" checked class="form-checkbox">
+                    <span>Hiện Vùng bao phủ</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Proximity Dispatch Inspector Box -->
+        <div class="card bg-gray-900 border-gray-800 p-4 flex-1" id="proximity-inspector-panel">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-sm text-gray-400 uppercase tracking-wider">📍 Điều phối Khoảng cách Gần nhất (Proximity Dispatch Inspector)</h3>
+                <span class="badge bg-blue-900 text-blue-300" id="proximity-badge" style="display: none;">Đang chọn</span>
+            </div>
+
+            <div id="proximity-content">
+                <div class="text-gray-500 text-center py-6 text-sm">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔍</div>
+                    Nhấp vào bất kỳ ghim phiếu sự cố nào trên bản đồ và chọn <strong>"Tìm Kỹ sư Gần nhất"</strong> để thực thi truy vấn không gian PostGIS ($ST\_DWithin$ & $ST\_Distance$).
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend Box -->
+        <div class="legend-box">
+            <div class="font-bold text-gray-300 mb-2">Chú giải Bản đồ GIS Vận hành</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #2563eb;"></span> Kỹ thuật viên Hiện trường (Kỹ sư CNTT)</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #ef4444;"></span> Phiếu sự cố Khẩn cấp</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #f97316;"></span> Phiếu sự cố Mức Cao</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #eab308;"></span> Phiếu sự cố Mức Trung bình</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> Phiếu sự cố Mức Thấp</div>
+        </div>
+    </div>
+
+    <!-- Map View -->
+    <div class="map-container">
+        <div id="service-map"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Initialize Map
+    const map = L.map("service-map", {
+        center: [10.7769, 106.7009],
+        zoom: 12,
+        zoomControl: true,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | GeoDjango + PostGIS',
+        maxZoom: 19,
+    }).addTo(map);
+
+    const ticketLayerGroup = L.layerGroup().addTo(map);
+    const techLayerGroup = L.layerGroup().addTo(map);
+    const coverageLayerGroup = L.layerGroup().addTo(map);
+    const proximityLayerGroup = L.layerGroup().addTo(map);
+
+    function formatVND(val) {
+        return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
+    }
+
+    // 2. Load Service Incident Tickets
+    function loadTickets() {
+        const cat = document.getElementById("filter-category").value;
+        const prio = document.getElementById("filter-priority").value;
+        const stat = document.getElementById("filter-status").value;
+
+        let url = "/api/v1/gis/service/tickets/?";
+        if (cat) url += `category=${cat}&`;
+        if (prio) url += `priority=${prio}&`;
+        if (stat) url += `status=${stat}&`;
+
+        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(res => res.json())
+            .then(res => {
+                ticketLayerGroup.clearLayers();
+                if (res.status !== "success" || !res.data || !res.data.features) return;
+
+                const features = res.data.features;
+                document.getElementById("kpi-ticket-count").textContent = `${features.length} Incident Tickets`;
+
+                features.forEach(feat => {
+                    const [lon, lat] = feat.geometry.coordinates;
+                    const props = feat.properties;
+
+                    let pinClass = "ticket-med";
+                    if (props.priority === "CRITICAL") pinClass = "ticket-crit";
+                    else if (props.priority === "HIGH") pinClass = "ticket-high";
+                    else if (props.priority === "LOW") pinClass = "ticket-low";
+
+                    const ticketIcon = L.divIcon({
+                        className: "custom-div-icon",
+                        html: `<div class="ticket-pin ${pinClass}">⚡</div>`,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14],
+                    });
+
+                    const marker = L.marker([lat, lon], { icon: ticketIcon });
+                    marker.bindPopup(`
+                        <div style="min-width: 240px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <strong style="color: #60a5fa; font-size: 0.95rem;">${props.request_number}</strong>
+                                <span class="badge ${pinClass}" style="font-size: 0.7rem;">${props.priority}</span>
+                            </div>
+                            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">${props.title}</div>
+                            <div style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 6px;">
+                                Phân loại: <span class="badge bg-gray-800" style="color: #6ee7b7;">${props.category_display}</span>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 0.8rem;">
+                                <div>🏢 Khách hàng: <strong>${props.customer_name}</strong></div>
+                                <div>🔧 Phân công: <strong>${props.assigned_employee_name}</strong></div>
+                                <div>⏱️ Trạng thái: <span class="badge bg-primary" style="font-size: 0.7rem;">${props.status_display}</span></div>
+                                ${props.is_breached ? '<div style="color: #ef4444; font-weight: bold; margin-top: 4px;">⚠️ ĐÃ VI PHẠM SLA</div>' : ''}
+                            </div>
+                            <div style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 10px;">📍 ${props.customer_address}</div>
+                            <button onclick="inspectNearbyTechnicians(${props.ticket_id})" class="btn btn-sm btn-primary" style="width: 100%; font-size: 0.8rem;">
+                                📍 Tìm Kỹ sư Gần nhất
+                            </button>
+                        </div>
+                    `);
+                    ticketLayerGroup.addLayer(marker);
+                });
+            })
+            .catch(err => console.error("Error loading tickets GIS:", err));
+    }
+
+    // 3. Load Technicians & Coverage Envelopes
+    function loadTechnicians() {
+        fetch("/api/v1/gis/service/technicians/", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(res => res.json())
+            .then(res => {
+                techLayerGroup.clearLayers();
+                coverageLayerGroup.clearLayers();
+                if (res.status !== "success" || !res.data || !res.data.features) return;
+
+                const features = res.data.features;
+                document.getElementById("kpi-tech-count").textContent = `${features.length} Kỹ sư trực tuyến`;
+
+                features.forEach(feat => {
+                    const [lon, lat] = feat.geometry.coordinates;
+                    const props = feat.properties;
+
+                    const techIcon = L.divIcon({
+                        className: "custom-div-icon",
+                        html: `<div class="tech-pin">👨‍💻</div>`,
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15],
+                    });
+
+                    const marker = L.marker([lat, lon], { icon: techIcon });
+                    marker.bindPopup(`
+                        <div style="min-width: 220px;">
+                            <div style="font-weight: bold; color: #60a5fa; font-size: 0.95rem;">${props.full_name} (${props.code})</div>
+                            <div style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 6px;">📞 ${props.phone}</div>
+                            <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 0.8rem;">
+                                <div>💼 Đơn giá: <strong style="color: #34d399;">${props.formatted_rate}</strong></div>
+                                <div>📊 Chỉ số tải: <strong>${props.current_workload_score.toFixed(1)}</strong></div>
+                                <div>⚡ Trạng thái: <span class="badge ${props.is_available ? 'bg-success' : 'bg-danger'}">${props.is_available ? 'Sẵn sàng' : 'Bận'}</span></div>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #cbd5e1;">Kỹ năng: <em>${props.skills.join(', ')}</em></div>
+                        </div>
+                    `);
+                    techLayerGroup.addLayer(marker);
+
+                    // Add 5.0km service coverage circle
+                    const circle = L.circle([lat, lon], {
+                        radius: 5000,
+                        color: "#3b82f6",
+                        fillColor: "#3b82f6",
+                        fillOpacity: 0.08,
+                        weight: 1,
+                        dashArray: "4, 4",
+                    });
+                    coverageLayerGroup.addLayer(circle);
+                });
+            })
+            .catch(err => console.error("Error loading technicians GIS:", err));
+    }
+
+    // 4. Proximity Search Function
+    window.inspectNearbyTechnicians = function(ticketId) {
+        proximityLayerGroup.clearLayers();
+        const contentPanel = document.getElementById("proximity-content");
+        const badge = document.getElementById("proximity-badge");
+        badge.style.display = "inline-block";
+        badge.textContent = `Phiếu #${ticketId}`;
+
+        contentPanel.innerHTML = `<div class="text-center py-4 text-sm text-gray-400">Đang thực thi truy vấn PostGIS ST_DWithin & ST_Distance...</div>`;
+
+        fetch(`/api/v1/gis/service/nearby-technicians/?request_id=${ticketId}&radius_km=10`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status !== "success" || !res.data) {
+                contentPanel.innerHTML = `<div class="text-red-400 text-sm py-2">Truy vấn vị trí thất bại.</div>`;
+                return;
+            }
+
+            const data = res.data;
+            const [tLon, tLat] = data.ticket_coordinates;
+
+            // Draw search radius circle on map
+            const searchCircle = L.circle([tLat, tLon], {
+                radius: data.search_radius_km * 1000,
+                color: "#f59e0b",
+                fillColor: "#f59e0b",
+                fillOpacity: 0.1,
+                weight: 2,
+            });
+            proximityLayerGroup.addLayer(searchCircle);
+
+            map.setView([tLat, tLon], 13);
+
+            if (data.candidates.length === 0) {
+                contentPanel.innerHTML = `
+                    <div class="text-yellow-400 text-sm py-3 text-center">
+                        Không tìm thấy kỹ sư khả dụng nào trong phạm vi ${data.search_radius_km} km.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div style="margin-bottom: 8px; font-size: 0.8rem; color: #9ca3af;">
+                    Tìm thấy <strong>${data.total_candidates}</strong> kỹ sư đủ điều kiện trong phạm vi <strong>${data.search_radius_km} km</strong> (Sắp xếp theo khoảng cách trắc địa):
+                </div>
+            `;
+
+            data.candidates.forEach((cand, idx) => {
+                const [cLon, cLat] = cand.coordinates;
+
+                // Draw distance line on map
+                const line = L.polyline([[tLat, tLon], [cLat, cLon]], {
+                    color: "#f59e0b",
+                    weight: 2,
+                    dashArray: "5, 5",
+                    opacity: 0.7,
+                });
+                proximityLayerGroup.addLayer(line);
+
+                html += `
+                    <div class="proximity-card">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-gray-200">#${idx + 1} ${cand.full_name}</span>
+                            <span class="badge bg-warning text-black" style="font-size: 0.75rem; font-weight: bold;">
+                                📍 ${cand.distance_km} km
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-400 mb-1">
+                            Mã: ${cand.code} | Đơn giá: <span class="text-emerald-400">${cand.formatted_rate}</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400 mb-1">
+                            <span>Chỉ số tải: <strong>${cand.current_workload_score.toFixed(1)}</strong></span>
+                            <span>Trạng thái: <strong class="text-green-400">Sẵn sàng</strong></span>
+                        </div>
+                        <div class="text-xs text-gray-500 truncate">Kỹ năng: ${cand.skills.join(', ')}</div>
+                    </div>
+                `;
+            });
+
+            contentPanel.innerHTML = html;
+        })
+        .catch(err => {
+            console.error("Proximity query error:", err);
+            contentPanel.innerHTML = `<div class="text-red-400 text-sm py-2">Lỗi khi tính toán khoảng cách.</div>`;
+        });
+    };
+
+    // Filter event listeners
+    document.getElementById("filter-category").addEventListener("change", loadTickets);
+    document.getElementById("filter-priority").addEventListener("change", loadTickets);
+    document.getElementById("filter-status").addEventListener("change", loadTickets);
+
+    document.getElementById("toggle-tickets").addEventListener("change", function() {
+        if (this.checked) map.addLayer(ticketLayerGroup);
+        else map.removeLayer(ticketLayerGroup);
+    });
+
+    document.getElementById("toggle-technicians").addEventListener("change", function() {
+        if (this.checked) map.addLayer(techLayerGroup);
+        else map.removeLayer(techLayerGroup);
+    });
+
+    document.getElementById("toggle-coverage").addEventListener("change", function() {
+        if (this.checked) map.addLayer(coverageLayerGroup);
+        else map.removeLayer(coverageLayerGroup);
+    });
+
+    // Initial Load
+    loadTickets();
+    loadTechnicians();
+});
+</script>
+{% endblock %}

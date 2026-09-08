@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Công việc Vận hành — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">Bảng Quản lý Công việc Kỹ thuật</h1>
+        <p class="text-secondary">Các hạng mục kỹ thuật chi tiết được thực hiện bởi đội ngũ kỹ sư</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Mã việc</th>
+                    <th>Tiêu đề</th>
+                    <th>Mã Ticket</th>
+                    <th>Người thực hiện</th>
+                    <th>Ưu tiên</th>
+                    <th>Dự kiến</th>
+                    <th>Thực tế</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tasks %}
+                <tr>
+                    <td><code>#{{ t.id }}</code></td>
+                    <td><strong>{{ t.title }}</strong></td>
+                    <td><a href="/services/requests/{{ t.service_request.id }}/"><code>{{ t.service_request.request_number }}</code></a></td>
+                    <td>
+                        {% if t.assigned_to %}
+                        <span>👨‍🔧 {{ t.assigned_to.full_name }}</span>
+                        {% else %}
+                        <span class="text-secondary">Chưa phân công</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if t.priority == 'CRITICAL' %}bg-danger{% elif t.priority == 'HIGH' %}bg-warning{% else %}bg-primary{% endif %}">
+                            {% if t.priority == 'CRITICAL' %}Khẩn cấp
+                            {% elif t.priority == 'HIGH' %}Cao
+                            {% elif t.priority == 'MEDIUM' %}Trung bình
+                            {% else %}Thấp{% endif %}
+                        </span>
+                    </td>
+                    <td>{{ t.estimated_duration_minutes }} phút</td>
+                    <td>
+                        {% if t.actual_duration_minutes %}
+                        <strong>{{ t.actual_duration_minutes }} phút</strong>
+                        {% else %}
+                        <span class="text-secondary">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if t.status == 'COMPLETED' %}bg-success{% elif t.status == 'CANCELLED' %}bg-danger{% else %}bg-primary{% endif %}">
+                            {% if t.status == 'COMPLETED' %}Hoàn thành
+                            {% elif t.status == 'CANCELLED' %}Đã hủy
+                            {% elif t.status == 'IN_PROGRESS' %}Đang thực hiện
+                            {% else %}Chờ xử lý{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-secondary">Không tìm thấy công việc nào.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}{{ service.name }} | XYZ IT Technical Services{% endblock %}
+
+{% block content %}
+<!-- Page Hero Banner / Breadcrumb -->
+<div class="page-hero-banner" style="padding: 1.75rem 1.5rem;">
+    <div class="page-hero-grid" aria-hidden="true"></div>
+    <div class="page-hero-container">
+        <div class="page-breadcrumb">
+            <a href="/">Trang chủ</a>
+            <span>/</span>
+            <a href="/dich-vu/">Dịch vụ kỹ thuật IT</a>
+            <span>/</span>
+            <span style="color: #F8FAFC;">{{ service.name }}</span>
+        </div>
+        <div class="page-domain-tag services">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+            </svg>
+            XYZ IT SERVICES • TECHNICAL PACKAGE
+        </div>
+    </div>
+</div>
+
+<div class="pub-section" style="padding-top: 2.5rem;">
+    <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 3rem; margin-bottom: 3.5rem;">
+        <!-- Left: Service Scope & Workflow -->
+        <div>
+            <div style="display: inline-flex; align-items: center; gap: 8px; font-family: var(--pub-mono-font); font-size: 0.78rem; font-weight: 700; color: var(--pub-accent); background: var(--pub-accent-light); padding: 4px 14px; border-radius: 9999px; margin-bottom: 1rem; border: 1px solid rgba(2, 132, 199, 0.2);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+                <span>{{ category_label }}</span>
+            </div>
+
+            <h1 style="font-size: 2.2rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 1.25rem; line-height: 1.25; letter-spacing: -0.025em;">
+                {{ service.name }}
+            </h1>
+
+            <!-- Price & Duration Metric Box -->
+            <div style="background: linear-gradient(135deg, #F8FAFC 0%, #F0F9FF 100%); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--pub-border); margin-bottom: 2rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div>
+                        <div style="font-size: 0.82rem; color: var(--pub-text-muted); margin-bottom: 4px;">Đơn giá dịch vụ cơ sở</div>
+                        <div style="font-family: var(--pub-mono-font); font-size: 1.8rem; font-weight: 800; color: var(--pub-primary); line-height: 1.1;">
+                            {{ service.base_fee|floatformat:0 }} VNĐ
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.82rem; color: var(--pub-text-muted); margin-bottom: 4px;">Thời lượng định mức tiêu chuẩn</div>
+                        <div style="font-family: var(--pub-mono-font); font-size: 1.8rem; font-weight: 800; color: var(--pub-text-heading); line-height: 1.1;">
+                            {{ service.standard_duration_minutes }} phút
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 2.25rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.75rem; letter-spacing: -0.02em;">
+                    Phạm vi &amp; Mô tả công việc
+                </h3>
+                <p style="color: var(--pub-text-body); font-size: 0.95rem; line-height: 1.7; margin: 0;">
+                    {{ service.description|default:"Dịch vụ kỹ thuật IT chuyên nghiệp được thực hiện theo quy chuẩn kỹ thuật nghiêm ngặt. Đội ngũ kỹ sư sẽ chẩn đoán toàn diện, thiết lập cấu hình an toàn, bàn giao tài liệu kỹ thuật và bảo hành vận hành chu đáo." }}
+                </p>
+            </div>
+
+            <!-- Standard 4-Step Technical Workflow (Zero Emojis) -->
+            <div style="margin-bottom: 2.5rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 1rem; letter-spacing: -0.02em;">
+                    Quy trình triển khai dịch vụ tiêu chuẩn
+                </h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; gap: 14px; align-items: flex-start; background: #FFFFFF; border: 1px solid var(--pub-border); border-radius: 12px; padding: 14px 18px;">
+                        <div style="width: 28px; height: 28px; background: var(--pub-primary); color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.82rem; font-family: var(--pub-mono-font); flex-shrink: 0;">1</div>
+                        <div>
+                            <div style="font-weight: 700; color: var(--pub-text-heading); font-size: 0.92rem;">Tiếp nhận &amp; Chẩn đoán sơ bộ</div>
+                            <div style="font-size: 0.85rem; color: var(--pub-text-muted); margin-top: 2px;">Ghi nhận chi tiết mô tả yêu cầu, phân loại mức độ ưu tiên SLA và xác nhận mốc thời gian.</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 14px; align-items: flex-start; background: #FFFFFF; border: 1px solid var(--pub-border); border-radius: 12px; padding: 14px 18px;">
+                        <div style="width: 28px; height: 28px; background: var(--pub-primary); color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.82rem; font-family: var(--pub-mono-font); flex-shrink: 0;">2</div>
+                        <div>
+                            <div style="font-weight: 700; color: var(--pub-text-heading); font-size: 0.92rem;">Khảo sát &amp; Báo giá chi tiết</div>
+                            <div style="font-size: 0.85rem; color: var(--pub-text-muted); margin-top: 2px;">Đánh giá hạ tầng hiện trạng, thống nhất phương án xử lý kỹ thuật và chi phí minh bạch.</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 14px; align-items: flex-start; background: #FFFFFF; border: 1px solid var(--pub-border); border-radius: 12px; padding: 14px 18px;">
+                        <div style="width: 28px; height: 28px; background: var(--pub-primary); color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.82rem; font-family: var(--pub-mono-font); flex-shrink: 0;">3</div>
+                        <div>
+                            <div style="font-weight: 700; color: var(--pub-text-heading); font-size: 0.92rem;">Thực hiện kỹ thuật &amp; Kiểm thử tải</div>
+                            <div style="font-size: 0.85rem; color: var(--pub-text-muted); margin-top: 2px;">Triển khai cài đặt, sửa chữa, tối ưu hóa CSDL và chạy thử nghiệm bảo đảm tính sẵn sàng.</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 14px; align-items: flex-start; background: #FFFFFF; border: 1px solid var(--pub-border); border-radius: 12px; padding: 14px 18px;">
+                        <div style="width: 28px; height: 28px; background: var(--pub-primary); color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.82rem; font-family: var(--pub-mono-font); flex-shrink: 0;">4</div>
+                        <div>
+                            <div style="font-weight: 700; color: var(--pub-text-heading); font-size: 0.92rem;">Nghiệm thu &amp; Hỗ trợ sau triển khai</div>
+                            <div style="font-size: 0.85rem; color: var(--pub-text-muted); margin-top: 2px;">Bàn giao biên bản kỹ thuật, phiếu bảo hành dịch vụ 30 ngày và hỗ trợ xử lý phát sinh 24/7.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Request CTA Card -->
+        <div>
+            <div class="pub-card" style="position: sticky; top: 90px; border-top: 4px solid var(--pub-primary);">
+                <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.5rem; letter-spacing: -0.02em;">
+                    Đăng ký gói dịch vụ này
+                </h3>
+                <p style="color: var(--pub-text-muted); font-size: 0.88rem; margin: 0 0 1.5rem; line-height: 1.5;">
+                    Gửi yêu cầu trực tuyến để kỹ sư chuyên môn XYZ IT Services liên hệ khảo sát hạ tầng và lên lịch hỗ trợ sớm nhất.
+                </p>
+
+                <a href="/yeu-cau-dich-vu/?service_id={{ service.id }}" class="pub-btn-primary" style="width: 100%; justify-content: center; padding: 13px; font-size: 1rem; margin-bottom: 1rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span>Yêu cầu dịch vụ này ngay</span>
+                </a>
+
+                <a href="tel:19006868" class="pub-btn-secondary" style="width: 100%; justify-content: center; padding: 11px; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <span>Hotline hỗ trợ: 1900 6868</span>
+                </a>
+
+                <div style="font-size: 0.82rem; color: var(--pub-text-muted); border-top: 1px solid var(--pub-border); padding-top: 1.25rem; line-height: 1.7;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                        Cam kết bảo mật dữ liệu khách hàng tuyệt đối
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                        Kỹ sư chuyên môn cao, có chứng chỉ hành nghề
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                        Bảo hành dịch vụ lên đến 30 ngày sau nghiệm thu
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

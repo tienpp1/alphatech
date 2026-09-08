@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Đơn hàng #{{ order.order_number }} - Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-completed { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; }
+.badge-confirmed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; }
+.badge-pending { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; }
+.badge-cancelled { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; }
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+@media (max-width: 900px) {
+    .detail-grid { grid-template-columns: 1fr; }
+}
+.card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.line-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+.line-items-table th, .line-items-table td {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.line-items-table th {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <a href="/retail/orders/" style="color: #6366f1; text-decoration: none; font-size: 0.875rem;">← Quay lại Danh sách Đơn hàng</a>
+        <h1 style="font-size: 2rem; font-weight: 800; margin-top: 0.5rem;">Đơn hàng #{{ order.order_number }}</h1>
+    </div>
+    <div>
+        <span class="badge-{{ order.status|lower }}">
+            {% if order.status == 'COMPLETED' %}Hoàn thành
+            {% elif order.status == 'CONFIRMED' %}Đã xác nhận
+            {% elif order.status == 'PROCESSING' %}Đang xử lý
+            {% elif order.status == 'CANCELLED' %}Đã hủy
+            {% else %}Chờ xử lý{% endif %}
+        </span>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <!-- Left Column: Line Items -->
+    <div>
+        <div class="card">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;">Danh mục Hàng hóa Đã mua</h3>
+            <table class="line-items-table">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>SL</th>
+                        <th>Đơn giá lịch sử</th>
+                        <th>Chiết khấu</th>
+                        <th>Thành tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.product.name }}</strong><br>
+                            <small style="color: #64748b;">Mã SKU: {{ item.product.sku }}</small>
+                        </td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.unit_price|floatformat:0 }} VND</td>
+                        <td>{{ item.discount|floatformat:0 }} VND</td>
+                        <td style="font-weight: 700; color: #38bdf8;">{{ item.subtotal|floatformat:0 }} VND</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Financial Summary -->
+            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
+                <div style="display: flex; justify-content: space-between; width: 270px; color: #94a3b8;">
+                    <span>Tạm tính:</span>
+                    <span>{{ order.subtotal_amount|floatformat:0 }} VND</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; width: 270px; color: #94a3b8;">
+                    <span>Chiết khấu đơn hàng:</span>
+                    <span>-{{ order.discount_amount|floatformat:0 }} VND</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; width: 270px; color: #94a3b8;">
+                    <span>Thuế VAT:</span>
+                    <span>+{{ order.tax_amount|floatformat:0 }} VND</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; width: 270px; font-size: 1.25rem; font-weight: 800; color: #38bdf8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem; margin-top: 0.25rem;">
+                    <span>Tổng doanh thu:</span>
+                    <span>{{ order.total_amount|floatformat:0 }} VND</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Metadata & Workflow Actions -->
+    <div>
+        <!-- Customer & Delivery -->
+        <div class="card">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;">Khách hàng & Điểm bán</h3>
+            <p style="margin-bottom: 0.5rem;"><strong>Khách hàng:</strong> {{ order.customer.name }} (<code>{{ order.customer.code }}</code>)</p>
+            <p style="margin-bottom: 0.5rem;"><strong>Điện thoại:</strong> {{ order.customer.phone|default:"Chưa cập nhật" }}</p>
+            <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> {{ order.customer.email|default:"Chưa cập nhật" }}</p>
+            <p style="margin-bottom: 0.5rem;"><strong>Phân khúc:</strong> 
+                <span class="badge" style="background: rgba(99,102,241,0.2); color: #818cf8;">
+                    {% if order.customer.customer_segment == 'VIP' %}Khách hàng VIP
+                    {% elif order.customer.customer_segment == 'ENTERPRISE' %}Doanh nghiệp
+                    {% else %}Khách hàng Tiêu chuẩn{% endif %}
+                </span>
+            </p>
+            <hr style="border-color: rgba(255,255,255,0.05); margin: 1rem 0;">
+            <p style="margin-bottom: 0.5rem;"><strong>Chi nhánh:</strong> {{ order.branch.name|default:"Bán trực tiếp / Trực tuyến" }}</p>
+            <p style="margin-bottom: 0.5rem;"><strong>Ngày đặt:</strong> {{ order.order_date|date:"Y-m-d" }}</p>
+            <p style="margin-bottom: 0.5rem;"><strong>Thời gian ghi nhận:</strong> {{ order.order_timestamp|date:"Y-m-d H:i:s" }}</p>
+            <p style="margin-bottom: 0.5rem;"><strong>Phương thức thanh toán:</strong> {{ order.payment_method }}</p>
+            <p style="margin-bottom: 0.5rem;"><strong>Người lập:</strong> {{ order.created_by.username|default:"Hệ thống" }}</p>
+        </div>
+
+        <!-- State Transitions Workflow -->
+        <div class="card">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;">Thao tác Trạng thái Đơn hàng</h3>
+            {% if can_manage %}
+            {% if order.status == "PENDING" %}
+            <form method="POST" action="" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                {% csrf_token %}
+                <button type="submit" name="action" value="confirm" class="btn btn-primary" style="width: 100%;">✓ Xác nhận Đơn hàng</button>
+                <button type="submit" name="action" value="cancel" class="btn btn-secondary" style="width: 100%; border-color: #ef4444; color: #f87171;">✕ Hủy Đơn hàng</button>
+            </form>
+            {% elif order.status == "CONFIRMED" %}
+            <form method="POST" action="" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                {% csrf_token %}
+                <button type="submit" name="action" value="complete" class="btn btn-primary" style="width: 100%; background: #22c55e;">✓ Hoàn thành Đơn hàng</button>
+                <button type="submit" name="action" value="cancel" class="btn btn-secondary" style="width: 100%; border-color: #ef4444; color: #f87171;">✕ Hủy Đơn hàng</button>
+            </form>
+            {% else %}
+            <p style="color: #94a3b8; font-size: 0.9rem;">
+                Đơn hàng đang ở trạng thái kết thúc 
+                <strong>
+                    {% if order.status == 'COMPLETED' %}Hoàn thành
+                    {% elif order.status == 'CANCELLED' %}Đã hủy
+                    {% else %}{{ order.status }}{% endif %}
+                </strong>. Không cho phép chuyển đổi trạng thái thêm.
+            </p>
+            {% endif %}
+            {% else %}
+            <p style="color: #94a3b8;">Bạn không có quyền thay đổi trạng thái đơn hàng.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Tạo Phiếu Nhập Hàng Mới - Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block extra_head %}
+<style>
+.form-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+.form-control {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f8fafc;
+    padding: 0.65rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.form-control:focus {
+    border-color: #6366f1;
+}
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+}
+.items-table th, .items-table td {
+    padding: 0.75rem 0.85rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.items-table th {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+.btn-primary {
+    background: #6366f1;
+    color: #ffffff;
+    padding: 0.65rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-primary:hover { background: #4f46e5; }
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    padding: 0.65rem 1.25rem;
+    border-radius: 8px;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+.btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+.alert-error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.75rem;">
+    <a href="/retail/goods-receiving/" style="color: #94a3b8; text-decoration: none; font-size: 0.875rem;">&larr; Quay lại danh sách phiếu nhập</a>
+    <h1 style="font-size: 2rem; font-weight: 800; margin-top: 0.5rem; margin-bottom: 0.5rem;">Tạo Phiếu Nhập Hàng Mới</h1>
+    <p style="color: #94a3b8;">
+        Khởi tạo phiếu nhập hàng ở trạng thái <strong>Bản nháp (DRAFT)</strong>. Tồn kho chi nhánh sẽ chỉ được cập nhật sau khi xác nhận nhập kho thực tế.
+    </p>
+</div>
+
+{% if error_message %}
+<div class="alert-error">
+    <strong>Lỗi tạo phiếu nhập:</strong> {{ error_message }}
+</div>
+{% endif %}
+
+<form method="post" class="form-card" id="form-create-receipt">
+    {% csrf_token %}
+
+    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; color: #f8fafc;">Thông tin chung phiếu nhập</h3>
+    <div class="form-grid">
+        <div class="form-group">
+            <label class="form-label">Nhà cung cấp *</label>
+            <select name="supplier_id" class="form-control" required>
+                <option value="">-- Chọn nhà cung cấp --</option>
+                {% for s in suppliers %}
+                <option value="{{ s.id }}">{{ s.name }} ({{ s.code }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Chi nhánh nhận hàng *</label>
+            <select name="branch_id" class="form-control" required>
+                <option value="">-- Chọn chi nhánh nhận hàng --</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}">{{ b.name }} ({{ b.code }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Ngày lập phiếu *</label>
+            <input type="date" name="receipt_date" class="form-control" value="{% now 'Y-m-d' %}" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Ngày dự kiến nhận</label>
+            <input type="date" name="expected_date" class="form-control">
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 2rem;">
+        <label class="form-label">Ghi chú phiếu nhập</label>
+        <textarea name="notes" class="form-control" rows="2" placeholder="Ghi chú thêm về lô hàng, số hóa đơn VAT, chứng từ vận chuyển..."></textarea>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #f8fafc;">Danh mục sản phẩm nhập kho</h3>
+        <button type="button" class="btn-secondary" id="btn-add-row" onclick="addRow()">➕ Thêm dòng sản phẩm</button>
+    </div>
+
+    <table class="items-table" id="table-items">
+        <thead>
+            <tr>
+                <th style="width: 45%;">Sản phẩm *</th>
+                <th style="width: 15%;">Số lượng</th>
+                <th style="width: 20%;">Đơn giá nhập (VND)</th>
+                <th style="width: 15%;">Thành tiền (VND)</th>
+                <th style="width: 5%;">Xóa</th>
+            </tr>
+        </thead>
+        <tbody id="items-body">
+            <!-- Row 1 -->
+            <tr class="item-row">
+                <td>
+                    <select name="item_product_id[]" class="form-control prod-select" onchange="onProductChange(this)" required>
+                        <option value="">-- Chọn sản phẩm --</option>
+                        {% for p in products %}
+                        <option value="{{ p.id }}" data-cost="{{ p.cost_price|default:p.unit_price }}">{{ p.name }} ({{ p.sku }}) - {{ p.unit }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" name="item_quantity[]" class="form-control qty-input" value="1" min="1" oninput="calcTotals()" required>
+                </td>
+                <td>
+                    <input type="number" name="item_unit_cost[]" class="form-control cost-input" value="0" min="0" step="1000" oninput="calcTotals()" required>
+                </td>
+                <td>
+                    <span class="row-subtotal" style="font-weight: 700; color: #38bdf8;">0 VND</span>
+                </td>
+                <td>
+                    <button type="button" class="btn-danger" onclick="removeRow(this)">✕</button>
+                </td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" style="text-align: right; font-weight: 700; color: #f8fafc; font-size: 1rem;">Tổng giá trị phiếu nhập:</td>
+                <td colspan="2" style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;" id="grand-total">0 VND</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <a href="/retail/goods-receiving/" class="btn-secondary">Hủy bỏ</a>
+        <button type="submit" class="btn-primary">Lưu Phiếu Nháp (DRAFT)</button>
+    </div>
+</form>
+
+<script>
+function onProductChange(selectElem) {
+    const row = selectElem.closest('.item-row');
+    const selectedOption = selectElem.options[selectElem.selectedIndex];
+    const cost = selectedOption.getAttribute('data-cost') || 0;
+    const costInput = row.querySelector('.cost-input');
+    costInput.value = parseFloat(cost).toFixed(0);
+    calcTotals();
+}
+
+function removeRow(btn) {
+    const rows = document.querySelectorAll('.item-row');
+    if (rows.length > 1) {
+        btn.closest('.item-row').remove();
+        calcTotals();
+    } else {
+        alert('Phiếu nhập phải có ít nhất 1 sản phẩm.');
+    }
+}
+
+function addRow() {
+    const body = document.getElementById('items-body');
+    const firstRow = document.querySelector('.item-row');
+    const newRow = firstRow.cloneNode(true);
+    newRow.querySelector('.prod-select').value = "";
+    newRow.querySelector('.qty-input').value = "1";
+    newRow.querySelector('.cost-input').value = "0";
+    newRow.querySelector('.row-subtotal').innerText = "0 VND";
+    body.appendChild(newRow);
+}
+
+function calcTotals() {
+    let grandTotal = 0;
+    document.querySelectorAll('.item-row').forEach(row => {
+        const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+        const cost = parseFloat(row.querySelector('.cost-input').value) || 0;
+        const sub = qty * cost;
+        grandTotal += sub;
+        row.querySelector('.row-subtotal').innerText = sub.toLocaleString('vi-VN') + ' VND';
+    });
+    document.getElementById('grand-total').innerText = grandTotal.toLocaleString('vi-VN') + ' VND';
+}
+
+document.addEventListener("DOMContentLoaded", calcTotals);
+</script>
+{% endblock %}

@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}Nền tảng Doanh nghiệp AI — ABC Tech Store & XYZ IT Technical Services. Cung cấp thiết bị công nghệ chính hãng và dịch vụ kỹ thuật IT chuyên nghiệp.{% endblock %}">
+    <title>{% block title %}{{ page_title|default:"Nền tảng Doanh nghiệp AI" }}{% endblock %}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Premium Light / White Theme Design Tokens */
+            --pub-bg: #FFFFFF;
+            --pub-bg-subtle: #F8FAFC;
+            --pub-bg-muted: #F1F5F9;
+            --pub-card: #FFFFFF;
+            --pub-border: #E2E8F0;
+            --pub-border-subtle: #EDF2F7;
+            
+            --pub-primary: #2563EB;
+            --pub-primary-hover: #1D4ED8;
+            --pub-primary-light: #EFF6FF;
+            --pub-accent: #0284C7;
+            --pub-accent-hover: #0369A1;
+            --pub-accent-light: #F0F9FF;
+            
+            --pub-success: #10B981;
+            --pub-success-bg: #ECFDF5;
+            --pub-success-text: #065F46;
+            --pub-warning: #F59E0B;
+            --pub-warning-bg: #FFFBEB;
+            --pub-danger: #EF4444;
+            --pub-danger-bg: #FEF2F2;
+            --pub-danger-text: #991B1B;
+            
+            --pub-text-heading: #0F172A;
+            --pub-text-body: #334155;
+            --pub-text-muted: #64748B;
+            --pub-text-light: #94A3B8;
+            
+            --pub-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --pub-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --pub-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+            --pub-radius: 12px;
+            --pub-radius-lg: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--pub-bg);
+            color: var(--pub-text-body);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Announcement Bar */
+        .pub-topbar {
+            background: var(--pub-bg-muted);
+            border-bottom: 1px solid var(--pub-border);
+            font-size: 0.8rem;
+            color: var(--pub-text-muted);
+            padding: 6px 1.5rem;
+        }
+
+        .pub-topbar-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Public Header */
+        .pub-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--pub-border);
+            transition: all 0.2s ease;
+        }
+
+        .pub-nav-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0.9rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+
+        .pub-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--pub-text-heading);
+            flex-shrink: 0;
+        }
+
+        .pub-brand-logo {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #2563EB, #4F46E5);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #FFFFFF;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+        }
+
+        .pub-brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pub-brand-title {
+            font-weight: 800;
+            font-size: 1.05rem;
+            letter-spacing: -0.02em;
+            color: var(--pub-text-heading);
+            line-height: 1.2;
+        }
+
+        .pub-brand-sub {
+            font-size: 0.72rem;
+            color: var(--pub-primary);
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+
+        .pub-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .pub-nav-item a {
+            color: var(--pub-text-body);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.92rem;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            display: inline-block;
+        }
+
+        .pub-nav-item a:hover {
+            color: var(--pub-primary);
+            background: var(--pub-bg-subtle);
+        }
+
+        .pub-nav-item a.active {
+            color: var(--pub-primary);
+            background: var(--pub-primary-light);
+            font-weight: 700;
+        }
+
+        .pub-header-auth {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .pub-btn-login {
+            background: var(--pub-primary);
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 0.88rem;
+            padding: 8px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+            border: 1px solid transparent;
+        }
+
+        .pub-btn-login:hover {
+            background: var(--pub-primary-hover);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            transform: translateY(-1px);
+            color: #FFFFFF;
+        }
+
+        .pub-btn-account {
+            background: var(--pub-bg-subtle);
+            color: var(--pub-text-heading);
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 8px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid var(--pub-border);
+            transition: all 0.15s ease;
+        }
+
+        .pub-btn-account:hover {
+            background: #FFFFFF;
+            border-color: var(--pub-primary);
+            color: var(--pub-primary);
+        }
+
+        .pub-btn-logout {
+            color: var(--pub-text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            padding: 8px 10px;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+        }
+
+        .pub-btn-logout:hover {
+            color: var(--pub-danger);
+            background: var(--pub-danger-bg);
+        }
+
+        .pub-btn-cart {
+            background: #FFFFFF;
+            color: var(--pub-text-heading);
+            font-weight: 700;
+            font-size: 0.88rem;
+            padding: 8px 14px;
+            border-radius: 10px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--pub-border);
+            box-shadow: var(--pub-shadow-sm);
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .pub-btn-cart:hover, .pub-btn-cart.active {
+            border-color: var(--pub-primary);
+            color: var(--pub-primary);
+            background: var(--pub-primary-light);
+        }
+
+        .pub-cart-badge {
+            background: #EF4444;
+            color: #FFFFFF;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 9999px;
+            line-height: 1;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .pub-mobile-toggle {
+            display: none;
+            background: transparent;
+            border: 1px solid var(--pub-border);
+            color: var(--pub-text-heading);
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        /* Main Container */
+        .pub-main {
+            flex: 1;
+            width: 100%;
+        }
+
+        /* Base Component Classes */
+        .pub-section {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+        }
+
+        .pub-section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .pub-section-tag {
+            color: var(--pub-primary);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+            background: var(--pub-primary-light);
+            padding: 4px 12px;
+            border-radius: 9999px;
+        }
+
+        .pub-section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0.5rem 0 0.75rem;
+            color: var(--pub-text-heading);
+        }
+
+        .pub-section-desc {
+            color: var(--pub-text-muted);
+            font-size: 1.05rem;
+            max-width: 620px;
+            margin: 0 auto;
+        }
+
+        /* Buttons */
+        .pub-btn-primary {
+            background: var(--pub-primary);
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 11px 22px;
+            border-radius: 10px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid transparent;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .pub-btn-primary:hover {
+            background: var(--pub-primary-hover);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+            transform: translateY(-1px);
+            color: #FFFFFF;
+        }
+
+        .pub-btn-secondary {
+            background: #FFFFFF;
+            color: var(--pub-text-heading);
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 11px 22px;
+            border-radius: 10px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--pub-border);
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .pub-btn-secondary:hover {
+            background: var(--pub-bg-subtle);
+            border-color: #CBD5E1;
+            color: var(--pub-primary);
+            transform: translateY(-1px);
+        }
+
+        /* Cards */
+        .pub-card {
+            background: var(--pub-card);
+            border: 1px solid var(--pub-border);
+            border-radius: var(--pub-radius-lg);
+            padding: 1.75rem;
+            box-shadow: var(--pub-shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .pub-card:hover {
+            border-color: #CBD5E1;
+            box-shadow: var(--pub-shadow-md);
+        }
+
+        /* Footer */
+        .pub-footer {
+            background: var(--pub-bg-subtle);
+            border-top: 1px solid var(--pub-border);
+            padding: 4rem 1.5rem 2rem;
+            margin-top: auto;
+        }
+
+        .pub-footer-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1.2fr;
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .pub-footer-col h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--pub-text-heading);
+            margin: 0 0 1.25rem;
+        }
+
+        .pub-footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .pub-footer-links li {
+            margin-bottom: 0.65rem;
+        }
+
+        .pub-footer-links a {
+            color: var(--pub-text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.15s;
+        }
+
+        .pub-footer-links a:hover {
+            color: var(--pub-primary);
+        }
+
+        .pub-footer-bottom {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding-top: 2rem;
+            border-top: 1px solid var(--pub-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--pub-text-muted);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 960px) {
+            .pub-nav-links {
+                display: none;
+            }
+            .pub-mobile-toggle {
+                display: block;
+            }
+            .pub-footer-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .pub-footer-container {
+                grid-template-columns: 1fr;
+            }
+            .pub-topbar {
+                display: none;
+            }
+        }
+    </style>
+    <!-- Master Public Pages Design System -->
+    <link rel="stylesheet" href="/static/css/public_pages.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% block topbar %}
+    <!-- Top Information Bar -->
+    <div class="pub-topbar">
+        <div class="pub-topbar-container">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Trụ sở: Quận 1, TP. Hồ Chí Minh
+                </span>
+                <span>•</span>
+                <span style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    Hotline: <strong>1900 6868</strong>
+                </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span>Giờ làm việc: 08:00 - 21:30</span>
+                {% if request.user.is_authenticated and request.user.is_superuser or request.user.is_authenticated and request.user.is_staff or request.user.is_authenticated and active_membership %}
+                <span>•</span>
+                <a href="/noibo/" style="color: var(--pub-primary); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                    Cổng Quản Trị /noibo/ →
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endblock topbar %}
+
+    {% block header %}
+    <!-- Public Header -->
+    <header class="pub-header">
+        <div class="pub-nav-container">
+            <!-- Brand Logo & Title -->
+            <a href="/" class="pub-brand">
+                <div class="pub-brand-logo">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                </div>
+                <div class="pub-brand-text">
+                    <span class="pub-brand-title">Nền tảng Doanh nghiệp AI</span>
+                    <span class="pub-brand-sub">ABC Tech Store & XYZ IT Services</span>
+                </div>
+            </a>
+
+            <!-- Navigation Links -->
+            <nav>
+                <ul class="pub-nav-links" id="pub-nav-links">
+                    <li class="pub-nav-item">
+                        <a href="/" class="{% if active_nav == 'home' %}active{% endif %}">Trang chủ</a>
+                    </li>
+                    <li class="pub-nav-item">
+                        <a href="/san-pham/" class="{% if active_nav == 'products' %}active{% endif %}">Sản phẩm</a>
+                    </li>
+                    <li class="pub-nav-item">
+                        <a href="/dich-vu/" class="{% if active_nav == 'services' %}active{% endif %}">Dịch vụ</a>
+                    </li>
+                    <li class="pub-nav-item">
+                        <a href="/chi-nhanh/" class="{% if active_nav == 'branches' %}active{% endif %}">Chi nhánh</a>
+                    </li>
+                    <li class="pub-nav-item">
+                        <a href="/gioi-thieu/" class="{% if active_nav == 'about' %}active{% endif %}">Giới thiệu</a>
+                    </li>
+                    <li class="pub-nav-item">
+                        <a href="/lien-he/" class="{% if active_nav == 'contact' %}active{% endif %}">Liên hệ</a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Authentication & Cart CTA Area -->
+            <div class="pub-header-auth">
+                <a href="/gio-hang/" class="pub-btn-cart {% if active_nav == 'cart' %}active{% endif %}" id="btn-header-cart" title="Giỏ hàng">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="8" cy="21" r="1"></circle>
+                        <circle cx="19" cy="21" r="1"></circle>
+                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+                    </svg>
+                    <span>Giỏ hàng</span>
+                    {% if cart_items_count and cart_items_count > 0 %}
+                    <span class="pub-cart-badge" id="header-cart-badge">{{ cart_items_count }}</span>
+                    {% else %}
+                    <span class="pub-cart-badge" id="header-cart-badge" style="display: none;">0</span>
+                    {% endif %}
+                </a>
+
+                {% if request.user.is_authenticated %}
+                    <a href="/tai-khoan/" class="pub-btn-account {% if active_nav == 'account' %}active{% endif %}" title="Tài khoản khách hàng">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span>{{ request.user.first_name|default:request.user.username }}</span>
+                    </a>
+                    <a href="/dang-xuat/" class="pub-btn-logout" title="Đăng xuất">
+                        <span>Đăng xuất</span>
+                    </a>
+                {% else %}
+                    <a href="/dang-nhap/" class="pub-btn-login" id="btn-header-login">
+                        <span>Đăng nhập</span>
+                    </a>
+                {% endif %}
+
+                <button type="button" class="pub-mobile-toggle" onclick="toggleMobileNav()" aria-label="Menu">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="4" x2="20" y1="12" y2="12"></line>
+                        <line x1="4" x2="20" y1="6" y2="6"></line>
+                        <line x1="4" x2="20" y1="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Drawer Navigation -->
+        <div id="pub-mobile-menu" style="display: none; background: #FFFFFF; border-bottom: 1px solid var(--pub-border); padding: 1rem 1.5rem;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <a href="/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Trang chủ</a>
+                <a href="/san-pham/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Sản phẩm</a>
+                <a href="/gio-hang/" style="color: var(--pub-primary); text-decoration: none; padding: 8px 0; font-weight: 700; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                        Giỏ hàng
+                    </span>
+                    {% if cart_items_count and cart_items_count > 0 %}
+                    <span class="pub-cart-badge">{{ cart_items_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="/dich-vu/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Dịch vụ</a>
+                <a href="/chi-nhanh/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Chi nhánh</a>
+                <a href="/gioi-thieu/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Giới thiệu</a>
+                <a href="/lien-he/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Liên hệ</a>
+                {% if request.user.is_authenticated %}
+                <hr style="border: none; border-top: 1px solid var(--pub-border); margin: 6px 0;">
+                <a href="/tai-khoan/" style="color: var(--pub-primary); text-decoration: none; padding: 8px 0; font-weight: 700;">Tài khoản của tôi</a>
+                <a href="/dang-xuat/" style="color: var(--pub-danger); text-decoration: none; padding: 8px 0; font-weight: 600;">Đăng xuất</a>
+                {% else %}
+                <hr style="border: none; border-top: 1px solid var(--pub-border); margin: 6px 0;">
+                <a href="/dang-nhap/" style="color: var(--pub-primary); text-decoration: none; padding: 8px 0; font-weight: 700;">Đăng nhập / Đăng ký</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+    {% endblock header %}
+
+    <!-- Main Content Body -->
+    <main class="pub-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block footer %}
+    <!-- Public Footer -->
+    <footer class="pub-footer">
+        <div class="pub-footer-container">
+            <div class="pub-footer-col">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+                    <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #2563EB, #4F46E5); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                    </div>
+                    <span style="font-weight: 800; font-size: 1.05rem; color: var(--pub-text-heading);">Nền tảng Doanh nghiệp AI</span>
+                </div>
+                <p style="color: var(--pub-text-muted); font-size: 0.9rem; margin-bottom: 1.25rem; line-height: 1.6;">
+                    Hệ sinh thái công nghệ kết hợp giữa bán lẻ thiết bị chính hãng (ABC Tech Store) và dịch vụ kỹ thuật CNTT chuyên sâu (XYZ IT Technical Services).
+                </p>
+                <div style="font-size: 0.85rem; color: var(--pub-text-muted);">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Trụ sở chính: Tầng 12, Tòa nhà Công nghệ, Quận 1, TP.HCM
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        Hotline dịch vụ: <strong>1900 6868</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pub-footer-col">
+                <h4>ABC Tech Store</h4>
+                <ul class="pub-footer-links">
+                    <li><a href="/san-pham/?category=laptop">Laptop & Máy tính</a></li>
+                    <li><a href="/san-pham/?category=smartphone">Điện thoại thông minh</a></li>
+                    <li><a href="/san-pham/?category=keyboard">Bàn phím & Chuột</a></li>
+                    <li><a href="/san-pham/?category=components">Linh kiện máy tính</a></li>
+                    <li><a href="/san-pham/?category=networking">Thiết bị mạng</a></li>
+                </ul>
+            </div>
+
+            <div class="pub-footer-col">
+                <h4>XYZ IT Services</h4>
+                <ul class="pub-footer-links">
+                    <li><a href="/dich-vu/?category=INSTALLATION">Cài đặt hệ thống</a></li>
+                    <li><a href="/dich-vu/?category=MAINTENANCE">Bảo trì hệ thống</a></li>
+                    <li><a href="/dich-vu/?category=DATABASE_CONSULTING">Tư vấn quản trị CSDL</a></li>
+                    <li><a href="/dich-vu/?category=DEVICE_REPAIR">Sửa chữa thiết bị</a></li>
+                    <li><a href="/yeu-cau-dich-vu/">Gửi yêu cầu kỹ thuật</a></li>
+                </ul>
+            </div>
+
+            <div class="pub-footer-col">
+                <h4>Khách hàng & Hỗ trợ</h4>
+                <ul class="pub-footer-links">
+                    <li><a href="/tai-khoan/">Tài khoản khách hàng</a></li>
+                    <li><a href="/chi-nhanh/">Danh sách 3 chi nhánh</a></li>
+                    <li><a href="/gioi-thieu/">Về chúng tôi</a></li>
+                    <li><a href="/lien-he/">Liên hệ & Phản hồi</a></li>
+                    <li><a href="/dang-nhap/">Đăng nhập / Đăng ký</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="pub-footer-bottom">
+            <div>
+                © 2026 Nền tảng Doanh nghiệp AI — ABC Tech Store & XYZ IT Technical Services. Bản quyền đã được bảo lưu.
+            </div>
+            <div style="display: flex; gap: 16px;">
+                <span>Giờ mở cửa: 08:00 - 21:30 hàng ngày</span>
+            </div>
+        </div>
+    </footer>
+    {% endblock footer %}
+
+    <!-- ==========================================
+         CYBER CART SLIDE-OVER DRAWER COMPONENT
+         ========================================== -->
+    <div class="cyber-cart-overlay" id="cyber-cart-overlay" onclick="closeCyberCart()"></div>
+    <div class="cyber-cart-drawer" id="cyber-cart-drawer" role="dialog" aria-modal="true" aria-label="Giỏ hàng công nghệ">
+        <div class="cyber-cart-header">
+            <div class="cyber-cart-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                <span>GIỎ HÀNG CÔNG NGHỆ</span>
+                <span class="cyber-cart-badge" id="cyber-cart-badge-count">0</span>
+            </div>
+            <button type="button" class="cyber-cart-close" onclick="closeCyberCart()" aria-label="Đóng giỏ hàng">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <!-- Free shipping meter -->
+        <div class="cyber-cart-shipping-bar">
+            <div class="shipping-bar-text">
+                <span id="cyber-shipping-status">Đơn từ 5.000.000₫ được Freeship toàn quốc</span>
+                <strong id="cyber-shipping-remaining" style="color: #38BDF8;"></strong>
+            </div>
+            <div class="shipping-bar-track">
+                <div class="shipping-bar-fill" id="cyber-shipping-fill" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- Cart items list container -->
+        <div class="cyber-cart-body" id="cyber-cart-body">
+            <div style="text-align: center; padding: 2.5rem 1rem; color: #94A3B8;">
+                Đang tải thông tin giỏ hàng...
+            </div>
+        </div>
+
+        <!-- Cart footer summary and checkout CTA -->
+        <div class="cyber-cart-footer">
+            <div class="cyber-cart-row">
+                <span>Tạm tính:</span>
+                <strong id="cyber-cart-subtotal" style="color: #F8FAFC;">0₫</strong>
+            </div>
+            <div class="cyber-cart-row">
+                <span>Phí vận chuyển:</span>
+                <span id="cyber-cart-shipping">0₫</span>
+            </div>
+            <div class="cyber-cart-row total">
+                <span>Tổng thanh toán:</span>
+                <span id="cyber-cart-total" style="color: #38BDF8;">0₫</span>
+            </div>
+            <a href="/thanh-toan/" class="cyber-cart-btn-checkout" id="cyber-cart-btn-checkout">
+                <span>Tiến hành đặt hàng ngay</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+            <a href="/gio-hang/" class="cyber-cart-btn-viewall">Xem toàn bộ giỏ hàng chi tiết →</a>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         FLOATING CYBER AI COPILOT WIDGET
+         ========================================== -->
+    <div class="copilot-launcher" id="copilot-launcher" onclick="toggleCopilot()" aria-label="Mở trợ lý AI Copilot">
+        <div class="copilot-badge-hint">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>Hỏi AI Copilot</span>
+        </div>
+        <div class="copilot-orb">
+            <div class="copilot-ring"></div>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                <path d="M12 12 2.1 10.5"></path>
+                <path d="M12 12V2.1"></path>
+            </svg>
+        </div>
+    </div>
+
+    <div class="copilot-chat-modal" id="copilot-chat-modal" role="dialog" aria-modal="true" aria-label="Khung trò chuyện AI Copilot">
+        <div class="copilot-chat-header">
+            <div class="copilot-chat-identity">
+                <div class="copilot-chat-avatar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                </div>
+                <div>
+                    <div class="copilot-chat-name">AI Copilot Dispatch</div>
+                    <div class="copilot-chat-status">
+                        <span style="width: 6px; height: 6px; background: #10B981; border-radius: 50%; display: inline-block;"></span>
+                        ONLINE • SLA &lt; 15M
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="copilot-chat-close" onclick="toggleCopilot()" aria-label="Thu nhỏ Copilot">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="copilot-chat-body" id="copilot-chat-body">
+            <div class="copilot-msg bot">
+                Xin chào! Tôi là <strong>AI Copilot</strong> của hệ thống ABC Tech Store &amp; XYZ IT Services. Tôi có thể hỗ trợ bạn tìm kiếm cấu hình máy tính, tư vấn dịch vụ kỹ thuật khẩn cấp (SLA &lt; 15m), hoặc tra cứu trạm kỹ thuật gần nhất.
+                <div class="copilot-chips-wrap" style="margin-top: 10px;">
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tư vấn Laptop doanh nghiệp Dell')">💻 Laptop Dell chính hãng</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Sự cố mạng khẩn cấp cam kết SLA')">⚡ Sự cố mạng (SLA 15m)</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tìm chi nhánh gần nhất')">📍 Chi nhánh &amp; Hotline</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tra cứu đơn hàng')">📦 Tra cứu đơn hàng</button>
+                </div>
+            </div>
+            <div class="copilot-typing" id="copilot-typing">
+                <div class="copilot-dot"></div>
+                <div class="copilot-dot"></div>
+                <div class="copilot-dot"></div>
+            </div>
+        </div>
+
+        <div class="copilot-chat-footer">
+            <input type="text" class="copilot-input" id="copilot-input" placeholder="Hỏi cấu hình, dịch vụ IT, bảo hành, chi nhánh..." onkeydown="if(event.key==='Enter') submitCopilot();">
+            <button type="button" class="copilot-send-btn" onclick="submitCopilot()" aria-label="Gửi tin nhắn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+    function toggleMobileNav() {
+        var menu = document.getElementById('pub-mobile-menu');
+        if (menu) {
+            menu.style.display = menu.style.display === 'none' || menu.style.display === '' ? 'block' : 'none';
+        }
+    }
+
+    /* --- Cyber Cart Client Logic --- */
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function openCyberCart() {
+        var drawer = document.getElementById('cyber-cart-drawer');
+        var overlay = document.getElementById('cyber-cart-overlay');
+        if (drawer && overlay) {
+            drawer.classList.add('active');
+            overlay.classList.add('active');
+            refreshCyberCart();
+        }
+    }
+
+    function closeCyberCart() {
+        var drawer = document.getElementById('cyber-cart-drawer');
+        var overlay = document.getElementById('cyber-cart-overlay');
+        if (drawer && overlay) {
+            drawer.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+    }
+
+    function syncHeaderCartBadge(count) {
+        var countNum = parseInt(count) || 0;
+        var badges = document.querySelectorAll('#header-cart-badge');
+        badges.forEach(function(b) {
+            b.textContent = countNum;
+            b.style.display = countNum > 0 ? 'inline-block' : 'none';
+        });
+        var drawerBadge = document.getElementById('cyber-cart-badge-count');
+        if (drawerBadge) drawerBadge.textContent = countNum;
+    }
+
+    function renderCyberCart(cartData) {
+        var body = document.getElementById('cyber-cart-body');
+        if (!body) return;
+
+        syncHeaderCartBadge(cartData.total_quantity);
+
+        // Update shipping progress bar
+        var shipStatus = document.getElementById('cyber-shipping-status');
+        var shipRemaining = document.getElementById('cyber-shipping-remaining');
+        var shipFill = document.getElementById('cyber-shipping-fill');
+        if (shipFill) shipFill.style.width = cartData.progress_pct + '%';
+        if (cartData.is_free_shipping) {
+            if (shipStatus) shipStatus.innerHTML = '🎉 <strong>Đủ điều kiện MIỄN PHÍ VẬN CHUYỂN!</strong>';
+            if (shipRemaining) shipRemaining.textContent = 'Freeship';
+        } else {
+            if (shipStatus) shipStatus.textContent = 'Mua thêm để nhận Freeship toàn quốc:';
+            if (shipRemaining) shipRemaining.textContent = cartData.formatted_remaining;
+        }
+
+        // Totals
+        var subtotalEl = document.getElementById('cyber-cart-subtotal');
+        if (subtotalEl) subtotalEl.textContent = cartData.formatted_subtotal;
+        var shipFeeEl = document.getElementById('cyber-cart-shipping');
+        if (shipFeeEl) shipFeeEl.textContent = cartData.formatted_shipping_fee;
+        var totalEl = document.getElementById('cyber-cart-total');
+        if (totalEl) totalEl.textContent = cartData.formatted_total_amount;
+
+        var checkoutBtn = document.getElementById('cyber-cart-btn-checkout');
+
+        if (!cartData.items || cartData.items.length === 0) {
+            if (checkoutBtn) checkoutBtn.style.display = 'none';
+            body.innerHTML = `
+                <div style="text-align: center; padding: 3rem 1.5rem; color: #94A3B8;">
+                    <div style="width: 52px; height: 52px; margin: 0 auto 1rem; border-radius: 50%; background: rgba(30,41,59,0.8); display: flex; align-items: center; justify-content: center; color: #64748B;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                    </div>
+                    <div style="font-size: 1rem; font-weight: 700; color: #F8FAFC; margin-bottom: 0.5rem;">Giỏ hàng của bạn đang trống</div>
+                    <p style="font-size: 0.85rem; margin: 0 0 1.5rem;">Khám phá các dòng sản phẩm máy trạm, laptop & phụ kiện chính hãng tại ABC Tech Store.</p>
+                    <a href="/san-pham/" class="pub-btn-primary" style="padding: 9px 20px; font-size: 0.88rem;">Xem sản phẩm ngay</a>
+                </div>
+            `;
+            return;
+        }
+
+        if (checkoutBtn) checkoutBtn.style.display = 'flex';
+
+        var html = '';
+        cartData.items.forEach(function(item) {
+            var imgHtml = item.image_url
+                ? `<img src="${item.image_url}" alt="${item.name}" class="cyber-cart-item-img">`
+                : `<div class="cyber-cart-item-img" style="display:flex;align-items:center;justify-content:center;color:#64748B;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg></div>`;
+
+            html += `
+                <div class="cyber-cart-item">
+                    ${imgHtml}
+                    <div class="cyber-cart-item-info">
+                        <div class="cyber-cart-item-name" title="${item.name}">${item.name}</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+                            <span class="cyber-cart-item-price">${item.formatted_unit_price}</span>
+                            <div class="cyber-cart-qty-ctrl">
+                                <button type="button" class="cyber-cart-qty-btn" onclick="cyberCartUpdateQty(${item.product_id}, ${item.quantity - 1})" aria-label="Giảm">−</button>
+                                <span class="cyber-cart-qty-val">${item.quantity}</span>
+                                <button type="button" class="cyber-cart-qty-btn" onclick="cyberCartUpdateQty(${item.product_id}, ${item.quantity + 1})" aria-label="Tăng">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="cyber-cart-del-btn" onclick="cyberCartRemoveItem(${item.product_id})" title="Xóa khỏi giỏ" aria-label="Xóa">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            `;
+        });
+        body.innerHTML = html;
+    }
+
+    function refreshCyberCart() {
+        fetch('/gio-hang/api/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            renderCyberCart(data);
+        })
+        .catch(function(err) {
+            console.error('Error fetching cart:', err);
+        });
+    }
+
+    function cyberCartUpdateQty(productId, newQty) {
+        var csrf = getCookie('csrftoken');
+        var formData = new FormData();
+        formData.append('quantity', newQty);
+        formData.append('format', 'json');
+
+        fetch('/gio-hang/cap-nhat/' + productId + '/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrf,
+            },
+            body: formData,
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.cart) renderCyberCart(data.cart);
+        });
+    }
+
+    function cyberCartRemoveItem(productId) {
+        var csrf = getCookie('csrftoken');
+        var formData = new FormData();
+        formData.append('format', 'json');
+
+        fetch('/gio-hang/xoa/' + productId + '/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrf,
+            },
+            body: formData,
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.cart) renderCyberCart(data.cart);
+        });
+    }
+
+
+    /* --- Cyber Copilot Client Logic --- */
+    function toggleCopilot() {
+        var modal = document.getElementById('copilot-chat-modal');
+        if (!modal) return;
+        modal.classList.toggle('active');
+        if (modal.classList.contains('active')) {
+            var input = document.getElementById('copilot-input');
+            if (input) input.focus();
+        }
+    }
+
+    function parseSimpleMarkdown(text) {
+        var escaped = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        
+        // Links: [label](url)
+        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_self">$1</a>');
+        // Bold: **text**
+        escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // Inline code: `text`
+        escaped = escaped.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.4);padding:1px 5px;border-radius:4px;color:#38BDF8;font-family:monospace;">$1</code>');
+        // Line breaks
+        escaped = escaped.replace(/\n/g, '<br>');
+        return escaped;
+    }
+
+    function sendCopilotMsg(msgText) {
+        var body = document.getElementById('copilot-chat-body');
+        var typing = document.getElementById('copilot-typing');
+        if (!body || !msgText.trim()) return;
+
+        // Append User Msg
+        var userMsgEl = document.createElement('div');
+        userMsgEl.className = 'copilot-msg user';
+        userMsgEl.textContent = msgText;
+        body.insertBefore(userMsgEl, typing);
+
+        // Show typing indicator
+        if (typing) {
+            typing.classList.add('active');
+            body.appendChild(typing);
+        }
+        body.scrollTop = body.scrollHeight;
+
+        var csrf = getCookie('csrftoken');
+        fetch('/api/v1/public/copilot/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrf,
+            },
+            body: JSON.stringify({ message: msgText }),
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (typing) typing.classList.remove('active');
+            var botMsgEl = document.createElement('div');
+            botMsgEl.className = 'copilot-msg bot';
+            var html = parseSimpleMarkdown(data.reply || 'Cảm ơn quý khách.');
+            
+            if (data.suggestions && data.suggestions.length > 0) {
+                html += '<div class="copilot-chips-wrap" style="margin-top:10px;">';
+                data.suggestions.forEach(function(s) {
+                    html += '<button type="button" class="copilot-chip" onclick="sendCopilotMsg(\'' + s.replace(/'/g, "\\'") + '\')">' + s + '</button>';
+                });
+                html += '</div>';
+            }
+            botMsgEl.innerHTML = html;
+            body.insertBefore(botMsgEl, typing);
+            body.scrollTop = body.scrollHeight;
+        })
+        .catch(function(err) {
+            if (typing) typing.classList.remove('active');
+            var errEl = document.createElement('div');
+            errEl.className = 'copilot-msg bot';
+            errEl.innerHTML = 'Hệ thống đang bận. Quý khách vui lòng liên hệ hotline <strong>1900 6868</strong> để được hỗ trợ tức thì.';
+            body.insertBefore(errEl, typing);
+            body.scrollTop = body.scrollHeight;
+        });
+    }
+
+    function submitCopilot() {
+        var input = document.getElementById('copilot-input');
+        if (!input) return;
+        var text = input.value.trim();
+        if (text) {
+            input.value = '';
+            sendCopilotMsg(text);
+        }
+    }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

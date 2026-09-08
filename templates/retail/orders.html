@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Đơn hàng - Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-completed { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.badge-confirmed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.badge-pending { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.badge-cancelled { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+.data-table th, .data-table td {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.data-table th {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">Quản lý Đơn hàng Bán lẻ</h1>
+    <p style="color: #94a3b8;">Giao dịch thương mại được ghi nhận của <strong>{{ active_workspace.name }}</strong></p>
+</div>
+
+<form method="GET" action="" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <input type="text" name="q" value="{{ search_q }}" placeholder="Tìm theo mã đơn hoặc tên khách hàng..." class="filter-input" style="min-width: 250px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 8px;">
+    <select name="status" class="filter-input" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 8px;">
+        <option value="">Tất cả Trạng thái</option>
+        {% for st in statuses %}
+        <option value="{{ st }}" {% if status_filter == st %}selected{% endif %}>
+            {% if st == 'COMPLETED' %}Hoàn thành
+            {% elif st == 'CONFIRMED' %}Đã xác nhận
+            {% elif st == 'PROCESSING' %}Đang xử lý
+            {% elif st == 'CANCELLED' %}Đã hủy
+            {% else %}Chờ xử lý{% endif %}
+        </option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">Lọc dữ liệu</button>
+    {% if search_q or status_filter %}
+    <a href="/retail/orders/" class="btn btn-secondary">Đặt lại</a>
+    {% endif %}
+</form>
+
+<div class="table-card" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.5rem; overflow-x: auto;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Mã đơn hàng</th>
+                <th>Thời gian</th>
+                <th>Khách hàng</th>
+                <th>Chi nhánh</th>
+                <th>Trạng thái</th>
+                <th>Phương thức</th>
+                <th>Tổng doanh thu</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in orders %}
+            <tr>
+                <td><strong>{{ o.order_number }}</strong></td>
+                <td>{{ o.order_timestamp|date:"Y-m-d H:i" }}</td>
+                <td>{{ o.customer.name }} <br><small style="color: #64748b;">{{ o.customer.code }}</small></td>
+                <td>{{ o.branch.name|default:"Trực tiếp / Online" }}</td>
+                <td>
+                    <span class="badge-{{ o.status|lower }}">
+                        {% if o.status == 'COMPLETED' %}Hoàn thành
+                        {% elif o.status == 'CONFIRMED' %}Đã xác nhận
+                        {% elif o.status == 'PROCESSING' %}Đang xử lý
+                        {% elif o.status == 'CANCELLED' %}Đã hủy
+                        {% else %}Chờ xử lý{% endif %}
+                    </span>
+                </td>
+                <td style="color: #94a3b8; font-size: 0.85rem;">{{ o.payment_method }}</td>
+                <td style="font-weight: 700; color: #38bdf8;">{{ o.total_amount|floatformat:0 }} VND</td>
+                <td>
+                    <a href="/retail/orders/{{ o.id }}/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Chi tiết →</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" style="text-align: center; color: #64748b; padding: 3rem;">Không tìm thấy đơn hàng nào phù hợp với bộ lọc.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

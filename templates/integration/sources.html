@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Nguồn Dữ liệu — {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div>
+            <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 4px;">Danh mục Nguồn Dữ liệu (Data Sources)</h1>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">Cấu hình kết nối tới các tệp ngoài, nguồn dữ liệu cũ và Mock REST API của đối tác.</p>
+        </div>
+        {% if can_manage %}<button onclick="document.getElementById('new-source-modal').style.display='flex'" class="btn btn-primary" style="background: #3b82f6; color: #fff; padding: 8px 18px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <span>+</span> Thêm Nguồn Dữ liệu
+        </button>{% endif %}
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; {% if message.tags == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;{% else %}background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Sources Grid -->
+    {% if sources %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px;">
+        {% for ds in sources %}
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <span style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; {% if ds.source_type == 'CSV' %}background: rgba(16, 185, 129, 0.2); color: #34d399;{% elif ds.source_type == 'EXCEL' %}background: rgba(59, 130, 246, 0.2); color: #60a5fa;{% else %}background: rgba(168, 85, 247, 0.2); color: #c084fc;{% endif %}">
+                        {{ ds.source_type }}
+                    </span>
+                    <span style="font-size: 0.75rem; color: {% if ds.is_active %}#34d399{% else %}#ef4444{% endif %};">
+                        ● {% if ds.is_active %}Hoạt động{% else %}Ngừng hoạt động{% endif %}
+                    </span>
+                </div>
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: #f8fafc; margin: 12px 0 6px 0;">{{ ds.name }}</h3>
+                <div style="color: #94a3b8; font-size: 0.82rem; font-family: monospace; background: rgba(0,0,0,0.25); padding: 8px; border-radius: 6px; margin: 8px 0; word-break: break-all;">
+                    {% if ds.source_type == 'MOCK_API' %}
+                    URL: {{ ds.connection_config.url|default:"/api/v1/mock-external/..." }}
+                    {% elif ds.source_type == 'EXCEL' %}
+                    Trang tính: {{ ds.connection_config.sheet_name|default:"Trang tính đầu tiên" }}
+                    {% else %}
+                    Dấu phân tách: "{{ ds.connection_config.delimiter|default:',' }}"
+                    {% endif %}
+                </div>
+            </div>
+            <div style="border-top: 1px solid #334155; padding-top: 14px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #64748b; font-size: 0.8rem;">
+                    Tạo bởi {{ ds.created_by.username|default:"Hệ thống" }}
+                </span>
+                {% if can_import %}<a href="/integration/import/?data_source_id={{ ds.id }}" class="btn btn-sm" style="background: #3b82f6; color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none;">
+                    Nhập liệu &rarr;
+                </a>{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 48px; text-align: center; color: #94a3b8;">
+        <div style="font-size: 2.5rem; margin-bottom: 12px;">📁</div>
+        <h3 style="color: #f8fafc; font-size: 1.2rem; font-weight: 600;">Chưa có Nguồn Dữ liệu nào</h3>
+        <p style="font-size: 0.9rem; max-width: 500px; margin: 8px auto 20px auto;">Thêm nguồn dữ liệu CSV, Excel hoặc Mock API đầu tiên để bắt đầu tiếp nhận dữ liệu ngoài.</p>
+        {% if can_manage %}<button onclick="document.getElementById('new-source-modal').style.display='flex'" class="btn btn-primary" style="background: #3b82f6; color: #fff; padding: 8px 18px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer;">
+            + Đăng ký Nguồn Dữ liệu
+        </button>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: New Data Source -->
+{% if can_manage %}
+<div id="new-source-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 14px; width: 100%; max-width: 520px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0; color: #f8fafc;">Đăng ký Nguồn Dữ liệu Mới</h2>
+            <button onclick="document.getElementById('new-source-modal').style.display='none'" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <form method="POST" action="/integration/sources/">
+            {% csrf_token %}
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Tên Nguồn Dữ liệu *</label>
+                <input type="text" name="name" required placeholder="Ví dụ: Tệp Đơn hàng POS Cũ CSV" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.9rem;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Loại Nguồn *</label>
+                <select name="source_type" id="source_type_select" onchange="toggleSourceConfig(this.value)" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.9rem;">
+                    <option value="CSV">Tệp CSV (.csv)</option>
+                    <option value="EXCEL">Bảng tính Excel (.xlsx)</option>
+                    <option value="MOCK_API">Mock REST API Ngoài</option>
+                </select>
+            </div>
+
+            <!-- Dynamic config fields -->
+            <div id="cfg-csv" style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Dấu phân tách (Delimiter)</label>
+                <input type="text" name="delimiter" value="," style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.9rem;">
+            </div>
+            <div id="cfg-excel" style="margin-bottom: 16px; display: none;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Tên Trang tính (Tùy chọn)</label>
+                <input type="text" name="sheet_name" placeholder="Để trống để chọn trang tính đầu tiên" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.9rem;">
+            </div>
+            <div id="cfg-api" style="margin-bottom: 16px; display: none;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Đường dẫn Endpoint URL *</label>
+                <input type="text" name="endpoint_url" placeholder="/api/v1/mock-external/retail/orders/" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.9rem;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                <button type="button" onclick="document.getElementById('new-source-modal').style.display='none'" style="background: rgba(255,255,255,0.08); color: #cbd5e1; border: 1px solid #334155; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">Hủy</button>
+                <button type="submit" style="background: #3b82f6; color: #fff; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: 600;">Tạo Nguồn Dữ liệu</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function toggleSourceConfig(val) {
+    document.getElementById('cfg-csv').style.display = val === 'CSV' ? 'block' : 'none';
+    document.getElementById('cfg-excel').style.display = val === 'EXCEL' ? 'block' : 'none';
+    document.getElementById('cfg-api').style.display = val === 'MOCK_API' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

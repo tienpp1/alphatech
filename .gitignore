@@ -8,6 +8,10 @@ env/
 venv/
 ENV/
 .venv/
+.venv-quality/
+.coverage
+coverage.xml
+.quality/
 build/
 develop-eggs/
 dist/

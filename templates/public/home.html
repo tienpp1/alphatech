@@ -1,0 +1,1267 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}Nền tảng Doanh nghiệp AI | ABC Tech Store & XYZ IT Technical Services{% endblock %}
+
+{% block body_class %}antialiased selection:bg-cyber-amber selection:text-cyber-bg bg-[#080b0e] text-[#e2e8f0]{% endblock %}
+
+{% block extra_css %}
+<!-- Tailwind CSS & Iconify Engine -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+
+<!-- Google Fonts: Space Grotesk & JetBrains Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- 3D & Animation Powerhouse Libraries: Three.js, GSAP 3, ScrollTrigger, Vanilla-Tilt -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    cyber: {
+                        bg: '#080b0e',
+                        surface: '#11161b',
+                        card: '#161d24',
+                        border: '#222c37',
+                        accent: '#38bdf8',
+                        glow: '#00f0ff',
+                        amber: '#f59e0b',
+                        lamp: '#ffb03a'
+                    }
+                },
+                fontFamily: {
+                    sans: ['Space Grotesk', 'sans-serif'],
+                    mono: ['JetBrains Mono', 'monospace'],
+                }
+            }
+        }
+    }
+</script>
+
+<style>
+    body {
+        background-color: #080b0e !important;
+        color: #e2e8f0 !important;
+        font-family: 'Space Grotesk', sans-serif !important;
+        overflow-x: hidden;
+    }
+
+    .terminal-grid {
+        background-size: 40px 40px;
+        background-image: linear-gradient(to right, rgba(34, 44, 55, 0.22) 1px, transparent 1px),
+                          linear-gradient(to bottom, rgba(34, 44, 55, 0.22) 1px, transparent 1px);
+    }
+
+    .ambient-lamp {
+        background: radial-gradient(circle at 50% 50%, rgba(255, 176, 58, 0.14) 0%, rgba(56, 189, 248, 0.05) 45%, transparent 70%);
+    }
+
+    .keycap-glow {
+        box-shadow: 0 0 30px rgba(0, 240, 255, 0.2), inset 0 0 15px rgba(0, 240, 255, 0.08);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .keycap-glow:hover {
+        box-shadow: 0 0 50px rgba(255, 176, 58, 0.35), inset 0 0 20px rgba(255, 176, 58, 0.15);
+        transform: translateY(-2px);
+    }
+
+    /* CRT Monitor Scanline Overlay on Terminal */
+    .scanlines {
+        position: relative;
+    }
+    .scanlines::before {
+        content: " ";
+        display: block;
+        position: absolute;
+        top: 0; left: 0; bottom: 0; right: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+        background-size: 100% 4px;
+        z-index: 20;
+        pointer-events: none;
+        opacity: 0.6;
+    }
+
+    /* Tech Corner Brackets */
+    .corner-bracket {
+        position: relative;
+    }
+    .corner-bracket::before {
+        content: '';
+        position: absolute;
+        top: -1px; left: -1px;
+        width: 10px; height: 10px;
+        border-top: 2px solid #38bdf8;
+        border-left: 2px solid #38bdf8;
+        pointer-events: none;
+    }
+    .corner-bracket::after {
+        content: '';
+        position: absolute;
+        bottom: -1px; right: -1px;
+        width: 10px; height: 10px;
+        border-bottom: 2px solid #ffb03a;
+        border-right: 2px solid #ffb03a;
+        pointer-events: none;
+    }
+
+    /* Sweeping Radar Beam Animation */
+    .radar-sweep-container {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 1px dashed rgba(56, 189, 248, 0.35);
+    }
+    .radar-sweep-beam {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: conic-gradient(from 0deg, transparent 75%, rgba(0, 240, 255, 0.35) 100%);
+        animation: radarSpin 4s linear infinite;
+    }
+    @keyframes radarSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .cursor-blink::after {
+        content: '|';
+        animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+        from, to { color: transparent }
+        50% { color: #38bdf8 }
+    }
+
+    /* Floating Cart Toast */
+    .cart-toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+        background: #11161b;
+        color: #ffffff;
+        border: 1px solid #38bdf8;
+        padding: 14px 20px;
+        border-radius: 8px;
+        font-family: 'Space Grotesk', sans-serif;
+        box-shadow: 0 10px 30px rgba(0, 240, 255, 0.25);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transform: translateY(120%);
+        opacity: 0;
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+        pointer-events: none;
+    }
+
+    .cart-toast.show {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .sim-cat-btn.active {
+        border-color: #38bdf8;
+        background-color: rgba(56, 189, 248, 0.12);
+        color: #ffffff;
+    }
+
+    .sim-pri-btn.active {
+        border-color: #f59e0b;
+        background-color: rgba(245, 158, 11, 0.15);
+        color: #ffb03a;
+        font-weight: 700;
+    }
+
+    .cat-pill.active {
+        background-color: #38bdf8;
+        color: #080b0e;
+        border-color: #38bdf8;
+        font-weight: 700;
+    }
+
+    /* Three.js canvas interactive cursor */
+    #three-canvas-container canvas {
+        width: 100% !important;
+        height: 100% !important;
+        outline: none;
+    }
+
+    .stage-pill-btn.active {
+        border-color: #38bdf8;
+        background-color: rgba(56, 189, 248, 0.2);
+        color: #ffffff;
+        font-weight: 700;
+    }
+</style>
+{% endblock %}
+
+{% block topbar %}
+<!-- Ambient Navigation Bar replaces topbar -->
+{% endblock topbar %}
+
+{% block header %}
+<!-- =========================================================================
+     CYBER TOP NAVIGATION (FLOATING & MORPHING ON SCROLL)
+     ========================================================================= -->
+<nav id="top-nav" class="fixed top-0 left-0 w-full z-50 transition-all duration-300 h-20 flex items-center border-b border-transparent bg-cyber-bg/70 backdrop-blur-md">
+    <div class="w-full max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <a href="/" class="font-mono text-base font-bold tracking-wider flex items-center gap-3 text-white">
+            <span class="flex h-2.5 w-2.5 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-glow opacity-80"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-glow"></span>
+            </span>
+            <span class="tracking-widest">CORE // AI PLATFORM</span>
+            <span class="hidden lg:inline-block font-mono text-[11px] text-slate-400 border-l border-cyber-border pl-3">
+                ABC TECH &amp; XYZ IT
+            </span>
+        </a>
+        
+        <div class="hidden md:flex items-center gap-7 font-mono text-xs uppercase tracking-widest text-slate-300">
+            <a href="#architecture" class="hover:text-cyber-glow transition-colors">Kiến trúc</a>
+            <a href="#console" class="hover:text-cyber-glow transition-colors">Terminal</a>
+            <a href="#hardware" class="hover:text-cyber-glow transition-colors">Phần cứng</a>
+            <a href="#services" class="hover:text-cyber-glow transition-colors">Dịch vụ &amp; SLA</a>
+            <a href="#branches" class="hover:text-cyber-glow transition-colors">Chi nhánh GIS</a>
+        </div>
+
+        <div class="flex items-center gap-3 sm:gap-4">
+            <!-- Shopping Cart Link with test-compatible ID and badge -->
+            <a href="/gio-hang/" class="relative font-mono text-xs border border-cyber-border bg-cyber-surface/90 px-3.5 py-2 hover:border-cyber-accent text-slate-300 hover:text-white transition-all flex items-center gap-2" id="btn-header-cart" title="Giỏ hàng">
+                <iconify-icon icon="ph:shopping-bag-light" class="text-base text-cyber-accent"></iconify-icon>
+                <span>Giỏ hàng</span>
+                {% if cart_items_count and cart_items_count > 0 %}
+                <span class="pub-cart-badge" id="header-cart-badge">{{ cart_items_count }}</span>
+                {% else %}
+                <span class="pub-cart-badge" id="header-cart-badge" style="display: none;">0</span>
+                {% endif %}
+            </a>
+
+            <!-- Authentication State -->
+            {% if request.user.is_authenticated %}
+                <a href="/tai-khoan/" class="font-mono text-xs border border-cyber-border px-3.5 py-2 bg-cyber-card text-cyber-lamp hover:border-cyber-lamp transition-all hidden sm:inline-flex items-center gap-1.5">
+                    <iconify-icon icon="ph:user-circle-light" class="text-sm"></iconify-icon>
+                    <span>{{ request.user.first_name|default:request.user.username }}</span>
+                </a>
+                {% if request.user.is_superuser or active_membership %}
+                <a href="/noibo/" class="font-mono text-xs border border-cyber-amber/50 px-3 py-2 bg-cyber-surface text-cyber-amber hover:border-cyber-amber transition-all hidden xl:inline-block">
+                    Cổng Quản Trị /noibo/ →
+                </a>
+                {% endif %}
+                <a href="/dang-xuat/" class="font-mono text-xs text-slate-400 hover:text-red-400 transition-colors hidden sm:inline-block">
+                    Đăng xuất
+                </a>
+            {% else %}
+                <a href="/dang-nhap/" class="font-mono text-xs border border-cyber-border px-4 py-2 bg-cyber-surface hover:border-slate-400 text-slate-300 hover:text-white transition-all">
+                    Đăng nhập
+                </a>
+            {% endif %}
+
+            <a href="/yeu-cau-dich-vu/" class="font-mono text-xs border border-cyber-accent/40 px-4 py-2 bg-cyber-accent text-cyber-bg font-bold hover:bg-cyber-glow transition-all hidden lg:inline-block">
+                Gửi phiếu dịch vụ
+            </a>
+        </div>
+    </div>
+</nav>
+{% endblock header %}
+
+{% block content %}
+<!-- Ambient Background Elements & Interactive Plexus Canvas -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div class="absolute inset-0 terminal-grid"></div>
+    <div class="absolute top-[18%] left-[8%] w-[50vw] h-[50vw] ambient-lamp rounded-full blur-3xl"></div>
+    <div class="absolute bottom-[10%] right-[-5%] w-[45vw] h-[45vw] bg-cyber-accent/5 rounded-full blur-[140px]"></div>
+</div>
+
+<!-- =========================================================================
+     1. CINEMATIC 3D HERO STAGE (THREE.JS + PLEXUS CANVAS + PARALLAX VIDEO)
+     ========================================================================= -->
+<header class="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
+    <!-- Layer 1: Parallax Video Backdrop -->
+    <div class="absolute inset-0 z-0">
+        <video id="hero-bg-video" autoplay loop muted playsinline class="w-full h-full object-cover opacity-30 mix-blend-screen transition-transform duration-100 ease-out">
+            <source src="/static/video/hero_matrix.mp4" type="video/mp4">
+        </video>
+        <!-- Layer 2: Interactive Neural Plexus Particles Canvas -->
+        <canvas id="plexus-canvas" class="absolute inset-0 w-full h-full pointer-events-auto opacity-70"></canvas>
+        <div class="absolute inset-0 bg-gradient-to-t from-cyber-bg via-cyber-bg/45 to-transparent"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-cyber-bg/90 via-transparent to-cyber-bg/90"></div>
+    </div>
+
+    <!-- Layer 3: 12-Column Responsive Dual Stage -->
+    <div class="relative z-10 w-full max-w-7xl mx-auto px-6 grid lg:grid-cols-12 gap-12 items-center py-8">
+        <!-- Left 7 Columns: Headings, Badges, CTAs, Telemetry Counters -->
+        <div class="lg:col-span-7 space-y-8 text-left hero-text-col">
+            <div class="inline-flex items-center gap-3 border border-cyber-border bg-cyber-surface/90 px-4 py-1.5 rounded-none backdrop-blur-sm shadow-lg gs-reveal">
+                <iconify-icon icon="ph:radar-light" class="text-cyber-amber text-base animate-spin"></iconify-icon>
+                <span class="font-mono text-xs uppercase tracking-widest text-slate-300">
+                    HỆ ĐIỀU HÀNH DOANH NGHIỆP TẬP TRUNG // SLA &lt; 15 PHÚT
+                </span>
+            </div>
+
+            <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.12] gs-reveal">
+                Thiết bị công nghệ và dịch vụ kỹ thuật cho doanh nghiệp <br>
+                <span class="font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyber-accent via-cyber-lamp to-cyber-amber">
+                    The Micro Matrix Protocol.
+                </span>
+            </h1>
+
+            <p class="max-w-xl text-slate-400 text-base sm:text-lg font-light leading-relaxed gs-reveal">
+                Kết hợp hoàn hảo giữa <strong>ABC Tech Store</strong> (Cửa hàng phân phối phần cứng, máy trạm &amp; thiết bị mạng chính hãng) và <strong>XYZ IT Technical Services</strong> (Dịch vụ cài đặt, bảo trì máy chủ, quản trị CSDL PostgreSQL và xử lý sự cố cấp doanh nghiệp).
+            </p>
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2 gs-reveal">
+                <a href="/san-pham/" class="magnetic-btn px-8 py-4 bg-cyber-accent text-cyber-bg font-mono text-xs uppercase tracking-widest font-bold hover:bg-cyber-glow transition-all text-center keycap-glow">
+                    Xem sản phẩm
+                </a>
+                <a href="/dich-vu/" class="magnetic-btn px-8 py-4 border border-cyber-border bg-cyber-surface/60 font-mono text-xs uppercase tracking-widest font-medium text-slate-200 hover:border-cyber-lamp hover:text-white transition-all text-center">
+                    Khám phá dịch vụ
+                </a>
+                <a href="#console" class="px-6 py-4 border border-cyber-accent/30 bg-cyber-surface/40 font-mono text-xs uppercase tracking-widest font-light text-cyber-accent hover:border-cyber-glow transition-all text-center">
+                    Khởi tạo Terminal ↓
+                </a>
+            </div>
+
+            <!-- Telemetry Animated Counters Strip -->
+            <div class="grid grid-cols-3 gap-6 pt-6 border-t border-cyber-border/60 max-w-xl gs-reveal">
+                <div>
+                    <div class="font-mono text-2xl sm:text-4xl font-bold text-white">
+                        <span class="counter-num" data-target="100">0</span><span class="text-cyber-accent">%</span>
+                    </div>
+                    <div class="font-mono text-[11px] text-slate-400 tracking-wider uppercase mt-1">CO/CQ Chính Hãng</div>
+                </div>
+                <div>
+                    <div class="font-mono text-2xl sm:text-4xl font-bold text-cyber-lamp">
+                        &lt; <span class="counter-num" data-target="15">0</span><span class="text-white">m</span>
+                    </div>
+                    <div class="font-mono text-[11px] text-slate-400 tracking-wider uppercase mt-1">Phản hồi Khẩn cấp</div>
+                </div>
+                <div>
+                    <div class="font-mono text-2xl sm:text-4xl font-bold text-white">
+                        <span class="counter-num" data-target="24">0</span><span class="text-cyber-glow">/7</span>
+                    </div>
+                    <div class="font-mono text-[11px] text-slate-400 tracking-wider uppercase mt-1">Hạ Tầng Sẵn Sàng</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right 5 Columns: Interactive 3D WebGL Hologram Core (Three.js) -->
+        <div class="lg:col-span-5 relative gs-reveal">
+            <div class="corner-bracket border border-cyber-border/80 bg-cyber-surface/70 backdrop-blur-md p-5 shadow-2xl rounded-lg">
+                <!-- Top Hologram HUD Bar -->
+                <div class="flex items-center justify-between pb-3 border-b border-cyber-border/60 text-xs font-mono select-none">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-cyber-glow animate-ping"></span>
+                        <span class="text-white font-bold tracking-wider">HOLO // QUANTUM CORE</span>
+                    </div>
+                    <span class="text-cyber-accent text-[10px]">3D REALTIME WEBGL</span>
+                </div>
+
+                <!-- Three.js Canvas Container -->
+                <div id="three-canvas-container" class="w-full h-[360px] sm:h-[400px] relative cursor-grab active:cursor-grabbing" title="Kéo chuột hoặc vuốt để xoay mô hình 3D">
+                </div>
+
+                <!-- Interactive Mode Switcher Pills -->
+                <div class="pt-3 border-t border-cyber-border/60 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 font-mono text-[11px]" role="tablist">
+                        <button type="button" class="stage-pill-btn active px-3 py-1.5 border border-cyber-accent bg-cyber-accent/20 text-white font-bold transition-all" data-mode="all" onclick="switchHeroSceneMode('all')">
+                            Tất cả
+                        </button>
+                        <button type="button" class="stage-pill-btn px-3 py-1.5 border border-cyber-border bg-cyber-surface text-slate-400 hover:text-white transition-all" data-mode="retail" onclick="switchHeroSceneMode('retail')">
+                            ABC Tech
+                        </button>
+                        <button type="button" class="stage-pill-btn px-3 py-1.5 border border-cyber-border bg-cyber-surface text-slate-400 hover:text-white transition-all" data-mode="services" onclick="switchHeroSceneMode('services')">
+                            XYZ IT
+                        </button>
+                    </div>
+                    <div class="font-mono text-[10px] text-cyber-amber tracking-wider font-semibold" id="stage-status-text">
+                        DUAL-ECOSYSTEM
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="relative z-10">
+
+    <!-- =========================================================================
+         2. DUAL-CORE ARCHITECTURE ENCLAVE (WITH 3D TILT CARDS)
+         ========================================================================= -->
+    <section id="architecture" class="py-28 max-w-7xl mx-auto px-6 border-t border-cyber-border/40">
+        <div class="grid lg:grid-cols-12 gap-12 items-center">
+            <div class="lg:col-span-5 space-y-6 gs-scroll">
+                <span class="font-mono text-xs text-cyber-amber uppercase tracking-widest block">KIẾN TRÚC VẬN HÀNH KÉP // ENCLAVE SPECIFICATION</span>
+                <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white leading-tight">
+                    Kiến trúc Kép ABC Tech &amp; XYZ IT
+                </h2>
+                <p class="text-slate-400 font-light leading-relaxed">
+                    Xây dựng theo mô hình Enclave độc lập. Phân hệ bán lẻ phần cứng và phân hệ điều phối dịch vụ kỹ thuật được vận hành theo cơ chế cách ly workspace nghiêm ngặt, đảm bảo tính toàn vẹn dữ liệu, triệt tiêu lỗi lan truyền và tối ưu hóa hiệu suất xử lý đơn hàng cùng sự cố kỹ thuật.
+                </p>
+                <div class="grid grid-cols-2 gap-4 pt-4">
+                    <div class="border-l-2 border-cyber-accent pl-4">
+                        <div class="font-mono text-2xl font-bold text-white">99.98%</div>
+                        <div class="text-xs text-slate-500 tracking-wider uppercase mt-1">Độ Tin Cậy Vận Hành</div>
+                    </div>
+                    <div class="border-l-2 border-cyber-lamp pl-4">
+                        <div class="font-mono text-2xl font-bold text-white">&lt; 1.2ms</div>
+                        <div class="text-xs text-slate-500 tracking-wider uppercase mt-1">Độ Trễ Điều Phối SLA</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7 grid sm:grid-cols-2 gap-6 gs-scroll">
+                <div class="tilt-card border border-cyber-border bg-cyber-card p-8 space-y-4 rounded-lg" data-tilt data-tilt-glare="true" data-tilt-max="10" data-tilt-scale="1.02">
+                    <iconify-icon icon="ph:cpu-light" class="text-3xl text-cyber-accent"></iconify-icon>
+                    <h3 class="text-xl font-semibold text-white">ABC Tech Hardware Matrix</h3>
+                    <p class="text-sm text-slate-400 font-light leading-relaxed">
+                        Phân phối thiết bị máy trạm, linh kiện phần cứng và thiết bị mạng chính hãng 100% nhập khẩu chính ngạch, xuất VAT tức thì.
+                    </p>
+                </div>
+
+                <div class="tilt-card border border-cyber-border bg-cyber-card p-8 space-y-4 rounded-lg" data-tilt data-tilt-glare="true" data-tilt-max="10" data-tilt-scale="1.02">
+                    <iconify-icon icon="ph:wrench-light" class="text-3xl text-cyber-lamp"></iconify-icon>
+                    <h3 class="text-xl font-semibold text-white">XYZ IT Technical Enclave</h3>
+                    <p class="text-sm text-slate-400 font-light leading-relaxed">
+                        Kỹ sư IT triển khai tận nơi, cam kết SLA phản hồi khẩn cấp có ràng buộc bằng văn bản, tối ưu hóa CSDL PostgreSQL và cứu hộ dữ liệu.
+                    </p>
+                </div>
+
+                <div class="tilt-card border border-cyber-border bg-cyber-card p-8 space-y-4 rounded-lg" data-tilt data-tilt-glare="true" data-tilt-max="10" data-tilt-scale="1.02">
+                    <iconify-icon icon="ph:map-pin-line-light" class="text-3xl text-cyber-glow"></iconify-icon>
+                    <h3 class="text-xl font-semibold text-white">GIS Spatial Radar</h3>
+                    <p class="text-sm text-slate-400 font-light leading-relaxed">
+                        Định vị tọa độ 3 trạm chi nhánh dịch vụ và bản đồ điều phối kỹ thuật viên tức thời theo khoảng cách và kỹ năng thực tế.
+                    </p>
+                </div>
+
+                <div class="tilt-card border border-cyber-border bg-cyber-card p-8 space-y-4 rounded-lg" data-tilt data-tilt-glare="true" data-tilt-max="10" data-tilt-scale="1.02">
+                    <iconify-icon icon="ph:shield-check-light" class="text-3xl text-slate-300"></iconify-icon>
+                    <h3 class="text-xl font-semibold text-white">AI Telemetry &amp; Sandbox</h3>
+                    <p class="text-sm text-slate-400 font-light leading-relaxed">
+                        Công nghệ dự báo nhu cầu chuỗi cung ứng XGBoost, bảo mật sandbox cách ly dữ liệu giữa các workspace tuyệt đối.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================================
+         3. COMMAND OVERRIDE // 3D TILT TERMINAL WITH CRT SCANLINES
+         ========================================================================= -->
+    <section id="console" class="py-28 bg-cyber-surface/40 border-y border-cyber-border">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="max-w-2xl mx-auto text-center mb-14 gs-scroll">
+                <span class="font-mono text-xs text-cyber-accent uppercase tracking-widest block mb-3">COMMAND OVERRIDE // LIVE KERNEL</span>
+                <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white">Interactive Sandbox Matrix</h2>
+            </div>
+
+            <div class="tilt-card scanlines w-full max-w-4xl mx-auto border border-cyber-border bg-cyber-bg shadow-2xl overflow-hidden rounded-lg" data-tilt data-tilt-glare="true" data-tilt-max="8" data-tilt-scale="1.01">
+                <div class="bg-cyber-surface px-4 py-3 border-b border-cyber-border flex items-center justify-between select-none">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500/60"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-green-500/60"></span>
+                        <span class="font-mono text-xs text-slate-400 ml-2">abctech_xyz_kernel_v4.sh</span>
+                    </div>
+                    <span class="font-mono text-[10px] text-cyber-accent font-bold">TTY // 1 — ACTIVE</span>
+                </div>
+                
+                <div class="p-6 font-mono text-xs sm:text-sm space-y-4 min-h-[340px] bg-gradient-to-b from-cyber-bg to-cyber-surface/30">
+                    <div class="flex items-start gap-2">
+                        <span class="text-cyber-accent">guest@nexus:~$</span>
+                        <span class="text-slate-300">init --dual-core=abc_tech_and_xyz_it</span>
+                    </div>
+                    <div class="text-slate-500 space-y-1">
+                        <div>[ <span class="text-emerald-400 font-bold">OK</span> ] Mounting ABC Tech hardware inventory &amp; real-time warehouse balances...</div>
+                        <div>[ <span class="text-emerald-400 font-bold">OK</span> ] Calibrating XYZ IT technician dispatch matrix (&lt;15m SLA target)...</div>
+                        <div>[ <span class="text-emerald-400 font-bold">OK</span> ] Activating AI telemetry &amp; XGBoost multi-tenant demand forecaster...</div>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-cyber-accent">guest@nexus:~$</span>
+                        <span class="text-slate-300">cat enterprise_manifesto.txt</span>
+                    </div>
+                    <div class="text-cyber-amber leading-relaxed bg-cyber-card/60 p-4 border border-cyber-border/80 rounded">
+                        "Hạ tầng công nghệ mạnh mẽ không hình thành từ sự phức tạp ngẫu nhiên, mà được xây dựng từ kỷ luật phân vùng tuyệt đối, phần cứng tin cậy và SLA dịch vụ chuẩn mực."
+                    </div>
+                    <div class="flex items-center gap-2 pt-2">
+                        <span class="text-cyber-accent">guest@nexus:~$</span>
+                        <span class="text-white cursor-blink" id="terminal-input-mock"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================================
+         4. HARDWARE MATRIX // ABC TECH STORE (DYNAMIC 3D TILT PRODUCT CARDS)
+         ========================================================================= -->
+    <section id="hardware" class="py-28 max-w-7xl mx-auto px-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6 gs-scroll">
+            <div>
+                <span class="font-mono text-xs text-cyber-accent uppercase tracking-widest block mb-2">ABC TECH STORE // HARDWARE MATRIX</span>
+                <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">Thiết Bị Phần Cứng Sẵn Sàng</h2>
+            </div>
+            
+            <!-- Category Filter Tabs -->
+            <div class="flex items-center gap-2 flex-wrap font-mono text-xs" role="tablist">
+                <button type="button" class="cat-pill active px-4 py-2 border border-cyber-border bg-cyber-surface text-slate-300 transition-all rounded" data-cat="all" onclick="filterHardwareCategory('all')">
+                    Tất cả
+                </button>
+                <button type="button" class="cat-pill px-4 py-2 border border-cyber-border bg-cyber-surface text-slate-300 hover:border-cyber-accent transition-all rounded" data-cat="laptop" onclick="filterHardwareCategory('laptop')">
+                    Laptop &amp; PC
+                </button>
+                <button type="button" class="cat-pill px-4 py-2 border border-cyber-border bg-cyber-surface text-slate-300 hover:border-cyber-accent transition-all rounded" data-cat="networking" onclick="filterHardwareCategory('networking')">
+                    Thiết bị mạng
+                </button>
+                <button type="button" class="cat-pill px-4 py-2 border border-cyber-border bg-cyber-surface text-slate-300 hover:border-cyber-accent transition-all rounded" data-cat="components" onclick="filterHardwareCategory('components')">
+                    Linh kiện
+                </button>
+            </div>
+        </div>
+
+        <!-- Dynamic Product Cards Grid with 3D Tilt -->
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 gs-scroll" id="hardware-cards-container">
+            {% for p in featured_products %}
+            <div class="tilt-card product-micro-card border border-cyber-border bg-cyber-card p-6 flex flex-col justify-between rounded-lg" data-tilt data-tilt-glare="true" data-tilt-max="10" data-tilt-scale="1.02" data-cat-code="{{ p.category.code|lower|default:'all' }}">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center text-xs font-mono">
+                        <span class="text-cyber-accent bg-cyber-accent/10 border border-cyber-accent/20 px-2.5 py-1 rounded">
+                            {{ p.category.name|default:"Phần cứng" }}
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 text-emerald-400">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Còn hàng
+                        </span>
+                    </div>
+
+                    <div>
+                        <h4 class="text-lg font-bold text-white hover:text-cyber-accent transition-colors line-clamp-2">
+                            <a href="/san-pham/{{ p.id }}/" title="{{ p.name }}">
+                                {{ p.name }}
+                            </a>
+                        </h4>
+                        <p class="text-xs text-slate-400 mt-2 font-mono">
+                            SKU: {{ p.sku|default:"N/A" }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-cyber-border/60 flex items-center justify-between mt-6">
+                    <div>
+                        <span class="font-mono text-[10px] text-slate-500 uppercase tracking-wider block">Giá niêm yết</span>
+                        <span class="font-mono text-lg font-bold text-cyber-lamp">
+                            {{ p.unit_price|floatformat:0 }} VNĐ
+                        </span>
+                    </div>
+
+                    <button type="button" class="px-4 py-2.5 bg-cyber-accent text-cyber-bg font-mono text-xs uppercase tracking-wider font-bold hover:bg-cyber-glow transition-all flex items-center gap-1.5 rounded" onclick="quickAddToCart({{ p.id }}, '{{ p.name|escapejs }}')">
+                        <iconify-icon icon="ph:plus-bold"></iconify-icon>
+                        <span>+ Giỏ</span>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center py-16 text-slate-500 font-mono">
+                Đang đồng bộ dữ liệu thiết bị phần cứng từ kho trung tâm...
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-10 text-center">
+            <a href="/san-pham/" class="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-cyber-accent hover:text-white border-b border-cyber-accent/40 pb-1 hover:border-white transition-all">
+                Xem toàn bộ kho sản phẩm ABC Tech Store →
+            </a>
+        </div>
+    </section>
+
+    <!-- =========================================================================
+         5. XYZ IT SERVICES & LIVE SLA DIAGNOSTIC SIMULATOR
+         ========================================================================= -->
+    <section id="services" class="py-28 bg-cyber-surface/30 border-t border-cyber-border">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid lg:grid-cols-12 gap-12 items-start">
+                <div class="lg:col-span-5 space-y-6 gs-scroll">
+                    <span class="font-mono text-xs text-cyber-lamp uppercase tracking-widest block">XYZ IT TECHNICAL SERVICES</span>
+                    <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-tight">
+                        Mô Phỏng Cam Kết SLA Kỹ Thuật Tức Thời
+                    </h2>
+                    <p class="text-slate-400 font-light leading-relaxed">
+                        Hệ thống tự động tính toán thời hạn phản hồi tiêu chuẩn và điều phối nhân sự chuyên trách theo từng cấp độ sự cố. Mọi quy trình tiếp nhận đều được chuẩn hóa theo tiêu chuẩn dịch vụ doanh nghiệp.
+                    </p>
+                    
+                    <div class="space-y-3 font-mono text-xs text-slate-400 pt-2">
+                        <div class="flex items-center gap-2">
+                            <iconify-icon icon="ph:check-circle-light" class="text-cyber-glow text-base"></iconify-icon>
+                            <span>Cam kết mốc thời gian bằng hợp đồng</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <iconify-icon icon="ph:check-circle-light" class="text-cyber-glow text-base"></iconify-icon>
+                            <span>Kỹ sư L2/Principal tiếp nhận trực tiếp</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <iconify-icon icon="ph:check-circle-light" class="text-cyber-glow text-base"></iconify-icon>
+                            <span>Ký cam kết bảo mật thông tin (NDA) trước xử lý</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulator Body with 3D Tilt -->
+                <div class="tilt-card lg:col-span-7 border border-cyber-border bg-cyber-card p-6 sm:p-8 space-y-6 rounded-lg gs-scroll" data-tilt data-tilt-glare="true" data-tilt-max="6" data-tilt-scale="1.01">
+                    <!-- Step 1: Chọn nhóm dịch vụ -->
+                    <div>
+                        <label class="font-mono text-xs text-slate-300 uppercase tracking-wider block mb-3">
+                            1. CHỌN NHÓM DỊCH VỤ CẦN TRIỂN KHAI
+                        </label>
+                        <div class="grid sm:grid-cols-2 gap-3">
+                            <button type="button" class="sim-cat-btn active text-left p-3.5 border border-cyber-border bg-cyber-surface transition-all rounded" data-cat-key="INSTALLATION" onclick="selectSimCategory('INSTALLATION')">
+                                <div class="font-bold text-sm text-white">Cài đặt hệ thống</div>
+                                <div class="font-mono text-xs text-slate-400 mt-1">OS, Server, Router, Cụm mạng</div>
+                            </button>
+                            <button type="button" class="sim-cat-btn text-left p-3.5 border border-cyber-border bg-cyber-surface transition-all rounded" data-cat-key="MAINTENANCE" onclick="selectSimCategory('MAINTENANCE')">
+                                <div class="font-bold text-sm text-white">Bảo trì định kỳ</div>
+                                <div class="font-mono text-xs text-slate-400 mt-1">Vệ sinh, Audit &amp; Cập nhật bảo mật</div>
+                            </button>
+                            <button type="button" class="sim-cat-btn text-left p-3.5 border border-cyber-border bg-cyber-surface transition-all rounded" data-cat-key="DATABASE_CONSULTING" onclick="selectSimCategory('DATABASE_CONSULTING')">
+                                <div class="font-bold text-sm text-white">Tư vấn CSDL</div>
+                                <div class="font-mono text-xs text-slate-400 mt-1">PostgreSQL, Tối ưu hóa &amp; Cứu hộ</div>
+                            </button>
+                            <button type="button" class="sim-cat-btn text-left p-3.5 border border-cyber-border bg-cyber-surface transition-all rounded" data-cat-key="DEVICE_REPAIR" onclick="selectSimCategory('DEVICE_REPAIR')">
+                                <div class="font-bold text-sm text-white">Sửa chữa thiết bị</div>
+                                <div class="font-mono text-xs text-slate-400 mt-1">Mainboard, Nguồn, Cứu linh kiện</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Chọn mức ưu tiên -->
+                    <div>
+                        <label class="font-mono text-xs text-slate-300 uppercase tracking-wider block mb-3">
+                            2. MỨC ĐỘ ƯU TIÊN TIẾP NHẬN
+                        </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button type="button" class="sim-pri-btn active p-3 border border-cyber-border bg-cyber-surface font-mono text-xs text-center transition-all rounded" data-priority="standard" onclick="selectSimPriority('standard')">
+                                Tiêu chuẩn (Giờ hành chính)
+                            </button>
+                            <button type="button" class="sim-pri-btn p-3 border border-cyber-border bg-cyber-surface font-mono text-xs text-center transition-all rounded" data-priority="urgent" onclick="selectSimPriority('urgent')">
+                                Khẩn cấp (SLA &lt; 15p)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Terminal Output Computation -->
+                    <div class="border border-cyber-border bg-cyber-bg p-5 font-mono text-xs space-y-3 rounded">
+                        <div class="flex justify-between items-center border-b border-cyber-border/40 pb-2 text-slate-500">
+                            <span>&gt; DIAGNOSTIC COMPUTATION</span>
+                            <span class="text-emerald-400 font-bold" id="sim-term-status">READY</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400">Cam kết phản hồi SLA:</span>
+                            <span class="text-cyber-accent font-bold text-sm" id="sim-out-sla">&lt; 4 Giờ</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400">Kỹ sư phụ trách:</span>
+                            <span class="text-white font-medium" id="sim-out-eng">Kỹ sư Hệ thống L2</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400">Ước tính định mức:</span>
+                            <span class="text-cyber-lamp font-bold" id="sim-out-fee">Từ 350.000 VNĐ</span>
+                        </div>
+                    </div>
+
+                    <a href="/yeu-cau-dich-vu/?category=INSTALLATION" id="sim-submit-btn" class="w-full py-4 bg-cyber-accent text-cyber-bg font-mono text-xs uppercase tracking-widest font-bold hover:bg-cyber-glow transition-all flex items-center justify-center gap-2 rounded">
+                        <span>Gửi phiếu yêu cầu kỹ thuật theo cấu hình này →</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================================
+         6. GIS BRANCHES & SPECIFICATION ALPHA (WITH RADAR SCANNER)
+         ========================================================================= -->
+    <section id="branches" class="py-28 max-w-7xl mx-auto px-6 border-t border-cyber-border">
+        <div class="grid lg:grid-cols-12 gap-16 items-center">
+            <div class="lg:col-span-6 space-y-6 gs-scroll">
+                <div class="flex items-center justify-between">
+                    <span class="font-mono text-xs text-cyber-accent uppercase tracking-widest block">MẠNG LƯỚI CHI NHÁNH &amp; ĐIỀU PHỐI GIS</span>
+                    <!-- Realtime Sweeping Radar Mini-Widget -->
+                    <div class="radar-sweep-container hidden sm:block">
+                        <div class="radar-sweep-beam"></div>
+                        <div class="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-cyber-glow">
+                            GIS SCAN
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white leading-tight">
+                    Hệ Thống Trạm Dịch Vụ Phủ Rộng
+                </h2>
+                <p class="text-slate-400 font-light leading-relaxed">
+                    3 trung tâm giao dịch trực tiếp cùng trạm kỹ thuật tại các quận trọng điểm, tích hợp bản đồ số GeoDjango / PostGIS điều phối tức thì.
+                </p>
+
+                <!-- Branch stack cards -->
+                <div class="space-y-4 pt-2">
+                    {% for b in branches %}
+                    <div class="tilt-card border border-cyber-border bg-cyber-card p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 rounded" data-tilt data-tilt-max="6">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <h4 class="font-bold text-white text-base">{{ b.name }}</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 font-mono">{{ b.address|default:"Khu vực trung tâm thành phố" }}</p>
+                        </div>
+                        <div>
+                            {% if b.phone %}
+                            <a href="tel:{{ b.phone }}" class="inline-flex items-center gap-1.5 font-mono text-xs border border-cyber-border px-3.5 py-2 text-cyber-accent hover:border-cyber-accent transition-colors rounded">
+                                <iconify-icon icon="ph:phone-call-light"></iconify-icon>
+                                <span>{{ b.phone }}</span>
+                            </a>
+                            {% else %}
+                            <span class="font-mono text-xs text-slate-500">Mở cửa: 08:00 - 21:30</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-slate-500 font-mono text-xs">Đang cập nhật danh mục chi nhánh...</div>
+                    {% endfor %}
+                </div>
+
+                <div class="pt-2">
+                    <a href="/chi-nhanh/" class="font-mono text-xs uppercase tracking-widest text-cyber-glow hover:underline inline-flex items-center gap-2">
+                        <iconify-icon icon="ph:navigation-arrow-light"></iconify-icon>
+                        <span>Xem bản đồ số chi nhánh GIS →</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Technical Specification Alpha Table -->
+            <div class="lg:col-span-6 relative gs-scroll">
+                <div class="absolute inset-0 bg-cyber-accent/5 blur-[100px] rounded-full pointer-events-none"></div>
+                <div class="tilt-card border border-cyber-border p-8 bg-cyber-bg relative z-10 font-mono text-xs space-y-4 shadow-2xl rounded-lg" data-tilt data-tilt-max="6">
+                    <div class="flex justify-between border-b border-cyber-border/60 pb-3 text-slate-500">
+                        <span>COMPONENT MATRIX</span>
+                        <span>SPECIFICATION ALPHA</span>
+                    </div>
+                    <div class="flex justify-between border-b border-cyber-border/40 pb-2">
+                        <span class="text-slate-400">Phần cứng máy trạm</span>
+                        <span class="text-white">100% Chính hãng / Đầy đủ CO-CQ</span>
+                    </div>
+                    <div class="flex justify-between border-b border-cyber-border/40 pb-2">
+                        <span class="text-slate-400">Chuẩn phản hồi SLA</span>
+                        <span class="text-cyber-amber">Khẩn cấp &lt; 15 Phút / Ràng buộc văn bản</span>
+                    </div>
+                    <div class="flex justify-between border-b border-cyber-border/40 pb-2">
+                        <span class="text-slate-400">Đội ngũ kỹ thuật</span>
+                        <span class="text-white">Kỹ sư L2 &amp; Principal PostgreSQL</span>
+                    </div>
+                    <div class="flex justify-between border-b border-cyber-border/40 pb-2">
+                        <span class="text-slate-400">Bảo mật dữ liệu</span>
+                        <span class="text-white">Ký cam kết NDA bảo mật tuyệt đối</span>
+                    </div>
+                    <div class="flex justify-between pb-1">
+                        <span class="text-slate-400">Hạ tầng phân tích AI</span>
+                        <span class="text-cyber-glow">XGBoost Telemetry / Workspace Isolated</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================================
+         7. ENTERPRISE ASSURANCE MATRIX & TELEMETRY SUBSCRIPTION
+         ========================================================================= -->
+    <section class="py-28 px-6 max-w-4xl mx-auto text-center relative overflow-hidden">
+        <div class="absolute inset-0 bg-cyber-lamp/5 blur-3xl pointer-events-none rounded-full"></div>
+        <div class="relative z-10 space-y-8 gs-scroll">
+            <iconify-icon icon="ph:fingerprint-light" class="text-5xl text-cyber-accent animate-pulse"></iconify-icon>
+            <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white">Kết Nối Nút Điều Hành Doanh Nghiệp</h2>
+            <p class="text-slate-400 text-sm sm:text-base font-light max-w-xl mx-auto leading-relaxed">
+                Nhận cập nhật telemetry về hạ tầng công nghệ, danh mục phần cứng độc quyền và chính sách bảo trì ưu đãi.
+            </p>
+            <div class="max-w-md mx-auto flex flex-col sm:flex-row items-center gap-3">
+                <input type="email" placeholder="email-doanh-nghiep@domain.com" class="w-full bg-cyber-card border border-cyber-border px-5 py-4 font-mono text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-cyber-accent transition-colors rounded">
+                <button type="button" class="w-full sm:w-auto px-8 py-4 bg-cyber-accent text-cyber-bg font-mono text-xs uppercase tracking-widest font-bold whitespace-nowrap hover:bg-cyber-glow transition-colors rounded">
+                    Kết nối Node
+                </button>
+            </div>
+            <div class="pt-4 text-xs font-mono text-slate-500">
+                Hotline hỗ trợ tức thời: <a href="tel:19006868" class="text-cyber-lamp font-bold hover:underline">1900 6868</a> (08:00 - 21:30)
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- Floating Toast Notification for Quick Add-to-Cart -->
+<div id="cart-toast" class="cart-toast" role="status" aria-live="polite">
+    <iconify-icon icon="ph:check-circle-bold" class="text-xl text-cyber-accent"></iconify-icon>
+    <div class="text-xs font-mono" id="cart-toast-msg">
+        Đã thêm sản phẩm vào giỏ hàng!
+    </div>
+</div>
+{% endblock content %}
+
+{% block footer %}
+<!-- =========================================================================
+     CYBER FOOTER (STANDALONE & THEMED)
+     ========================================================================= -->
+<footer class="bg-cyber-surface border-t border-cyber-border pt-20 pb-12 px-6 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto grid lg:grid-cols-12 gap-16 items-start relative z-10 mb-16">
+        <div class="lg:col-span-5 space-y-6">
+            <a href="/" class="font-mono text-lg font-bold tracking-wider text-white flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyber-glow"></span>
+                CORE // ENTER
+            </a>
+            <p class="text-slate-400 text-sm font-light leading-relaxed max-w-sm">
+                Nền tảng tích hợp bán lẻ thiết bị công nghệ chính hãng (ABC Tech Store) và dịch vụ kỹ thuật CNTT chuyên sâu (XYZ IT Technical Services).
+            </p>
+            <div class="font-mono text-xs text-slate-500 space-y-1">
+                <div>Trụ sở: Tầng 12, Tòa nhà Công nghệ, Quận 1, TP.HCM</div>
+                <div>Hotline dịch vụ: <strong class="text-cyber-lamp">1900 6868</strong></div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-12 w-full">
+            <div>
+                <h4 class="font-mono text-xs uppercase tracking-widest font-bold text-cyber-amber mb-6">Phân Hệ</h4>
+                <ul class="space-y-4 font-mono text-xs text-slate-400">
+                    <li><a href="/san-pham/" class="hover:text-white transition-colors">ABC Tech Store</a></li>
+                    <li><a href="/dich-vu/" class="hover:text-white transition-colors">XYZ IT Services</a></li>
+                    <li><a href="/chi-nhanh/" class="hover:text-white transition-colors">Bản đồ GIS</a></li>
+                    <li><a href="/yeu-cau-dich-vu/" class="hover:text-white transition-colors">Gửi phiếu SLA</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-mono text-xs uppercase tracking-widest font-bold text-cyber-amber mb-6">Tài Khoản</h4>
+                <ul class="space-y-4 font-mono text-xs text-slate-400">
+                    <li><a href="/tai-khoan/" class="hover:text-white transition-colors">Trang cá nhân</a></li>
+                    <li><a href="/gio-hang/" class="hover:text-white transition-colors">Giỏ hàng</a></li>
+                    <li><a href="/dang-nhap/" class="hover:text-white transition-colors">Đăng nhập / Đăng ký</a></li>
+                    <li><a href="/lien-he/" class="hover:text-white transition-colors">Liên hệ hỗ trợ</a></li>
+                </ul>
+            </div>
+            <div class="col-span-2 md:col-span-1">
+                <h4 class="font-mono text-xs uppercase tracking-widest font-bold text-cyber-amber mb-6">Kết Nối</h4>
+                <div class="flex gap-4 text-2xl text-slate-500">
+                    <a href="#" class="hover:text-cyber-accent transition-colors"><iconify-icon icon="ph:github-logo-light"></iconify-icon></a>
+                    <a href="#console" class="hover:text-cyber-lamp transition-colors"><iconify-icon icon="ph:terminal-light"></iconify-icon></a>
+                    <a href="#" class="hover:text-cyber-glow transition-colors"><iconify-icon icon="ph:cpu-light"></iconify-icon></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto border-t border-cyber-border/40 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10 font-mono text-[11px] uppercase tracking-widest text-slate-500">
+        <p>© 2026 Nền tảng Doanh nghiệp AI — ABC Tech Store &amp; XYZ IT Technical Services.</p>
+        <div class="flex gap-8">
+            <a href="/gioi-thieu/" class="hover:text-white transition-colors">Điều khoản dịch vụ</a>
+            <a href="/lien-he/" class="hover:text-white transition-colors">Cam kết bảo mật</a>
+        </div>
+    </div>
+</footer>
+{% endblock footer %}
+
+{% block extra_js %}
+<!-- Three.js Kinetic Cyber Core Engine -->
+<script src="/static/js/home_three_scene.js"></script>
+
+<!-- Interactive Master Engine: Neural Plexus, GSAP 3, Vanilla-Tilt, Parallax & SLA Engine -->
+<script>
+    // =========================================================================
+    // 1. NEURAL PLEXUS CANVAS PARTICLES ENGINE
+    // =========================================================================
+    (function initNeuralPlexus() {
+        const canvas = document.getElementById('plexus-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        let width, height;
+        let particles = [];
+        const particleCount = 65;
+        const maxDistance = 140;
+        let mouseX = -1000, mouseY = -1000;
+
+        function resize() {
+            width = canvas.width = canvas.parentElement.clientWidth || window.innerWidth;
+            height = canvas.height = canvas.parentElement.clientHeight || window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize, { passive: true });
+
+        canvas.addEventListener('mousemove', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        }, { passive: true });
+
+        canvas.addEventListener('mouseleave', function() {
+            mouseX = -1000;
+            mouseY = -1000;
+        }, { passive: true });
+
+        // Particle Class
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.7;
+                this.vy = (Math.random() - 0.5) * 0.7;
+                this.radius = Math.random() * 1.8 + 1;
+                this.color = Math.random() > 0.35 ? '#38bdf8' : '#ffb03a';
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0) this.x = width;
+                else if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                else if (this.y > height) this.y = 0;
+
+                // Mouse proximity attraction
+                const dx = mouseX - this.x;
+                const dy = mouseY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 130) {
+                    this.x += dx * 0.015;
+                    this.y += dy * 0.015;
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        function renderPlexus() {
+            ctx.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+
+                // Connect particles with distance lines
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < maxDistance) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        const alpha = (1 - dist / maxDistance) * 0.35;
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${alpha})`;
+                        ctx.lineWidth = 0.75;
+                        ctx.stroke();
+                    }
+                }
+
+                // Connect to mouse cursor
+                if (mouseX > 0 && mouseY > 0) {
+                    const mdx = particles[i].x - mouseX;
+                    const mdy = particles[i].y - mouseY;
+                    const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+                    if (mdist < 140) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(mouseX, mouseY);
+                        const malpha = (1 - mdist / 140) * 0.55;
+                        ctx.strokeStyle = `rgba(0, 240, 255, ${malpha})`;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            requestAnimationFrame(renderPlexus);
+        }
+        renderPlexus();
+    })();
+
+    // =========================================================================
+    // 2. GSAP 3 & SCROLLTRIGGER CINEMATIC ANIMATIONS
+    // =========================================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof gsap !== 'undefined') {
+            gsap.registerPlugin(ScrollTrigger);
+
+            // Hero Stagger Entrance
+            gsap.from('.gs-reveal', {
+                y: 35,
+                opacity: 0,
+                duration: 1.1,
+                stagger: 0.15,
+                ease: 'power3.out'
+            });
+
+            // ScrollTrigger reveals on sections
+            document.querySelectorAll('.gs-scroll').forEach(function(el) {
+                gsap.from(el, {
+                    scrollTrigger: {
+                        trigger: el,
+                        start: 'top 85%',
+                        toggleActions: 'play none none reverse'
+                    },
+                    y: 40,
+                    opacity: 0,
+                    duration: 0.9,
+                    ease: 'power2.out'
+                });
+            });
+
+            // Animated Number Counter on Telemetry
+            document.querySelectorAll('.counter-num').forEach(function(counter) {
+                const target = parseInt(counter.getAttribute('data-target') || '0', 10);
+                gsap.to(counter, {
+                    scrollTrigger: {
+                        trigger: counter,
+                        start: 'top 90%',
+                        toggleActions: 'play none none none'
+                    },
+                    textContent: target,
+                    duration: 1.8,
+                    ease: 'power1.out',
+                    snap: { textContent: 1 }
+                });
+            });
+
+            // Magnetic Button Effect on Primary Buttons
+            document.querySelectorAll('.magnetic-btn').forEach(function(btn) {
+                btn.addEventListener('mousemove', function(e) {
+                    const rect = btn.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    gsap.to(btn, { x: x * 0.25, y: y * 0.25, duration: 0.3, ease: 'power2.out' });
+                });
+                btn.addEventListener('mouseleave', function() {
+                    gsap.to(btn, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.4)' });
+                });
+            });
+        }
+
+        // Initialize Vanilla-Tilt on 3D elements
+        if (typeof VanillaTilt !== 'undefined') {
+            VanillaTilt.init(document.querySelectorAll('.tilt-card'), {
+                max: 8,
+                speed: 400,
+                glare: true,
+                "max-glare": 0.25,
+                scale: 1.01
+            });
+        }
+    });
+
+    // =========================================================================
+    // 3. PARALLAX VIDEO SCROLL & DYNAMIC TOP NAV MORPHING
+    // =========================================================================
+    const video = document.getElementById('hero-bg-video');
+    const nav = document.getElementById('top-nav');
+    let scrollActive = false;
+
+    const runScrollLogic = () => {
+        const currentY = window.scrollY;
+        
+        if (video) {
+            video.style.transform = `translateY(${currentY * 0.25}px)`;
+        }
+
+        if (nav) {
+            if (currentY > 50) {
+                nav.classList.remove('h-20', 'border-transparent', 'bg-cyber-bg/70');
+                nav.classList.add('h-16', 'bg-cyber-bg/95', 'backdrop-blur-md', 'border-cyber-border');
+            } else {
+                nav.classList.remove('h-16', 'bg-cyber-bg/95', 'border-cyber-border');
+                nav.classList.add('h-20', 'border-transparent', 'bg-cyber-bg/70');
+            }
+        }
+    };
+
+    window.addEventListener('scroll', () => {
+        if (!scrollActive) {
+            window.requestAnimationFrame(() => {
+                runScrollLogic();
+                scrollActive = false;
+            });
+            scrollActive = true;
+        }
+    }, { passive: true });
+
+    // =========================================================================
+    // 4. INTERACTIVE SANDBOX MATRIX TERMINAL TYPEWRITER
+    // =========================================================================
+    const mockInput = document.getElementById('terminal-input-mock');
+    const sequences = [
+        "scan --workspace=retail --catalog=active",
+        "dispatch --ticket=emergency --sla=15m",
+        "verify --origin=co_cq --vat=standard",
+        "telemetry --xgboost=forecast --status=optimal"
+    ];
+    let sequenceIndex = 0;
+    let characterIndex = 0;
+    let deletionActive = false;
+
+    const processTypewriter = () => {
+        if (!mockInput) return;
+        const currentString = sequences[sequenceIndex];
+        
+        if (!deletionActive) {
+            mockInput.textContent = currentString.substring(0, characterIndex + 1);
+            characterIndex++;
+            
+            if (characterIndex === currentString.length) {
+                deletionActive = true;
+                setTimeout(processTypewriter, 2200);
+                return;
+            }
+        } else {
+            mockInput.textContent = currentString.substring(0, characterIndex - 1);
+            characterIndex--;
+            
+            if (characterIndex === 0) {
+                deletionActive = false;
+                sequenceIndex = (sequenceIndex + 1) % sequences.length;
+            }
+        }
+        
+        setTimeout(processTypewriter, deletionActive ? 35 : 90);
+    };
+
+    if (mockInput) {
+        setTimeout(processTypewriter, 800);
+    }
+
+    // =========================================================================
+    // 5. HARDWARE CATEGORY FILTERING
+    // =========================================================================
+    function filterHardwareCategory(category) {
+        document.querySelectorAll('.cat-pill').forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-cat') === category);
+        });
+
+        var cards = document.querySelectorAll('.product-micro-card');
+        cards.forEach(function(card) {
+            var cardCat = card.getAttribute('data-cat-code') || '';
+            if (category === 'all' || cardCat.indexOf(category) !== -1) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // =========================================================================
+    // 6. XYZ IT SLA DIAGNOSTIC SIMULATOR ENGINE
+    // =========================================================================
+    var simState = {
+        category: 'INSTALLATION',
+        priority: 'standard'
+    };
+
+    var simConfig = {
+        INSTALLATION: {
+            standard: { sla: '< 4 Giờ', eng: 'Kỹ sư Hệ thống L2', fee: 'Từ 350.000 VNĐ' },
+            urgent:   { sla: '< 30 Phút', eng: 'Kỹ sư Trưởng Hạ Tầng', fee: 'Từ 650.000 VNĐ' }
+        },
+        MAINTENANCE: {
+            standard: { sla: '< 8 Giờ', eng: 'Kỹ sư Bảo trì Định kỳ', fee: 'Từ 250.000 VNĐ' },
+            urgent:   { sla: '< 1 Giờ', eng: 'Đội Phản ứng Nhanh', fee: 'Từ 500.000 VNĐ' }
+        },
+        DATABASE_CONSULTING: {
+            standard: { sla: '< 2 Giờ', eng: 'Chuyên gia CSDL PostgreSQL', fee: 'Từ 500.000 VNĐ' },
+            urgent:   { sla: '< 15 Phút', eng: 'Kiến trúc sư CSDL Principal', fee: 'Từ 1.200.000 VNĐ' }
+        },
+        DEVICE_REPAIR: {
+            standard: { sla: '< 24 Giờ', eng: 'Kỹ thuật viên Phần cứng L1', fee: 'Từ 150.000 VNĐ' },
+            urgent:   { sla: '< 2 Giờ', eng: 'Chuyên gia Cứu hộ Dữ liệu', fee: 'Từ 450.000 VNĐ' }
+        }
+    };
+
+    function selectSimCategory(catKey) {
+        simState.category = catKey;
+        document.querySelectorAll('.sim-cat-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-cat-key') === catKey);
+        });
+        updateSimulatorOutput();
+    }
+
+    function selectSimPriority(priority) {
+        simState.priority = priority;
+        document.querySelectorAll('.sim-pri-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-priority') === priority);
+        });
+        updateSimulatorOutput();
+    }
+
+    function updateSimulatorOutput() {
+        var data = simConfig[simState.category][simState.priority];
+        var slaEl = document.getElementById('sim-out-sla');
+        var engEl = document.getElementById('sim-out-eng');
+        var feeEl = document.getElementById('sim-out-fee');
+        var btnEl = document.getElementById('sim-submit-btn');
+
+        if (slaEl) slaEl.textContent = data.sla;
+        if (engEl) engEl.textContent = data.eng;
+        if (feeEl) feeEl.textContent = data.fee;
+        if (btnEl) btnEl.href = '/yeu-cau-dich-vu/?category=' + simState.category;
+    }
+
+    // =========================================================================
+    // 7. QUICK ADD TO CART VIA AJAX & TOAST
+    // =========================================================================
+    function quickAddToCart(productId, productName) {
+        var toast = document.getElementById('cart-toast');
+        var toastMsg = document.getElementById('cart-toast-msg');
+        var badge = document.getElementById('header-cart-badge');
+
+        fetch('/gio-hang/them/' + productId + '/?action=add_to_cart&quantity=1', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(res) {
+            if (res.ok) {
+                if (badge) {
+                    var currentCount = parseInt(badge.textContent.trim() || '0', 10);
+                    badge.textContent = currentCount + 1;
+                    badge.style.display = 'inline-block';
+                }
+                if (toastMsg) toastMsg.textContent = 'Đã thêm "' + productName + '" vào giỏ hàng!';
+                if (toast) {
+                    toast.classList.add('show');
+                    setTimeout(function() {
+                        toast.classList.remove('show');
+                    }, 3200);
+                }
+            } else {
+                window.location.href = '/gio-hang/them/' + productId + '/';
+            }
+        })
+        .catch(function() {
+            window.location.href = '/gio-hang/them/' + productId + '/';
+        });
+    }
+</script>
+{% endblock %}

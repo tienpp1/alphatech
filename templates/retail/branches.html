@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Chi nhánh - Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">Hệ thống Chi nhánh Bán lẻ</h1>
+    <p style="color: #94a3b8;">Mạng lưới cửa hàng trực tiếp của <strong>{{ active_workspace.name }}</strong></p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+    {% for b in branches %}
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div style="font-size: 0.8rem; color: #6366f1; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem;">Khu vực: {{ b.region }}</div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.25rem;">{{ b.name }}</h3>
+            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;">Mã: <code>{{ b.code }}</code></div>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.5rem;">📍 {{ b.address }}</p>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.5rem;">📞 {{ b.phone|default:"Chưa cập nhật số điện thoại" }}</p>
+            {% if b.latitude and b.longitude %}
+            <p style="color: #64748b; font-size: 0.8rem;">Tọa độ GPS: {{ b.latitude }}, {{ b.longitude }}</p>
+            {% endif %}
+        </div>
+        <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.8rem; color: {% if b.is_active %}#4ade80{% else %}#f87171{% endif %}; font-weight: 600;">
+                {% if b.is_active %}● Đang hoạt động{% else %}○ Ngừng hoạt động{% endif %}
+            </span>
+            <span style="font-size: 0.85rem; color: #38bdf8; font-weight: 600;">{{ b.orders.count }} đơn hàng</span>
+        </div>
+    </div>
+    {% empty %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: rgba(255,255,255,0.02); border-radius: 12px; color: #64748b;">
+        Chưa cấu hình chi nhánh nào trong hệ thống.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

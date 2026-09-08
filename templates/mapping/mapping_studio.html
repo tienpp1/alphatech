@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+
+{% block title %}Xưởng Ánh xạ — {{ profile.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width: 1440px; margin: 0 auto; padding: 24px 16px;">
+    <!-- Breadcrumb & Header -->
+    <div style="margin-bottom: 16px; font-size: 0.85rem; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <a href="/mapping/" style="color: #60a5fa; text-decoration: none;">Bảng điều khiển Ánh xạ</a> &gt;
+            <span>{{ profile.name }}</span>
+        </div>
+        <span style="color: #64748b;">Mã Hồ sơ: {{ profile.id }}</span>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h1 style="font-size: 1.6rem; font-weight: 700; color: #f8fafc; margin: 0; display: flex; align-items: center; gap: 10px;">
+                <span>🛠️</span> Xưởng Ánh xạ Dữ liệu: {{ profile.name }}
+            </h1>
+            <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
+                <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 3px 10px; border-radius: 6px; font-weight: 600; font-size: 0.8rem;">
+                    Đích: {{ profile.target_entity }} ({{ model_def.display_name }})
+                </span>
+                <span style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem;">
+                    Nguồn: {% if profile.data_source %}{{ profile.data_source.name }}{% else %}Tập dữ liệu Chung{% endif %}
+                </span>
+                <span style="color: #34d399; font-weight: 600; font-size: 0.85rem;">
+                    ● {{ profile.active_rules_count }} Quy tắc Hoạt động
+                </span>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button id="btnAiSuggest" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <span>✨</span> Gợi ý Ánh xạ Tự động bằng AI
+            </button>
+            <button id="btnOpenApplyModal" class="btn" {% if not can_apply %}disabled title="Bạn không có quyền áp dụng ánh xạ"{% endif %} style="background: #10b981; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;{% if not can_apply %} opacity: .45; cursor: not-allowed;{% endif %}">
+                <span>🚀</span> Áp dụng Nhập Dữ liệu Chuẩn hóa
+            </button>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; {% if message.tags == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;{% elif message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171;{% else %}background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #60a5fa;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- AI Suggestion Container (Hidden by default, shown when AI suggests) -->
+    <div id="aiSuggestionsBox" style="display: none; background: #1e1b4b; border: 1px solid #6366f1; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.2rem;">🤖</span>
+                <h3 style="color: #c7d2fe; font-size: 1rem; font-weight: 700; margin: 0;">Khuyến nghị Ánh xạ từ AI (Xem xét &amp; Xác nhận)</h3>
+            </div>
+            <span style="color: #a5b4fc; font-size: 0.75rem;">Yêu cầu người dùng phê duyệt trước khi kích hoạt quy tắc</span>
+        </div>
+        <div id="aiSuggestionsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+    </div>
+
+    <!-- Main Workspace Grid -->
+    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; margin-bottom: 30px;">
+        <!-- Left: Discovered Source Columns -->
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 8px;">
+                <h3 style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; margin: 0;">Các Cột Nguồn Phát hiện</h3>
+                <span style="font-size: 0.75rem; color: #94a3b8;">{{ discovery.columns|length }} cột</span>
+            </div>
+
+            {% if discovery.columns %}
+            <div style="max-height: 520px; overflow-y: auto;">
+                {% for col, stats in discovery.column_stats.items %}
+                <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #38bdf8; font-family: monospace; font-weight: 600; font-size: 0.85rem;">{{ col }}</span>
+                        <span style="background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">{{ stats.inferred_type }}</span>
+                    </div>
+                    {% if stats.sample_values %}
+                    <div style="margin-top: 6px; font-size: 0.75rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        Mẫu: {{ stats.sample_values|join:", " }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; color: #64748b; padding: 20px 10px; font-size: 0.85rem;">
+                Chưa phát hiện cột nguồn nào. Liên kết Nguồn Dữ liệu hoặc Lô Nhập để kiểm tra các trường.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right: Configured Rules & Rule Builder -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Active Rules Table -->
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden;">
+                <div style="padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="font-size: 1rem; font-weight: 700; color: #f8fafc; margin: 0;">Quy tắc Ánh xạ Đã Cấu hình ({{ rules|length }})</h3>
+                    <span style="font-size: 0.8rem; color: #94a3b8;">Mô hình Chuẩn hóa: {{ profile.target_entity }}</span>
+                </div>
+
+                {% if rules %}
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="background: #0f172a; color: #94a3b8; border-bottom: 1px solid #334155;">
+                                <th style="padding: 10px 14px;">Biểu thức Nguồn</th>
+                                <th style="padding: 10px 14px;"></th>
+                                <th style="padding: 10px 14px;">Trường Chuẩn hóa Đích</th>
+                                <th style="padding: 10px 14px;">Loại Quy tắc</th>
+                                <th style="padding: 10px 14px;">Trạng thái</th>
+                                <th style="padding: 10px 14px; text-align: right;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rules %}
+                            <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.5);">
+                                <td style="padding: 12px 14px; font-family: monospace; color: #38bdf8;">
+                                    {{ r.source_field }}
+                                </td>
+                                <td style="padding: 12px 6px; color: #64748b; text-align: center;">➔</td>
+                                <td style="padding: 12px 14px; font-weight: 600; color: #34d399;">
+                                    {{ r.target_field }}
+                                </td>
+                                <td style="padding: 12px 14px;">
+                                    <span style="background: rgba(255,255,255,0.06); color: #cbd5e1; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
+                                        {{ r.rule_type }}
+                                    </span>
+                                </td>
+                                <td style="padding: 12px 14px;">
+                                    {% if r.ai_status == 'PENDING' %}
+                                    <span style="background: rgba(234, 179, 8, 0.15); color: #facc15; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+                                        Chờ duyệt ({{ r.confidence_score|floatformat:2 }})
+                                    </span>
+                                    {% elif r.is_active %}
+                                    <span style="color: #34d399; font-weight: 600;">● Hoạt động</span>
+                                    {% else %}
+                                    <span style="color: #64748b;">○ Ngừng hoạt động</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 12px 14px; text-align: right;">
+                                    {% if can_manage %}
+                                    {% if r.ai_status == 'PENDING' %}
+                                    <form method="POST" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="ACCEPT_AI">
+                                        <input type="hidden" name="rule_id" value="{{ r.id }}">
+                                        <button type="submit" class="btn" style="background: #10b981; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; margin-right: 4px;">Chấp thuận</button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa quy tắc này?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="DELETE_RULE">
+                                        <input type="hidden" name="rule_id" value="{{ r.id }}">
+                                        <button type="submit" class="btn" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Xóa</button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div style="padding: 30px; text-align: center; color: #94a3b8; font-size: 0.9rem;">
+                    Chưa có quy tắc ánh xạ nào được cấu hình. Sử dụng biểu mẫu Thêm nhanh bên dưới hoặc nhấp <strong>Gợi ý Ánh xạ Tự động bằng AI</strong>.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Add Rule Form -->
+            {% if can_manage %}
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
+                <h4 style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; margin-bottom: 12px;">Thêm Quy tắc Chuyển đổi Mới</h4>
+                <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="ADD_RULE">
+
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">Cột Nguồn / Biểu thức</label>
+                        <input type="text" name="source_field" required placeholder="Ví dụ: tong_tien" list="discoveredColList" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; padding: 8px 10px; font-size: 0.85rem;">
+                        <datalist id="discoveredColList">
+                            {% for col in discovery.columns %}
+                            <option value="{{ col }}">
+                            {% endfor %}
+                        </datalist>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">Trường Chuẩn hóa Đích</label>
+                        <select name="target_field" required style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; padding: 8px 10px; font-size: 0.85rem;">
+                            {% for fname, fdef in model_def.fields.items %}
+                            <option value="{{ fname }}">{{ fname }} ({{ fdef.field_type }}){% if fdef.required %} *{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">Loại Quy tắc</label>
+                        <select name="rule_type" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; padding: 8px 10px; font-size: 0.85rem;">
+                            {% for r_code, r_name in rule_types %}
+                            <option value="{{ r_code }}">{{ r_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <button type="submit" class="btn btn-primary" style="background: #3b82f6; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
+                            Thêm Quy tắc ➕
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Live Simulation / Transform Preview Section -->
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <span>🔬</span> Xem trước Chuyển đổi Trực tiếp &amp; Bộ Mô phỏng Kiểm duyệt
+                </h3>
+                <p style="color: #94a3b8; font-size: 0.8rem; margin: 4px 0 0 0;">
+                    Kiểm tra các quy tắc ánh xạ trên các dòng trong bộ đệm staging ngay trong bộ nhớ. Tuyệt đối không thay đổi dữ liệu (không ghi vào cơ sở dữ liệu).
+                </p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <select id="previewJobSelect" style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; padding: 8px 12px; font-size: 0.85rem;">
+                    <option value="">-- Tự động (Lô Nhập Gần nhất) --</option>
+                    {% for j in import_jobs %}
+                    <option value="{{ j.id }}">Lô #{{ j.id|stringformat:".8s" }} ({{ j.data_source.name }} - {{ j.total_rows }} dòng)</option>
+                    {% endfor %}
+                </select>
+                <button id="btnRunPreview" class="btn" style="background: #3b82f6; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    Chạy Mô phỏng Xem trước
+                </button>
+            </div>
+        </div>
+
+        <div id="previewResultsContainer" style="display: none;">
+            <div id="previewSummaryBar" style="padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 0.85rem; font-weight: 600;"></div>
+            <div id="previewTableWrapper" style="overflow-x: auto;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Apply Canonical Import -->
+<div id="applyModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999; align-items: center; justify-content: center;">
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; width: 500px; max-width: 90%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: #f8fafc; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+            <span>🚀</span> Xác nhận Nhập Dữ liệu Miền Chuẩn hóa
+        </h3>
+        <p style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.5; margin-bottom: 16px;">
+            Thao tác này sẽ chuyển đổi các bản ghi trong vùng đệm từ Lô Nhập đã chọn và ghi các bản ghi chuẩn hóa vào bảng miền <strong>{{ profile.target_entity }}</strong> thông qua một giao dịch cơ sở dữ liệu nguyên tử (atomic transaction).
+        </p>
+
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px; font-weight: 600;">Chọn Lô Nhập để nạp dữ liệu *</label>
+            <select id="applyJobSelect" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; padding: 10px; font-size: 0.85rem;">
+                {% for j in import_jobs %}
+                <option value="{{ j.id }}">Lô #{{ j.id|stringformat:".8s" }} - {{ j.data_source.name }} ({{ j.total_rows }} dòng)</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="strictModeCheckbox" style="accent-color: #3b82f6;">
+            <label for="strictModeCheckbox" style="font-size: 0.8rem; color: #cbd5e1;">Chế độ nghiêm ngặt (Strict Mode - Hoàn tác toàn bộ lô nếu có bất kỳ dòng nào không hợp lệ)</label>
+        </div>
+
+        <div id="applyStatusBox" style="display: none; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 0.85rem;"></div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="btnCloseApplyModal" type="button" class="btn" style="background: transparent; color: #94a3b8; border: 1px solid #334155; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                Hủy
+            </button>
+            <button id="btnConfirmApply" type="button" class="btn" style="background: #10b981; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                Ghi Dữ liệu Miền Chuẩn hóa
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const profileId = "{{ profile.id }}";
+    const targetEntity = "{{ profile.target_entity }}";
+    const csrfToken = "{{ csrf_token }}";
+
+    // 1. AI Auto-Suggest Mappings Handler
+    const btnAiSuggest = document.getElementById("btnAiSuggest");
+    const aiBox = document.getElementById("aiSuggestionsBox");
+    const aiList = document.getElementById("aiSuggestionsList");
+
+    btnAiSuggest.addEventListener("click", function() {
+        btnAiSuggest.disabled = true;
+        btnAiSuggest.innerHTML = "<span>⏳</span> Đang phân tích Cấu trúc...";
+
+        const sourceCols = {{ discovery.columns|safe }};
+        const sampleVals = {};
+        {% for col, stats in discovery.column_stats.items %}
+        sampleVals["{{ col }}"] = {{ stats.sample_values|safe }};
+        {% endfor %}
+
+        fetch("/api/v1/mapping/ai-suggest/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify({
+                target_entity: targetEntity,
+                source_columns: sourceCols,
+                sample_values: sampleVals,
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            btnAiSuggest.disabled = false;
+            btnAiSuggest.innerHTML = "<span>✨</span> Gợi ý Ánh xạ Tự động bằng AI";
+
+            if (res.success && res.suggestions && res.suggestions.length > 0) {
+                aiList.innerHTML = "";
+                res.suggestions.forEach((sug, idx) => {
+                    const item = document.createElement("div");
+                    item.style = "display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.3);";
+                    item.innerHTML = `
+                        <div>
+                            <span style="color: #38bdf8; font-family: monospace; font-weight: 600;">${sug.source_field}</span>
+                            <span style="color: #a5b4fc; margin: 0 8px;">➔</span>
+                            <span style="color: #34d399; font-weight: 600;">${sug.suggested_target_field}</span>
+                            <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Độ tin cậy: ${(sug.confidence * 100).toFixed(0)}%</span>
+                            <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 4px;">${sug.reason}</div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn-accept-ai" data-src="${sug.source_field}" data-tgt="${sug.suggested_target_field}" data-type="${sug.suggested_rule_type}" data-conf='${JSON.stringify(sug.transformation_config)}' data-score="${sug.confidence}" style="background: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
+                                Chấp thuận Quy tắc
+                            </button>
+                        </div>
+                    `;
+                    aiList.appendChild(item);
+                });
+                aiBox.style.display = "block";
+
+                // Wire Accept buttons
+                document.querySelectorAll(".btn-accept-ai").forEach(btn => {
+                    btn.addEventListener("click", function() {
+                        const src = this.getAttribute("data-src");
+                        const tgt = this.getAttribute("data-tgt");
+                        const rType = this.getAttribute("data-type");
+                        const rConf = JSON.parse(this.getAttribute("data-conf"));
+                        const score = parseFloat(this.getAttribute("data-score"));
+
+                        fetch(`/api/v1/mapping/profiles/${profileId}/rules/`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": csrfToken,
+                            },
+                            body: JSON.stringify({
+                                source_field: src,
+                                target_field: tgt,
+                                rule_type: rType,
+                                transformation_config: rConf,
+                                confidence_score: score,
+                                ai_status: "ACCEPTED",
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(resp => {
+                            if (resp.success) {
+                                window.location.reload();
+                            } else {
+                                alert("Thêm quy tắc thất bại: " + JSON.stringify(resp.error));
+                            }
+                        });
+                    });
+                });
+            } else {
+                alert("Không có gợi ý ánh xạ mới nào cho các cột này.");
+            }
+        })
+        .catch(err => {
+            btnAiSuggest.disabled = false;
+            btnAiSuggest.innerHTML = "<span>✨</span> Gợi ý Ánh xạ Tự động bằng AI";
+            alert("Lỗi khi yêu cầu gợi ý: " + err);
+        });
+    });
+
+    // 2. Live Transform Preview Handler
+    const btnRunPreview = document.getElementById("btnRunPreview");
+    const previewContainer = document.getElementById("previewResultsContainer");
+    const previewSummaryBar = document.getElementById("previewSummaryBar");
+    const previewTableWrapper = document.getElementById("previewTableWrapper");
+    const previewJobSelect = document.getElementById("previewJobSelect");
+
+    btnRunPreview.addEventListener("click", function() {
+        btnRunPreview.disabled = true;
+        btnRunPreview.innerText = "Đang mô phỏng...";
+
+        const payload = {
+            profile_id: profileId,
+            sample_count: 5,
+        };
+        if (previewJobSelect.value) {
+            payload.import_job_id = previewJobSelect.value;
+        }
+
+        fetch("/api/v1/mapping/preview/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(res => {
+            btnRunPreview.disabled = false;
+            btnRunPreview.innerText = "Chạy Mô phỏng Xem trước";
+
+            if (res.success && res.data) {
+                const d = res.data;
+                previewContainer.style.display = "block";
+
+                if (d.is_valid) {
+                    previewSummaryBar.style.background = "rgba(16, 185, 129, 0.15)";
+                    previewSummaryBar.style.border = "1px solid #10b981";
+                    previewSummaryBar.style.color = "#34d399";
+                    previewSummaryBar.innerHTML = `✓ Mô phỏng Thành công: Toàn bộ ${d.valid_count} bản ghi mẫu đều thỏa mãn Mô hình Dữ liệu Chuẩn hóa cho ${d.target_entity}.`;
+                } else {
+                    previewSummaryBar.style.background = "rgba(239, 68, 68, 0.15)";
+                    previewSummaryBar.style.border = "1px solid #ef4444";
+                    previewSummaryBar.style.color = "#f87171";
+                    previewSummaryBar.innerHTML = `⚠ Cảnh báo Kiểm duyệt: ${d.invalid_count} trên ${d.sample_count} bản ghi phát sinh lỗi. Xem thông báo lỗi bên dưới.`;
+                }
+
+                // Render table
+                let tableHtml = `<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8rem;">
+                    <thead>
+                        <tr style="background: #0f172a; color: #94a3b8; border-bottom: 1px solid #334155;">
+                            <th style="padding: 8px 12px; width: 60px;">Dòng</th>
+                            <th style="padding: 8px 12px;">Dữ liệu Thô Đầu vào</th>
+                            <th style="padding: 8px 12px;">Dữ liệu Chuẩn hóa Đã chuyển đổi</th>
+                            <th style="padding: 8px 12px; width: 120px;">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                d.transformed_samples.forEach(s => {
+                    tableHtml += `<tr style="border-bottom: 1px solid #334155;">
+                        <td style="padding: 10px 12px; font-weight: 600; color: #cbd5e1;">#${s.row_number}</td>
+                        <td style="padding: 10px 12px; font-family: monospace; color: #94a3b8; max-width: 300px; overflow-x: auto;">
+                            <pre style="margin: 0; white-space: pre-wrap;">${JSON.stringify(s.raw_input, null, 2)}</pre>
+                        </td>
+                        <td style="padding: 10px 12px; font-family: monospace; color: #38bdf8; max-width: 400px; overflow-x: auto;">
+                            <pre style="margin: 0; white-space: pre-wrap;">${JSON.stringify(s.canonical_output, null, 2)}</pre>
+                        </td>
+                        <td style="padding: 10px 12px;">
+                            ${s.is_valid ? '<span style="color: #34d399; font-weight: 600;">✓ Hợp lệ</span>' : '<span style="color: #f87171; font-weight: 600;">✗ Lỗi</span>'}
+                            ${s.errors && s.errors.length > 0 ? '<div style="color: #f87171; font-size: 0.7rem; margin-top: 4px;">' + s.errors.map(e => e.message || e.error).join("<br>") + '</div>' : ''}
+                        </td>
+                    </tr>`;
+                });
+
+                tableHtml += `</tbody></table>`;
+                previewTableWrapper.innerHTML = tableHtml;
+            } else {
+                alert("Lỗi xem trước: " + JSON.stringify(res.error));
+            }
+        })
+        .catch(err => {
+            btnRunPreview.disabled = false;
+            btnRunPreview.innerText = "Chạy Mô phỏng Xem trước";
+            alert("Lỗi mạng: " + err);
+        });
+    });
+
+    // 3. Modal: Apply Canonical Import
+    const btnOpenApplyModal = document.getElementById("btnOpenApplyModal");
+    const btnCloseApplyModal = document.getElementById("btnCloseApplyModal");
+    const applyModal = document.getElementById("applyModal");
+    const btnConfirmApply = document.getElementById("btnConfirmApply");
+    const applyJobSelect = document.getElementById("applyJobSelect");
+    const strictCheckbox = document.getElementById("strictModeCheckbox");
+    const applyStatusBox = document.getElementById("applyStatusBox");
+
+    btnOpenApplyModal.addEventListener("click", function() {
+        applyModal.style.display = "flex";
+        applyStatusBox.style.display = "none";
+    });
+
+    btnCloseApplyModal.addEventListener("click", function() {
+        applyModal.style.display = "none";
+    });
+
+    btnConfirmApply.addEventListener("click", function() {
+        btnConfirmApply.disabled = true;
+        btnConfirmApply.innerText = "Đang nạp Dữ liệu Chuẩn hóa...";
+
+        fetch("/api/v1/mapping/apply/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify({
+                profile_id: profileId,
+                import_job_id: applyJobSelect.value,
+                strict: strictCheckbox.checked,
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            btnConfirmApply.disabled = false;
+            btnConfirmApply.innerText = "Ghi Dữ liệu Miền Chuẩn hóa";
+
+            applyStatusBox.style.display = "block";
+            if (res.success && res.data) {
+                const d = res.data;
+                applyStatusBox.style.background = "rgba(16, 185, 129, 0.15)";
+                applyStatusBox.style.border = "1px solid #10b981";
+                applyStatusBox.style.color = "#34d399";
+                applyStatusBox.innerHTML = `<strong>Nhập Dữ liệu Thành công!</strong><br>Đã lưu trữ thành công <strong>${d.inserted_count}</strong> bản ghi chuẩn hóa ${d.target_entity}.`;
+                setTimeout(() => {
+                    applyModal.style.display = "none";
+                    window.location.reload();
+                }, 2000);
+            } else {
+                applyStatusBox.style.background = "rgba(239, 68, 68, 0.15)";
+                applyStatusBox.style.border = "1px solid #ef4444";
+                applyStatusBox.style.color = "#f87171";
+                applyStatusBox.innerHTML = `<strong>Nhập Dữ liệu Thất bại:</strong> ${res.error || (res.data ? res.data.message : "Kiểm duyệt thất bại.")}`;
+            }
+        })
+        .catch(err => {
+            btnConfirmApply.disabled = false;
+            btnConfirmApply.innerText = "Ghi Dữ liệu Miền Chuẩn hóa";
+            alert("Lỗi khi nhập dữ liệu: " + err);
+        });
+    });
+});
+</script>
+{% endblock %}

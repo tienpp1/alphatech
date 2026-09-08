@@ -1,0 +1,956 @@
+/* ==========================================================================
+   PUBLIC HOMEPAGE - ULTRA-PREMIUM HIGH-TECH DESIGN SYSTEM
+   Anti-AI-Slop: Swiss Precision, Bento Box Grid & Kinetic Aesthetics
+   ========================================================================== */
+
+:root {
+    --core-obsidian: #080C14;
+    --core-slate-900: #0F172A;
+    --core-slate-800: #1E293B;
+    --core-slate-700: #334155;
+    --core-blue-600: #2563EB;
+    --core-blue-500: #3B82F6;
+    --core-blue-400: #60A5FA;
+    --core-cyan-500: #06B6D4;
+    --core-cyan-400: #22D3EE;
+    --core-emerald-500: #10B981;
+    --core-emerald-400: #34D399;
+    --core-amber-500: #F59E0B;
+    
+    --pub-mono-font: 'JetBrains Mono', monospace, ui-monospace;
+    --pub-sans-font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    
+    --card-surface: #FFFFFF;
+    --card-surface-subtle: #F8FAFC;
+    --card-border: #E2E8F0;
+    --card-border-hover: #CBD5E1;
+}
+
+/* --------------------------------------------------------------------------
+   1. HERO & 3D KINETIC VIEWPORT
+   -------------------------------------------------------------------------- */
+.kinetic-hero-section {
+    position: relative;
+    background: radial-gradient(circle at 50% 0%, #0F172A 0%, #080C14 100%);
+    color: #FFFFFF;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 3.5rem 1.5rem 4rem;
+}
+
+.hero-grid-background {
+    position: absolute;
+    inset: 0;
+    background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at 50% 40%, black 40%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 40%, black 40%, transparent 80%);
+    pointer-events: none;
+}
+
+.hero-content-wrapper {
+    position: relative;
+    z-index: 10;
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 3rem;
+    align-items: center;
+}
+
+/* Telemetry Badge */
+.telemetry-badge-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 6px 14px;
+    border-radius: 9999px;
+    margin-bottom: 1.5rem;
+}
+
+.radar-dot {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    background-color: var(--core-emerald-400);
+    border-radius: 50%;
+}
+
+.radar-dot::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border: 1.5px solid var(--core-emerald-400);
+    border-radius: 50%;
+    animation: radar-pulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes radar-pulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2.8); opacity: 0; }
+}
+
+.telemetry-text {
+    font-family: var(--pub-mono-font);
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    color: #94A3B8;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.telemetry-highlight {
+    color: #F8FAFC;
+    font-weight: 700;
+}
+
+/* Main Hero Typography */
+.hero-title {
+    font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.035em;
+    color: #FFFFFF;
+    margin: 0 0 1.25rem;
+}
+
+.hero-title-accent {
+    background: linear-gradient(135deg, #60A5FA 0%, #38BDF8 50%, #34D399 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+}
+
+.hero-description {
+    font-size: 1.1rem;
+    line-height: 1.65;
+    color: #94A3B8;
+    margin: 0 0 2rem;
+    max-width: 580px;
+}
+
+.hero-cta-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+}
+
+.btn-kinetic-primary {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #2563EB;
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 12px 24px;
+    border-radius: 10px;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-kinetic-primary:hover {
+    background: #1D4ED8;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.5);
+    color: #FFFFFF;
+}
+
+.btn-kinetic-secondary {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #F8FAFC;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 12px 24px;
+    border-radius: 10px;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-kinetic-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+    color: #FFFFFF;
+}
+
+/* Key Metrics Telemetry Strip */
+.hero-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat-item-val {
+    font-family: var(--pub-mono-font);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    letter-spacing: -0.02em;
+}
+
+.stat-item-val span {
+    color: var(--core-cyan-400);
+}
+
+.stat-item-lbl {
+    font-size: 0.8rem;
+    color: #64748B;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+}
+
+/* 3D Kinetic Canvas Stage */
+.hero-stage-container {
+    position: relative;
+    width: 100%;
+    height: 480px;
+    border-radius: 20px;
+    background: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#three-canvas-container {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+    cursor: grab;
+}
+
+#three-canvas-container:active {
+    cursor: grabbing;
+}
+
+/* Three.js Mode Controls overlay */
+.stage-control-panel {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(8, 12, 20, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 12px;
+    padding: 6px 12px;
+}
+
+.stage-pills-group {
+    display: flex;
+    gap: 6px;
+}
+
+.stage-pill-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #94A3B8;
+    font-family: var(--pub-mono-font);
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.stage-pill-btn:hover {
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.stage-pill-btn.active {
+    background: rgba(37, 99, 235, 0.3);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #60A5FA;
+}
+
+.stage-info-status {
+    font-family: var(--pub-mono-font);
+    font-size: 0.72rem;
+    color: #64748B;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* --------------------------------------------------------------------------
+   2. BENTO GRID ARCHITECTURE
+   -------------------------------------------------------------------------- */
+.bento-section {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 5rem 1.5rem;
+}
+
+.bento-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2.5rem;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.bento-header-info {
+    max-width: 650px;
+}
+
+.bento-pre-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--pub-mono-font);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--core-blue-600);
+    background: rgba(37, 99, 235, 0.08);
+    padding: 4px 12px;
+    border-radius: 9999px;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    margin-bottom: 0.75rem;
+}
+
+.bento-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--pub-text-heading);
+    margin: 0 0 0.5rem;
+    line-height: 1.2;
+}
+
+.bento-subtitle {
+    color: var(--pub-text-muted);
+    font-size: 1.02rem;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* The Bento Grid Container */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+}
+
+/* Bento Cards Generic */
+.bento-card {
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(15, 23, 42, 0.03);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bento-card:hover {
+    border-color: var(--card-border-hover);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    transform: translateY(-2px);
+}
+
+/* Card Header Stylings */
+.card-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.75rem 1.75rem 1rem;
+}
+
+.card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.card-icon-frame {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.card-icon-frame.blue {
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563EB;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.card-icon-frame.cyan {
+    background: rgba(6, 182, 212, 0.1);
+    color: #0891B2;
+    border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+.card-icon-frame.emerald {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.card-icon-frame.purple {
+    background: rgba(124, 58, 237, 0.1);
+    color: #7C3AED;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.card-heading {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--pub-text-heading);
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.card-subtext {
+    font-size: 0.84rem;
+    color: var(--pub-text-muted);
+    margin: 2px 0 0;
+}
+
+/* --------------------------------------------------------------------------
+   3. WIDGET: HARDWARE HUB (ABC TECH STORE) - 7 COLS
+   -------------------------------------------------------------------------- */
+.bento-card-hardware {
+    grid-column: span 7;
+    display: flex;
+    flex-direction: column;
+}
+
+.hardware-tabs-bar {
+    display: flex;
+    gap: 8px;
+    padding: 0 1.75rem 1rem;
+    border-bottom: 1px solid var(--card-border);
+    overflow-x: auto;
+}
+
+.hardware-tab-btn {
+    background: var(--card-surface-subtle);
+    border: 1px solid var(--card-border);
+    color: var(--pub-text-body);
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.hardware-tab-btn:hover {
+    border-color: var(--core-blue-600);
+    color: var(--core-blue-600);
+}
+
+.hardware-tab-btn.active {
+    background: var(--core-blue-600);
+    border-color: var(--core-blue-600);
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.hardware-items-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    padding: 1.5rem 1.75rem;
+    flex: 1;
+}
+
+.product-micro-card {
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+.product-micro-card:hover {
+    border-color: var(--core-blue-400);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.08);
+}
+
+.prod-meta-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.prod-cat-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--core-blue-600);
+    background: rgba(37, 99, 235, 0.08);
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.prod-stock-badge {
+    font-family: var(--pub-mono-font);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--core-emerald-500);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.prod-title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--pub-text-heading);
+    margin: 0 0 0.5rem;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.prod-title a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.prod-title a:hover {
+    color: var(--core-blue-600);
+}
+
+.prod-bottom-row {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--pub-border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.prod-price-text {
+    font-family: var(--pub-mono-font);
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--core-blue-600);
+}
+
+.prod-btn-cart {
+    background: var(--card-surface-subtle);
+    border: 1px solid var(--card-border);
+    color: var(--pub-text-heading);
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.prod-btn-cart:hover {
+    background: var(--core-blue-600);
+    border-color: var(--core-blue-600);
+    color: #FFFFFF;
+}
+
+.card-footer-action {
+    padding: 1rem 1.75rem 1.5rem;
+    background: var(--card-surface-subtle);
+    border-top: 1px solid var(--card-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* --------------------------------------------------------------------------
+   4. WIDGET: LIVE IT SLA & DIAGNOSTIC SIMULATOR - 5 COLS
+   -------------------------------------------------------------------------- */
+.bento-card-service-sim {
+    grid-column: span 5;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+    display: flex;
+    flex-direction: column;
+}
+
+.simulator-body {
+    padding: 1.25rem 1.75rem 1.75rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.sim-field-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--pub-text-heading);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sim-field-label span.req {
+    color: var(--core-blue-600);
+    font-family: var(--pub-mono-font);
+    font-size: 0.72rem;
+}
+
+.sim-options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.sim-radio-card {
+    position: relative;
+    border: 1px solid var(--card-border);
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: all 0.15s ease;
+}
+
+.sim-radio-card:hover {
+    border-color: var(--core-cyan-500);
+}
+
+.sim-radio-card.active {
+    border-color: var(--core-cyan-500);
+    background: rgba(6, 182, 212, 0.05);
+    box-shadow: 0 0 0 1px var(--core-cyan-500);
+}
+
+.sim-radio-title {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--pub-text-heading);
+}
+
+.sim-radio-desc {
+    font-size: 0.72rem;
+    color: var(--pub-text-muted);
+}
+
+/* Priority Toggle */
+.sim-priority-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    background: var(--card-surface-subtle);
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+}
+
+.sim-pri-btn {
+    border: none;
+    background: transparent;
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--pub-text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sim-pri-btn.active {
+    background: #FFFFFF;
+    color: var(--pub-text-heading);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+/* Simulator Output Display Screen */
+.sim-output-terminal {
+    background: var(--core-obsidian);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 14px;
+    color: #FFFFFF;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.terminal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    font-family: var(--pub-mono-font);
+    font-size: 0.72rem;
+    color: #94A3B8;
+}
+
+.terminal-metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+}
+
+.terminal-metric-row:last-child {
+    margin-bottom: 0;
+}
+
+.terminal-lbl {
+    font-size: 0.8rem;
+    color: #94A3B8;
+}
+
+.terminal-val {
+    font-family: var(--pub-mono-font);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--core-cyan-400);
+}
+
+.terminal-val.highlight {
+    color: var(--core-emerald-400);
+    font-size: 1.05rem;
+}
+
+/* --------------------------------------------------------------------------
+   5. WIDGET: GIS BRANCH RADAR - 6 COLS
+   -------------------------------------------------------------------------- */
+.bento-card-gis {
+    grid-column: span 6;
+}
+
+.branch-list-stack {
+    padding: 1rem 1.75rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.branch-card-item {
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card-surface);
+    transition: all 0.2s ease;
+}
+
+.branch-card-item:hover {
+    border-color: var(--core-blue-400);
+    background: var(--card-surface-subtle);
+}
+
+.branch-main-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.branch-name-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--pub-text-heading);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.branch-addr-text {
+    font-size: 0.84rem;
+    color: var(--pub-text-muted);
+}
+
+.branch-action-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--pub-mono-font);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--core-blue-600);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(37, 99, 235, 0.08);
+    transition: all 0.15s ease;
+}
+
+.branch-action-pill:hover {
+    background: var(--core-blue-600);
+    color: #FFFFFF;
+}
+
+/* --------------------------------------------------------------------------
+   6. WIDGET: ENTERPRISE ASSURANCE MATRIX - 6 COLS
+   -------------------------------------------------------------------------- */
+.bento-card-assurance {
+    grid-column: span 6;
+}
+
+.assurance-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 1rem 1.75rem 1.75rem;
+}
+
+.assurance-pill-box {
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 14px;
+    background: var(--card-surface-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.assure-top-tag {
+    font-family: var(--pub-mono-font);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--core-blue-600);
+}
+
+.assure-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--pub-text-heading);
+}
+
+.assure-desc {
+    font-size: 0.8rem;
+    color: var(--pub-text-muted);
+    line-height: 1.45;
+}
+
+/* --------------------------------------------------------------------------
+   7. FLOATING TOAST NOTIFICATION FOR ADD-TO-CART
+   -------------------------------------------------------------------------- */
+.cart-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    background: var(--core-obsidian);
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    transform: translateY(100px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cart-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+.cart-toast-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.2);
+    color: #10B981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --------------------------------------------------------------------------
+   8. RESPONSIVE MEDIA QUERIES
+   -------------------------------------------------------------------------- */
+@media (max-width: 1080px) {
+    .hero-content-wrapper {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+    
+    .hero-stage-container {
+        height: 400px;
+    }
+    
+    .bento-card-hardware,
+    .bento-card-service-sim,
+    .bento-card-gis,
+    .bento-card-assurance {
+        grid-column: span 12;
+    }
+}
+
+@media (max-width: 680px) {
+    .hardware-items-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .sim-options-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .assurance-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .hero-stats-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .hero-stage-container {
+        height: 320px;
+    }
+}

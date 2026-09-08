@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Sản phẩm - {{ active_workspace.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.catalog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+}
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.filters-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+}
+.filter-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    outline: none;
+    font-size: 0.9rem;
+}
+.filter-input:focus {
+    border-color: #6366f1;
+    background: rgba(255, 255, 255, 0.08);
+}
+.filter-input option {
+    background: #1e293b;
+    color: #f8fafc;
+}
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+.product-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+.product-card:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+}
+.product-img-wrapper {
+    width: 100%;
+    height: 180px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    position: relative;
+}
+.product-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.product-img-placeholder {
+    font-size: 2.5rem;
+    color: #64748b;
+}
+.product-category {
+    font-size: 0.75rem;
+    color: #818cf8;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.05em;
+}
+.product-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 0.35rem;
+    line-height: 1.35;
+    text-decoration: none;
+    display: block;
+}
+.product-title:hover {
+    color: #38bdf8;
+}
+.product-sku {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.product-price-box {
+    margin-top: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.product-price {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #38bdf8;
+}
+.product-cost {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+.product-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 0.9rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="catalog-header">
+    <div>
+        <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.4rem; color: #f8fafc;">
+            Quản lý Sản phẩm Công nghệ
+        </h1>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            Danh mục hàng hóa và thiết bị thương mại của <strong>{{ active_workspace.name }}</strong>
+        </p>
+    </div>
+
+    <div class="header-actions">
+        <a href="/retail/products/trash/" class="btn btn-secondary" style="position: relative; display: inline-flex; align-items: center; gap: 8px;">
+            <span>🗑️ Thùng rác</span>
+            {% if trash_count > 0 %}
+            <span style="background: #ef4444; color: #fff; font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 9999px;">
+                {{ trash_count }}
+            </span>
+            {% endif %}
+        </a>
+
+        {% if can_manage %}
+        <a href="/retail/products/create/" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <span>➕ Thêm sản phẩm</span>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Search, Filter & Sort Form -->
+<form method="GET" action="" class="filters-bar">
+    <input type="text" name="q" value="{{ search_q }}" placeholder="Tìm kiếm tên, SKU, mô tả..." class="filter-input" style="min-width: 260px; flex: 1;">
+    
+    <select name="category" class="filter-input">
+        <option value="">Tất cả Danh mục</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"i" %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="status" class="filter-input">
+        <option value="">Tất cả trạng thái</option>
+        <option value="active" {% if selected_status == "active" %}selected{% endif %}>Đang kinh doanh</option>
+        <option value="inactive" {% if selected_status == "inactive" %}selected{% endif %}>Ngừng kinh doanh</option>
+    </select>
+
+    <select name="sort" class="filter-input">
+        <option value="created_desc" {% if sort_option == "created_desc" or not sort_option %}selected{% endif %}>Mới nhất</option>
+        <option value="created_asc" {% if sort_option == "created_asc" %}selected{% endif %}>Cũ nhất</option>
+        <option value="name_asc" {% if sort_option == "name_asc" %}selected{% endif %}>Tên A → Z</option>
+        <option value="name_desc" {% if sort_option == "name_desc" %}selected{% endif %}>Tên Z → A</option>
+        <option value="price_asc" {% if sort_option == "price_asc" %}selected{% endif %}>Giá tăng dần</option>
+        <option value="price_desc" {% if sort_option == "price_desc" %}selected{% endif %}>Giá giảm dần</option>
+        <option value="updated_desc" {% if sort_option == "updated_desc" %}selected{% endif %}>Cập nhật gần đây</option>
+    </select>
+
+    <button type="submit" class="btn btn-primary">Lọc</button>
+    {% if search_q or selected_category or selected_status or sort_option %}
+    <a href="/retail/products/" class="btn btn-secondary">Đặt lại</a>
+    {% endif %}
+</form>
+
+<!-- Products Cards Grid -->
+<div class="products-grid">
+    {% for p in products %}
+    <div class="product-card">
+        <div>
+            <!-- Primary Image Preview -->
+            <div class="product-img-wrapper">
+                {% if p.primary_image and p.primary_image.image %}
+                <img src="{{ p.primary_image.image.url }}" alt="{{ p.name }}" class="product-img">
+                {% else %}
+                <div class="product-img-placeholder">💻</div>
+                {% endif %}
+
+                {% if p.images.count > 1 %}
+                <span style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.72rem; padding: 2px 6px; border-radius: 6px; font-weight: 600;">
+                    📷 {{ p.images.count }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="product-category">{{ p.category.name }}</div>
+            <a href="/retail/products/{{ p.id }}/" class="product-title">{{ p.name }}</a>
+            <div class="product-sku">
+                <span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-family: monospace;">{{ p.sku }}</span>
+                <span>• {{ p.unit }}</span>
+            </div>
+            
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.75rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                {{ p.description|default:"Chưa có mô tả chi tiết." }}
+            </p>
+        </div>
+
+        <div>
+            <div class="product-price-box">
+                <div>
+                    <div class="product-price">{{ p.unit_price|floatformat:0 }} <small style="font-size: 0.75rem; color: #94a3b8;">VND</small></div>
+                    {% if can_manage and p.cost_price > 0 %}
+                    <div class="product-cost">Vốn: {{ p.cost_price|floatformat:0 }} VND</div>
+                    {% endif %}
+                </div>
+                <span style="font-size: 0.75rem; color: {% if p.is_active %}#4ade80{% else %}#f87171{% endif %}; font-weight: 600;">
+                    {% if p.is_active %}● Đang bán{% else %}○ Tạm ngừng{% endif %}
+                </span>
+            </div>
+
+            <div class="product-card-actions">
+                <a href="/retail/products/{{ p.id }}/" class="btn btn-secondary" style="flex: 1; text-align: center; padding: 6px 10px; font-size: 0.82rem;">
+                    Chi tiết & Ảnh
+                </a>
+                {% if can_manage %}
+                <form method="POST" action="/retail/products/{{ p.id }}/delete/" onsubmit="return confirm('Bạn có chắc chắn muốn chuyển sản phẩm này vào Thùng rác? (Sản phẩm có thể khôi phục trong 7 ngày)');" style="margin: 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary" style="color: #f87171; border-color: rgba(239,68,68,0.3); padding: 6px 10px; font-size: 0.82rem;" title="Xóa vào thùng rác">
+                        🗑️ Xóa
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 4.5rem 1.5rem; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 14px;">
+        <div style="font-size: 3rem; margin-bottom: 0.75rem;">📦</div>
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.5rem;">Không tìm thấy sản phẩm nào</h3>
+        <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 1.25rem;">Thử thay đổi bộ lọc tìm kiếm hoặc thêm sản phẩm công nghệ mới.</p>
+        {% if can_manage %}
+        <a href="/retail/products/create/" class="btn btn-primary">➕ Thêm sản phẩm mới</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

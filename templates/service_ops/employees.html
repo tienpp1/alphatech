@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Kỹ thuật viên & Kỹ sư — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">Danh bạ Nhân sự Kỹ thuật</h1>
+        <p class="text-secondary">Kỹ sư hiện trường, chuyên gia CNTT, chuyên môn kỹ năng, định mức giờ công và tải công việc thời gian thực</p>
+    </div>
+    <div class="header-actions">
+        <a href="/api/v1/service-ops/employees/" target="_blank" class="btn btn-secondary">API JSON ↗</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Mã NV</th>
+                    <th>Họ tên Kỹ sư</th>
+                    <th>Điện thoại</th>
+                    <th>Chuyên môn Kỹ năng</th>
+                    <th>Đơn giá/giờ</th>
+                    <th>Trạng thái trực</th>
+                    <th>Việc đang mở</th>
+                    <th>Tổng thời gian đã ghi</th>
+                    <th>Chỉ số tải</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tech in technicians %}
+                <tr>
+                    <td><code>{{ tech.code }}</code></td>
+                    <td><strong>{{ tech.name }}</strong></td>
+                    <td>{{ tech.phone|default:"-" }}</td>
+                    <td>
+                        {% for skill in tech.skills %}
+                        <span class="badge" style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; margin-right: 0.2rem;">{{ skill }}</span>
+                        {% empty %}
+                        <span class="text-secondary">-</span>
+                        {% endfor %}
+                    </td>
+                    <td><strong style="color: #60a5fa;">{{ tech.hourly_labor_rate|floatformat:0 }}</strong> <span class="text-secondary" style="font-size: 0.75rem;">VND/giờ</span></td>
+                    <td>
+                        <span class="badge {% if tech.is_available %}bg-success{% else %}bg-warning{% endif %}">
+                            {% if tech.is_available %}SẴN SÀNG{% else %}ĐANG ĐI TRẠM{% endif %}
+                        </span>
+                    </td>
+                    <td><span class="badge bg-primary">{{ tech.active_tasks_count }}</span></td>
+                    <td>
+                        <span style="font-size: 0.85rem; color: #34d399;">{{ tech.total_labor_minutes }} phút ({{ tech.total_labor_cost|floatformat:0 }} VND)</span>
+                    </td>
+                    <td>
+                        <strong style="color: {% if tech.workload_score > 4 %}#ef4444{% elif tech.workload_score > 2 %}#f59e0b{% else %}#10b981{% endif %}; font-size: 1.05rem;">
+                            {{ tech.workload_score }}
+                        </strong>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-secondary">Chưa có kỹ thuật viên nào được đăng ký.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

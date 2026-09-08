@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Chính sách Cam kết SLA — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">Chính sách Cam kết Chất lượng Dịch vụ (SLA)</h1>
+        <p class="text-secondary">Định mức vận hành chuẩn hóa cho phản hồi ban đầu và giải quyết hoàn tất sự cố</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Gói Chính sách</th>
+                    <th>Mức Ưu tiên</th>
+                    <th>Thời hạn Phản hồi</th>
+                    <th>Thời hạn Giải quyết</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sla in slas %}
+                <tr>
+                    <td><strong>{{ sla.name }}</strong></td>
+                    <td>
+                        <span class="badge {% if sla.priority == 'CRITICAL' %}bg-danger{% elif sla.priority == 'HIGH' %}bg-warning{% else %}bg-primary{% endif %}">
+                            {% if sla.priority == 'CRITICAL' %}Khẩn cấp
+                            {% elif sla.priority == 'HIGH' %}Cao
+                            {% elif sla.priority == 'MEDIUM' %}Trung bình
+                            {% else %}Thấp{% endif %}
+                        </span>
+                    </td>
+                    <td><span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">⚡ Phản hồi trong {{ sla.response_time_hours }} giờ</span></td>
+                    <td><span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">✔ Giải quyết trong {{ sla.resolution_time_hours }} giờ</span></td>
+                    <td>
+                        {% if sla.is_active %}
+                        <span class="badge bg-success">Đang áp dụng</span>
+                        {% else %}
+                        <span class="badge bg-danger">Vô hiệu hóa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-secondary">Chưa cấu hình chính sách SLA nào cho không gian làm việc này.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

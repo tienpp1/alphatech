@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Lịch sử Nhập Dữ liệu — {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div>
+            <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 4px;">Lịch sử Các Lô Nhập Dữ liệu</h1>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">Nhật ký kiểm toán đầy đủ của tất cả các lần nạp dữ liệu và thống kê vùng đệm staging.</p>
+        </div>
+        <a href="/integration/import/" class="btn btn-primary" style="background: #3b82f6; color: #fff; padding: 8px 18px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+            + Chạy Lượt Nhập Mới
+        </a>
+    </div>
+
+    <!-- Filter Bar -->
+    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+        <a href="/integration/jobs/" style="padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none; {% if not active_status %}background: #3b82f6; color: #fff;{% else %}background: #1e293b; color: #94a3b8; border: 1px solid #334155;{% endif %}">
+            Tất cả Lô
+        </a>
+        {% for code, label in status_choices %}
+        <a href="/integration/jobs/?status={{ code }}" style="padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none; {% if active_status == code %}background: #3b82f6; color: #fff;{% else %}background: #1e293b; color: #94a3b8; border: 1px solid #334155;{% endif %}">
+            {% if code == 'COMPLETED' %}Hoàn thành
+            {% elif code == 'PARTIAL' %}Một phần
+            {% elif code == 'RUNNING' %}Đang chạy
+            {% elif code == 'FAILED' %}Thất bại
+            {% else %}{{ label }}{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Jobs Table -->
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden;">
+        {% if jobs %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                <thead style="background: rgba(255,255,255,0.03); color: #94a3b8; border-bottom: 1px solid #334155;">
+                    <tr>
+                        <th style="padding: 14px 16px;">Mã Lô</th>
+                        <th style="padding: 14px 16px;">Nguồn Dữ liệu</th>
+                        <th style="padding: 14px 16px;">Miền Thực thể</th>
+                        <th style="padding: 14px 16px;">Trạng thái</th>
+                        <th style="padding: 14px 16px;">Dòng (Tổng / Hợp lệ / Lỗi)</th>
+                        <th style="padding: 14px 16px;">Tỷ lệ Thành công</th>
+                        <th style="padding: 14px 16px;">Hoàn thành lúc</th>
+                        <th style="padding: 14px 16px; text-align: right;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody style="color: #f8fafc;">
+                    {% for job in jobs %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 12px 16px; font-family: monospace; font-size: 0.82rem; color: #94a3b8;">
+                            {{ job.id|stringformat:"s"|slice:":8" }}...
+                        </td>
+                        <td style="padding: 12px 16px; font-weight: 600;">
+                            {{ job.data_source.name }}
+                            <span style="display: inline-block; padding: 1px 5px; border-radius: 4px; font-size: 0.7rem; background: rgba(255,255,255,0.08); color: #cbd5e1; margin-left: 4px;">{{ job.data_source.source_type }}</span>
+                        </td>
+                        <td style="padding: 12px 16px; color: #cbd5e1; font-size: 0.85rem;">
+                            {{ job.entity_type }}
+                        </td>
+                        <td style="padding: 12px 16px;">
+                            <span style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; {% if job.status == 'COMPLETED' %}background: rgba(16, 185, 129, 0.2); color: #34d399;{% elif job.status == 'PARTIAL' %}background: rgba(245, 158, 11, 0.2); color: #fbbf24;{% elif job.status == 'RUNNING' %}background: rgba(59, 130, 246, 0.2); color: #60a5fa;{% else %}background: rgba(239, 68, 68, 0.2); color: #f87171;{% endif %}">
+                                {% if job.status == 'COMPLETED' %}HOÀN THÀNH
+                                {% elif job.status == 'PARTIAL' %}MỘT PHẦN
+                                {% elif job.status == 'RUNNING' %}ĐANG CHẠY
+                                {% elif job.status == 'FAILED' %}THẤT BẠI
+                                {% else %}{{ job.status }}{% endif %}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 16px; font-size: 0.85rem;">
+                            <span style="font-weight: 700;">{{ job.total_rows }}</span> tổng
+                            (<span style="color: #34d399;">{{ job.successful_rows }}</span> / <span style="color: {% if job.failed_rows > 0 %}#f87171{% else %}#64748b{% endif %};">{{ job.failed_rows }}</span>)
+                        </td>
+                        <td style="padding: 12px 16px; width: 140px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="flex: 1; background: #0f172a; height: 6px; border-radius: 3px; overflow: hidden;">
+                                    <div style="width: {{ job.success_rate }}%; height: 100%; background: {% if job.success_rate >= 90 %}#34d399{% elif job.success_rate >= 50 %}#fbbf24{% else %}#ef4444{% endif %};"></div>
+                                </div>
+                                <span style="font-size: 0.75rem; font-weight: 600; color: #94a3b8;">{{ job.success_rate }}%</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px 16px; color: #94a3b8; font-size: 0.8rem;">
+                            {{ job.completed_at|date:"d/m/Y H:i"|default:"Đang xử lý..." }}
+                        </td>
+                        <td style="padding: 12px 16px; text-align: right;">
+                            <a href="/integration/jobs/{{ job.id }}/" style="color: #60a5fa; text-decoration: none; font-weight: 600; font-size: 0.85rem;">
+                                Chi tiết &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 48px; text-align: center; color: #94a3b8;">
+            <p>Không tìm thấy lượt nhập dữ liệu nào khớp với tiêu chí.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

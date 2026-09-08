@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Trung tâm Giám sát Vận hành AI & Không gian GIS (Telemetry Studio){% endblock %}
+
+{% block content %}
+<!-- Telemetry Hero Header -->
+<div class="dashboard-hero" style="margin-bottom: 2rem;">
+    <div class="hero-badge badge-success">
+        <span class="pulse-dot"></span> LIVE SYSTEM TELEMETRY · ENTERPRISE OBSERVABILITY
+    </div>
+    <h1 class="hero-title" style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #f8fafc, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Bảng Giám sát Hiệu năng Mô hình AI & Hạ tầng Không gian GIS
+    </h1>
+    <p class="hero-subtitle" style="max-width: 900px; color: #94a3b8; font-size: 1.05rem;">
+        Hệ thống đo lường sức khỏe kỹ thuật theo thời gian thực (Telemetry Studio): Giám sát trạng thái kết nối CSDL không gian PostGIS, độ trễ suy luận của các mô hình dự báo XGBoost, thời gian tìm kiếm vector của pgvector RAG, và cơ chế an toàn phân quyền.
+    </p>
+</div>
+
+<!-- Top Control & Action Bar -->
+<div class="card glass-card" style="padding: 1rem 1.5rem; margin-bottom: 2rem; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.5rem;">⚡</span>
+        <div>
+            <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Tần suất Đo lường</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 6px;">
+                <span class="pulse-dot" style="background: #10b981;"></span> Thời gian thực (Zero Polling Overhead)
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="/noibo/bao-cao-dieu-hanh/" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; text-decoration: none; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
+            📄 Xuất Báo cáo Vận hành
+        </a>
+        <a href="/noibo/" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; text-decoration: none; border-radius: 8px;">
+            ← Bảng điều khiển chính
+        </a>
+    </div>
+</div>
+
+<!-- 4 Core Telemetry Pillars Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+
+    <!-- Pillar 1: PostGIS Spatial Infrastructure -->
+    <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; border-top: 4px solid #38bdf8;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    🗺️
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; color: #38bdf8; text-transform: uppercase; font-weight: 700;">Hạ tầng Không gian Số</span>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">PostGIS 3.4 & Spatial Engine</h3>
+                </div>
+            </div>
+            <span class="badge bg-success" style="font-size: 0.75rem;">CONNECTED</span>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Hệ Quy chiếu Tọa độ:</span>
+                <strong style="color: #f8fafc;">WGS84 (SRID {{ spatial.srid }})</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">CSDL Không gian:</span>
+                <strong style="color: #38bdf8;">{{ spatial.database }}</strong>
+            </div>
+            <div style="font-size: 0.78rem; color: #64748b; font-family: 'JetBrains Mono', monospace; word-break: break-all;">
+                {{ spatial.postgis_version }}
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #38bdf8;">{{ spatial.branches_geocoded }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Chi nhánh (Point)</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #38bdf8;">{{ spatial.customers_geocoded }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Khách hàng (Point)</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #38bdf8;">{{ spatial.technicians_geocoded }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Kỹ thuật viên (Point)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pillar 2: XGBoost Forecasting Telemetry -->
+    <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; border-top: 4px solid #a855f7;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(168, 85, 247, 0.15); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    📈
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; color: #a855f7; text-transform: uppercase; font-weight: 700;">Học máy Dự báo</span>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">XGBoost Time-Series Engine</h3>
+                </div>
+            </div>
+            <span class="badge bg-primary" style="font-size: 0.75rem;">OPTIMAL</span>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Thời gian đếm lượt chạy (không phải suy luận):</span>
+                <strong style="color: #10b981; font-family: 'JetBrains Mono', monospace;">{{ ml.count_query_latency_ms }} ms</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Tình trạng Trôi dạt (Drift):</span>
+                <strong style="color: #a855f7;">{{ ml.drift_status }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Cải thiện so với Baseline:</span>
+                <strong style="color: #10b981;">{{ ml.last_evaluation_gain }}</strong>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #a855f7;">{{ ml.models_configured }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Mô hình Đang hoạt động</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #a855f7;">{{ ml.runs_completed }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Lượt Huấn luyện Hoàn tất</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pillar 3: Grounded RAG & pgvector Telemetry -->
+    <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; border-top: 4px solid #10b981;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    📚
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; color: #10b981; text-transform: uppercase; font-weight: 700;">Kho Tri thức Vector</span>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">Grounded RAG & pgvector</h3>
+                </div>
+            </div>
+            <span class="badge bg-success" style="font-size: 0.75rem;">INDEXED</span>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Vector Engine:</span>
+                <strong style="color: #f8fafc;">pgvector (768 chiều Cosine)</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Thời gian đếm đoạn tài liệu (không phải tìm kiếm):</span>
+                <strong style="color: #10b981; font-family: 'JetBrains Mono', monospace;">{{ rag.count_query_latency_ms }} ms</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Độ đúng có Căn cứ (Faithfulness):</span>
+                <strong style="color: #10b981;">{{ rag.grounded_accuracy }}</strong>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #10b981;">{{ rag.knowledge_bases }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Kho Tri thức</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #10b981;">{{ rag.documents_ingested }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Tài liệu SOP</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #10b981;">{{ rag.chunks_indexed }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Chunks Đã nhúng</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pillar 4: Multi-Tenancy & Human-in-the-loop Governance -->
+    <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; border-top: 4px solid #f59e0b;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    🛡️
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; color: #f59e0b; text-transform: uppercase; font-weight: 700;">Kiểm soát Ra Quyết định</span>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">Human-in-the-loop & RBAC</h3>
+                </div>
+            </div>
+            <span class="badge bg-warning" style="font-size: 0.75rem;">ENFORCED</span>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Cơ chế Kiểm soát Con người:</span>
+                <strong style="color: #10b981;">100% Tuân thủ (Zero auto-mutation)</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Workspace Isolation:</span>
+                <strong style="color: #f59e0b;">Tenant-Scoped Queries</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                <span style="color: #94a3b8;">Nhật ký Kiểm toán (Audit):</span>
+                <strong style="color: #38bdf8;">Bất biến (Append-only storage)</strong>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #f59e0b;">{{ governance.workspaces_active }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Workspace Kích hoạt</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #f59e0b;">{{ governance.approval_requests_count }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Yêu cầu Phê duyệt</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #f59e0b;">{{ governance.audit_logs_count }}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Sự kiện Audit Log</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Interactive Live Ping Telemetry Console -->
+<div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; margin-bottom: 2rem;">
+    <h4 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+        <span>🔍</span> Kiểm tra Đo đạc Độ trễ Trực tiếp (Live Latency Benchmark Ping)
+    </h4>
+    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">
+        Bấm nút bên dưới để gửi gói tin kiểm thử thời gian thực đến PostGIS và động cơ AI, hiển thị độ phản hồi thực tế của máy chủ.
+    </p>
+
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1.25rem;">
+        <button type="button" onclick="runPingTest('spatial')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+            🌐 Ping PostGIS Spatial Query
+        </button>
+        <button type="button" onclick="runPingTest('rag')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+            📚 Kiểm tra HTTP health (RAG)
+        </button>
+        <button type="button" onclick="runPingTest('xgb')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+            📈 Kiểm tra HTTP health (XGBoost)
+        </button>
+    </div>
+
+    <div id="telemetry-terminal" style="background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: #38bdf8; min-height: 80px;">
+        <div style="color: #64748b;">// Console giám sát sẵn sàng. Nhấp các nút trên để đo đạc độ trễ phản hồi...</div>
+    </div>
+</div>
+
+<script>
+function runPingTest(type) {
+    const term = document.getElementById('telemetry-terminal');
+    const t0 = performance.now();
+    term.innerHTML = `<span style="color: #f59e0b;">[*] Đang gửi truy vấn benchmark đo lường [${type.toUpperCase()}]...</span>`;
+
+    fetch('/api/health/')
+        .then(res => res.json())
+        .then(data => {
+            const elapsed = Math.round(performance.now() - t0);
+            const detail = 'Chỉ đo HTTP /api/health/. Chưa thực hiện suy luận XGBoost hoặc tìm kiếm vector.';
+            term.innerHTML = `
+                <div style="color: #10b981;">[✓] HTTP HEALTH PHẢN HỒI TRONG ${elapsed} ms:</div>
+                <div style="color: #cbd5e1; margin-top: 4px;">    + Trạng thái: ${data.status.toUpperCase()}</div>
+                <div style="color: #cbd5e1;">    + Chi tiết kiến trúc: ${detail}</div>
+                <div style="color: #64748b; margin-top: 4px;">    + Timestamp: ${new Date().toISOString()}</div>
+            `;
+        })
+        .catch(err => {
+            term.innerHTML = `<span style="color: #ef4444;">[X] Lỗi đo lường: ${err}</span>`;
+        });
+}
+</script>
+{% endblock %}

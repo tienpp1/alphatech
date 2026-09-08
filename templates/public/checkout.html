@@ -1,0 +1,335 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}Thanh toán đơn hàng | ABC Tech Store{% endblock %}
+
+{% block content %}
+<!-- Page Hero Banner -->
+<div class="page-hero-banner">
+    <div class="page-hero-grid">
+        <div class="page-breadcrumb">
+            <a href="{% url 'public_home' %}">Trang chủ</a>
+            <span>/</span>
+            <a href="{% url 'public_cart' %}">Giỏ hàng</a>
+            <span>/</span>
+            <span>Thanh toán</span>
+        </div>
+        <div style="margin-bottom: 0.75rem;">
+            <span class="page-domain-tag retail">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                Quy Trình Mua Hàng
+            </span>
+        </div>
+        <h1 class="page-hero-title">
+            Thông Tin Thanh Toán
+        </h1>
+        <p class="page-hero-subtitle">
+            Hoàn thiện địa chỉ giao nhận và phương thức thanh toán an toàn, minh bạch cho đơn hàng của bạn.
+        </p>
+    </div>
+</div>
+
+<div class="pub-section" style="padding-top: 2.5rem;">
+    <!-- Step Progress Indicator -->
+    <div class="checkout-stepper">
+        <div class="step-item completed">
+            <a href="{% url 'public_cart' %}" class="step-bubble" style="text-decoration: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </a>
+            <span class="step-label">Giỏ hàng</span>
+        </div>
+        <div class="step-item active">
+            <div class="step-bubble">2</div>
+            <span class="step-label">Thông tin giao hàng</span>
+        </div>
+        <div class="step-item">
+            <div class="step-bubble">3</div>
+            <span class="step-label">Xác nhận & Đặt mua</span>
+        </div>
+    </div>
+
+    {% if error_message %}
+    <div style="background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; padding: 14px 18px; border-radius: 12px; font-size: 0.92rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 10px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span style="font-weight: 600;">{{ error_message }}</span>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/thanh-toan/dat-hang/" id="checkout-form">
+        {% csrf_token %}
+
+        <div style="display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 2.5rem; align-items: start;">
+            <!-- Left Column: Shipping Details & Payment -->
+            <div>
+                <!-- Customer Contact Info -->
+                <div class="pub-card" style="padding: 1.75rem 2rem; margin-bottom: 1.75rem;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem;">
+                        <div style="width: 36px; height: 36px; background: rgba(37, 99, 235, 0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #2563EB;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </div>
+                        <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--pub-text-heading); margin: 0; letter-spacing: -0.01em;">
+                            Thông tin người nhận hàng
+                        </h2>
+                    </div>
+
+                    {% if not request.user.is_authenticated %}
+                    <div style="background: #F8FAFC; border: 1px solid var(--pub-border); border-radius: 10px; padding: 12px 16px; margin-bottom: 1.5rem; font-size: 0.88rem; color: var(--pub-text-muted); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                            <span>Đã có tài khoản thành viên?</span>
+                        </div>
+                        <a href="/dang-nhap/?next=/thanh-toan/" style="color: var(--pub-primary); font-weight: 700; text-decoration: none; font-size: 0.85rem;">Đăng nhập ngay →</a>
+                    </div>
+                    {% endif %}
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                        <div class="pub-form-group" style="margin-bottom: 0;">
+                            <label for="name" class="pub-form-label">
+                                Họ và tên <span style="color: var(--pub-danger);">*</span>
+                            </label>
+                            <input type="text" name="name" id="name" required value="{{ customer_name }}" placeholder="Ví dụ: Nguyễn Văn A"
+                                   class="pub-form-control">
+                        </div>
+
+                        <div class="pub-form-group" style="margin-bottom: 0;">
+                            <label for="phone" class="pub-form-label">
+                                Số điện thoại <span style="color: var(--pub-danger);">*</span>
+                            </label>
+                            <input type="tel" name="phone" id="phone" required value="{{ customer_phone }}" placeholder="Ví dụ: 0901234567"
+                                   class="pub-form-control">
+                        </div>
+                    </div>
+
+                    <div class="pub-form-group" style="margin-bottom: 0;">
+                        <label for="email" class="pub-form-label">
+                            Địa chỉ Email <span style="color: var(--pub-danger);">*</span>
+                        </label>
+                        <input type="email" name="email" id="email" required value="{{ customer_email }}" placeholder="nguyenvana@gmail.com"
+                               class="pub-form-control">
+                        <div style="font-size: 0.8rem; color: var(--pub-text-muted); margin-top: 5px;">Mã vận đơn và hóa đơn điện tử sẽ được gửi về địa chỉ này.</div>
+                    </div>
+                </div>
+
+                <!-- Delivery Method & Address -->
+                <div class="pub-card" style="padding: 1.75rem 2rem; margin-bottom: 1.75rem;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem;">
+                        <div style="width: 36px; height: 36px; background: rgba(16, 185, 129, 0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #10B981;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                        </div>
+                        <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--pub-text-heading); margin: 0; letter-spacing: -0.01em;">
+                            Phương thức nhận hàng
+                        </h2>
+                    </div>
+
+                    <!-- Delivery Method Switcher -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem;">
+                        <label onclick="setDeliveryMethod('HOME_DELIVERY')" id="label-home-delivery" style="border: 2px solid {% if delivery_method == 'HOME_DELIVERY' %}#2563EB{% else %}var(--pub-border){% endif %}; background: {% if delivery_method == 'HOME_DELIVERY' %}#EFF6FF{% else %}#FFFFFF{% endif %}; border-radius: 12px; padding: 14px; cursor: pointer; display: flex; align-items: flex-start; gap: 12px; transition: all 0.2s ease;">
+                            <input type="radio" name="delivery_method" value="HOME_DELIVERY" {% if delivery_method == 'HOME_DELIVERY' %}checked{% endif %} style="margin-top: 4px; accent-color: #2563EB;">
+                            <div>
+                                <strong style="display: block; font-size: 0.95rem; color: var(--pub-text-heading); font-weight: 700;">Giao hàng tận nơi</strong>
+                                <span style="font-size: 0.8rem; color: var(--pub-text-muted); line-height: 1.4; display: block; margin-top: 2px;">Giao nhanh toàn quốc, phí tiêu chuẩn 30.000đ (Miễn phí từ 5 triệu)</span>
+                            </div>
+                        </label>
+
+                        <label onclick="setDeliveryMethod('STORE_PICKUP')" id="label-store-pickup" style="border: 2px solid {% if delivery_method == 'STORE_PICKUP' %}#2563EB{% else %}var(--pub-border){% endif %}; background: {% if delivery_method == 'STORE_PICKUP' %}#EFF6FF{% else %}#FFFFFF{% endif %}; border-radius: 12px; padding: 14px; cursor: pointer; display: flex; align-items: flex-start; gap: 12px; transition: all 0.2s ease;">
+                            <input type="radio" name="delivery_method" value="STORE_PICKUP" {% if delivery_method == 'STORE_PICKUP' %}checked{% endif %} style="margin-top: 4px; accent-color: #2563EB;">
+                            <div>
+                                <strong style="display: block; font-size: 0.95rem; color: var(--pub-text-heading); font-weight: 700;">Nhận tại cửa hàng</strong>
+                                <span style="font-size: 0.8rem; color: var(--pub-text-muted); line-height: 1.4; display: block; margin-top: 2px;">Miễn phí vận chuyển, nhận trực tiếp tại hệ thống chi nhánh</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Home Delivery Address Section -->
+                    <div id="home-delivery-fields" style="display: {% if delivery_method == 'HOME_DELIVERY' %}block{% else %}none{% endif %};">
+                        <div class="pub-form-group" style="margin-bottom: 1rem;">
+                            <label for="address" class="pub-form-label">
+                                Địa chỉ nhận hàng chi tiết <span style="color: var(--pub-danger);">*</span>
+                            </label>
+                            <input type="text" name="address" id="address" value="{{ customer_address }}" placeholder="Số nhà, tên đường, tòa nhà/căn hộ..."
+                                   class="pub-form-control">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="pub-form-group" style="margin-bottom: 0;">
+                                <label for="city" class="pub-form-label">
+                                    Tỉnh / Thành phố
+                                </label>
+                                <input type="text" name="city" id="city" value="TP. Hồ Chí Minh" placeholder="Ví dụ: TP. Hồ Chí Minh"
+                                       class="pub-form-control">
+                            </div>
+
+                            <div class="pub-form-group" style="margin-bottom: 0;">
+                                <label for="district" class="pub-form-label">
+                                    Quận / Huyện
+                                </label>
+                                <input type="text" name="district" id="district" placeholder="Ví dụ: Quận 1"
+                                       class="pub-form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Store Pickup Branch Selection -->
+                    <div id="store-pickup-fields" style="display: {% if delivery_method == 'STORE_PICKUP' %}block{% else %}none{% endif %};">
+                        <div class="pub-form-group" style="margin-bottom: 1rem;">
+                            <label for="branch_id" class="pub-form-label">
+                                Chọn chi nhánh ABC Tech Store <span style="color: var(--pub-danger);">*</span>
+                            </label>
+                            <select name="branch_id" id="branch_id" class="pub-form-control">
+                                <option value="">-- Vui lòng chọn chi nhánh gần bạn nhất --</option>
+                                {% for b in branches %}
+                                <option value="{{ b.id }}">{{ b.name }} - {{ b.address }} ({{ b.region }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Order Notes -->
+                    <div class="pub-form-group" style="margin-bottom: 0; margin-top: 1rem;">
+                        <label for="notes" class="pub-form-label">
+                            Ghi chú đơn hàng (Không bắt buộc)
+                        </label>
+                        <textarea name="notes" id="notes" rows="2" placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi giao 15 phút..."
+                                  class="pub-form-control" style="resize: vertical;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Payment Method Section -->
+                <div class="pub-card" style="padding: 1.75rem 2rem;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem;">
+                        <div style="width: 36px; height: 36px; background: rgba(37, 99, 235, 0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #2563EB;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                        </div>
+                        <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--pub-text-heading); margin: 0; letter-spacing: -0.01em;">
+                            Phương thức thanh toán
+                        </h2>
+                    </div>
+
+                    <div style="border: 2px solid #2563EB; background: #EFF6FF; border-radius: 12px; padding: 16px; display: flex; align-items: flex-start; gap: 14px;">
+                        <input type="radio" name="payment_method" value="CASH" checked style="accent-color: #2563EB; margin-top: 3px;">
+                        <div>
+                            <strong style="display: block; font-size: 0.95rem; color: var(--pub-text-heading); font-weight: 700;">
+                                Thanh toán khi nhận hàng (COD)
+                            </strong>
+                            <span style="font-size: 0.84rem; color: var(--pub-text-muted); line-height: 1.5; display: block; margin-top: 2px;">
+                                Quý khách chỉ thanh toán tiền mặt trực tiếp cho nhân viên giao vận sau khi nhận kiện hàng và kiểm tra nguyên vẹn tem niêm phong.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Order Review Sidebar -->
+            <div class="pub-card" style="padding: 1.75rem; position: sticky; top: 90px; border-top: 3px solid #2563EB;">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 1.25rem; display: flex; justify-content: space-between; align-items: center; letter-spacing: -0.01em;">
+                    <span>Sản phẩm trong đơn</span>
+                    <a href="{% url 'public_cart' %}" style="font-size: 0.82rem; color: var(--pub-primary); font-weight: 600; text-decoration: underline;">Sửa giỏ hàng</a>
+                </h3>
+
+                <!-- Cart Items Mini List -->
+                <div style="display: flex; flex-direction: column; gap: 12px; max-height: 280px; overflow-y: auto; padding-right: 4px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--pub-border); padding-bottom: 1.25rem;">
+                    {% for item in items %}
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <div style="width: 52px; height: 52px; background: #F8FAFC; border-radius: 8px; border: 1px solid var(--pub-border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                            {% if item.image_url %}
+                            <img src="{{ item.image_url }}" alt="{{ item.product.name }}" style="width: 100%; height: 100%; object-fit: contain; padding: 2px;">
+                            {% else %}
+                            <div style="color: #94A3B8;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 0.88rem; font-weight: 700; color: var(--pub-text-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                {{ item.product.name }}
+                            </div>
+                            <div style="font-size: 0.78rem; color: var(--pub-text-muted); font-family: var(--pub-font-mono);">
+                                {{ item.quantity }} × {{ item.unit_price|floatformat:0 }} VNĐ
+                            </div>
+                        </div>
+                        <div style="font-size: 0.92rem; font-weight: 800; color: var(--pub-text-heading); text-align: right; font-family: var(--pub-font-mono);">
+                            {{ item.line_total|floatformat:0 }} VNĐ
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Price Breakdown -->
+                <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; border-bottom: 1px solid var(--pub-border); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; color: var(--pub-text-muted);">
+                        <span>Tạm tính</span>
+                        <strong style="color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ summary.subtotal|floatformat:0 }} VNĐ</strong>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; color: var(--pub-text-muted);">
+                        <span>Phí vận chuyển</span>
+                        <strong id="summary-shipping-fee" style="color: {% if summary.is_free_shipping %}#10B981{% else %}var(--pub-text-heading){% endif %}; font-family: var(--pub-font-mono);">
+                            {% if summary.is_free_shipping %}
+                            Miễn phí
+                            {% else %}
+                            {{ summary.shipping_fee|floatformat:0 }} VNĐ
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+
+                <!-- Grand Total -->
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.5rem;">
+                    <span style="font-size: 1rem; font-weight: 700; color: var(--pub-text-heading);">Tổng thanh toán</span>
+                    <span id="summary-grand-total" style="font-size: 1.55rem; font-weight: 900; color: var(--pub-primary); font-family: var(--pub-font-mono);">
+                        {{ summary.total_amount|floatformat:0 }} VNĐ
+                    </span>
+                </div>
+
+                <!-- Place Order Button -->
+                <button type="submit" class="pub-btn-primary" id="btn-place-order" style="width: 100%; justify-content: center; padding: 14px; font-size: 1.05rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Đặt mua đơn hàng</span>
+                </button>
+
+                <div style="font-size: 0.78rem; color: var(--pub-text-muted); text-align: center; line-height: 1.45;">
+                    Bằng việc bấm "Đặt mua đơn hàng", quý khách đồng ý với Điều khoản giao dịch và Chính sách bảo mật của ABC Tech Store.
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function setDeliveryMethod(method) {
+    var homeDiv = document.getElementById('home-delivery-fields');
+    var storeDiv = document.getElementById('store-pickup-fields');
+    var addressInput = document.getElementById('address');
+    var branchSelect = document.getElementById('branch_id');
+    var labelHome = document.getElementById('label-home-delivery');
+    var labelStore = document.getElementById('label-store-pickup');
+
+    if (method === 'HOME_DELIVERY') {
+        if (homeDiv) homeDiv.style.display = 'block';
+        if (storeDiv) storeDiv.style.display = 'none';
+        if (addressInput) addressInput.setAttribute('required', 'required');
+        if (branchSelect) branchSelect.removeAttribute('required');
+        if (labelHome) {
+            labelHome.style.borderColor = '#2563EB';
+            labelHome.style.background = '#EFF6FF';
+        }
+        if (labelStore) {
+            labelStore.style.borderColor = 'var(--pub-border)';
+            labelStore.style.background = '#FFFFFF';
+        }
+    } else {
+        if (homeDiv) homeDiv.style.display = 'none';
+        if (storeDiv) storeDiv.style.display = 'block';
+        if (addressInput) addressInput.removeAttribute('required');
+        if (branchSelect) branchSelect.setAttribute('required', 'required');
+        if (labelHome) {
+            labelHome.style.borderColor = 'var(--pub-border)';
+            labelHome.style.background = '#FFFFFF';
+        }
+        if (labelStore) {
+            labelStore.style.borderColor = '#2563EB';
+            labelStore.style.background = '#EFF6FF';
+        }
+    }
+}
+</script>
+{% endblock %}

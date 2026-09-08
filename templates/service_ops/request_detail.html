@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}Phiếu Yêu cầu {{ req.request_number }} — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <a href="/services/requests/" class="text-secondary" style="font-size: 0.875rem;">&larr; Quay lại Danh sách Phiếu Yêu cầu</a>
+        <h1 class="page-title" style="margin-top: 0.5rem;">Phiếu Yêu cầu Sự cố: <code>{{ req.request_number }}</code></h1>
+        <p class="text-secondary">{{ req.title }}</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <span class="badge" style="font-size: 0.9rem; padding: 0.4rem 0.8rem; background: rgba(139, 92, 246, 0.2); color: #c084fc;">
+            {% if req.service.category == 'INSTALLATION' %}Cài đặt hệ thống
+            {% elif req.service.category == 'MAINTENANCE' %}Bảo trì hệ thống
+            {% elif req.service.category == 'DATABASE_CONSULTING' %}Tư vấn CSDL
+            {% elif req.service.category == 'DEVICE_REPAIR' %}Sửa chữa thiết bị
+            {% else %}{{ req.service.get_category_display }}{% endif %}
+        </span>
+        <span class="badge {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}bg-success{% elif req.status == 'CANCELLED' %}bg-danger{% else %}bg-info{% endif %}" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+            {% if req.status == 'OPEN' %}Mở
+            {% elif req.status == 'ASSIGNED' %}Đã phân công
+            {% elif req.status == 'IN_PROGRESS' %}Đang xử lý
+            {% elif req.status == 'RESOLVED' %}Đã giải quyết
+            {% elif req.status == 'CLOSED' %}Đã đóng
+            {% elif req.status == 'CANCELLED' %}Đã hủy
+            {% else %}{{ req.status }}{% endif %}
+        </span>
+        <span class="badge {% if req.priority == 'CRITICAL' %}bg-danger{% elif req.priority == 'HIGH' %}bg-warning{% else %}bg-primary{% endif %}" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+            ƯU TIÊN: {% if req.priority == 'CRITICAL' %}KHẨN CẤP{% elif req.priority == 'HIGH' %}CAO{% elif req.priority == 'MEDIUM' %}TRUNG BÌNH{% else %}THẤP{% endif %}
+        </span>
+    </div>
+</div>
+
+<!-- Human-Readable Ticket Progress Timeline -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+    <h4 style="font-size: 0.9rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 1rem; letter-spacing: 0.05em;">Tiến trình Vòng đời Phiếu Yêu cầu</h4>
+    <div style="display: flex; align-items: center; justify-content: space-between; position: relative;">
+        <!-- Step 1: Created -->
+        <div style="text-align: center; flex: 1; position: relative; z-index: 2;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: #10b981; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; font-size: 0.875rem;">✔</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">1. Tiếp nhận</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">{{ req.created_at|date:"d/m, H:i" }}</div>
+        </div>
+
+        <!-- Connector Line 1 -->
+        <div style="flex: 1; height: 2px; background: {% if req.status != 'OPEN' %}#10b981{% else %}rgba(255,255,255,0.15){% endif %}; margin-top: -1.25rem;"></div>
+
+        <!-- Step 2: Assigned -->
+        <div style="text-align: center; flex: 1; position: relative; z-index: 2;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: {% if req.status != 'OPEN' %}#10b981{% else %}#334155{% endif %}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; font-size: 0.875rem;">
+                {% if req.status != 'OPEN' %}✔{% else %}2{% endif %}
+            </div>
+            <div style="font-size: 0.85rem; font-weight: 600;">2. Phân công</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">{{ req.responded_at|date:"d/m, H:i"|default:"Chờ phân công" }}</div>
+        </div>
+
+        <!-- Connector Line 2 -->
+        <div style="flex: 1; height: 2px; background: {% if req.status == 'IN_PROGRESS' or req.status == 'RESOLVED' or req.status == 'CLOSED' %}#10b981{% else %}rgba(255,255,255,0.15){% endif %}; margin-top: -1.25rem;"></div>
+
+        <!-- Step 3: In Progress -->
+        <div style="text-align: center; flex: 1; position: relative; z-index: 2;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: {% if req.status == 'IN_PROGRESS' %}#3b82f6{% elif req.status == 'RESOLVED' or req.status == 'CLOSED' %}#10b981{% else %}#334155{% endif %}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; font-size: 0.875rem;">
+                {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}✔{% else %}3{% endif %}
+            </div>
+            <div style="font-size: 0.85rem; font-weight: 600;">3. Đang xử lý</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">{% if req.status == 'IN_PROGRESS' %}Đang thực hiện{% elif req.status == 'RESOLVED' or req.status == 'CLOSED' %}Đã xong{% else %}Chờ thực hiện{% endif %}</div>
+        </div>
+
+        <!-- Connector Line 3 -->
+        <div style="flex: 1; height: 2px; background: {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}#10b981{% else %}rgba(255,255,255,0.15){% endif %}; margin-top: -1.25rem;"></div>
+
+        <!-- Step 4: Resolved -->
+        <div style="text-align: center; flex: 1; position: relative; z-index: 2;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}#10b981{% else %}#334155{% endif %}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; font-size: 0.875rem;">
+                {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}✔{% else %}4{% endif %}
+            </div>
+            <div style="font-size: 0.85rem; font-weight: 600;">4. Đã giải quyết</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">{{ req.resolved_at|date:"d/m, H:i"|default:"Chờ hoàn thành" }}</div>
+        </div>
+
+        <!-- Connector Line 4 -->
+        <div style="flex: 1; height: 2px; background: {% if req.status == 'CLOSED' %}#10b981{% else %}rgba(255,255,255,0.15){% endif %}; margin-top: -1.25rem;"></div>
+
+        <!-- Step 5: Closed -->
+        <div style="text-align: center; flex: 1; position: relative; z-index: 2;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: {% if req.status == 'CLOSED' %}#10b981{% else %}#334155{% endif %}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; font-size: 0.875rem;">
+                {% if req.status == 'CLOSED' %}✔{% else %}5{% endif %}
+            </div>
+            <div style="font-size: 0.85rem; font-weight: 600;">5. Đã đóng</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">{{ req.closed_at|date:"d/m, H:i"|default:"-" }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Details Layout -->
+<div class="grid-2-cols" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+    <!-- Left Column: Details, Tasks, Labor Tracking, Lifecycle Actions -->
+    <div>
+        <!-- Ticket Information Card -->
+        <div class="card">
+            <h3 class="card-title">Chi tiết Sự cố</h3>
+            <p style="white-space: pre-wrap; margin-bottom: 1.5rem; line-height: 1.6;">{{ req.description }}</p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.875rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                <div>
+                    <span class="text-secondary">Dịch vụ:</span>
+                    <strong>{{ req.service.name }} ({{ req.service.code }})</strong>
+                </div>
+                <div>
+                    <span class="text-secondary">Phân loại:</span>
+                    <strong style="color: #c084fc;">
+                        {% if req.service.category == 'INSTALLATION' %}Cài đặt hệ thống
+                        {% elif req.service.category == 'MAINTENANCE' %}Bảo trì hệ thống
+                        {% elif req.service.category == 'DATABASE_CONSULTING' %}Tư vấn CSDL
+                        {% elif req.service.category == 'DEVICE_REPAIR' %}Sửa chữa thiết bị
+                        {% else %}{{ req.service.get_category_display }}{% endif %}
+                    </strong>
+                </div>
+                <div>
+                    <span class="text-secondary">Phí cơ bản:</span>
+                    <strong>{{ req.service.base_fee|floatformat:0 }} VND</strong>
+                </div>
+                <div>
+                    <span class="text-secondary">Lịch hẹn kỹ thuật:</span>
+                    <span>{{ req.scheduled_at|date:"Y-m-d H:i"|default:"Chưa xếp lịch" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operational Tasks Card -->
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="dashboard-header" style="margin-bottom: 1rem;">
+                <h3 class="card-title" style="margin-bottom: 0;">Danh mục Công việc Thực hiện</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mã việc</th>
+                            <th>Tiêu đề</th>
+                            <th>Người thực hiện</th>
+                            <th>Dự kiến</th>
+                            <th>Thực tế</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tasks %}
+                        <tr>
+                            <td><code>#{{ t.id }}</code></td>
+                            <td><strong>{{ t.title }}</strong></td>
+                            <td>
+                                {% if t.assigned_to %}
+                                <span>👨‍💻 {{ t.assigned_to.full_name }}</span>
+                                {% else %}
+                                <span class="text-secondary">Chưa phân công</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ t.estimated_duration_minutes }} phút</td>
+                            <td>
+                                {% if t.actual_duration_minutes %}
+                                <strong>{{ t.actual_duration_minutes }} phút</strong>
+                                {% else %}
+                                <span class="text-secondary">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if t.status == 'COMPLETED' %}bg-success{% elif t.status == 'CANCELLED' %}bg-danger{% else %}bg-primary{% endif %}">
+                                    {% if t.status == 'COMPLETED' %}Hoàn thành
+                                    {% elif t.status == 'CANCELLED' %}Đã hủy
+                                    {% elif t.status == 'IN_PROGRESS' %}Đang làm
+                                    {% else %}Chờ xử lý{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-secondary">Chưa có công việc cụ thể nào được tạo.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Labor Time & Cost Tracking Section -->
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="dashboard-header" style="margin-bottom: 1rem;">
+                <div>
+                    <h3 class="card-title" style="margin-bottom: 0.25rem;">Theo dõi Thời gian & Quyết toán Chi phí Giờ công</h3>
+                    <p class="text-secondary" style="font-size: 0.8rem; margin-bottom: 0;">Ảnh chụp đơn giá lịch sử bất biến và chi phí nhân công được tính toán từ máy chủ</p>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Kỹ thuật viên</th>
+                            <th>Công việc</th>
+                            <th>Thời lượng</th>
+                            <th>Đơn giá lịch sử</th>
+                            <th>Chi phí nhân công</th>
+                            <th>Ghi chú</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in cost_summary.entries %}
+                        <tr>
+                            <td><strong>{{ entry.employee_name }}</strong></td>
+                            <td><span class="text-secondary">{{ entry.task_title }}</span></td>
+                            <td><span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">⏱ {{ entry.duration_minutes }} phút</span></td>
+                            <td><code>{{ entry.hourly_rate_snapshot|floatformat:0 }} VND/giờ</code></td>
+                            <td><strong style="color: #34d399;">{{ entry.labor_cost|floatformat:0 }} VND</strong></td>
+                            <td class="text-secondary">{{ entry.notes|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-secondary">Chưa có nhật ký giờ công nào cho phiếu yêu cầu này.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Cost Summary Footer -->
+            <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span class="text-secondary" style="font-size: 0.875rem;">Tổng thời gian ghi nhận:</span>
+                    <strong>{{ cost_summary.total_labor_minutes }} phút ({{ cost_summary.total_labor_hours }} giờ)</strong>
+                </div>
+                <div>
+                    <span class="text-secondary" style="font-size: 0.875rem;">Chi phí nhân công:</span>
+                    <strong style="color: #34d399; font-size: 1.1rem; margin-right: 1.5rem;">{{ cost_summary.total_labor_cost|floatformat:0 }} VND</strong>
+                    <span class="text-secondary" style="font-size: 0.875rem;">Ước tính tổng chi phí:</span>
+                    <strong style="color: #60a5fa; font-size: 1.1rem;">{{ cost_summary.total_estimated_cost|floatformat:0 }} VND</strong>
+                </div>
+            </div>
+
+            <!-- Log Labor Form -->
+            {% if can_log_labor and req.status != 'CLOSED' and req.status != 'CANCELLED' and tasks %}
+            <div style="border-top: 1px solid rgba(255,255,255,0.08); margin-top: 1.5rem; padding-top: 1rem;">
+                <h4 style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.75rem;">+ Ghi nhận Giờ công Kỹ thuật viên</h4>
+                <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr 1fr 2fr auto; gap: 0.75rem; align-items: end;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="log_labor">
+                    <div>
+                        <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Công việc:</label>
+                        <select name="task_id" class="form-control" required style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+                            {% for t in tasks %}
+                            <option value="{{ t.id }}">#{{ t.id }} - {{ t.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Kỹ thuật viên:</label>
+                        <select name="employee_id" class="form-control" required style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+                            {% for tech in technicians %}
+                            <option value="{{ tech.id }}" {% if req.assigned_employee and req.assigned_employee.id == tech.id %}selected{% endif %}>
+                                {{ tech.full_name }} ({{ tech.hourly_labor_rate|floatformat:0 }} VND/h)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Thời lượng (phút):</label>
+                        <input type="number" name="duration_minutes" value="60" min="1" required class="form-control" style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Ghi chú chi tiết:</label>
+                        <input type="text" name="notes" placeholder="Mô tả công việc thực hiện..." class="form-control" style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-primary" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;">Ghi nhận</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Lifecycle State Actions Card -->
+        {% if can_manage_request %}
+        <div class="card" style="margin-top: 1.5rem;">
+            <h3 class="card-title">Thao tác Chuyển đổi Trạng thái</h3>
+            <p class="text-secondary" style="font-size: 0.875rem; margin-bottom: 1rem;">Thực hiện chuyển đổi trạng thái có kiểm soát tuân thủ quy trình vận hành</p>
+            
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                {% if req.status == 'ASSIGNED' or req.status == 'OPEN' %}
+                <form method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="start">
+                    <button type="submit" class="btn btn-primary">▶ Chuyển sang Đang xử lý</button>
+                </form>
+                {% endif %}
+
+                {% if req.status == 'IN_PROGRESS' %}
+                <form method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="resolve">
+                    <button type="submit" class="btn btn-success">✔ Đánh dấu Đã giải quyết</button>
+                </form>
+                {% endif %}
+
+                {% if req.status == 'RESOLVED' %}
+                <form method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="close">
+                    <button type="submit" class="btn btn-secondary">🔒 Đóng Phiếu Yêu cầu</button>
+                </form>
+                {% endif %}
+
+                {% if req.status != 'CLOSED' and req.status != 'CANCELLED' %}
+                <form method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn hủy phiếu yêu cầu dịch vụ này không?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="cancel">
+                    <button type="submit" class="btn btn-danger">✖ Hủy Phiếu Yêu cầu</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: SLA Health, Customer Info & Dispatch Assignment -->
+    <div>
+        <!-- SLA Compliance Card -->
+        <div class="card" style="border-left: 4px solid {% if sla.overall_status == 'ON_TIME' %}#10b981{% elif sla.overall_status == 'AT_RISK' %}#f59e0b{% else %}#ef4444{% endif %};">
+            <h3 class="card-title">Tình trạng Tuân thủ Cam kết SLA</h3>
+            <div style="margin-bottom: 1rem;">
+                <span class="badge {% if sla.overall_status == 'ON_TIME' %}bg-success{% elif sla.overall_status == 'AT_RISK' %}bg-warning{% else %}bg-danger{% endif %}" style="font-size: 1.1rem; padding: 0.4rem 0.8rem;">
+                    {% if sla.overall_status == 'ON_TIME' %}ĐÚNG HẠN
+                    {% elif sla.overall_status == 'AT_RISK' %}NGUY CƠ TRỄ
+                    {% else %}VI PHẠM SLA{% endif %}
+                </span>
+            </div>
+
+            <div style="font-size: 0.875rem; line-height: 1.8;">
+                <div>
+                    <span class="text-secondary">Chính sách:</span>
+                    <strong>{{ req.sla.name|default:"Chính sách Tiêu chuẩn" }}</strong>
+                </div>
+                <div>
+                    <span class="text-secondary">Hạn phản hồi:</span><br>
+                    <code>{{ req.response_deadline_at|date:"Y-m-d H:i" }}</code>
+                    <span class="badge {% if sla.is_response_breached %}bg-danger{% else %}bg-success{% endif %}">
+                        {% if sla.is_response_breached %}Vi phạm{% else %}Đúng hạn{% endif %}
+                    </span>
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <span class="text-secondary">Hạn giải quyết:</span><br>
+                    <code>{{ req.resolution_deadline_at|date:"Y-m-d H:i" }}</code>
+                    <span class="badge {% if sla.is_resolution_breached %}bg-danger{% else %}bg-success{% endif %}">
+                        {% if sla.is_resolution_breached %}Vi phạm{% else %}Đúng hạn{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Profile Card -->
+        <div class="card" style="margin-top: 1.5rem;">
+            <h3 class="card-title">Hồ sơ Khách hàng Doanh nghiệp</h3>
+            <div style="font-size: 0.875rem; line-height: 1.8;">
+                <div>
+                    <span class="text-secondary">Tên công ty / Cơ quan:</span>
+                    <strong>{{ req.customer.name }}</strong>
+                </div>
+                <div>
+                    <span class="text-secondary">Mã đối tác:</span>
+                    <code>{{ req.customer.code }}</code>
+                    <span class="badge bg-primary">
+                        {% if req.customer.customer_segment == 'VIP' %}VIP
+                        {% elif req.customer.customer_segment == 'ENTERPRISE' %}Doanh nghiệp
+                        {% else %}Tiêu chuẩn{% endif %}
+                    </span>
+                </div>
+                <div>
+                    <span class="text-secondary">Điện thoại liên hệ:</span>
+                    <span>{{ req.customer.phone|default:"-" }}</span>
+                </div>
+                <div>
+                    <span class="text-secondary">Địa chỉ trụ sở / Trạm:</span>
+                    <span>{{ req.customer.address|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dispatch / Reassign Card -->
+        {% if can_assign and req.status != 'CLOSED' and req.status != 'CANCELLED' %}
+        <div class="card" style="margin-top: 1.5rem;">
+            <h3 class="card-title">Điều phối & Phân công Kỹ sư</h3>
+            <p class="text-secondary" style="font-size: 0.875rem; margin-bottom: 1rem;">Chỉ định hoặc thay đổi kỹ sư kỹ thuật phụ trách</p>
+
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign">
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-size: 0.875rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Chọn kỹ sư:</label>
+                    <select name="employee_id" class="form-control" required style="width: 100%; padding: 0.5rem;">
+                        <option value="">-- Chọn kỹ sư thực hiện --</option>
+                        {% for tech in technicians %}
+                        <option value="{{ tech.id }}" {% if req.assigned_employee and req.assigned_employee.id == tech.id %}selected{% endif %}>
+                            {{ tech.full_name }} (Tải: {{ tech.current_workload_score }} | {{ tech.hourly_labor_rate|floatformat:0 }} VND/giờ)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">👨‍💻 Xác nhận Điều phối</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - Chi tiết Sản phẩm{% endblock %}
+
+{% block extra_head %}
+<style>
+.detail-layout {
+    display: grid;
+    grid-template-columns: 1.8fr 1.2fr;
+    gap: 1.75rem;
+    margin-bottom: 2rem;
+}
+.detail-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+}
+.card-header-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin: 0 0 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 0.75rem;
+}
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 0.9rem;
+}
+.info-label {
+    color: #94a3b8;
+}
+.info-val {
+    color: #f8fafc;
+    font-weight: 600;
+}
+.image-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.gallery-card {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 8px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.gallery-card.primary {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 1px #6366f1;
+}
+.gallery-thumb {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+.primary-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #6366f1;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.form-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+    padding: 0.65rem 0.9rem;
+    border-radius: 8px;
+    outline: none;
+    font-size: 0.9rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+.form-input:focus {
+    border-color: #6366f1;
+}
+.form-input option {
+    background: #1e293b;
+    color: #f8fafc;
+}
+@media (max-width: 900px) {
+    .detail-layout {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.35rem;">
+            <a href="/retail/products/" style="color: #94a3b8; text-decoration: none; font-size: 0.88rem;">← Danh mục sản phẩm</a>
+            <span style="color: #64748b;">/</span>
+            <span style="color: #818cf8; font-size: 0.85rem; font-weight: 700;">{{ product.category.name }}</span>
+        </div>
+        <h1 style="font-size: 2rem; font-weight: 800; color: #f8fafc; margin: 0 0 0.5rem;">
+            {{ product.name }}
+        </h1>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; color: #38bdf8;">
+                SKU: {{ product.sku }}
+            </span>
+            <span style="font-size: 0.85rem; color: {% if product.is_active %}#4ade80{% else %}#f87171{% endif %}; font-weight: 600;">
+                {% if product.is_active %}● Đang kinh doanh{% else %}○ Ngừng kinh doanh{% endif %}
+            </span>
+            <a href="/san-pham/{{ product.id }}/" target="_blank" style="color: #38bdf8; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                <span>🌐 Xem trên Web công khai ↗</span>
+            </a>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; align-items: center;">
+        {% if can_manage %}
+        <form method="POST" action="/retail/products/{{ product.id }}/delete/" onsubmit="return confirm('Bạn có chắc chắn muốn chuyển sản phẩm này vào Thùng rác? (Có thể khôi phục trong 7 ngày)');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary" style="color: #f87171; border-color: rgba(239,68,68,0.3);">
+                🗑️ Chuyển vào Thùng rác
+            </button>
+        </form>
+        {% endif %}
+        <a href="/retail/products/" class="btn btn-secondary">Quay lại</a>
+    </div>
+</div>
+
+<div class="detail-layout">
+    <!-- Left Column: Edit Form & Images Management -->
+    <div>
+        <!-- Edit Form -->
+        <div class="detail-card">
+            <div class="card-header-title">
+                <span>📝 Chỉnh sửa Thông tin Sản phẩm</span>
+                {% if not can_manage %}
+                <span style="font-size: 0.75rem; color: #94a3b8; font-weight: normal;">(Chỉ xem)</span>
+                {% endif %}
+            </div>
+
+            <form method="POST" action="/retail/products/{{ product.id }}/edit/">
+                {% csrf_token %}
+
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Tên sản phẩm</label>
+                        <input type="text" name="name" value="{{ product.name }}" required class="form-input" {% if not can_manage %}disabled{% endif %}>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Mã SKU</label>
+                        <input type="text" name="sku" value="{{ product.sku }}" required class="form-input" style="text-transform: uppercase;" {% if not can_manage %}disabled{% endif %}>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Danh mục</label>
+                        <select name="category_id" required class="form-input" {% if not can_manage %}disabled{% endif %}>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if product.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Giá bán (VND)</label>
+                        <input type="number" name="unit_price" value="{{ product.unit_price|floatformat:0 }}" step="1000" min="0" required class="form-input" {% if not can_manage %}disabled{% endif %}>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Giá vốn (VND)</label>
+                        <input type="number" name="cost_price" value="{{ product.cost_price|floatformat:0 }}" step="1000" min="0" class="form-input" {% if not can_manage %}disabled{% endif %}>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Đơn vị tính</label>
+                        <input type="text" name="unit" value="{{ product.unit }}" class="form-input" {% if not can_manage %}disabled{% endif %}>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; padding-top: 1.4rem;">
+                        <input type="checkbox" id="is_active" name="is_active" {% if product.is_active %}checked{% endif %} style="width: 18px; height: 18px;" {% if not can_manage %}disabled{% endif %}>
+                        <label for="is_active" style="color: #f8fafc; font-size: 0.88rem; cursor: pointer;">Đang kinh doanh (Hiển thị công khai)</label>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Mô tả sản phẩm & Thông số kỹ thuật</label>
+                    <textarea name="description" rows="4" class="form-input" {% if not can_manage %}disabled{% endif %}>{{ product.description }}</textarea>
+                </div>
+
+                {% if can_manage %}
+                <div style="text-align: right;">
+                    <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.5rem; font-weight: 700;">
+                        💾 Lưu thay đổi
+                    </button>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Product Images Management -->
+        <div class="detail-card">
+            <div class="card-header-title">
+                <span>📸 Quản lý Hình ảnh Sản phẩm ({{ product.images.count }} ảnh)</span>
+            </div>
+
+            <!-- Upload new images -->
+            {% if can_manage %}
+            <form method="POST" action="/retail/products/{{ product.id }}/images/upload/" enctype="multipart/form-data" style="margin-bottom: 1.5rem; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px dashed rgba(255,255,255,0.12);">
+                {% csrf_token %}
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <input type="file" name="images" multiple accept=".jpg,.jpeg,.png,.webp" required class="form-input" style="flex: 1; min-width: 200px;">
+                    <button type="submit" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.65rem 1.25rem;">
+                        ⬆️ Tải ảnh lên
+                    </button>
+                </div>
+                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 6px;">
+                    Chấp nhận JPG, PNG, WEBP (tối đa 5MB/tệp). Có thể chọn nhiều tệp cùng lúc.
+                </div>
+            </form>
+            {% endif %}
+
+            <!-- Images List -->
+            <div class="image-gallery-grid">
+                {% for img in product.images.all %}
+                <div class="gallery-card {% if img.is_primary %}primary{% endif %}">
+                    {% if img.is_primary %}
+                    <span class="primary-badge">Ảnh chính</span>
+                    {% endif %}
+
+                    {% if img.image %}
+                    <img src="{{ img.image.url }}" alt="{{ img.alt_text|default:product.name }}" class="gallery-thumb">
+                    {% endif %}
+
+                    <div style="display: flex; gap: 4px; margin-top: auto; justify-content: space-between;">
+                        {% if can_manage %}
+                            {% if not img.is_primary %}
+                            <form method="POST" action="/retail/products/{{ product.id }}/images/{{ img.id }}/primary/" style="margin: 0; flex: 1;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary" style="width: 100%; padding: 3px; font-size: 0.7rem;" title="Đặt làm ảnh chính">
+                                    ★ Chính
+                                </button>
+                            </form>
+                            {% endif %}
+                            
+                            <form method="POST" action="/retail/products/{{ product.id }}/images/{{ img.id }}/delete/" onsubmit="return confirm('Xóa ảnh này?');" style="margin: 0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary" style="padding: 3px 6px; font-size: 0.7rem; color: #f87171;" title="Xóa ảnh">
+                                    ✕
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #64748b; font-size: 0.9rem;">
+                    Sản phẩm này chưa có hình ảnh. Vui lòng tải ảnh lên để hiển thị trên danh mục bán hàng.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Commercial Summary & Audit Trail -->
+    <div>
+        <!-- Summary Box -->
+        <div class="detail-card">
+            <div class="card-header-title">
+                <span>📊 Thông tin Thương mại</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Giá niêm yết bán lẻ:</span>
+                <span class="info-val" style="color: #38bdf8; font-size: 1.15rem;">{{ product.unit_price|floatformat:0 }} VND</span>
+            </div>
+            {% if can_manage %}
+            <div class="info-row">
+                <span class="info-label">Giá vốn nhập hàng:</span>
+                <span class="info-val">{{ product.cost_price|floatformat:0 }} VND</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Biên lợi nhuận gộp:</span>
+                <span class="info-val" style="color: #4ade80;">
+                    {% widthratio product.unit_price|add:product.cost_price product.unit_price 100 as markup %}
+                    {{ product.unit_price|floatformat:0 }} VND
+                </span>
+            </div>
+            {% endif %}
+            <div class="info-row">
+                <span class="info-label">Đơn vị tính:</span>
+                <span class="info-val">{{ product.unit }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Không gian làm việc:</span>
+                <span class="info-val">{{ active_workspace.name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Ngày tạo:</span>
+                <span class="info-val">{{ product.created_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Cập nhật lần cuối:</span>
+                <span class="info-val">{{ product.updated_at|date:"d/m/Y H:i" }}</span>
+            </div>
+        </div>
+
+        <!-- Audit History -->
+        <div class="detail-card">
+            <div class="card-header-title">
+                <span>📜 Lịch sử Kiểm toán (Audit Trail)</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                {% for log in audit_logs %}
+                <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.04); font-size: 0.82rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <strong style="color: #818cf8;">{{ log.action }}</strong>
+                        <span style="color: #64748b;">{{ log.timestamp|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div style="color: #94a3b8;">
+                        Thực hiện bởi: <strong>{{ log.actor_user.username|default:"Hệ thống" }}</strong>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 1rem;">
+                    Chưa có nhật ký kiểm toán cho sản phẩm này.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

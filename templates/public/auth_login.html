@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Đăng nhập tài khoản khách hàng — Nền tảng Doanh nghiệp AI">
+    <title>{{ page_title|default:"Đăng nhập | Nền tảng Doanh nghiệp AI" }}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --pub-bg: #F8FAFC;
+            --pub-card: #FFFFFF;
+            --pub-border: #E2E8F0;
+            --pub-primary: #2563EB;
+            --pub-primary-hover: #1D4ED8;
+            --pub-text-heading: #0F172A;
+            --pub-text-body: #334155;
+            --pub-text-muted: #64748B;
+            --pub-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+            --pub-radius: 16px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--pub-bg);
+            color: var(--pub-text-body);
+            margin: 0;
+            padding: 2.5rem 1rem;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .auth-container {
+            max-width: 440px;
+            width: 100%;
+            margin: auto;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-logo {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, #2563EB, #4F46E5);
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            margin-bottom: 0.85rem;
+            text-decoration: none;
+        }
+
+        .auth-brand-name {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: var(--pub-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.35rem;
+        }
+
+        .auth-title {
+            font-size: 1.65rem;
+            font-weight: 800;
+            color: var(--pub-text-heading);
+            margin: 0 0 0.4rem;
+            letter-spacing: -0.02em;
+        }
+
+        .auth-subtitle {
+            color: var(--pub-text-muted);
+            font-size: 0.92rem;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .auth-card {
+            background: var(--pub-card);
+            border: 1px solid var(--pub-border);
+            border-radius: var(--pub-radius);
+            box-shadow: var(--pub-shadow);
+            padding: 2.25rem 2rem;
+            border-top: 3px solid #2563EB;
+        }
+
+        /* Segmented Tabs */
+        .auth-tabs {
+            display: flex;
+            background: #F1F5F9;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 1.75rem;
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 9px 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: var(--pub-text-muted);
+            border-radius: 8px;
+            transition: all 0.15s ease;
+        }
+
+        .auth-tab.active {
+            background: #FFFFFF;
+            color: var(--pub-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .auth-tab:hover:not(.active) {
+            color: var(--pub-text-heading);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: var(--pub-text-heading);
+            margin-bottom: 0.45rem;
+        }
+
+        .form-input {
+            width: 100%;
+            background: #FFFFFF;
+            border: 1px solid #CBD5E1;
+            border-radius: 10px;
+            padding: 11px 14px;
+            font-size: 0.95rem;
+            color: var(--pub-text-heading);
+            outline: none;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            border-color: var(--pub-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--pub-primary);
+            color: #FFFFFF;
+            border: none;
+            padding: 13px;
+            border-radius: 10px;
+            font-size: 0.98rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover {
+            background: var(--pub-primary-hover);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 1.5rem 0;
+            color: var(--pub-text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--pub-border);
+        }
+
+        .divider span {
+            padding: 0 12px;
+        }
+
+        /* Official Compliant Google Sign-In Button */
+        .btn-google {
+            width: 100%;
+            background: #FFFFFF;
+            color: #3C4043;
+            border: 1px solid #DADCE0;
+            padding: 11px 16px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-decoration: none;
+            transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+            cursor: pointer;
+        }
+
+        .btn-google:hover {
+            background: #F8FAFC;
+            border-color: #CBD5E1;
+            box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15);
+        }
+
+        .alert-box {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-error {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            color: #991B1B;
+        }
+
+        .alert-success {
+            background: #ECFDF5;
+            border: 1px solid #A7F3D0;
+            color: #065F46;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <!-- Header -->
+        <div class="auth-header">
+            <a href="/" class="auth-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+            </a>
+            <div class="auth-brand-name">Nền tảng Doanh nghiệp AI</div>
+            <h1 class="auth-title">Đăng nhập tài khoản</h1>
+            <p class="auth-subtitle">Truy cập để quản lý dịch vụ và mua sắm công nghệ</p>
+        </div>
+
+        <!-- Auth Card -->
+        <div class="auth-card">
+            <!-- Segmented Tabs -->
+            <div class="auth-tabs">
+                <a href="/dang-nhap/{% if next %}?next={{ next|urlencode }}{% endif %}" class="auth-tab active">
+                    Đăng nhập
+                </a>
+                <a href="/dang-ky/{% if next %}?next={{ next|urlencode }}{% endif %}" class="auth-tab">
+                    Đăng ký
+                </a>
+            </div>
+
+            {% if error %}
+            <div class="alert-box alert-error">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            {% if pending_verification %}
+            <div style="margin:-.5rem 0 1.25rem;text-align:center;font-size:.86rem;">
+                <a href="/dang-ky/" style="color:var(--pub-primary);font-weight:700;text-decoration:none;">Mở trang gửi lại email xác minh</a>
+            </div>
+            {% endif %}
+
+            {% if logged_out %}
+            <div class="alert-box alert-success">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Bạn đã đăng xuất thành công.</span>
+            </div>
+            {% endif %}
+
+            <!-- Login Form -->
+            <form method="POST" action="/dang-nhap/">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="form-group">
+                    <label for="username_or_email" class="form-label">Email hoặc Tên đăng nhập</label>
+                    <input type="text" id="username_or_email" name="username_or_email" required autofocus
+                           placeholder="name@example.com hoặc username" class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+                        <label for="password" class="form-label" style="margin-bottom: 0;">Mật khẩu</label>
+                        <a href="/quen-mat-khau/" style="font-size: 0.82rem; color: var(--pub-primary); text-decoration: none; font-weight: 700;">
+                            Quên mật khẩu?
+                        </a>
+                    </div>
+                    <div style="position: relative;">
+                        <input type="password" id="password" name="password" required placeholder="••••••••••••" class="form-input" style="padding-right: 42px;">
+                        <button type="button" onclick="togglePasswordVisibility('password', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--pub-text-muted); display: flex; align-items: center; padding: 4px;" aria-label="Hiển thị mật khẩu">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="btn-login-submit" style="margin-top: 0.75rem;">
+                    <span>Đăng nhập</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </form>
+
+            <!-- Social Divider -->
+            <div class="divider">
+                <span>hoặc tiếp tục với</span>
+            </div>
+
+            <!-- Official Compliant Google Button -->
+            <a href="/accounts/google/?auth=1{% if next %}&next={{ next|urlencode }}{% endif %}" class="btn-google" id="btn-google-login">
+                <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z" fill="#4285F4"/>
+                    <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+                    <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+                    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                </svg>
+                <span>Đăng nhập bằng Google</span>
+            </a>
+
+            <!-- Registration Footer Prompt -->
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.88rem; color: var(--pub-text-muted);">
+                Chưa có tài khoản? <a href="/dang-ky/{% if next %}?next={{ next|urlencode }}{% endif %}" style="color: var(--pub-primary); font-weight: 700; text-decoration: none;">Đăng ký</a>
+            </div>
+        </div>
+
+        <!-- Back to Home Link -->
+        <div style="text-align: center; margin-top: 1.5rem;">
+            <a href="/" style="color: var(--pub-text-muted); font-size: 0.88rem; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Quay lại trang chủ</span>
+            </a>
+        </div>
+    </div>
+
+    <script>
+    function togglePasswordVisibility(fieldId, btn) {
+        var input = document.getElementById(fieldId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+        } else {
+            input.type = 'password';
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+        }
+    }
+    </script>
+</body>
+</html>

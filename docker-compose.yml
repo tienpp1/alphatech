@@ -1,3 +1,10 @@
+# ==============================================================================
+# Docker Compose Orchestration (Optional Deployment / CI Artifact)
+# NOTE: Native local development standard is PostgreSQL 18 + PostGIS 3.6.
+# Docker image tag remains postgis/postgis:16-3.4 until Docker environment is
+# available and an image tag is empirically verified (see ADR-015).
+# ==============================================================================
+
 services:
   db:
     image: postgis/postgis:16-3.4
@@ -30,7 +37,7 @@ services:
       - DEBUG=True
       - SECRET_KEY=${SECRET_KEY:-django-insecure-docker-secret-key-2026}
       - ALLOWED_HOSTS=*
-      - DB_ENGINE=django.db.backends.postgresql
+      - DB_ENGINE=django.contrib.gis.db.backends.postgis
       - DB_NAME=${DB_NAME:-ai_business_platform_db}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-postgres}

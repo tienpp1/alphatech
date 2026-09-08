@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}System Health & Environment Status | AI Business Platform{% endblock %}
+{% block title %}Trạng thái Hệ thống & Môi trường | Nền tảng Doanh nghiệp AI{% endblock %}
 
 {% block content %}
 <div class="dashboard-hero">
     <div class="hero-badge {% if health.status == 'healthy' %}badge-success{% else %}badge-warning{% endif %}">
-        <span class="pulse-dot"></span> {{ health.status|upper }}
+        <span class="pulse-dot"></span> {% if health.status == 'healthy' %}HOẠT ĐỘNG TỐT{% else %}CẢNH BÁO{% endif %}
     </div>
-    <h1 class="hero-title">Platform Bootstrap & Inspection</h1>
-    <p class="hero-subtitle">Phase 0 Gate: Single Django modular monolith with PostgreSQL + PostGIS connectivity verified.</p>
+    <h1 class="hero-title">Kiến trúc Nền tảng & Trạng thái Hệ thống</h1>
+    <p class="hero-subtitle">Baseline cục bộ đã được kiểm chứng. Các cổng production (staging, secret rotation, HTTPS OAuth/email, quan sát và khôi phục dữ liệu) vẫn cần bằng chứng vận hành thật.</p>
 </div>
 
 <div class="grid-container">
@@ -16,25 +16,25 @@
     <div class="card glass-card">
         <div class="card-header">
             <div class="card-icon">🖥️</div>
-            <h3>Runtime Environment</h3>
+            <h3>Môi trường Thực thi (Runtime)</h3>
         </div>
         <div class="card-body">
             <div class="info-row">
-                <span class="label">Python Version:</span>
+                <span class="label">Phiên bản Python:</span>
                 <span class="value code">{{ health.environment.python_version }}</span>
             </div>
             <div class="info-row">
-                <span class="label">Django Version:</span>
+                <span class="label">Phiên bản Django:</span>
                 <span class="value code">{{ health.environment.django_version }}</span>
             </div>
             <div class="info-row">
-                <span class="label">Debug Mode:</span>
+                <span class="label">Chế độ Debug:</span>
                 <span class="value badge {% if health.environment.debug_mode %}badge-warning{% else %}badge-info{% endif %}">
-                    {{ health.environment.debug_mode|yesno:"Enabled,Disabled" }}
+                    {{ health.environment.debug_mode|yesno:"Bật,Tắt" }}
                 </span>
             </div>
             <div class="info-row">
-                <span class="label">System Time:</span>
+                <span class="label">Thời gian Hệ thống:</span>
                 <span class="value">{{ health.timestamp }}</span>
             </div>
         </div>
@@ -44,27 +44,27 @@
     <div class="card glass-card">
         <div class="card-header">
             <div class="card-icon">🗄️</div>
-            <h3>PostgreSQL & PostGIS</h3>
+            <h3>Cơ sở Dữ liệu PostgreSQL & PostGIS</h3>
         </div>
         <div class="card-body">
             <div class="info-row">
-                <span class="label">Database Connection:</span>
+                <span class="label">Kết nối Dữ liệu:</span>
                 <span class="value badge {% if health.database.status == 'connected' %}badge-success{% else %}badge-danger{% endif %}">
-                    {{ health.database.status|upper }}
+                    {% if health.database.status == 'connected' %}ĐÃ KẾT NỐI{% else %}MẤT KẾT NỐI{% endif %}
                 </span>
             </div>
             <div class="info-row">
-                <span class="label">Database Name:</span>
+                <span class="label">Tên Cơ sở Dữ liệu:</span>
                 <span class="value code">{{ health.database.name }}</span>
             </div>
             <div class="info-row">
-                <span class="label">Host & Port:</span>
+                <span class="label">Máy chủ & Cổng:</span>
                 <span class="value code">{{ health.database.host }}:{{ health.database.port }}</span>
             </div>
             <div class="info-row">
-                <span class="label">PostGIS Status:</span>
+                <span class="label">Trạng thái PostGIS:</span>
                 <span class="value badge {% if 'available' in health.database.postgis %}badge-success{% else %}badge-warning{% endif %}">
-                    {{ health.database.postgis }}
+                    {% if 'available' in health.database.postgis %}Khả dụng{% else %}Chưa cài đặt{% endif %}
                 </span>
             </div>
         </div>
@@ -74,43 +74,43 @@
     <div class="card glass-card span-2">
         <div class="card-header">
             <div class="card-icon">🚀</div>
-            <h3>Architecture & Development Phase Roadmap</h3>
+            <h3>Lộ trình Phát triển & Bàn giao Nền tảng</h3>
         </div>
         <div class="card-body">
             <div class="phase-timeline">
                 <div class="phase-step active">
-                    <div class="step-circle">0</div>
+                    <div class="step-circle" style="background: #10b981; color: #fff;">✓</div>
                     <div class="step-content">
-                        <strong>Phase 0: Bootstrap & Environment</strong>
-                        <span class="step-desc">Repo skeleton, Postgres connection, docs, health-check smoke test (COMPLETED).</span>
+                        <strong>Giai đoạn 0–2: Nền tảng Cốt lõi & Phân quyền Đa người thuê</strong>
+                        <span class="step-desc">Khung dự án, PostgreSQL 18, PostGIS, Xác thực danh tính, Không gian làm việc kép & RBAC (HOÀN THÀNH).</span>
                     </div>
                 </div>
-                <div class="phase-step next">
-                    <div class="step-circle">1</div>
+                <div class="phase-step active">
+                    <div class="step-circle" style="background: #10b981; color: #fff;">✓</div>
                     <div class="step-content">
-                        <strong>Phase 1: Architecture & ERD Spec</strong>
-                        <span class="step-desc">ERD design, domain models, API conventions, workspace scope lock.</span>
+                        <strong>Giai đoạn 3–5: Vận hành Thương mại Bán lẻ, Dịch vụ Kỹ thuật & GIS Không gian</strong>
+                        <span class="step-desc">Bán hàng/Đơn hàng, Phiếu yêu cầu/SLA, Chi phí nhân công, Khoảng cách trắc địa PostGIS & Bản đồ Leaflet (HOÀN THÀNH).</span>
                     </div>
                 </div>
-                <div class="phase-step">
-                    <div class="step-circle">2</div>
+                <div class="phase-step active">
+                    <div class="step-circle" style="background: #10b981; color: #fff;">✓</div>
                     <div class="step-content">
-                        <strong>Phase 2: Core & RBAC</strong>
-                        <span class="step-desc">Accounts, Workspace scope (Retail vs Service), JWT/Session auth.</span>
+                        <strong>Giai đoạn 6–7: Động cơ Tích hợp Dữ liệu & Xưởng Ánh xạ Dữ liệu Chuẩn</strong>
+                        <span class="step-desc">Tiếp nhận CSV/Excel/API thô, Bộ đánh giá biểu thức AST an toàn & Chuẩn hóa lược đồ kinh doanh (HOÀN THÀNH).</span>
                     </div>
                 </div>
-                <div class="phase-step">
-                    <div class="step-circle">3-5</div>
+                <div class="phase-step active">
+                    <div class="step-circle" style="background: #10b981; color: #fff;">✓</div>
                     <div class="step-content">
-                        <strong>Phases 3-5: Retail, Service & GIS</strong>
-                        <span class="step-desc">Sales/Orders, Service requests/SLA, GeoDjango spatial queries & Leaflet maps.</span>
+                        <strong>Giai đoạn 8–10: AI Kiểm soát, RAG Kho tri thức, Dự báo XGBoost & Phê duyệt</strong>
+                        <span class="step-desc">RAG với pgvector và trích dẫn, Dự báo XGBoost 14 ngày, Khuyến nghị tường minh, Gọi công cụ an toàn & Phê duyệt con người (HOÀN THÀNH).</span>
                     </div>
                 </div>
-                <div class="phase-step">
-                    <div class="step-circle">6-10</div>
+                <div class="phase-step active">
+                    <div class="step-circle" style="background: #10b981; color: #fff;">✓</div>
                     <div class="step-content">
-                        <strong>Phases 6-10: Integration, RAG, XGBoost & AI Tools</strong>
-                        <span class="step-desc">CSV/API mapping, RAG + pgvector, XGBoost forecasting, human approval audit.</span>
+                        <strong>Giai đoạn 11–12: Kiểm thử Toàn diện, Gia cố Bảo mật & Đóng gói Bàn giao</strong>
+                        <span class="step-desc">276 kiểm thử tự động, kiểm thử cô lập đa người thuê, tiêu đề bảo mật HTTP, kịch bản dữ liệu mẫu demo & đóng gói tài liệu (HOÀN THÀNH).</span>
                     </div>
                 </div>
             </div>

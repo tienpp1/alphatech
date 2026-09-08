@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng điều khiển Vận hành Dịch vụ CNTT — {{ active_workspace.name }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">Trung tâm Điều hành Vận hành Dịch vụ CNTT</h1>
+        <p class="text-secondary">Điều phối sự cố, theo dõi thời gian & chi phí nhân công, tải công việc kỹ thuật viên và tuân thủ SLA</p>
+    </div>
+    <div class="header-actions">
+        <a href="/services/requests/" class="btn btn-primary">+ Tạo Phiếu Yêu cầu</a>
+        <a href="/api/v1/service-ops/analytics/overview/" target="_blank" class="btn btn-secondary">Phân tích JSON ↗</a>
+    </div>
+</div>
+
+<!-- KPI Cards Grid -->
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+    <div class="card kpi-card">
+        <div class="kpi-label">Phiếu Yêu cầu Đang mở</div>
+        <div class="kpi-value text-primary">{{ summary.open_requests }}</div>
+        <div class="kpi-subtitle">{{ summary.in_progress_requests }} đang xử lý, {{ summary.resolved_requests }} đã giải quyết</div>
+    </div>
+    <div class="card kpi-card">
+        <div class="kpi-label">Tổng Chi phí Nhân công Thực tế</div>
+        <div class="kpi-value text-success">{{ summary.total_labor_cost|floatformat:0 }} <span style="font-size: 1rem;">VND</span></div>
+        <div class="kpi-subtitle">{{ summary.total_labor_hours }} giờ kỹ thuật tính phí được ghi nhận</div>
+    </div>
+    <div class="card kpi-card">
+        <div class="kpi-label">Tỷ lệ Tuân thủ SLA</div>
+        <div class="kpi-value {% if summary.sla_compliance_rate >= 90 %}text-success{% else %}text-danger{% endif %}">{{ summary.sla_compliance_rate }}%</div>
+        <div class="kpi-subtitle">{{ summary.on_time_sla_count }} đúng hạn, {{ summary.at_risk_sla_count }} nguy cơ, {{ summary.breached_sla_count }} vi phạm</div>
+    </div>
+    <div class="card kpi-card">
+        <div class="kpi-label">Thời gian Xử lý Trung bình</div>
+        <div class="kpi-value text-warning">{{ summary.avg_resolution_time_hours }} <span style="font-size: 1rem;">giờ</span></div>
+        <div class="kpi-subtitle">Thời lượng trung bình từ khi tạo đến khi giải quyết</div>
+    </div>
+    <div class="card kpi-card">
+        <div class="kpi-label">Kỹ sư Sẵn sàng Nhận việc</div>
+        <div class="kpi-value text-info">{{ summary.available_technicians }} / {{ summary.total_technicians }}</div>
+        <div class="kpi-subtitle">Kỹ sư kỹ thuật đang trực sẵn sàng</div>
+    </div>
+</div>
+
+<!-- Service Category Distribution Cards -->
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1.5rem;">
+    <div class="card" style="border-left: 4px solid #3b82f6; padding: 1rem;">
+        <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Cài đặt hệ thống</div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #60a5fa; margin-top: 0.25rem;">{{ summary.tickets_by_category.INSTALLATION|default:0 }}</div>
+        <div style="font-size: 0.75rem; color: #64748b;">Hệ điều hành, Máy chủ, Mạng, Phần mềm</div>
+    </div>
+    <div class="card" style="border-left: 4px solid #10b981; padding: 1rem;">
+        <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Bảo trì hệ thống</div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #34d399; margin-top: 0.25rem;">{{ summary.tickets_by_category.MAINTENANCE|default:0 }}</div>
+        <div style="font-size: 0.75rem; color: #64748b;">Máy trạm, Máy chủ, Bản sao lưu định kỳ</div>
+    </div>
+    <div class="card" style="border-left: 4px solid #8b5cf6; padding: 1rem;">
+        <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Tư vấn CSDL</div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #c084fc; margin-top: 0.25rem;">{{ summary.tickets_by_category.DATABASE_CONSULTING|default:0 }}</div>
+        <div style="font-size: 0.75rem; color: #64748b;">Thiết kế, Tối ưu hóa truy vấn, Khắc phục sự cố</div>
+    </div>
+    <div class="card" style="border-left: 4px solid #f59e0b; padding: 1rem;">
+        <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Sửa chữa thiết bị</div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #fbbf24; margin-top: 0.25rem;">{{ summary.tickets_by_category.DEVICE_REPAIR|default:0 }}</div>
+        <div style="font-size: 0.75rem; color: #64748b;">Laptop, Máy tính để bàn, Máy in, Phần cứng</div>
+    </div>
+</div>
+
+<!-- Analytics Charts & Roster Section -->
+<div class="grid-2-cols" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+    <!-- Workload & Labor Roster -->
+    <div class="card">
+        <h3 class="card-title">Tải Công việc & Chi phí Nhân công Kỹ thuật</h3>
+        <p class="text-secondary" style="font-size: 0.875rem; margin-bottom: 1rem;">Công việc được phân công, thời gian ghi nhận và định mức chi phí giờ công</p>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Mã NV</th>
+                        <th>Kỹ thuật viên</th>
+                        <th>Kỹ năng</th>
+                        <th>Đơn giá/giờ</th>
+                        <th>Việc đang mở</th>
+                        <th>Thời gian & Chi phí</th>
+                        <th>Chỉ số tải</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tech in technicians %}
+                    <tr>
+                        <td><code>{{ tech.code }}</code></td>
+                        <td><strong>{{ tech.name }}</strong></td>
+                        <td>
+                            {% for skill in tech.skills %}
+                            <span class="badge" style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa;">{{ skill }}</span>
+                            {% empty %}
+                            <span class="text-secondary">-</span>
+                            {% endfor %}
+                        </td>
+                        <td><strong>{{ tech.hourly_labor_rate|floatformat:0 }}</strong> <span class="text-secondary" style="font-size: 0.75rem;">VND/giờ</span></td>
+                        <td><span class="badge bg-primary">{{ tech.active_tasks_count }}</span></td>
+                        <td>
+                            <span style="font-size: 0.85rem; color: #34d399;">{{ tech.total_labor_minutes }} phút ({{ tech.total_labor_cost|floatformat:0 }} VND)</span>
+                        </td>
+                        <td>
+                            <strong style="color: {% if tech.workload_score > 4 %}#ef4444{% elif tech.workload_score > 2 %}#f59e0b{% else %}#10b981{% endif %};">
+                                {{ tech.workload_score }}
+                            </strong>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-secondary">Chưa có kỹ thuật viên nào được đăng ký.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SLA Health Doughnut Chart -->
+    <div class="card">
+        <h3 class="card-title">Tình trạng Tuân thủ Cam kết SLA</h3>
+        <div style="position: relative; height: 260px; display: flex; align-items: center; justify-content: center;">
+            <canvas id="slaChart"></canvas>
+        </div>
+        <div style="display: flex; justify-content: space-around; margin-top: 1rem; font-size: 0.85rem;">
+            <div><span style="display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 50%; margin-right: 4px;"></span> Đúng hạn ({{ summary.on_time_sla_count }})</div>
+            <div><span style="display: inline-block; width: 10px; height: 10px; background: #f59e0b; border-radius: 50%; margin-right: 4px;"></span> Nguy cơ trễ ({{ summary.at_risk_sla_count }})</div>
+            <div><span style="display: inline-block; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; margin-right: 4px;"></span> Vi phạm ({{ summary.breached_sla_count }})</div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Service Requests Stream -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="dashboard-header" style="margin-bottom: 1rem;">
+        <h3 class="card-title" style="margin-bottom: 0;">Luồng Phiếu Yêu cầu Gần đây</h3>
+        <a href="/services/requests/" class="btn btn-secondary" style="font-size: 0.875rem;">Xem tất cả phiếu &rarr;</a>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Mã Ticket</th>
+                    <th>Phân loại</th>
+                    <th>Khách hàng</th>
+                    <th>Dịch vụ</th>
+                    <th>Mức ưu tiên</th>
+                    <th>Kỹ sư</th>
+                    <th>Trạng thái</th>
+                    <th>SLA</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in recent_requests %}
+                <tr>
+                    <td><code>{{ item.req.request_number }}</code></td>
+                    <td>
+                        <span class="badge" style="font-size: 0.75rem; background: rgba(139, 92, 246, 0.15); color: #c084fc;">
+                            {% if item.req.service.category == 'INSTALLATION' %}Cài đặt hệ thống
+                            {% elif item.req.service.category == 'MAINTENANCE' %}Bảo trì hệ thống
+                            {% elif item.req.service.category == 'DATABASE_CONSULTING' %}Tư vấn CSDL
+                            {% elif item.req.service.category == 'DEVICE_REPAIR' %}Sửa chữa thiết bị
+                            {% else %}{{ item.req.service.get_category_display }}{% endif %}
+                        </span>
+                    </td>
+                    <td><strong>{{ item.req.customer.name }}</strong></td>
+                    <td>{{ item.req.service.name }}</td>
+                    <td>
+                        <span class="badge {% if item.req.priority == 'CRITICAL' %}bg-danger{% elif item.req.priority == 'HIGH' %}bg-warning{% else %}bg-primary{% endif %}">
+                            {% if item.req.priority == 'CRITICAL' %}Khẩn cấp
+                            {% elif item.req.priority == 'HIGH' %}Cao
+                            {% elif item.req.priority == 'MEDIUM' %}Trung bình
+                            {% else %}Thấp{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {% if item.req.assigned_employee %}
+                        <span style="color: #60a5fa;">👨‍💻 {{ item.req.assigned_employee.full_name }}</span>
+                        {% else %}
+                        <span class="text-secondary">Chưa phân công</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if item.req.status == 'RESOLVED' or item.req.status == 'CLOSED' %}bg-success{% elif item.req.status == 'CANCELLED' %}bg-danger{% else %}bg-info{% endif %}">
+                            {% if item.req.status == 'OPEN' %}Mở
+                            {% elif item.req.status == 'ASSIGNED' %}Đã phân công
+                            {% elif item.req.status == 'IN_PROGRESS' %}Đang xử lý
+                            {% elif item.req.status == 'RESOLVED' %}Đã giải quyết
+                            {% elif item.req.status == 'CLOSED' %}Đã đóng
+                            {% elif item.req.status == 'CANCELLED' %}Đã hủy
+                            {% else %}{{ item.req.status }}{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge {% if item.sla.overall_status == 'ON_TIME' %}bg-success{% elif item.sla.overall_status == 'AT_RISK' %}bg-warning{% else %}bg-danger{% endif %}">
+                            {% if item.sla.overall_status == 'ON_TIME' %}Đúng hạn
+                            {% elif item.sla.overall_status == 'AT_RISK' %}Nguy cơ
+                            {% else %}Vi phạm{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="/services/requests/{{ item.req.id }}/" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Xử lý</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-secondary">Chưa có phiếu yêu cầu dịch vụ nào trong không gian làm việc này.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById("slaChart").getContext("2d");
+        new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels: ["Đúng hạn", "Nguy cơ trễ", "Vi phạm SLA"],
+                datasets: [{
+                    data: [{{ summary.on_time_sla_count }}, {{ summary.at_risk_sla_count }}, {{ summary.breached_sla_count }}],
+                    backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
+                    borderColor: "#1e293b",
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ": " + context.raw + " phiếu";
+                            }
+                        }
+                    }
+                },
+                cutout: "70%"
+            }
+        });
+    });
+</script>
+{% endblock %}

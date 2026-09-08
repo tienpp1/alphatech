@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-The **Intelligent Business Operations Platform with AI-Powered Analytics, Forecasting and Decision Support** is designed as an enterprise-grade **Django Modular Monolith**. It unifies relational business management, spatial GIS analytics, machine learning forecasting, and retrieval-augmented generation (RAG) into a single cohesive, auditable platform.
+The **Intelligent Business Operations Platform with AI-Powered Analytics, Forecasting and Decision Support** is designed as a structured **Django Modular Monolith**. It unifies relational business management, spatial GIS analytics, machine learning forecasting, and retrieval-augmented generation (RAG) into a single cohesive, auditable platform.
 
 ---
 

@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Chi tiết Phiếu Nhập #{{ receipt.receipt_number }} - Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block extra_head %}
+<style>
+.detail-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+.info-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.info-val {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f8fafc;
+}
+.badge {
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: inline-block;
+}
+.badge-draft { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+.badge-confirmed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+.badge-received { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+.badge-cancelled { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+.data-table th, .data-table td {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.data-table th {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+.actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.btn-action {
+    padding: 0.65rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-confirm { background: #3b82f6; color: #ffffff; }
+.btn-confirm:hover { background: #2563eb; }
+.btn-receive { background: #22c55e; color: #ffffff; }
+.btn-receive:hover { background: #16a34a; }
+.btn-cancel { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.btn-cancel:hover { background: rgba(239, 68, 68, 0.25); }
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    padding: 0.65rem 1.25rem;
+    border-radius: 8px;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.banner-info {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.banner-cancelled {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+    <a href="/retail/goods-receiving/" style="color: #94a3b8; text-decoration: none; font-size: 0.875rem;">&larr; Quay lại danh sách phiếu nhập</a>
+</div>
+
+{% if receipt.status == 'RECEIVED' %}
+<div class="banner-info">
+    <span style="font-size: 1.5rem;">✅</span>
+    <div>
+        <strong>Phiếu nhập kho đã hoàn tất (RECEIVED)!</strong><br>
+        Tồn kho thực tế của các mặt hàng tại chi nhánh <strong>{{ receipt.branch.name }}</strong> đã được cập nhật thành công vào lúc {{ receipt.received_at|date:"Y-m-d H:i" }}.
+    </div>
+</div>
+{% elif receipt.status == 'CANCELLED' %}
+<div class="banner-cancelled">
+    <strong>Phiếu nhập hàng này đã bị hủy (CANCELLED).</strong> Không có thay đổi nào được áp dụng vào tồn kho.
+</div>
+{% endif %}
+
+<div class="detail-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem;">Phiếu Nhập Hàng #{{ receipt.receipt_number }}</h1>
+            <span style="color: #94a3b8; font-size: 0.875rem;">Lập lúc: {{ receipt.created_at|date:"Y-m-d H:i" }} bởi {{ receipt.created_by.username|default:"System" }}</span>
+        </div>
+        <div>
+            <span class="badge badge-{{ receipt.status|lower }}">
+                {% if receipt.status == 'DRAFT' %}Bản nháp (DRAFT)
+                {% elif receipt.status == 'CONFIRMED' %}Đã xác nhận (CONFIRMED)
+                {% elif receipt.status == 'RECEIVED' %}Đã nhập kho (RECEIVED)
+                {% elif receipt.status == 'CANCELLED' %}Đã hủy (CANCELLED)
+                {% else %}{{ receipt.status }}{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-label">Nhà cung cấp</span>
+            <span class="info-val">{{ receipt.supplier.name }}</span>
+            <small style="color: #64748b;">Mã NCC: {{ receipt.supplier.code }} | SĐT: {{ receipt.supplier.phone|default:"Chưa có" }}</small>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Chi nhánh nhận hàng</span>
+            <span class="info-val">{{ receipt.branch.name }}</span>
+            <small style="color: #64748b;">{{ receipt.branch.address }}</small>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Ngày nhập hàng</span>
+            <span class="info-val">{{ receipt.receipt_date|date:"Y-m-d" }}</span>
+            {% if receipt.expected_date %}
+            <small style="color: #64748b;">Dự kiến: {{ receipt.expected_date|date:"Y-m-d" }}</small>
+            {% endif %}
+        </div>
+        <div class="info-item">
+            <span class="info-label">Tổng giá trị đơn nhập</span>
+            <span class="info-val" style="color: #38bdf8; font-size: 1.35rem;">{{ receipt.total_amount|floatformat:0 }} VND</span>
+        </div>
+    </div>
+
+    {% if receipt.notes %}
+    <div style="background: rgba(255, 255, 255, 0.03); padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+        <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase;">Ghi chú:</span>
+        <p style="margin-top: 0.25rem; color: #cbd5e1;">{{ receipt.notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Items Table -->
+    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.75rem; color: #f8fafc;">Chi tiết các mặt hàng nhập kho</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>STT</th>
+                <th>Sản phẩm</th>
+                <th>Mã SKU</th>
+                <th>Đơn vị tính</th>
+                <th>Số lượng</th>
+                <th>Đơn giá nhập</th>
+                <th>Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><strong>{{ item.product.name }}</strong></td>
+                <td><code>{{ item.product.sku }}</code></td>
+                <td>{{ item.product.unit }}</td>
+                <td style="font-weight: 700;">{{ item.quantity }}</td>
+                <td>{{ item.unit_cost|floatformat:0 }} VND</td>
+                <td style="font-weight: 700; color: #38bdf8;">{{ item.line_total|floatformat:0 }} VND</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="6" style="text-align: right; font-weight: 700; color: #f8fafc; font-size: 1.05rem;">Tổng tiền thanh toán:</td>
+                <td style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">{{ receipt.total_amount|floatformat:0 }} VND</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar">
+        <a href="/retail/goods-receiving/" class="btn-secondary">&larr; Danh sách phiếu</a>
+
+        <div style="display: flex; gap: 0.75rem;">
+            {% if can_manage %}
+            {% if receipt.status == 'DRAFT' %}
+            <form method="post" onsubmit="return confirm('Bạn có chắc chắn muốn XÁC NHẬN phiếu nhập này?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="confirm">
+                <button type="submit" class="btn-action btn-confirm" id="btn-confirm-receipt">
+                    <span>✔️</span>
+                    <span>Xác nhận Phiếu (CONFIRMED)</span>
+                </button>
+            </form>
+            <form method="post" onsubmit="return confirm('Bạn có chắc chắn muốn HỦY phiếu nhập này?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cancel">
+                <button type="submit" class="btn-action btn-cancel">
+                    <span>✕</span>
+                    <span>Hủy phiếu</span>
+                </button>
+            </form>
+
+            {% elif receipt.status == 'CONFIRMED' %}
+            <form method="post" onsubmit="return confirm('XÁC NHẬN NHẬP KHO: Thao tác này sẽ tăng số lượng tồn kho thực tế của chi nhánh. Tiếp tục?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="receive">
+                <button type="submit" class="btn-action btn-receive" id="btn-receive-receipt">
+                    <span>📥</span>
+                    <span>Xác nhận Đã Nhập Kho (RECEIVED)</span>
+                </button>
+            </form>
+            <form method="post" onsubmit="return confirm('Bạn có chắc chắn muốn HỦY phiếu nhập này?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cancel">
+                <button type="submit" class="btn-action btn-cancel">
+                    <span>✕</span>
+                    <span>Hủy phiếu</span>
+                </button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

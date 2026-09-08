@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Phiếu Yêu cầu Sự cố — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">Danh sách Phiếu Yêu cầu Sự cố</h1>
+        <p class="text-secondary">Theo dõi yêu cầu khách hàng, thời hạn cam kết SLA, chi phí nhân công và phân công kỹ thuật</p>
+    </div>
+    <div class="header-actions">
+        <a href="/api/v1/service-ops/requests/" target="_blank" class="btn btn-secondary">API JSON ↗</a>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1rem;">
+    <form method="GET" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <div>
+            <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Phân loại dịch vụ:</label>
+            <select name="category" class="form-control" style="padding: 0.4rem; font-size: 0.85rem;" onchange="this.form.submit()">
+                <option value="">Tất cả Phân loại</option>
+                {% for cat_key, cat_label in categories %}
+                <option value="{{ cat_key }}" {% if current_category == cat_key %}selected{% endif %}>
+                    {% if cat_key == 'INSTALLATION' %}Cài đặt hệ thống
+                    {% elif cat_key == 'MAINTENANCE' %}Bảo trì hệ thống
+                    {% elif cat_key == 'DATABASE_CONSULTING' %}Tư vấn CSDL
+                    {% elif cat_key == 'DEVICE_REPAIR' %}Sửa chữa thiết bị
+                    {% else %}{{ cat_label }}{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Trạng thái:</label>
+            <select name="status" class="form-control" style="padding: 0.4rem; font-size: 0.85rem;" onchange="this.form.submit()">
+                <option value="">Tất cả Trạng thái</option>
+                <option value="OPEN" {% if current_status == "OPEN" %}selected{% endif %}>Mở</option>
+                <option value="ASSIGNED" {% if current_status == "ASSIGNED" %}selected{% endif %}>Đã phân công</option>
+                <option value="IN_PROGRESS" {% if current_status == "IN_PROGRESS" %}selected{% endif %}>Đang xử lý</option>
+                <option value="RESOLVED" {% if current_status == "RESOLVED" %}selected{% endif %}>Đã giải quyết</option>
+                <option value="CLOSED" {% if current_status == "CLOSED" %}selected{% endif %}>Đã đóng</option>
+                <option value="CANCELLED" {% if current_status == "CANCELLED" %}selected{% endif %}>Đã hủy</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Mức ưu tiên:</label>
+            <select name="priority" class="form-control" style="padding: 0.4rem; font-size: 0.85rem;" onchange="this.form.submit()">
+                <option value="">Tất cả Ưu tiên</option>
+                <option value="CRITICAL" {% if current_priority == "CRITICAL" %}selected{% endif %}>Khẩn cấp</option>
+                <option value="HIGH" {% if current_priority == "HIGH" %}selected{% endif %}>Cao</option>
+                <option value="MEDIUM" {% if current_priority == "MEDIUM" %}selected{% endif %}>Trung bình</option>
+                <option value="LOW" {% if current_priority == "LOW" %}selected{% endif %}>Thấp</option>
+            </select>
+        </div>
+        {% if current_status or current_priority or current_category %}
+        <div style="margin-top: 1.25rem;">
+            <a href="/services/requests/" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;">Đặt lại bộ lọc</a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Mã Ticket</th>
+                    <th>Phân loại</th>
+                    <th>Khách hàng</th>
+                    <th>Tiêu đề & Dịch vụ</th>
+                    <th>Ưu tiên</th>
+                    <th>Trạng thái</th>
+                    <th>Kỹ sư phụ trách</th>
+                    <th>SLA</th>
+                    <th>Hạn xử lý</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in requests %}
+                <tr>
+                    <td><code>{{ item.req.request_number }}</code></td>
+                    <td>
+                        <span class="badge" style="font-size: 0.75rem; background: rgba(139, 92, 246, 0.15); color: #c084fc;">
+                            {% if item.req.service.category == 'INSTALLATION' %}Cài đặt hệ thống
+                            {% elif item.req.service.category == 'MAINTENANCE' %}Bảo trì hệ thống
+                            {% elif item.req.service.category == 'DATABASE_CONSULTING' %}Tư vấn CSDL
+                            {% elif item.req.service.category == 'DEVICE_REPAIR' %}Sửa chữa thiết bị
+                            {% else %}{{ item.req.service.get_category_display }}{% endif %}
+                        </span>
+                    </td>
+                    <td><strong>{{ item.req.customer.name }}</strong></td>
+                    <td>
+                        <strong>{{ item.req.title }}</strong><br>
+                        <span class="text-secondary" style="font-size: 0.75rem;">{{ item.req.service.name }}</span>
+                    </td>
+                    <td>
+                        <span class="badge {% if item.req.priority == 'CRITICAL' %}bg-danger{% elif item.req.priority == 'HIGH' %}bg-warning{% else %}bg-primary{% endif %}">
+                            {% if item.req.priority == 'CRITICAL' %}Khẩn cấp
+                            {% elif item.req.priority == 'HIGH' %}Cao
+                            {% elif item.req.priority == 'MEDIUM' %}Trung bình
+                            {% else %}Thấp{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge {% if item.req.status == 'RESOLVED' or item.req.status == 'CLOSED' %}bg-success{% elif item.req.status == 'CANCELLED' %}bg-danger{% else %}bg-info{% endif %}">
+                            {% if item.req.status == 'OPEN' %}Mở
+                            {% elif item.req.status == 'ASSIGNED' %}Đã phân công
+                            {% elif item.req.status == 'IN_PROGRESS' %}Đang xử lý
+                            {% elif item.req.status == 'RESOLVED' %}Đã giải quyết
+                            {% elif item.req.status == 'CLOSED' %}Đã đóng
+                            {% elif item.req.status == 'CANCELLED' %}Đã hủy
+                            {% else %}{{ item.req.status }}{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {% if item.req.assigned_employee %}
+                        <span style="color: #60a5fa;">👨‍💻 {{ item.req.assigned_employee.full_name }}</span>
+                        {% else %}
+                        <span class="text-secondary">Chưa phân công</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if item.sla.overall_status == 'ON_TIME' %}bg-success{% elif item.sla.overall_status == 'AT_RISK' %}bg-warning{% else %}bg-danger{% endif %}">
+                            {% if item.sla.overall_status == 'ON_TIME' %}Đúng hạn
+                            {% elif item.sla.overall_status == 'AT_RISK' %}Nguy cơ
+                            {% else %}Vi phạm{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.8rem; {% if item.sla.is_resolution_breached %}color: #ef4444; font-weight: 700;{% endif %}">
+                            {{ item.req.resolution_deadline_at|date:"d/m, H:i" }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="/services/requests/{{ item.req.id }}/" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Xử lý</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center text-secondary">Không có phiếu yêu cầu nào phù hợp với bộ lọc đã chọn.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

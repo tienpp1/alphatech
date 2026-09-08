@@ -1,0 +1,115 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}Đơn hàng của tôi | ABC Tech Store{% endblock %}
+
+{% block content %}
+<!-- Page Hero Banner -->
+<div class="page-hero-banner">
+    <div class="page-hero-grid">
+        <div class="page-breadcrumb">
+            <a href="{% url 'public_home' %}">Trang chủ</a>
+            <span>/</span>
+            <a href="{% url 'public_customer_account' %}">Tài khoản</a>
+            <span>/</span>
+            <span>Lịch sử đơn hàng</span>
+        </div>
+        <div style="margin-bottom: 0.75rem;">
+            <span class="page-domain-tag retail">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                Quản Lý Giao Dịch
+            </span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; margin-top: 0.5rem;">
+            <div>
+                <h1 class="page-hero-title" style="margin: 0 0 6px;">
+                    Đơn hàng của tôi
+                </h1>
+                <p class="page-hero-subtitle" style="margin: 0;">
+                    Theo dõi tiến độ xử lý và lịch sử mua sắm thiết bị công nghệ chính hãng tại ABC Tech Store.
+                </p>
+            </div>
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="{% url 'public_customer_account' %}" class="pub-btn-secondary" style="font-size: 0.88rem; padding: 10px 18px; display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span>Hồ sơ cá nhân</span>
+                </a>
+                <a href="{% url 'public_products' %}" class="pub-btn-primary" style="font-size: 0.88rem; padding: 10px 18px; display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>Mua sắm thêm</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="pub-section" style="padding-top: 2.5rem; max-width: 1000px; margin: 0 auto;">
+    {% if orders %}
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        {% for ord in orders %}
+        <div class="pub-card" style="padding: 1.75rem; border-top: 3px solid #2563EB;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--pub-border); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; background: rgba(37, 99, 235, 0.08); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #2563EB;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); font-family: var(--pub-font-mono);">
+                            #{{ ord.order_number }}
+                        </div>
+                        <div style="font-size: 0.82rem; color: var(--pub-text-muted); display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <span style="font-family: var(--pub-font-mono);">Ngày đặt: {{ ord.order_timestamp|date:"H:i, d/m/Y" }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="background: #FEF3C7; color: #92400E; font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; border: 1px solid #FDE68A;">
+                        {{ ord.get_status_display|default:ord.status }}
+                    </span>
+                    <a href="{% url 'public_customer_order_detail' ord.order_number %}" class="pub-btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                        <span>Chi tiết đơn</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Order preview items -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div style="font-size: 0.88rem; color: var(--pub-text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <span>Chi nhánh / Điểm giao: <strong style="color: var(--pub-text-heading);">{{ ord.branch.name|default:"ABC Tech Store" }}</strong></span>
+                    <span>•</span>
+                    <span>Hình thức: <strong style="color: var(--pub-text-heading);">{{ ord.get_payment_method_display|default:ord.payment_method }}</strong></span>
+                </div>
+
+                <div style="text-align: right;">
+                    <span style="font-size: 0.82rem; color: var(--pub-text-muted);">Tổng giá trị đơn: </span>
+                    <strong style="font-size: 1.25rem; font-weight: 900; color: var(--pub-primary); font-family: var(--pub-font-mono);">
+                        {{ ord.total_amount|floatformat:0 }} VNĐ
+                    </strong>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="pub-empty-state">
+        <div class="pub-empty-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        </div>
+        <h2 class="pub-empty-title">
+            Quý khách chưa có đơn hàng nào
+        </h2>
+        <p class="pub-empty-desc">
+            Hãy lựa chọn các thiết bị công nghệ chính hãng để nhận ưu đãi vận chuyển và chính sách bảo hành tốt nhất.
+        </p>
+        <a href="{% url 'public_products' %}" class="pub-btn-primary" style="padding: 12px 24px; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            <span>Khám phá danh mục sản phẩm ngay</span>
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

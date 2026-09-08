@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Tích hợp & Tiếp nhận Dữ liệu — {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div>
+            <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 10px;">
+                <span>📥</span> Tích hợp & Tiếp nhận Dữ liệu (Data Integration)
+            </h1>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">
+                Nạp dữ liệu kinh doanh từ tệp CSV, Excel và Mock REST API vào vùng đệm staging đã kiểm duyệt cấu trúc.
+            </p>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <a href="/integration/sources/" class="btn" style="background: rgba(255,255,255,0.08); color: #f8fafc; border: 1px solid rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+                ⚙️ Nguồn Dữ liệu ({{ total_sources }})
+            </a>
+            <a href="/integration/import/" class="btn btn-primary" style="background: #3b82f6; color: #fff; padding: 8px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                <span>⬆️</span> Nhập Dữ liệu Mới
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; {% if message.tags == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;{% elif message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171;{% else %}background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #60a5fa;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px;">
+            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Nguồn Dữ liệu Hoạt động</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #f8fafc; margin-top: 6px;">{{ total_sources }}</div>
+            <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">CSV, Excel, Mock API</div>
+        </div>
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px;">
+            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Tổng số Lô Nhập liệu</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #60a5fa; margin-top: 6px;">{{ total_jobs }}</div>
+            <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">Lô dữ liệu đã thực thi</div>
+        </div>
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px;">
+            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Bản ghi Thô Vùng đệm</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #34d399; margin-top: 6px;">{{ total_ingested|default:0 }}</div>
+            <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">{{ total_successful|default:0 }} hợp lệ / {{ total_failed|default:0 }} lỗi</div>
+        </div>
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px;">
+            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Tỷ lệ Nhập thành công</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: {% if success_rate >= 90 %}#34d399{% elif success_rate >= 70 %}#fbbf24{% else %}#f87171{% endif %}; margin-top: 6px;">{{ success_rate }}%</div>
+            <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">Chỉ số toàn vẹn cấu trúc</div>
+        </div>
+    </div>
+
+    <!-- Dual Layout: Recent Sources & Jobs -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <!-- Registered Data Sources -->
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Nguồn Dữ liệu Đã Cấu hình</h3>
+                <a href="/integration/sources/" style="color: #60a5fa; font-size: 0.85rem; text-decoration: none;">Xem tất cả &rarr;</a>
+            </div>
+            {% if recent_sources %}
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                {% for ds in recent_sources %}
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px;">
+                    <div>
+                        <div style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">{{ ds.name }}</div>
+                        <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 2px;">
+                            <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; margin-right: 6px;">{{ ds.source_type }}</span>
+                            Tạo lúc {{ ds.created_at|date:"d/m/Y H:i" }}
+                        </div>
+                    </div>
+                    <div>
+                        <a href="/integration/import/?data_source_id={{ ds.id }}" class="btn btn-sm" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; text-decoration: none;">
+                            Nhập ngay
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 32px 0; color: #64748b;">
+                <p>Chưa có nguồn dữ liệu nào được cấu hình.</p>
+                <a href="/integration/sources/" class="btn btn-primary" style="font-size: 0.85rem; padding: 6px 14px; text-decoration: none; border-radius: 6px; background: #3b82f6; color: #fff;">+ Thêm Nguồn Dữ liệu</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Import Jobs -->
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Các Lô Nhập Dữ liệu Gần đây</h3>
+                <a href="/integration/jobs/" style="color: #60a5fa; font-size: 0.85rem; text-decoration: none;">Xem lịch sử &rarr;</a>
+            </div>
+            {% if recent_jobs %}
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                {% for job in recent_jobs %}
+                <a href="/integration/jobs/{{ job.id }}/" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px; text-decoration: none; color: inherit;">
+                    <div>
+                        <div style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">{{ job.data_source.name }}</div>
+                        <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 2px;">
+                            {{ job.total_rows }} dòng • {{ job.successful_rows }} hợp lệ • {{ job.failed_rows }} lỗi
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; {% if job.status == 'COMPLETED' %}background: rgba(16, 185, 129, 0.2); color: #34d399;{% elif job.status == 'PARTIAL' %}background: rgba(245, 158, 11, 0.2); color: #fbbf24;{% elif job.status == 'RUNNING' %}background: rgba(59, 130, 246, 0.2); color: #60a5fa;{% else %}background: rgba(239, 68, 68, 0.2); color: #f87171;{% endif %}">
+                            {% if job.status == 'COMPLETED' %}HOÀN THÀNH
+                            {% elif job.status == 'PARTIAL' %}MỘT PHẦN
+                            {% elif job.status == 'RUNNING' %}ĐANG CHẠY
+                            {% elif job.status == 'FAILED' %}THẤT BẠI
+                            {% else %}{{ job.status }}{% endif %}
+                        </span>
+                        <div style="color: #64748b; font-size: 0.75rem; margin-top: 4px;">{{ job.created_at|date:"H:i d/m" }}</div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 32px 0; color: #64748b;">
+                <p>Chưa có lượt nhập dữ liệu nào được thực hiện.</p>
+                <a href="/integration/import/" class="btn btn-primary" style="font-size: 0.85rem; padding: 6px 14px; text-decoration: none; border-radius: 6px; background: #3b82f6; color: #fff;">Chạy Lượt Nhập Đầu tiên</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

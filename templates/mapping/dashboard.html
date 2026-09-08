@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Động cơ Ánh xạ Dữ liệu — {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 10px;">
+                <span>🔄</span> Động cơ Ánh xạ Dữ liệu & Mô hình Chuẩn hóa (SDM)
+            </h1>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">
+                Chuyển đổi các lược đồ thô bên ngoài thành Mô hình Dữ liệu Chuẩn hóa (Standard Data Model) với gợi ý từ AI và mô phỏng trực tiếp.
+            </p>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <a href="/integration/" class="btn" style="background: rgba(255,255,255,0.08); color: #f8fafc; border: 1px solid rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+                📥 Xem Dữ liệu Thô Staging
+            </a>
+            {% if can_manage %}<a href="/mapping/profiles/new/" class="btn btn-primary" style="background: #3b82f6; color: #fff; padding: 8px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                <span>➕</span> Hồ sơ Ánh xạ Mới
+            </a>{% endif %}
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; {% if message.tags == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;{% elif message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171;{% else %}background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #60a5fa;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px;">
+            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Hồ sơ Ánh xạ</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #f8fafc; margin-top: 6px;">{{ total_profiles }}</div>
+            <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">Lược đồ đã cấu hình</div>
+        </div>
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px;">
+            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Quy tắc Chuyển đổi Hoạt động</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #60a5fa; margin-top: 6px;">{{ active_rules_total }}</div>
+            <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">Quy tắc Trường, Kiểu, Giá trị &amp; Công thức</div>
+        </div>
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px;">
+            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Hồ sơ Miền Bán lẻ</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #34d399; margin-top: 6px;">{{ retail_profiles }}</div>
+            <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">Đơn hàng, Khách hàng, Sản phẩm, Chi nhánh</div>
+        </div>
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px;">
+            <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Hồ sơ Miền Dịch vụ</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #a78bfa; margin-top: 6px;">{{ service_profiles }}</div>
+            <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">Phiếu yêu cầu, Kỹ thuật viên, Công việc, Giờ công</div>
+        </div>
+    </div>
+
+    <!-- Mapping Profiles Table -->
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; margin-bottom: 30px;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin: 0;">Hồ sơ Ánh xạ Đã Cấu hình</h2>
+            <span style="font-size: 0.85rem; color: #94a3b8;">Không gian làm việc: <strong>{{ workspace.name }}</strong> ({{ workspace.code }})</span>
+        </div>
+
+        {% if profiles %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: #0f172a; color: #94a3b8; border-bottom: 1px solid #334155;">
+                        <th style="padding: 12px 16px;">Tên Hồ sơ</th>
+                        <th style="padding: 12px 16px;">Thực thể Chuẩn hóa Đích</th>
+                        <th style="padding: 12px 16px;">Nguồn Cung cấp</th>
+                        <th style="padding: 12px 16px;">Quy tắc Hoạt động</th>
+                        <th style="padding: 12px 16px;">Trạng thái</th>
+                        <th style="padding: 12px 16px;">Cập nhật Lần cuối</th>
+                        <th style="padding: 12px 16px; text-align: right;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in profiles %}
+                    <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.5);">
+                        <td style="padding: 14px 16px; font-weight: 600; color: #f8fafc;">
+                            <a href="/mapping/profiles/{{ p.id }}/" style="color: #60a5fa; text-decoration: none;">
+                                {{ p.name }}
+                            </a>
+                            {% if p.description %}
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">{{ p.description }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 14px 16px;">
+                            <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 0.8rem;">
+                                {{ p.target_entity }}
+                            </span>
+                        </td>
+                        <td style="padding: 14px 16px; color: #cbd5e1;">
+                            {% if p.data_source %}
+                            {{ p.data_source.name }} ({{ p.data_source.source_type }})
+                            {% else %}
+                            <span style="color: #64748b;">Tập dữ liệu Chung</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 14px 16px; color: #cbd5e1;">
+                            <strong>{{ p.active_rules_count }}</strong> quy tắc
+                        </td>
+                        <td style="padding: 14px 16px;">
+                            {% if p.is_active %}
+                            <span style="color: #34d399; font-weight: 600;">● Hoạt động</span>
+                            {% else %}
+                            <span style="color: #64748b;">○ Ngừng hoạt động</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 14px 16px; color: #94a3b8; font-size: 0.8rem;">
+                            {{ p.updated_at|date:"d/m/Y H:i" }}
+                        </td>
+                        <td style="padding: 14px 16px; text-align: right;">
+                            <a href="/mapping/profiles/{{ p.id }}/" class="btn" style="background: #3b82f6; color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none;">
+                                Mở Xưởng Ánh xạ 🛠️
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 40px 20px; text-align: center; color: #94a3b8;">
+            <p style="font-size: 1.1rem; margin-bottom: 12px;">Chưa có hồ sơ ánh xạ nào được tạo cho không gian làm việc này.</p>
+            {% if can_manage %}<a href="/mapping/profiles/new/" class="btn btn-primary" style="background: #3b82f6; color: #fff; padding: 8px 18px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+                Tạo Hồ sơ Ánh xạ Đầu tiên
+            </a>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

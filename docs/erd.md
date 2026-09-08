@@ -82,7 +82,7 @@ The architecture classifies all database entities into three distinct structural
 
 #### `Workspace`
 - `id` (UUID, PK, Default=uuid4): Unique tenant/workspace identifier.
-- `name` (CharField(100), Not Null): E.g., `ABC Retail Store`, `XYZ Field Service`.
+- `name` (CharField(100), Not Null): E.g., `ABC Tech Store`, `XYZ IT Technical Services`.
 - `code` (SlugField(50), Unique, Not Null): E.g., `abc-retail`, `xyz-service`.
 - `workspace_type` (CharField(20), Choices: `RETAIL`, `SERVICE`, Not Null).
 - `description` (TextField, Blank).
@@ -119,11 +119,13 @@ The architecture classifies all database entities into three distinct structural
 - `sku` (CharField(50), Not Null): Product SKU / barcode.
 - `name` (CharField(255), Not Null)
 - `description` (TextField, Blank)
+- `unit` (CharField(30), Default="cái"): Measurement unit.
 - `unit_price` (DecimalField(12, 2), Not Null)
 - `cost_price` (DecimalField(12, 2), Default=0.00)
 - `is_active` (BooleanField, Default True)
 - `created_at` (DateTimeField, auto_now_add=True)
 - `updated_at` (DateTimeField, auto_now=True)
+- *Scope Note*: Commercial sales catalog only. Warehouse stock tracking (`stock_quantity`) is non-core external metadata.
 - *Constraint*: `Unique(workspace_id, sku)`
 
 #### `Branch` (Retail Physical Outlet)
@@ -160,8 +162,9 @@ The architecture classifies all database entities into three distinct structural
 - `branch_id` (FK $\to$ `Branch`, Nullable, OnDelete=SET_NULL)
 - `order_date` (DateField, Not Null)
 - `order_timestamp` (DateTimeField, Not Null)
-- `status` (CharField(30), Choices: `PENDING`, `COMPLETED`, `CANCELLED`, `REFUNDED`, Default=`COMPLETED`)
-- `total_amount` (DecimalField(14, 2), Not Null): Canonical `revenue`.
+- `status` (CharField(30), Choices: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `COMPLETED`, `CANCELLED`, `REFUNDED`, Default=`COMPLETED`)
+- `total_amount` (DecimalField(14, 2), Not Null): Discrete transaction amount physically stored on the order. Realized revenue is the aggregate business metric derived from completed orders (`Sum(total_amount)` where `status != CANCELLED`).
+- `subtotal_amount` (DecimalField(14, 2), Default=0.00)
 - `tax_amount` (DecimalField(12, 2), Default=0.00)
 - `discount_amount` (DecimalField(12, 2), Default=0.00)
 - `payment_method` (CharField(50), Choices: `CASH`, `BANK_TRANSFER`, `CREDIT_CARD`, `E_WALLET`)
@@ -182,11 +185,12 @@ The architecture classifies all database entities into three distinct structural
 
 ### 2.4 Tier 3: Service Operations Domain (Workspace Scoped)
 
-#### `Service` (Catalog of Services)
+#### `Service` (Catalog of IT & Technical Services)
 - `id` (BigInt, PK)
 - `workspace_id` (FK $\to$ `Workspace`, OnDelete=CASCADE)
 - `code` (CharField(50), Not Null): Service code.
 - `name` (CharField(200), Not Null)
+- `category` (CharField(50), Choices: `INSTALLATION`, `MAINTENANCE`, `DATABASE_CONSULTING`, `DEVICE_REPAIR`, Default=`INSTALLATION`)
 - `description` (TextField, Blank)
 - `standard_duration_minutes` (IntegerField, Default=60)
 - `base_fee` (DecimalField(12, 2), Default=0.00)
@@ -194,25 +198,26 @@ The architecture classifies all database entities into three distinct structural
 - `created_at` (DateTimeField, auto_now_add=True)
 - *Constraint*: `Unique(workspace_id, code)`
 
-#### `Employee` (Field Technician / Staff)
+#### `Employee` (Technical Staff / Field Engineer)
 - `id` (BigInt, PK)
 - `workspace_id` (FK $\to$ `Workspace`, OnDelete=CASCADE)
 - `user_id` (FK $\to$ `User`, Nullable, OnDelete=SET_NULL): Optional link to login account.
-- `code` (CharField(50), Not Null): Employee staff code.
+- `code` (CharField(50), Not Null): Staff identifier.
 - `full_name` (CharField(200), Not Null)
-- `phone` (CharField(20), Not Null)
-- `skills` (JSONField, Default=list): E.g., `["HVAC", "Plumbing", "Electrical"]`.
+- `phone` (CharField(20), Blank)
+- `skills` (JSONField, Default=list): E.g., `["SERVER", "DATABASE", "NETWORK", "DEVICE_REPAIR"]`.
+- `hourly_labor_rate` (DecimalField(12, 2), Default=150000.00): Hourly labor rate in VND.
 - `current_location` (PointField(srid=4326, spatial_index=True), Nullable): Last known coordinates.
 - `location_updated_at` (DateTimeField, Nullable)
 - `is_available` (BooleanField, Default True)
-- `current_workload_score` (FloatField, Default=0.0): Dynamic score calculated from active tasks.
+- `current_workload_score` (FloatField, Default=0.0): Deterministic score: `active_tasks + (overdue_tasks * 1.5)`.
 - `created_at` (DateTimeField, auto_now_add=True)
 - *Constraint*: `Unique(workspace_id, code)`
 
 #### `SLA` (Service Level Agreement)
 - `id` (BigInt, PK)
 - `workspace_id` (FK $\to$ `Workspace`, OnDelete=CASCADE)
-- `name` (CharField(100), Not Null): E.g., `Standard 24h`, `Critical 2h`.
+- `name` (CharField(100), Not Null): E.g., `Critical Priority SLA (2h/4h)`.
 - `priority` (CharField(20), Choices: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`)
 - `response_time_hours` (IntegerField, Not Null)
 - `resolution_time_hours` (IntegerField, Not Null)
@@ -222,17 +227,21 @@ The architecture classifies all database entities into three distinct structural
 #### `ServiceRequest` (Incident Ticket)
 - `id` (BigInt, PK)
 - `workspace_id` (FK $\to$ `Workspace`, OnDelete=CASCADE)
-- `request_number` (CharField(50), Not Null): Unique ticket code.
+- `request_number` (CharField(50), Not Null): Unique ticket identifier (`SR-YYYYMMDD-XXXX`).
 - `customer_id` (FK $\to$ `Customer`, OnDelete=RESTRICT)
 - `service_id` (FK $\to$ `Service`, OnDelete=RESTRICT)
-- `sla_id` (FK $\to$ `SLA`, OnDelete=RESTRICT)
+- `sla_id` (FK $\to$ `SLA`, Nullable, OnDelete=SET_NULL)
+- `assigned_employee_id` (FK $\to$ `Employee`, Nullable, OnDelete=SET_NULL)
 - `title` (CharField(255), Not Null)
 - `description` (TextField, Not Null)
-- `location` (PointField(srid=4326, spatial_index=True), Not Null): Incident coordinate.
+- `location` (PointField(srid=4326, spatial_index=True), Nullable): Incident coordinates.
 - `priority` (CharField(20), Choices: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`, Default=`MEDIUM`)
-- `status` (CharField(30), Choices: `NEW`, `SCHEDULED`, `IN_PROGRESS`, `RESOLVED`, `CANCELLED`, Default=`NEW`)
-- `deadline_at` (DateTimeField, Not Null): SLA breach timestamp.
+- `status` (CharField(30), Choices: `OPEN`, `ASSIGNED`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`, `CANCELLED`, Default=`OPEN`)
+- `response_deadline_at` (DateTimeField, Nullable)
+- `resolution_deadline_at` (DateTimeField, Nullable)
+- `responded_at` (DateTimeField, Nullable)
 - `resolved_at` (DateTimeField, Nullable)
+- `closed_at` (DateTimeField, Nullable)
 - `created_at` (DateTimeField, auto_now_add=True)
 - `updated_at` (DateTimeField, auto_now=True)
 - *Constraint*: `Unique(workspace_id, request_number)`
@@ -242,20 +251,34 @@ The architecture classifies all database entities into three distinct structural
 - `service_request_id` (FK $\to$ `ServiceRequest`, OnDelete=CASCADE, RelatedName=`tasks`): Inherits workspace tenancy via ServiceRequest.
 - `assigned_to_id` (FK $\to$ `Employee`, Nullable, OnDelete=SET_NULL)
 - `title` (CharField(255), Not Null)
-- `status` (CharField(30), Choices: `PENDING`, `ASSIGNED`, `STARTED`, `COMPLETED`, `FAILED`, Default=`PENDING`)
+- `status` (CharField(30), Choices: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, Default=`PENDING`)
 - `estimated_duration_minutes` (IntegerField, Default=60)
 - `actual_duration_minutes` (IntegerField, Nullable)
 - `started_at` (DateTimeField, Nullable)
 - `completed_at` (DateTimeField, Nullable)
+- `due_at` (DateTimeField, Nullable)
 - `created_at` (DateTimeField, auto_now_add=True)
 
 #### `Schedule` (Child Entity)
 - `id` (BigInt, PK)
-- `task_id` (FK $\to$ `Task`, OnDelete=CASCADE)
-- `employee_id` (FK $\to$ `Employee`, OnDelete=CASCADE)
+- `task_id` (FK $\to$ `Task`, OnDelete=CASCADE, RelatedName=`schedules`)
+- `employee_id` (FK $\to$ `Employee`, OnDelete=CASCADE, RelatedName=`schedules`)
 - `start_time` (DateTimeField, Not Null)
 - `end_time` (DateTimeField, Not Null)
 - `status` (CharField(20), Choices: `SCHEDULED`, `IN_PROGRESS`, `DONE`, `CANCELLED`, Default=`SCHEDULED`)
+- `notes` (TextField, Blank)
+- `created_at` (DateTimeField, auto_now_add=True)
+
+#### `LaborEntry` (Child Entity - Labor Time & Realized Cost Tracking)
+- `id` (BigInt, PK)
+- `task_id` (FK $\to$ `Task`, OnDelete=CASCADE, RelatedName=`labor_entries`): Inherits workspace tenancy via Task $\to$ ServiceRequest.
+- `employee_id` (FK $\to$ `Employee`, OnDelete=PROTECT, RelatedName=`labor_entries`)
+- `started_at` (DateTimeField, Not Null)
+- `ended_at` (DateTimeField, Not Null)
+- `duration_minutes` (PositiveIntegerField, Not Null)
+- `hourly_rate_snapshot` (DecimalField(12, 2), Not Null): Immutable snapshot of technician hourly rate at entry time.
+- `labor_cost` (DecimalField(14, 2), Not Null): Server-calculated: `(duration_minutes / 60) * hourly_rate_snapshot`.
+- `notes` (TextField, Blank)
 - `created_at` (DateTimeField, auto_now_add=True)
 
 ---

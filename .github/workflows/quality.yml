@@ -1,0 +1,66 @@
+name: Django quality gates
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  focused-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: platform_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-not-a-production-secret
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      DEBUG: 'True'
+      SECRET_KEY: ci-only-key-not-for-deployment
+      DB_ENGINE: django.contrib.gis.db.backends.postgis
+      DB_NAME: platform_ci
+      DB_USER: postgres
+      DB_PASSWORD: ci-only-not-a-production-secret
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+      LLM_API_KEY: ''
+      GEMINI_API_KEY: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: sudo apt-get update && sudo apt-get install -y gdal-bin libgdal-dev libgeos-dev
+      - run: python -m pip install -r requirements.txt
+      - run: python manage.py check
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py migrate --noinput
+      - run: python -m pip install pip-audit bandit coverage
+      - name: Audit installed dependencies
+        run: pip-audit --progress-spinner off --format json --output pip-audit.json
+      - name: Static security scan
+        if: ${{ !cancelled() }}
+        run: bandit -q -r apps config -x "*/migrations/*" -f json -o bandit.json
+      - name: Focused regressions with coverage
+        if: ${{ !cancelled() }}
+        run: coverage run --branch manage.py test tests.test_customer_account_identity tests.test_approval_state_integrity tests.test_approvals tests.test_recommendations tests.test_public_ecommerce_cart_and_checkout tests.test_production_readiness tests.test_health tests.test_web_auth_routing tests.test_phase10_demonstration_scenarios tests.test_executive_reporting_and_telemetry tests.test_authorization_convergence tests.test_public_copilot_and_cart_api tests.test_internal_notifications tests.test_noibo_route_convergence --noinput
+      - name: Coverage gate
+        if: ${{ !cancelled() }}
+        run: coverage report --include="apps/accounts/*,apps/approvals/*,apps/public_web/*,apps/retail/*,apps/recommendations/*,apps/forecasting/*,config/*" --fail-under=40
+      - name: Export coverage evidence
+        if: ${{ !cancelled() }}
+        run: coverage xml
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: quality-evidence
+          path: |
+            pip-audit.json
+            bandit.json
+            coverage.xml
+          retention-days: 14

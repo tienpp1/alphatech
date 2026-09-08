@@ -110,3 +110,12 @@
   3. *Workspace-Scoped Entities*: Direct tenant models (`Order`, `ServiceRequest`, `Product`, `DataSource`, `ForecastModelConfig`) and child entities inheriting tenancy via parent FK (`OrderItem`, `Task`, `DocumentChunk`, `ForecastResult`).
 - **Reason**: Allows users to belong to multiple workspaces with distinct roles without duplicating credentials, while ensuring absolute logical data segregation for business transactions.
 - **Consequences**: Querysets for tenant models must always filter via `workspace_id` or parent relationships.
+
+---
+
+## ADR-015: Docker Compose Environment Alignment & Verification Deferral
+- **Status**: Accepted (Phase 1 / Pre-Phase 2 Cleanup)
+- **Context**: The primary canonical local development environment uses native PostgreSQL 18 with PostGIS 3.6. The existing `docker-compose.yml` references `postgis/postgis:16-3.4`. Docker is not installed in the current development environment, meaning container image tags cannot be empirically verified locally.
+- **Decision**: Keep `docker-compose.yml` with its existing image configuration and explicitly treat Docker Compose as an optional future/CI deployment artifact. Do NOT fabricate an unverified container image tag. Native PostgreSQL 18 + PostGIS 3.6 remains the canonical datastore standard.
+- **Reason**: Prevents committing unverified or broken Docker image tags while maintaining architectural transparency.
+- **Consequences**: Docker image verification and compose harmonization are formally deferred until a verified Docker runtime environment is provisioned.

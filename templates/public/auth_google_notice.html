@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title|default:"Đăng nhập bằng Google | Nền tảng Doanh nghiệp AI" }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pub-bg: #F8FAFC;
+            --pub-card: #FFFFFF;
+            --pub-border: #E2E8F0;
+            --pub-primary: #2563EB;
+            --pub-primary-hover: #1D4ED8;
+            --pub-text-heading: #0F172A;
+            --pub-text-body: #334155;
+            --pub-text-muted: #64748B;
+            --pub-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            --pub-radius: 16px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--pub-bg);
+            color: var(--pub-text-body);
+            margin: 0;
+            padding: 2.5rem 1rem;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-font-smoothing: antialiased;
+        }
+        .auth-container { max-width: 500px; width: 100%; margin: auto; }
+        .auth-card {
+            background: var(--pub-card);
+            border: 1px solid var(--pub-border);
+            border-radius: var(--pub-radius);
+            box-shadow: var(--pub-shadow);
+            padding: 2.5rem 2.25rem;
+            text-align: center;
+            border-top: 4px solid var(--pub-primary);
+        }
+        .icon-circle {
+            width: 64px;
+            height: 64px;
+            background: #EFF6FF;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+        }
+        .btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: var(--pub-primary);
+            color: #FFFFFF;
+            text-decoration: none;
+            padding: 13px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+            margin-bottom: 0.85rem;
+        }
+        .btn-primary:hover {
+            background: var(--pub-primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+        .btn-secondary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #F1F5F9;
+            color: var(--pub-text-body);
+            text-decoration: none;
+            padding: 11px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover {
+            background: #E2E8F0;
+            color: var(--pub-text-heading);
+        }
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            margin-bottom: 1rem;
+        }
+        .badge-active {
+            background: #ECFDF5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+        .badge-inactive {
+            background: #FFFBEB;
+            color: #92400E;
+            border: 1px solid #FDE68A;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="icon-circle">
+                <svg width="28" height="28" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z" fill="#4285F4"/>
+                    <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+                    <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+                    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                </svg>
+            </div>
+
+            {% if status == "configured" %}
+            <div>
+                <span class="badge-status badge-active">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+                    OAuth 2.0 Sẵn sàng
+                </span>
+            </div>
+            <h1 style="font-size: 1.45rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.5rem; letter-spacing: -0.02em;">
+                Đăng nhập bằng tài khoản Google
+            </h1>
+            <p style="color: var(--pub-text-muted); font-size: 0.92rem; line-height: 1.55; margin: 0 0 1.5rem;">
+                {{ message }}
+            </p>
+
+            <div style="background: #F8FAFC; border: 1px solid var(--pub-border); border-radius: 10px; padding: 14px 16px; font-size: 0.82rem; color: var(--pub-text-muted); text-align: left; margin-bottom: 1.25rem; font-family: 'JetBrains Mono', monospace; word-break: break-all;">
+                <div style="margin-bottom: 6px;"><strong>Client ID:</strong> {{ google_client_id }}</div>
+                <div style="margin-bottom: 6px;"><strong>URI hiện tại:</strong> <span style="color: #2563EB;">{{ redirect_uri }}</span></div>
+            </div>
+
+            <div style="background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 10px; padding: 12px 16px; font-size: 0.82rem; color: #92400E; text-align: left; margin-bottom: 1.5rem; line-height: 1.5;">
+                <strong>Lưu ý cấu hình Google Cloud Console:</strong><br>
+                Để tránh lỗi <code>redirect_uri_mismatch</code>, hãy đảm bảo Client ID của bạn đã thêm 2 URI sau vào mục <em>"URI chuyển hướng được ủy quyền"</em>:
+                <ul style="margin: 6px 0 0 16px; padding: 0;">
+                    <li><code>http://localhost:8000/accounts/google/callback/</code></li>
+                    <li><code>http://127.0.0.1:8000/accounts/google/callback/</code></li>
+                </ul>
+            </div>
+
+            <a href="/accounts/google/?auth=1{% if next %}&next={{ next|urlencode }}{% endif %}" class="btn-primary" id="btn-proceed-google-auth">
+                <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z" fill="#FFFFFF"/>
+                </svg>
+                <span>Tiến hành đăng nhập bằng Google</span>
+            </a>
+            {% else %}
+            <div>
+                <span class="badge-status badge-inactive">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; display: inline-block;"></span>
+                    Môi trường Phát triển (Dev Mode)
+                </span>
+            </div>
+            <h1 style="font-size: 1.45rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.5rem; letter-spacing: -0.02em;">
+                Google Sign-In
+            </h1>
+            <p style="color: var(--pub-text-muted); font-size: 0.92rem; line-height: 1.55; margin: 0 0 1.5rem;">
+                {{ message }}
+            </p>
+            <div style="background: #F8FAFC; border: 1px dashed var(--pub-border); border-radius: 10px; padding: 12px 16px; font-size: 0.84rem; color: var(--pub-text-body); text-align: left; margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace;">
+                GOOGLE_CLIENT_ID=&lt;your-google-oauth-client-id&gt;
+            </div>
+            {% endif %}
+
+            <a href="/dang-nhap/{% if next %}?next={{ next|urlencode }}{% endif %}" class="btn-secondary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Quay lại trang Đăng nhập</span>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

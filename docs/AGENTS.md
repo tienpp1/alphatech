@@ -39,18 +39,18 @@ Phases must be completed in strict sequential order. No phase transitions withou
 | Phase | Description | Status |
 |---|---|---|
 | **Phase 0** | Bootstrap + Inspect Environment + Skeleton + PostgreSQL Smoke Tests | **DONE** |
-| **Phase 1** | Architecture + ERD + API Conventions + Workspace Scope | **PENDING** |
-| **Phase 2** | Django Core + Authentication + RBAC + Workspaces | PENDING |
-| **Phase 3** | Retail Business Modules | PENDING |
-| **Phase 4** | Service Business Modules | PENDING |
-| **Phase 5** | GIS + PostGIS + GeoDjango + Leaflet | PENDING |
-| **Phase 6** | Data Integration (CSV/Excel/Mock API) | PENDING |
-| **Phase 7** | Data Mapping Engine & Standard Data Model | PENDING |
-| **Phase 8** | RAG + Document Ingestion + pgvector Retrieval | PENDING |
-| **Phase 9** | XGBoost Forecasting (Dataset, Time-split, Training, Metrics) | PENDING |
-| **Phase 10**| Recommendation + Safe Tool Calling + Approval Flow + Audit | PENDING |
-| **Phase 11**| Testing, Security Hardening & Performance | PENDING |
-| **Phase 12**| Seed Data, Demo Scenarios & Final Deliverables | PENDING |
+| **Phase 1** | Architecture + ERD + API Conventions + Workspace Scope | **DONE (Corrected)** |
+| **Phase 2** | Django Core + Authentication + RBAC + Workspaces | **DONE** |
+| **Phase 3** | Retail Business Modules | **DONE** |
+| **Phase 4** | Service Business Modules | **DONE** |
+| **Phase 5** | GIS + PostGIS + GeoDjango + Leaflet | **DONE** |
+| **Phase 6** | Data Integration (CSV/Excel/Mock API) | **DONE** |
+| **Phase 7** | Data Mapping Engine & Standard Data Model | **DONE** |
+| **Phase 8** | Grounded RAG + Knowledge Base + Grounded LLM Assistant | **DONE** |
+| **Phase 9** | XGBoost Forecasting (Dataset, Time-split, Training, Metrics) | **DONE** |
+| **Phase 10**| Recommendation + Safe Tool Calling + Approval Flow + Audit | **DONE** |
+| **Phase 11**| Testing, Security Hardening & Performance | **DONE** |
+| **Phase 12**| Seed Data, Demo Scenarios, Documentation & Final Delivery | **DONE (FINAL)** |
 
 ---
 

@@ -1,0 +1,453 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}Tiếp nhận yêu cầu kỹ thuật IT | XYZ IT Technical Services{% endblock %}
+
+{% block extra_css %}
+<style>
+.wizard-steps-track {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    position: relative;
+}
+.wizard-steps-track::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    right: 40px;
+    height: 3px;
+    background: #E2E8F0;
+    z-index: 1;
+}
+.wizard-step-node {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+.wizard-step-bubble {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 3px solid #E2E8F0;
+    color: #64748B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+.wizard-step-node.active .wizard-step-bubble {
+    background: #2563EB;
+    border-color: #93C5FD;
+    color: #FFFFFF;
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
+}
+.wizard-step-node.completed .wizard-step-bubble {
+    background: #10B981;
+    border-color: #A7F3D0;
+    color: #FFFFFF;
+}
+.wizard-step-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #64748B;
+    transition: color 0.2s ease;
+}
+.wizard-step-node.active .wizard-step-title {
+    color: #0F172A;
+}
+.wizard-pane {
+    display: none;
+    animation: fadeInPane 0.3s ease;
+}
+.wizard-pane.active {
+    display: block;
+}
+@keyframes fadeInPane {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.priority-card {
+    border: 2px solid var(--pub-border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #FFFFFF;
+}
+.priority-card:hover {
+    border-color: var(--pub-primary);
+    background: #F8FAFC;
+}
+.priority-card.selected {
+    border-color: #2563EB;
+    background: #EFF6FF;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+}
+.sla-clock-box {
+    background: radial-gradient(circle at 50% 0%, #1E293B 0%, #0F172A 100%);
+    color: #FFFFFF;
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    margin: 1.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Hero Banner -->
+<div class="page-hero-banner">
+    <div class="page-hero-grid" aria-hidden="true"></div>
+    <div class="page-hero-container" style="text-align: center;">
+        <div class="page-breadcrumb" style="justify-content: center;">
+            <a href="/">Trang chủ</a>
+            <span>/</span>
+            <a href="/dich-vu/">Dịch vụ kỹ thuật</a>
+            <span>/</span>
+            <span style="color: #F8FAFC;">Điều phối hỗ trợ 3 bước</span>
+        </div>
+        <div class="page-domain-tag services">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+            </svg>
+            XYZ IT TECHNICAL SUPPORT • SMART DISPATCH ENGINE
+        </div>
+        <h1 class="page-title-main" style="margin-left: auto; margin-right: auto; max-width: 750px;">
+            Tiếp nhận yêu cầu hỗ trợ kỹ thuật IT
+        </h1>
+        <p class="page-subtitle-main" style="margin-left: auto; margin-right: auto;">
+            Hệ thống điều phối kỹ thuật tự động: Chọn dịch vụ, mức độ ưu tiên phản hồi SLA, và cung cấp thông tin liên hệ.
+        </p>
+    </div>
+</div>
+
+<div class="pub-section" style="padding-top: 2.5rem;">
+    <div style="max-width: 780px; margin: 0 auto;">
+        {% if success_message %}
+        <div style="background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; padding: 1.5rem; border-radius: 14px; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(16,185,129,0.08);">
+            <div style="display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; margin-bottom: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Tiếp nhận yêu cầu thành công!</span>
+            </div>
+            <p style="margin: 0; font-size: 0.95rem; line-height: 1.6;">
+                {{ success_message }}
+            </p>
+            {% if request.user.is_authenticated %}
+            <div style="margin-top: 1rem;">
+                <a href="/tai-khoan/" style="color: #059669; font-weight: 700; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 4px;">
+                    Xem trạng thái yêu cầu tại Trang tài khoản khách hàng →
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if email_warning %}
+        <div style="background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:14px 18px;border-radius:12px;margin-bottom:1.5rem;">
+            Yêu cầu đã được ghi nhận, nhưng email xác nhận chưa gửi được.
+        </div>
+        {% endif %}
+
+        {% if error_message %}
+        <div style="background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; padding: 14px 18px; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>{{ error_message }}</span>
+        </div>
+        {% endif %}
+
+        <!-- 3-Step Wizard Navigation Track -->
+        <div class="wizard-steps-track" id="wizard-track">
+            <div class="wizard-step-node active" id="step-node-1" onclick="jumpToStep(1)">
+                <div class="wizard-step-bubble">1</div>
+                <span class="wizard-step-title">Dịch vụ &amp; Vấn đề</span>
+            </div>
+            <div class="wizard-step-node" id="step-node-2" onclick="jumpToStep(2)">
+                <div class="wizard-step-bubble">2</div>
+                <span class="wizard-step-title">Ưu tiên &amp; SLA</span>
+            </div>
+            <div class="wizard-step-node" id="step-node-3" onclick="jumpToStep(3)">
+                <div class="wizard-step-bubble">3</div>
+                <span class="wizard-step-title">Lịch hẹn &amp; Liên hệ</span>
+            </div>
+        </div>
+
+        <div class="pub-form-card">
+            <form method="POST" action="/yeu-cau-dich-vu/" id="service-request-form">
+                {% csrf_token %}
+
+                <!-- ================= BƯỚC 1: DỊCH VỤ & MÔ TẢ TRIỆU CHỨNG ================= -->
+                <div class="wizard-pane active" id="wizard-pane-1">
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 6px;">Bước 1: Chọn gói dịch vụ &amp; Mô tả hiện tượng sự cố</h3>
+                        <p style="font-size: 0.88rem; color: var(--pub-text-muted); margin: 0;">Hãy cho kỹ sư của chúng tôi biết thiết bị hoặc phân hệ đang gặp vấn đề.</p>
+                    </div>
+
+                    <div class="pub-form-group" style="margin-bottom: 1.5rem;">
+                        <label for="service_id" class="pub-form-label">
+                            Gói dịch vụ quan tâm
+                        </label>
+                        <select id="service_id" name="service_id" class="pub-select-custom" style="width: 100%; font-size: 0.92rem;">
+                            <option value="">-- Chọn gói dịch vụ (hoặc để trống) --</option>
+                            {% for s in services %}
+                            <option value="{{ s.id }}" {% if preselected_service_id == s.id|stringformat:"s" %}selected{% endif %}>
+                                [{{ s.category }}] {{ s.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="pub-form-group" style="margin-bottom: 2rem;">
+                        <label for="description" class="pub-form-label">
+                            Mô tả chi tiết vấn đề / Yêu cầu kỹ thuật <span style="color: #EF4444;">*</span>
+                        </label>
+                        <textarea id="description" name="description" rows="5" required
+                                  placeholder="Vui lòng mô tả hiện tượng sự cố, cấu hình máy hoặc nhu cầu cụ thể của bạn..."
+                                  class="pub-form-control" style="resize: vertical;">{{ request.GET.description }}</textarea>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="button" class="pub-btn-primary" onclick="proceedToStep(2)" style="padding: 12px 24px; font-size: 0.95rem;">
+                            <span>Tiếp tục: Mức ưu tiên &amp; SLA →</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ================= BƯỚC 2: MỨC ƯU TIÊN & SLA ĐẾM NGƯỢC ================= -->
+                <div class="wizard-pane" id="wizard-pane-2">
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 6px;">Bước 2: Mức độ ưu tiên xử lý &amp; Cam kết phản hồi SLA</h3>
+                        <p style="font-size: 0.88rem; color: var(--pub-text-muted); margin: 0;">Lựa chọn cấp độ khẩn cấp để thuật toán điều phối kỹ sư phù hợp nhất.</p>
+                    </div>
+
+                    <!-- Priority Choice Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div class="priority-card selected" id="pcard-p1" onclick="selectPriority('P1', 15, 'Khẩn cấp')">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="background: #FEF2F2; color: #DC2626; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">P1 • KHẨN CẤP</span>
+                                <span style="font-size: 0.74rem; color: #EF4444; font-weight: 700;">&lt; 15 Phút</span>
+                            </div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #0F172A; margin-bottom: 4px;">Sự cố hệ thống sập</div>
+                            <div style="font-size: 0.8rem; color: #64748B; line-height: 1.4;">Server ngưng hoạt động, mạng toàn công ty gián đoạn.</div>
+                        </div>
+
+                        <div class="priority-card" id="pcard-p2" onclick="selectPriority('P2', 30, 'Tiêu chuẩn')">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="background: #EFF6FF; color: #2563EB; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">P2 • TIÊU CHUẨN</span>
+                                <span style="font-size: 0.74rem; color: #2563EB; font-weight: 700;">&lt; 30 Phút</span>
+                            </div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #0F172A; margin-bottom: 4px;">Máy trạm &amp; Thiết bị</div>
+                            <div style="font-size: 0.8rem; color: #64748B; line-height: 1.4;">Hỏng phần cứng máy trạm, lỗi phần mềm kế toán, in ấn.</div>
+                        </div>
+
+                        <div class="priority-card" id="pcard-p3" onclick="selectPriority('P3', 120, 'Kế hoạch')">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="background: #F8FAFC; color: #64748B; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">P3 • KẾ HOẠCH</span>
+                                <span style="font-size: 0.74rem; color: #64748B; font-weight: 700;">Trong ngày</span>
+                            </div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #0F172A; margin-bottom: 4px;">Bảo trì &amp; Nâng cấp</div>
+                            <div style="font-size: 0.8rem; color: #64748B; line-height: 1.4;">Vệ sinh bảo dưỡng máy, nâng cấp RAM/SSD, tư vấn mở rộng.</div>
+                        </div>
+                    </div>
+
+                    <!-- Live SLA Countdown Simulator -->
+                    <div class="sla-clock-box">
+                        <div>
+                            <div style="font-size: 0.74rem; color: #38BDF8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">MÔ PHỎNG THỜI GIAN PHẢN HỒI CAM KẾT (SLA)</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF; margin: 4px 0;" id="sla-display-text">Ưu tiên P1: Phản hồi xác nhận trong vòng &lt; 15 phút</div>
+                            <div style="font-size: 0.8rem; color: #94A3B8;">Kỹ sư trực điều phối tại trạm kỹ thuật gần nhất sẽ gọi điện xác nhận.</div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 10px 18px; text-align: center;">
+                            <div style="font-size: 0.7rem; color: #94A3B8; font-weight: 700;">THỜI GIAN DỰ KIẾN</div>
+                            <div style="font-family: var(--pub-mono-font, monospace); font-size: 1.45rem; font-weight: 800; color: #34D399;" id="sla-countdown-val">14:59</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between;">
+                        <button type="button" class="pub-btn-secondary" onclick="proceedToStep(1)" style="padding: 12px 20px;">
+                            <span>← Quay lại bước 1</span>
+                        </button>
+                        <button type="button" class="pub-btn-primary" onclick="proceedToStep(3)" style="padding: 12px 24px; font-size: 0.95rem;">
+                            <span>Tiếp tục: Thông tin liên hệ →</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ================= BƯỚC 3: LỊCH HẸN & THÔNG TIN LIÊN HỆ ================= -->
+                <div class="wizard-pane" id="wizard-pane-3">
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 6px;">Bước 3: Lịch hẹn &amp; Thông tin liên hệ</h3>
+                        <p style="font-size: 0.88rem; color: var(--pub-text-muted); margin: 0;">Điền thông tin để kỹ sư chủ động liên hệ và điều phối hỗ trợ tại hiện trường.</p>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
+                        <div class="pub-form-group" style="margin-bottom: 0;">
+                            <label for="customer_name" class="pub-form-label">
+                                Họ và tên của bạn <span style="color: #EF4444;">*</span>
+                            </label>
+                            <input type="text" id="customer_name" name="customer_name" required
+                                   value="{% if request.user.is_authenticated %}{{ request.user.first_name|default:request.user.username }}{% endif %}"
+                                   placeholder="Ví dụ: Nguyễn Văn An"
+                                   class="pub-form-control">
+                        </div>
+                        <div class="pub-form-group" style="margin-bottom: 0;">
+                            <label for="phone" class="pub-form-label">
+                                Số điện thoại liên hệ <span style="color: #EF4444;">*</span>
+                            </label>
+                            <input type="tel" id="phone" name="phone" required placeholder="Ví dụ: 0901234567"
+                                   class="pub-form-control">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
+                        <div class="pub-form-group" style="margin-bottom: 0;">
+                            <label for="email" class="pub-form-label">
+                                Địa chỉ Email
+                            </label>
+                            <input type="email" id="email" name="email"
+                                   value="{% if request.user.is_authenticated %}{{ request.user.email }}{% endif %}"
+                                   placeholder="an.nguyen@example.com"
+                                   class="pub-form-control">
+                        </div>
+                        <div class="pub-form-group" style="margin-bottom: 0;">
+                            <label for="address" class="pub-form-label">
+                                Khu vực / Địa chỉ thực hiện
+                            </label>
+                            <input type="text" id="address" name="address" placeholder="Ví dụ: Quận 1, TP.HCM"
+                                   class="pub-form-control">
+                        </div>
+                    </div>
+
+                    <div class="pub-form-group" style="margin-bottom: 1.75rem;">
+                        <label for="preferred_time" class="pub-form-label">
+                            Thời gian mong muốn
+                        </label>
+                        <input type="text" id="preferred_time" name="preferred_time" placeholder="Ví dụ: Sớm nhất có thể / Sáng mai 09:00"
+                               class="pub-form-control">
+                        <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                            <button type="button" class="facet-quick-btn" onclick="document.getElementById('preferred_time').value='Sớm nhất có thể'">⚡ Sớm nhất có thể</button>
+                            <button type="button" class="facet-quick-btn" onclick="document.getElementById('preferred_time').value='Hôm nay lúc 14:00'">🕒 Chiều nay 14:00</button>
+                            <button type="button" class="facet-quick-btn" onclick="document.getElementById('preferred_time').value='Sáng mai lúc 09:00'">☀️ Sáng mai 09:00</button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                        <button type="button" class="pub-btn-secondary" onclick="proceedToStep(2)" style="padding: 12px 20px;">
+                            <span>← Quay lại bước 2</span>
+                        </button>
+                        <button type="submit" class="pub-btn-primary" style="padding: 14px 28px; font-size: 1rem; border-radius: 12px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span>Gửi yêu cầu dịch vụ ngay</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem; font-size: 0.88rem; color: var(--pub-text-muted);">
+            Cần hỗ trợ kỹ thuật khẩn cấp? Gọi ngay tổng đài: <strong style="color: var(--pub-primary); font-family: var(--pub-mono-font);">1900 6868</strong> (Phản hồi &lt; 15 phút)
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var currentStep = 1;
+var selectedSlaMinutes = 15;
+var countdownTimer = null;
+
+function proceedToStep(step) {
+    if (step === 2) {
+        var desc = document.getElementById('description');
+        if (desc && !desc.value.trim()) {
+            desc.focus();
+            desc.style.borderColor = '#EF4444';
+            return;
+        }
+        if (desc) desc.style.borderColor = '';
+        startSlaSimulation();
+    }
+    
+    currentStep = step;
+    updateWizardUI();
+}
+
+function jumpToStep(step) {
+    if (step > currentStep) {
+        proceedToStep(step);
+    } else {
+        currentStep = step;
+        updateWizardUI();
+    }
+}
+
+function updateWizardUI() {
+    for (var i = 1; i <= 3; i++) {
+        var pane = document.getElementById('wizard-pane-' + i);
+        var node = document.getElementById('step-node-' + i);
+        if (pane) {
+            if (i === currentStep) pane.classList.add('active');
+            else pane.classList.remove('active');
+        }
+        if (node) {
+            if (i === currentStep) {
+                node.classList.add('active');
+                node.classList.remove('completed');
+            } else if (i < currentStep) {
+                node.classList.remove('active');
+                node.classList.add('completed');
+            } else {
+                node.classList.remove('active');
+                node.classList.remove('completed');
+            }
+        }
+    }
+    window.scrollTo({ top: document.querySelector('.pub-form-card').offsetTop - 90, behavior: 'smooth' });
+}
+
+function selectPriority(level, slaMins, label) {
+    document.querySelectorAll('.priority-card').forEach(c => c.classList.remove('selected'));
+    var card = document.getElementById('pcard-' + level.toLowerCase());
+    if (card) card.classList.add('selected');
+
+    selectedSlaMinutes = slaMins;
+    var display = document.getElementById('sla-display-text');
+    if (display) {
+        display.textContent = `Ưu tiên ${level} (${label}): Phản hồi xác nhận trong vòng < ${slaMins} phút`;
+    }
+    startSlaSimulation();
+}
+
+function startSlaSimulation() {
+    if (countdownTimer) clearInterval(countdownTimer);
+    var remainingSeconds = selectedSlaMinutes * 60;
+    var clockEl = document.getElementById('sla-countdown-val');
+
+    function tick() {
+        var mins = Math.floor(remainingSeconds / 60);
+        var secs = remainingSeconds % 60;
+        if (clockEl) {
+            clockEl.textContent = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+        if (remainingSeconds > 0) {
+            remainingSeconds--;
+        }
+    }
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+}
+</script>
+{% endblock %}

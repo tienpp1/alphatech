@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Chi tiết Lô Nhập {{ job.id|stringformat:"s"|slice:":8" }} — {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
+    <!-- Header -->
+    <div style="margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <a href="/integration/jobs/" style="color: #60a5fa; text-decoration: none; font-size: 0.9rem;">&larr; Quay lại Lịch sử Lô</a>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 style="font-size: 1.75rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 12px;">
+                    <span>Lô #{{ job.id|stringformat:"s"|slice:":8" }}</span>
+                    <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; {% if job.status == 'COMPLETED' %}background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981;{% elif job.status == 'PARTIAL' %}background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b;{% elif job.status == 'RUNNING' %}background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid #3b82f6;{% else %}background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444;{% endif %}">
+                        {% if job.status == 'COMPLETED' %}HOÀN THÀNH
+                        {% elif job.status == 'PARTIAL' %}MỘT PHẦN
+                        {% elif job.status == 'RUNNING' %}ĐANG CHẠY
+                        {% elif job.status == 'FAILED' %}THẤT BẠI
+                        {% else %}{{ job.status }}{% endif %}
+                    </span>
+                </h1>
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 4px;">
+                    Nguồn: <strong style="color: #f8fafc;">{{ job.data_source.name }}</strong> ({{ job.data_source.source_type }}) • Miền: <strong style="color: #f8fafc;">{{ job.entity_type }}</strong>
+                </p>
+            </div>
+            <div style="text-align: right; color: #94a3b8; font-size: 0.85rem;">
+                <div>Bắt đầu: {{ job.started_at|date:"d/m/Y H:i:s"|default:"N/A" }}</div>
+                <div>Hoàn thành: {{ job.completed_at|date:"d/m/Y H:i:s"|default:"Đang xử lý..." }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Statistics Strip -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+            <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Tổng Dòng Dữ liệu Vào</div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: #f8fafc; margin-top: 4px;">{{ job.total_rows }}</div>
+        </div>
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+            <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Đã Nạp vào Staging Thành công</div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: #34d399; margin-top: 4px;">{{ job.successful_rows }}</div>
+        </div>
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+            <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Lỗi Kiểm duyệt Cấu trúc</div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: {% if job.failed_rows > 0 %}#f87171{% else %}#64748b{% endif %}; margin-top: 4px;">{{ job.failed_rows }}</div>
+        </div>
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
+            <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Tỷ lệ Thành công</div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: #60a5fa; margin-top: 4px;">{{ job.success_rate }}%</div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div style="display: flex; gap: 12px; border-bottom: 1px solid #334155; margin-bottom: 20px;">
+        <button onclick="switchTab('staged-records')" id="tab-btn-records" style="background: none; border: none; border-bottom: 2px solid #3b82f6; color: #3b82f6; padding: 10px 16px; font-weight: 700; font-size: 0.95rem; cursor: pointer;">
+            📋 Bản ghi Thô Staging ({{ raw_records|length }})
+        </button>
+        <button onclick="switchTab('error-summary')" id="tab-btn-errors" style="background: none; border: none; border-bottom: 2px solid transparent; color: #94a3b8; padding: 10px 16px; font-weight: 700; font-size: 0.95rem; cursor: pointer;">
+            ⚠️ Nhật ký Lỗi ({% if errors %}{{ errors|length }}{% else %}0{% endif %})
+        </button>
+        <button onclick="switchTab('tech-meta')" id="tab-btn-meta" style="background: none; border: none; border-bottom: 2px solid transparent; color: #94a3b8; padding: 10px 16px; font-weight: 700; font-size: 0.95rem; cursor: pointer;">
+            ⚙️ Siêu dữ liệu Kỹ thuật
+        </button>
+    </div>
+
+    <!-- Tab 1: Staged Raw Records -->
+    <div id="tab-staged-records" style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Bảng Vùng đệm Staging Thô (50 bản ghi đầu tiên)</h3>
+            <span style="font-size: 0.8rem; color: #94a3b8;">Các cặp khóa-giá trị thô nguyên bản được lưu trữ trong <code>RawImportRecord</code></span>
+        </div>
+        {% if raw_records %}
+        <div style="overflow-x: auto; background: #0f172a; border: 1px solid #334155; border-radius: 8px;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                <thead style="background: rgba(255,255,255,0.03); color: #cbd5e1; border-bottom: 1px solid #334155;">
+                    <tr>
+                        <th style="padding: 10px 12px; width: 60px;">Dòng #</th>
+                        <th style="padding: 10px 12px; width: 120px;">Tính hợp lệ</th>
+                        <th style="padding: 10px 12px;">Bản ghi Dữ liệu Thô (JSON)</th>
+                    </tr>
+                </thead>
+                <tbody style="color: #f8fafc;">
+                    {% for rec in raw_records %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 10px 12px; color: #64748b; font-family: monospace;">{{ rec.row_number }}</td>
+                        <td style="padding: 10px 12px;">
+                            {% if rec.is_valid %}
+                            <span style="color: #34d399; font-size: 0.75rem; font-weight: 700;">✓ HỢP LỆ</span>
+                            {% else %}
+                            <span style="color: #f87171; font-size: 0.75rem; font-weight: 700;">✗ KHÔNG HỢP LỆ</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 12px;">
+                            <pre style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #93c5fd; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; white-space: pre-wrap; word-break: break-all;">{{ rec.raw_data }}</pre>
+                            {% if rec.validation_errors %}
+                            <div style="color: #f87171; font-size: 0.75rem; margin-top: 4px;">
+                                Lỗi: {{ rec.validation_errors|join:", " }}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color: #64748b; text-align: center; padding: 32px;">Không có bản ghi thô nào được lưu trong vùng đệm cho lô này.</p>
+        {% endif %}
+    </div>
+
+    <!-- Tab 2: Error Breakdown -->
+    <div id="tab-error-summary" style="display: none; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-top: 0; margin-bottom: 16px;">Chi tiết Lỗi Kiểm duyệt Cấu trúc</h3>
+        {% if errors %}
+        <div style="overflow-x: auto; background: #0f172a; border: 1px solid #334155; border-radius: 8px;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                <thead style="background: rgba(255,255,255,0.03); color: #cbd5e1; border-bottom: 1px solid #334155;">
+                    <tr>
+                        <th style="padding: 10px 12px; width: 80px;">Dòng</th>
+                        <th style="padding: 10px 12px; width: 180px;">Loại lỗi</th>
+                        <th style="padding: 10px 12px;">Thông báo</th>
+                        <th style="padding: 10px 12px;">Dữ liệu Thô</th>
+                    </tr>
+                </thead>
+                <tbody style="color: #f8fafc;">
+                    {% for err in errors %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 10px 12px; color: #f87171; font-weight: 700; font-family: monospace;">{{ err.row }}</td>
+                        <td style="padding: 10px 12px; color: #fbbf24; font-weight: 600;">{{ err.error_type }}</td>
+                        <td style="padding: 10px 12px; color: #f8fafc;">{{ err.message }}</td>
+                        <td style="padding: 10px 12px; font-family: monospace; font-size: 0.75rem; color: #94a3b8;">
+                            {{ err.raw }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 32px; text-align: center; color: #34d399;">
+            <div style="font-size: 2rem; margin-bottom: 8px;">🎉</div>
+            <strong>Không Phát hiện Lỗi nào</strong>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">Tất cả các bản ghi trong tập dữ liệu này đã vượt qua kiểm tra cấu trúc một cách hoàn hảo.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Tab 3: Technical Metadata -->
+    <div id="tab-tech-meta" style="display: none; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-top: 0; margin-bottom: 16px;">Thuộc tính Kỹ thuật Nguồn Dữ liệu</h3>
+        <pre style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; color: #93c5fd; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; overflow-x: auto;">{{ job.source_metadata }}</pre>
+    </div>
+</div>
+
+<script>
+function switchTab(tabId) {
+    document.getElementById('tab-staged-records').style.display = tabId === 'staged-records' ? 'block' : 'none';
+    document.getElementById('tab-error-summary').style.display = tabId === 'error-summary' ? 'block' : 'none';
+    document.getElementById('tab-tech-meta').style.display = tabId === 'tech-meta' ? 'block' : 'none';
+
+    document.getElementById('tab-btn-records').style.borderBottomColor = tabId === 'staged-records' ? '#3b82f6' : 'transparent';
+    document.getElementById('tab-btn-records').style.color = tabId === 'staged-records' ? '#3b82f6' : '#94a3b8';
+
+    document.getElementById('tab-btn-errors').style.borderBottomColor = tabId === 'error-summary' ? '#3b82f6' : 'transparent';
+    document.getElementById('tab-btn-errors').style.color = tabId === 'error-summary' ? '#3b82f6' : '#94a3b8';
+
+    document.getElementById('tab-btn-meta').style.borderBottomColor = tabId === 'tech-meta' ? '#3b82f6' : 'transparent';
+    document.getElementById('tab-btn-meta').style.color = tabId === 'tech-meta' ? '#3b82f6' : '#94a3b8';
+}
+</script>
+{% endblock %}

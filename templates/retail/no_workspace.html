@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Vận hành - Chưa chọn Không gian làm việc{% endblock %}
+
+{% block content %}
+<div class="status-card text-center" style="max-width: 600px; margin: 4rem auto;">
+    <h2>⚠️ Chưa chọn Không gian làm việc</h2>
+    <p class="text-muted" style="margin: 1.5rem 0;">
+        Bạn cần được phân quyền vào một Không gian làm việc đang hoạt động (ví dụ: <strong>Chuỗi Bán lẻ Thiết bị Công nghệ ABC</strong> hoặc <strong>Công ty Dịch vụ Kỹ thuật CNTT XYZ</strong>) để truy cập nghiệp vụ.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="/admin/" class="btn btn-primary">Quản trị Hệ thống (Admin)</a>
+        <a href="/" class="btn btn-secondary">Trạng thái Hệ thống</a>
+    </div>
+</div>
+{% endblock %}

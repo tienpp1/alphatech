@@ -1,0 +1,404 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}Hệ thống chi nhánh &amp; Trạm kỹ thuật | ABC Tech Store &amp; XYZ Services{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+.cyber-pin {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #0284C7;
+    border: 3px solid #FFFFFF;
+    box-shadow: 0 0 15px #38BDF8, 0 0 25px rgba(56, 189, 248, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    animation: cyberPulse 2s infinite ease-in-out;
+}
+@keyframes cyberPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 12px #38BDF8; }
+    50% { transform: scale(1.15); box-shadow: 0 0 24px #38BDF8, 0 0 35px rgba(56, 189, 248, 0.8); }
+}
+.user-pin {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #10B981;
+    border: 3px solid #FFFFFF;
+    box-shadow: 0 0 15px #10B981;
+}
+.nearest-highlight {
+    border-color: #38BDF8 !important;
+    box-shadow: 0 0 25px rgba(56, 189, 248, 0.35) !important;
+    transform: translateY(-2px);
+}
+.leaflet-popup-content-wrapper {
+    background: #0F172A !important;
+    color: #F8FAFC !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+}
+.leaflet-popup-tip {
+    background: #0F172A !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Hero Header Banner -->
+<div class="page-hero-banner">
+    <div class="page-hero-grid" aria-hidden="true"></div>
+    <div class="page-hero-container">
+        <div class="page-breadcrumb">
+            <a href="/">Trang chủ</a>
+            <span>/</span>
+            <span style="color: #F8FAFC;">Chi nhánh &amp; Trạm kỹ thuật</span>
+        </div>
+        <div class="page-domain-tag general">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            PHYSICAL HUBS • TACTICAL GIS NETWORK
+        </div>
+        <h1 class="page-title-main">
+            Hệ thống chi nhánh &amp; Trung tâm kỹ thuật
+        </h1>
+        <p class="page-subtitle-main">
+            Mạng lưới 3 chi nhánh tích hợp showroom bán lẻ thiết bị chính hãng và trạm tiếp nhận điều phối kỹ thuật trực tiếp tại các vị trí trung tâm, sẵn sàng đón tiếp quý khách.
+        </p>
+    </div>
+</div>
+
+<div class="pub-section" style="padding-top: 2.5rem;">
+    <!-- Tactical GIS Interactive Map Section -->
+    <div class="tactical-map-container">
+        <div id="tactical-leaflet-map" style="width: 100%; height: 100%;"></div>
+        
+        <!-- Radar Scan Overlay -->
+        <div class="tactical-map-radar">
+            <div class="radar-sweep-line"></div>
+        </div>
+
+        <!-- Tactical HUD Bar -->
+        <div class="tactical-map-hud">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-family: var(--pub-mono-font, monospace); font-size: 0.76rem; color: #38BDF8; font-weight: 700;">
+                        <span style="width: 8px; height: 8px; background: #10B981; border-radius: 50%; box-shadow: 0 0 8px #10B981;"></span>
+                        GIS RADAR HUD • NETWORK ACTIVE (3/3 HUBS ONLINE)
+                    </div>
+                    <div id="tactical-geo-status" style="font-size: 0.85rem; color: #E2E8F0; margin-top: 4px; font-weight: 600;">
+                        Bấm nút bên cạnh để tự động tìm trạm kỹ thuật gần bạn nhất qua GPS
+                    </div>
+                </div>
+                <button type="button" onclick="findNearestBranch()" class="pub-btn-primary" style="padding: 8px 16px; font-size: 0.85rem; box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
+                    <span>Tìm trạm gần tôi nhất (GPS)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fleet Telemetry HUD Stats -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem;">
+        <div class="pub-card" style="display: flex; align-items: center; gap: 14px; padding: 1.25rem;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--pub-text-muted); font-weight: 600;">Thời gian kỹ sư có mặt</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading);">&lt; 25 Phút (Nội thành)</div>
+            </div>
+        </div>
+        <div class="pub-card" style="display: flex; align-items: center; gap: 14px; padding: 1.25rem;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: #ECFDF5; color: #059669; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--pub-text-muted); font-weight: 600;">Kỹ sư lưu động trực chiến</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading);">8 Kỹ thuật viên sẵn sàng</div>
+            </div>
+        </div>
+        <div class="pub-card" style="display: flex; align-items: center; gap: 14px; padding: 1.25rem;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: #F0FDF4; color: #16A34A; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--pub-text-muted); font-weight: 600;">Tỷ lệ chuẩn cam kết SLA</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading);">99.8% Đạt chuẩn cam kết</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Branch Cards Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 3.5rem;">
+        {% for b in branches %}
+        <div class="pub-product-card" id="branch-card-{{ b.id }}" data-branch-id="{{ b.id }}" data-lat="{{ b.latitude }}" data-lng="{{ b.longitude }}" data-name="{{ b.name }}" style="padding: 1.75rem; transition: all 0.3s ease;">
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <span style="font-size: 0.76rem; font-weight: 700; color: var(--pub-primary); background: var(--pub-primary-light); padding: 4px 10px; border-radius: 6px;">
+                        Chi nhánh bán lẻ &amp; Dịch vụ
+                    </span>
+                    <span style="font-family: var(--pub-mono-font); font-size: 0.74rem; color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="#10B981" aria-hidden="true"><circle cx="4" cy="4" r="4"/></svg>
+                        Đang mở cửa
+                    </span>
+                </div>
+
+                <div id="branch-distance-tag-{{ b.id }}" style="display: none; margin-bottom: 0.75rem;">
+                    <span style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #0284C7; font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;">
+                        ⭐ TRẠM GẦN BẠN NHẤT: <strong id="branch-distance-val-{{ b.id }}">0 km</strong>
+                    </span>
+                </div>
+
+                <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 0.6rem; letter-spacing: -0.02em;">
+                    {{ b.name }}
+                </h3>
+
+                <div style="font-size: 0.9rem; color: var(--pub-text-body); margin-bottom: 1.25rem; line-height: 1.55; display: flex; align-items: flex-start; gap: 8px;">
+                    <div style="color: var(--pub-primary); margin-top: 3px; flex-shrink: 0;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    </div>
+                    <span>{{ b.address|default:"Tòa nhà văn phòng trung tâm" }}</span>
+                </div>
+
+                <!-- Info Stack -->
+                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.84rem; color: var(--pub-text-muted); margin-bottom: 1.5rem; background: var(--pub-bg-subtle); padding: 14px; border-radius: 12px; border: 1px solid var(--pub-border-subtle);">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: inline-flex; align-items: center; gap: 6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            Hotline:
+                        </span>
+                        <strong style="color: var(--pub-text-heading); font-family: var(--pub-mono-font);">{{ b.phone|default:"1900 6868" }}</strong>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: inline-flex; align-items: center; gap: 6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Giờ làm việc:
+                        </span>
+                        <strong style="color: var(--pub-text-heading);">08:00 - 21:30</strong>
+                    </div>
+                    {% if b.latitude and b.longitude %}
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: inline-flex; align-items: center; gap: 6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            Tọa độ GIS:
+                        </span>
+                        <code style="font-family: var(--pub-mono-font); font-size: 0.78rem; color: var(--pub-primary); background: #FFFFFF; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--pub-border);">{{ b.latitude }}, {{ b.longitude }}</code>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if b.latitude and b.longitude %}
+            <div style="padding-top: 1rem; border-top: 1px solid var(--pub-border); display: flex; gap: 8px;">
+                <a href="tel:{{ b.phone|default:'19006868' }}" class="pub-btn-secondary" style="flex: 1; justify-content: center; padding: 10px; font-size: 0.88rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <span>Gọi điện</span>
+                </a>
+                <button type="button" onclick="focusBranchOnMap({{ b.latitude }}, {{ b.longitude }}, '{{ b.name|escapejs }}')" class="pub-btn-primary" style="flex: 1.2; justify-content: center; padding: 10px; font-size: 0.88rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                    <span>Xem bản đồ</span>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Experience Guarantee -->
+    <div style="background: radial-gradient(circle at 50% 0%, #1E293B 0%, #0F172A 100%); color: #FFFFFF; border-radius: 20px; padding: 3rem 2rem; text-align: center; border: 1px solid rgba(255,255,255,0.08);">
+        <h3 style="font-size: 1.45rem; font-weight: 800; color: #FFFFFF; margin: 0 0 0.75rem; letter-spacing: -0.02em;">
+            Dịch vụ tiếp nhận &amp; bảo hành kỹ thuật tại chỗ
+        </h3>
+        <p style="color: #94A3B8; font-size: 0.98rem; margin: 0 auto 1.75rem; max-width: 680px; line-height: 1.65;">
+            Tất cả chi nhánh đều có kỹ sư thường trực hỗ trợ kiểm tra máy, vệ sinh phần cứng, nâng cấp linh kiện và tiếp nhận bảo hành nhanh chóng trong ngày.
+        </p>
+        <a href="/yeu-cau-dich-vu/" class="pub-btn-primary" style="padding: 12px 28px; font-size: 0.95rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Đặt lịch hẹn kỹ thuật trước</span>
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+var map;
+var markers = [];
+var userMarker = null;
+var routeLine = null;
+
+var branchData = [
+    {% for b in branches %}
+    {% if b.latitude and b.longitude %}
+    {
+        id: {{ b.id }},
+        name: "{{ b.name|escapejs }}",
+        address: "{{ b.address|default:'Trung tâm công nghệ'|escapejs }}",
+        phone: "{{ b.phone|default:'1900 6868'|escapejs }}",
+        lat: parseFloat("{{ b.latitude }}"),
+        lng: parseFloat("{{ b.longitude }}")
+    },
+    {% endif %}
+    {% endfor %}
+];
+
+function initTacticalMap() {
+    // Default center (Ho Chi Minh City / Branch 1)
+    var defaultLat = 10.7725;
+    var defaultLng = 106.6980;
+    if (branchData.length > 0) {
+        defaultLat = branchData[0].lat;
+        defaultLng = branchData[0].lng;
+    }
+
+    map = L.map('tactical-leaflet-map', {
+        zoomControl: true,
+        attributionControl: false
+    }).setView([defaultLat, defaultLng], 13);
+
+    // CartoDB Dark Matter Tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+    }).addTo(map);
+
+    // Add branch markers
+    branchData.forEach(function(b) {
+        var icon = L.divIcon({
+            className: 'custom-leaflet-marker',
+            html: '<div class="cyber-pin"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/></svg></div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        });
+
+        var popupContent = `
+            <div style="font-family: sans-serif; padding: 4px;">
+                <div style="font-size: 0.72rem; color: #38BDF8; font-weight: 800; text-transform: uppercase;">SHOWROOM &amp; SERVICE HUB</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #FFFFFF; margin: 3px 0 6px;">${b.name}</div>
+                <div style="font-size: 0.82rem; color: #94A3B8; margin-bottom: 6px;">${b.address}</div>
+                <div style="font-size: 0.8rem; color: #E2E8F0; margin-bottom: 10px;">Hotline: <strong style="color:#38BDF8;">${b.phone}</strong></div>
+                <a href="https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #2563EB; color: #FFFFFF; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; border-radius: 6px; text-decoration: none;">Chỉ đường Google Maps →</a>
+            </div>
+        `;
+
+        var marker = L.marker([b.lat, b.lng], { icon: icon }).addTo(map).bindPopup(popupContent);
+        markers.push({ id: b.id, marker: marker, data: b });
+    });
+
+    if (branchData.length > 1) {
+        var group = new L.featureGroup(markers.map(m => m.marker));
+        map.fitBounds(group.getBounds().pad(0.2));
+    }
+}
+
+function focusBranchOnMap(lat, lng, name) {
+    if (!map) return;
+    map.flyTo([lat, lng], 15, { duration: 1.2 });
+    var target = markers.find(m => m.data.lat === lat && m.data.lng === lng);
+    if (target) {
+        target.marker.openPopup();
+    }
+    window.scrollTo({ top: document.querySelector('.tactical-map-container').offsetTop - 90, behavior: 'smooth' });
+}
+
+// Haversine Distance Formula in Kilometers
+function calcDistance(lat1, lon1, lat2, lon2) {
+    var R = 6371; // km
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function findNearestBranch() {
+    var statusEl = document.getElementById('tactical-geo-status');
+    if (!navigator.geolocation) {
+        if (statusEl) statusEl.textContent = 'Trình duyệt không hỗ trợ định vị GPS tự động.';
+        return;
+    }
+
+    if (statusEl) statusEl.textContent = 'Đang quét tọa độ GPS vệ tinh...';
+
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            var uLat = pos.coords.latitude;
+            var uLng = pos.coords.longitude;
+
+            if (userMarker) map.removeLayer(userMarker);
+            var userIcon = L.divIcon({
+                className: 'custom-user-marker',
+                html: '<div class="user-pin"></div>',
+                iconSize: [22, 22],
+                iconAnchor: [11, 11]
+            });
+            userMarker = L.marker([uLat, uLng], { icon: userIcon }).addTo(map).bindPopup('<strong>Vị trí của bạn</strong>').openPopup();
+
+            var nearest = null;
+            var minDistance = Infinity;
+
+            branchData.forEach(function(b) {
+                var d = calcDistance(uLat, uLng, b.lat, b.lng);
+                b.distance = d;
+                if (d < minDistance) {
+                    minDistance = d;
+                    nearest = b;
+                }
+            });
+
+            if (nearest) {
+                var travelMin = Math.round(minDistance * 2.5); // Estimate driving time
+                if (statusEl) {
+                    statusEl.innerHTML = `Đã tìm thấy trạm gần bạn nhất: <strong>${nearest.name}</strong> (${minDistance.toFixed(1)} km - ~${travelMin} phút)`;
+                }
+
+                // Connect with tactical line
+                if (routeLine) map.removeLayer(routeLine);
+                routeLine = L.polyline([[uLat, uLng], [nearest.lat, nearest.lng]], {
+                    color: '#38BDF8',
+                    dashArray: '6, 8',
+                    weight: 3
+                }).addTo(map);
+
+                // Highlight card
+                document.querySelectorAll('.pub-product-card').forEach(c => c.classList.remove('nearest-highlight'));
+                var card = document.getElementById('branch-card-' + nearest.id);
+                if (card) {
+                    card.classList.add('nearest-highlight');
+                    var tag = document.getElementById('branch-distance-tag-' + nearest.id);
+                    var val = document.getElementById('branch-distance-val-' + nearest.id);
+                    if (tag && val) {
+                        tag.style.display = 'block';
+                        val.textContent = minDistance.toFixed(1) + ' km (~' + travelMin + ' phút)';
+                    }
+                }
+
+                // Focus bounds to fit user and nearest branch
+                var bounds = L.latLngBounds([[uLat, uLng], [nearest.lat, nearest.lng]]);
+                map.fitBounds(bounds.pad(0.3));
+            }
+        },
+        function(err) {
+            if (statusEl) {
+                statusEl.textContent = 'Không thể truy cập GPS (quyền bị từ chối hoặc lỗi mạng). Hiển thị toàn bộ mạng lưới chi nhánh.';
+            }
+        },
+        { timeout: 8000, enableHighAccuracy: true }
+    );
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initTacticalMap();
+});
+</script>
+{% endblock %}

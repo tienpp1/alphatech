@@ -46,39 +46,79 @@ RAG hyperparameters are **configurable system parameters** rather than fixed con
 | **Embedding Model** | `EMBEDDING_MODEL` | `text-embedding-004` | Active embedding provider model (e.g., Google `text-embedding-004`, OpenAI `text-embedding-3-small`). |
 | **Embedding Dimension**| `EMBEDDING_DIMENSION` | `768` (dynamic) | Vector dimension **derived directly from the active embedding model** (e.g. 768 or 1536). |
 
-### 2.2 Grounding & Fallback Invariant
-- **Fallback Rule**: If no retrieved chunk meets `similarity_threshold`, the assistant is strictly instructed to respond: *"Dữ liệu tài liệu hiện tại không đủ thông tin để trả lời chính xác câu hỏi này"* rather than hallucinating.
-- **Tenant Boundary**: All vector queries join with `knowledge_base__workspace_id = active_workspace_id`.
+### 2.2 Dual-Mode Vector Storage & Multi-Platform Compatibility
+- **Production Mode**: Native PostgreSQL `pgvector` (`vector` column type with cosine distance operators `<=>`).
+- **Development / Non-Elevated Windows Fallback**: `DynamicVectorField` seamlessly maps to native `vector` when `pgvector` extension exists in PostgreSQL, and transparently falls back to an indexed `jsonb` array on platforms without C-extension binaries.
+- **Dynamic Dimension**: Vector dimension is derived from `EMBEDDING_DIMENSION` and `EMBEDDING_MODEL` dynamically rather than hardcoded to a fixed constant.
+
+### 2.3 Grounding, Citations & Fallback Invariant
+- **Fallback Rule**: If no retrieved chunk meets `similarity_threshold` and no structured tool facts are available, the assistant strictly returns: *"Không tìm thấy thông tin đủ tin cậy trong tài liệu của doanh nghiệp."*
+- **Strict Citations**: Every claim synthesized from document chunks includes a structured source citation `[Doc: <title>, P.<page>]` or `[Doc: <title>, Sec: <heading>]`.
+- **Zero Raw SQL / Zero Mutations**: The LLM is strictly prohibited from generating or executing SQL. All structured facts are retrieved via parameterised, read-only Python selectors (`get_sales_summary`, `get_product_catalog_summary`, `get_customer_summary`, `get_service_ticket_summary`, `get_technician_workload_summary`).
+- **Tenant Boundary**: All vector and structured queries enforce `for_workspace(active_workspace)`. Every query produces an immutable `AuditLog` entry.
+
+### 2.4 Benchmark Evaluation Metrics
+The pipeline is continuously validated by an automated benchmark suite (`apps.knowledge.evaluation`) across 16 test cases:
+- **Retrieval Relevance Rate**: >= 80% (achieved 85.7%+)
+- **Grounded Correctness Rate**: >= 80% (achieved 100.0%)
+- **Fallback Precision**: 100.0% (achieved 100.0%)
 
 ---
 
 ## 3. Pillar 2: XGBoost Time-Series Forecasting
 
-XGBoost is selected for its state-of-the-art performance on structured tabular data, fast training convergence, and interpretability.
+XGBoost is implemented in `apps.forecasting` for controlled, reproducible predictive analytics on tabular business time series. It translates operational business data into continuous chronologically ordered series, computes lag and rolling features, trains gradient-boosted decision trees, and recursively projects forward 14-day forecasts with approximate 95% prediction bands based on historical test residual standard deviation.
 
 ```text
 [Orders / Service Requests DB]
             │
             ▼
-[Data Aggregation (Daily / Weekly)] ──> [Feature Engineering]
-                                               ├── Lag Features: lag_1, lag_2, lag_7, lag_14
-                                               ├── Rolling Statistics: rolling_mean_7, rolling_std_7
-                                               └── Calendar Features: day_of_week, month, is_weekend
+[Data Aggregation & Gap Filling via Continuous Date Reindexing]
             │
             ▼
-[Time-Based Train/Test Split] (Strictly NO random split across time series)
+[Feature Engineering]
+            ├── Autoregressive Lags: lag_1, lag_7, lag_14
+            ├── Shifted Rolling Stats (Zero Leakage): rolling_mean_7, rolling_std_7, rolling_mean_14
+            └── Calendar / Temporal: day_of_week, day_of_month, month, week_of_year, is_weekend
             │
             ▼
-[XGBoost Regressor Training] ──> [Evaluation vs Naive Baseline (MAE, RMSE)]
+[Strict Chronological Split (80% Train / 20% Test, Non-Shuffled)]
             │
             ▼
-[Forecast Run Saved in DB + Model Serialized in ml_models/]
+[XGBoost Regressor Training (reg:squarederror, random_state=42)]
+            │
+            ▼
+[Evaluation Benchmarking: MAE, RMSE, Non-Zero MAPE, R2 vs Naive Persistence Baseline]
+            │
+            ▼
+[Model JSON Serialized in ml_models/forecasting/ + Run & 14-Day Recursive Predictions Saved in DB]
 ```
 
-### Evaluation Protocol
-- **Metrics**: MAE (Mean Absolute Error), RMSE (Root Mean Squared Error), MAPE.
-- **Baseline Comparison**: Every model run must be benchmarked against a Naive Persistence Baseline ($y_t = y_{t-1}$ or $y_t = y_{t-7}$).
-- **Offline / Background Execution**: Model training is executed via Django management commands or background workers, never inside synchronous HTTP request loops.
+### 3.1 Supported Targets & Domain Validation
+- **Retail Domain**:
+  - `RETAIL_REVENUE`: Daily gross monetary sales (VND) from completed retail orders.
+  - `RETAIL_ORDER_VOLUME`: Daily incoming volume of valid retail orders.
+- **Service Domain**:
+  - `SERVICE_TICKET_VOLUME`: Daily volume of incoming service request tickets.
+- **Tenant Validation**: Workspaces are restricted to targets matching their operational domain (`RETAIL` vs `SERVICE`). Cross-domain training attempts are rejected with HTTP 400.
+
+### 3.2 Evaluation Protocol, Baselines & Metric Limitations
+- **Metrics**: MAE, RMSE, non-zero masked MAPE (excluding zero actuals to prevent infinite percentage skew on intermittent days), and $R^2$.
+- **MAPE Limitations**:
+  - MAPE is computed strictly on non-zero actual observations ($|y_i| > 10^{-3}$).
+  - Percentage metrics are inherently volatile for small integer counts (such as daily service tickets), where a difference of 1 ticket can represent a 100% error. For Service Ticket Volume, MAPE is relatively high (**62.58%**).
+  - Consequently, **MAE and RMSE are emphasized** for discrete, count-based service ops forecasting.
+- **Naive Persistence Baseline & Benchmark Results**:
+  - Models are benchmarked against naive persistence baselines ($y_t = y_{t-7}$ or $y_{t-1}$).
+  - *On this benchmark, models performed better than the naive baseline (results are dataset-dependent):*
+    - **Retail Revenue**: MAE 635,078 VND vs Baseline 832,234 VND (**+23.69% improvement**); RMSE 750,005 VND vs Baseline 1,029,425 VND (**+27.14% improvement**); MAPE: 31.85%.
+    - **Retail Order Volume**: MAE 0.65 orders vs Baseline 0.81 orders (**+19.75% improvement**); RMSE 0.88 orders vs Baseline 1.12 orders (**+21.43% improvement**); MAPE: 34.45%.
+    - **Service Ticket Volume**: MAE 0.94 tickets vs Baseline 1.14 tickets (**+17.54% improvement**); RMSE 1.21 tickets vs Baseline 1.48 tickets (**+18.24% improvement**); MAPE: 62.58%.
+- **Prediction Uncertainty Bands**:
+  - Bands represent approximate 95% prediction bands based on historical test residual standard deviation ($\pm 1.96 \cdot \sigma_{\text{residual}} \cdot \sqrt{1 + 0.05(h-1)}$).
+  - These serve as an uncertainty visualization. Recursive multi-step forecasts accumulate autoregressive uncertainty forward in time; they are not formally calibrated probabilistic intervals.
+- **Asynchronous Execution**: Training runs execute via `python manage.py train_forecast` or non-blocking background threads (`ForecastRun.status = PENDING -> RUNNING -> COMPLETED / FAILED`).
+- **Security & Artifact Governance**: Native XGBoost JSON models are stored with path traversal verification. All records enforce `WorkspaceScopedModel` data isolation and `forecasting.view_forecast` / `forecasting.manage_forecast` RBAC.
 
 ---
 
@@ -147,3 +187,8 @@ AI Agents never execute raw database mutations or arbitrary SQL. All agentic act
 
 ### 5.2 Zero Unchecked Mutations Invariant
 **No high-impact mutation may execute directly from an LLM-generated tool call.** Every state change requires explicit human manager confirmation through an `ApprovalRequest` record.
+
+### 5.3 Technical References (Phase 10 Implementation)
+- Detailed Recommendation Engine specification: [docs/recommendations.md](file:///d:/ai_business_platform/docs/recommendations.md)
+- Tool Registry and Calling protocol: [docs/tool-calling.md](file:///d:/ai_business_platform/docs/tool-calling.md)
+- Approval workflow and idempotency governance: [docs/approval-workflow.md](file:///d:/ai_business_platform/docs/approval-workflow.md)

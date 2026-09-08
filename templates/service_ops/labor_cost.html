@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Chi phí nhân công — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <div class="header-left">
+        <h1 class="page-title">⏱️ Chi phí nhân công & Giờ công kỹ thuật</h1>
+        <p class="page-subtitle">Theo dõi chi tiết thời lượng thực tế, đơn giá giờ công và tổng chi phí kỹ sư theo từng
+            phiếu yêu cầu dịch vụ.</p>
+    </div>
+    <div class="header-actions">
+        <a href="/services/requests/" class="btn btn-secondary">📋 Phiếu yêu cầu (Ticket)</a>
+        <a href="/services/employees/" class="btn btn-primary">👨‍💻 Đội ngũ Kỹ thuật viên</a>
+    </div>
+</div>
+
+<!-- KPI Cards Summary -->
+<div class="kpi-grid"
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="card" style="padding: 1.25rem;">
+        <div
+            style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 0.5rem;">
+            Tổng giờ công kỹ thuật
+        </div>
+        <div style="font-size: 1.75rem; font-weight: 700; color: #38bdf8;">
+            {{ total_hours }} <span style="font-size: 1rem; font-weight: 500; color: #94a3b8;">giờ</span>
+        </div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+            Tương đương {{ total_minutes }} phút ghi nhận
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem;">
+        <div
+            style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 0.5rem;">
+            Tổng chi phí nhân công
+        </div>
+        <div style="font-size: 1.75rem; font-weight: 700; color: #34d399;">
+            {{ total_cost|floatformat:0 }} <span style="font-size: 1rem; font-weight: 500; color: #94a3b8;">VND</span>
+        </div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+            Dựa trên đơn giá hợp đồng của từng kỹ sư
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem;">
+        <div
+            style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 0.5rem;">
+            Số lượt ghi nhận công
+        </div>
+        <div style="font-size: 1.75rem; font-weight: 700; color: #a855f7;">
+            {{ entry_count }} <span style="font-size: 1rem; font-weight: 500; color: #94a3b8;">lượt</span>
+        </div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+            Đã đồng bộ vào lịch sử tính phí
+        </div>
+    </div>
+</div>
+
+<!-- Labor Entries Table -->
+<div class="card" style="padding: 1.5rem; overflow-x: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 600; margin: 0;">Lịch sử ghi nhận giờ công kỹ sư</h3>
+        <span class="badge"
+            style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">
+            {{ labor_entries|length }} bản ghi gần nhất
+        </span>
+    </div>
+
+    <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+        <thead>
+            <tr style="border-bottom: 1px solid #334155; text-align: left; color: #94a3b8;">
+                <th style="padding: 0.75rem;">Mã Ticket</th>
+                <th style="padding: 0.75rem;">Khách hàng</th>
+                <th style="padding: 0.75rem;">Công việc</th>
+                <th style="padding: 0.75rem;">Kỹ thuật viên</th>
+                <th style="padding: 0.75rem;">Thời lượng</th>
+                <th style="padding: 0.75rem;">Đơn giá giờ công</th>
+                <th style="padding: 0.75rem;">Thành tiền</th>
+                <th style="padding: 0.75rem;">Thời gian</th>
+                <th style="padding: 0.75rem;">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in labor_entries %}
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                <td style="padding: 0.75rem; font-weight: 600; color: #60a5fa;">
+                    <a href="/services/requests/{{ entry.task.service_request.id }}/"
+                        style="color: inherit; text-decoration: none;">
+                        {{ entry.task.service_request.request_number }}
+                    </a>
+                </td>
+                <td style="padding: 0.75rem;">
+                    {{ entry.task.service_request.customer.name|default:"Khách hàng vãng lai" }}
+                </td>
+                <td style="padding: 0.75rem;">
+                    {{ entry.task.title }}
+                </td>
+                <td style="padding: 0.75rem; font-weight: 500;">
+                    <span style="color: #cbd5e1;">👨‍💻 {{ entry.employee.full_name }}</span>
+                    <span style="font-size: 0.75rem; color: #64748b; display: block;">{{ entry.employee.code }}</span>
+                </td>
+                <td style="padding: 0.75rem;">
+                    <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                        {{ entry.duration_minutes }} phút
+                    </span>
+                </td>
+                <td style="padding: 0.75rem; color: #94a3b8;">
+                    {{ entry.hourly_rate|floatformat:0 }} VND/h
+                </td>
+                <td style="padding: 0.75rem; font-weight: 600; color: #34d399;">
+                    {{ entry.labor_cost|floatformat:0 }} VND
+                </td>
+                <td style="padding: 0.75rem; color: #64748b; font-size: 0.8rem;">
+                    {{ entry.started_at|date:"d/m/Y H:i"|default:"-" }}
+                </td>
+                <td style="padding: 0.75rem;">
+                    <a href="/services/requests/{{ entry.task.service_request.id }}/" class="btn btn-sm btn-outline"
+                        style="font-size: 0.75rem; padding: 3px 8px;">
+                        Chi tiết ticket ↗
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 2rem; color: #64748b;">
+                    Chưa có lượt ghi nhận giờ công kỹ sư nào trong không gian làm việc này.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,34 +1,485 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Intelligent Business Operations Platform with AI-Powered Analytics, Forecasting and Decision Support">
-    <title>{% block title %}AI Business Operations Platform{% endblock %}</title>
+    <meta name="description" content="Nền tảng Quản trị Doanh nghiệp Thông minh với Phân tích Dữ liệu, Dự báo AI và Hỗ trợ Quyết định">
+    <title>{% block title %}Nền tảng Doanh nghiệp AI{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* Internal Notification Bell & Dropdown Styles */
+        .notif-bell-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .btn-notif-bell {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .btn-notif-bell:hover, .btn-notif-bell.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .notif-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 0.68rem;
+            font-weight: 800;
+            min-width: 18px;
+            height: 18px;
+            line-height: 18px;
+            border-radius: 9999px;
+            text-align: center;
+            padding: 0 4px;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+            border: 2px solid #0b0f19;
+        }
+
+        .notif-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: 380px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65);
+            z-index: 9999;
+            overflow: hidden;
+            backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notif-dropdown-header {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .notif-dropdown-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .notif-dropdown-count {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 2px 8px;
+            border-radius: 9999px;
+        }
+
+        .notif-mark-all-btn {
+            background: none;
+            border: none;
+            color: #818cf8;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
+
+        .notif-mark-all-btn:hover {
+            color: #a5b4fc;
+        }
+
+        .notif-dropdown-body {
+            max-height: 380px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notif-dropdown-item {
+            padding: 12px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.15s ease;
+            cursor: pointer;
+        }
+
+        .notif-dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .notif-dropdown-item.unread {
+            background: rgba(99, 102, 241, 0.08);
+            border-left: 3px solid #6366f1;
+        }
+
+        .notif-item-icon {
+            font-size: 1.3rem;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .notif-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notif-item-title {
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: #f8fafc;
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notif-item-message {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.4;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .notif-item-time {
+            font-size: 0.72rem;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .notif-dropdown-footer {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: center;
+        }
+
+        .notif-view-all-link {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #818cf8;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .notif-view-all-link:hover {
+            color: #a5b4fc;
+            text-decoration: underline;
+        }
+
+        .notif-empty {
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.88rem;
+        }
+
+        /* Centralized Navigation Dropdowns */
+        .nav-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .nav-dropdown-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary, #94a3b8);
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .nav-dropdown-btn:hover, .nav-dropdown-btn.active, .nav-dropdown:hover .nav-dropdown-btn {
+            color: #f8fafc;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .dropdown-arrow {
+            font-size: 0.6rem;
+            opacity: 0.7;
+            transition: transform 0.2s;
+        }
+
+        .nav-dropdown:hover .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .nav-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+            min-width: 210px;
+            padding: 6px;
+            z-index: 10000;
+            backdrop-filter: blur(12px);
+        }
+
+        .nav-dropdown:hover .nav-dropdown-menu,
+        .nav-dropdown.open .nav-dropdown-menu {
+            display: block;
+        }
+
+        .nav-dropdown.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .nav-dropdown.open .nav-dropdown-btn {
+            color: #f8fafc;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .nav-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 0.82rem;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .nav-dropdown-item:hover {
+            background: rgba(99, 102, 241, 0.15);
+            color: #f8fafc;
+        }
+
+        .nav-dropdown-item.active {
+            background: rgba(99, 102, 241, 0.25);
+            color: #818cf8;
+            font-weight: 600;
+        }
+
+        .notif-ws-badge {
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.08);
+            color: #cbd5e1;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-dark text-light">
     <div class="app-container">
         <header class="app-header">
             <div class="header-content">
-                <div class="brand">
-                    <div class="brand-logo">
-                        <span class="logo-icon">⚡</span>
+                <!-- Top Bar: Brand, Workspace & User Menu -->
+                <div class="header-top">
+                    <div class="brand">
+                        <a href="/noibo/" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit;">
+                            <div class="brand-logo">
+                                <span class="logo-icon">⚡</span>
+                            </div>
+                            <div class="brand-text">
+                                <span class="brand-title">Nền tảng Doanh nghiệp AI</span>
+                            </div>
+                        </a>
+
+                        <span class="brand-badge bg-primary" style="font-size: 0.8rem; font-weight: 700; padding: 5px 12px; border-radius: 6px; background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; letter-spacing: 0.02em;">
+                            🛡️ Trung tâm quản trị nội bộ
+                        </span>
                     </div>
-                    <div class="brand-text">
-                        <span class="brand-title">AI Business Platform</span>
-                        <span class="brand-badge">Phase 0: Bootstrap</span>
+
+                    <!-- Pinned Right: User Menu & Prominent Logout -->
+                    <div class="user-header-menu">
+                        {% if request.user.is_authenticated %}
+                        <!-- Internal Notification Bell & Dropdown -->
+                        <div class="notif-bell-container" id="notif-bell-container">
+                            <button type="button" class="btn-notif-bell" id="btn-notif-bell" onclick="toggleNotificationDropdown(event)" aria-label="Thông báo" title="Thông báo hệ thống">
+                                <span style="font-size: 1.15rem; line-height: 1;">🔔</span>
+                                <span class="notif-badge" id="notif-badge" style="display: none;">0</span>
+                            </button>
+
+                            <!-- Compact Notification Dropdown Menu -->
+                            <div class="notif-dropdown-menu" id="notif-dropdown-menu" style="display: none;">
+                                <div class="notif-dropdown-header">
+                                    <div class="notif-dropdown-title">
+                                        <span>🔔 Thông báo</span>
+                                        <span class="notif-dropdown-count" id="notif-dropdown-count">0 chưa đọc</span>
+                                    </div>
+                                    <button type="button" class="notif-mark-all-btn" onclick="markAllNotificationsRead(event)" title="Đánh dấu tất cả đã đọc">
+                                        Đánh dấu đã đọc
+                                    </button>
+                                </div>
+
+                                <div class="notif-dropdown-body" id="notif-dropdown-body">
+                                    <div class="notif-empty" id="notif-loading">Đang tải thông báo...</div>
+                                </div>
+
+                                <div class="notif-dropdown-footer">
+                                    <a href="/noibo/thong-bao/" class="notif-view-all-link">
+                                        Xem tất cả thông báo →
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="user-pill">
+                            <div class="user-avatar">{{ request.user.username|slice:":1"|upper }}</div>
+                            <div class="user-meta">
+                                <span class="user-name">{{ request.user.username }}</span>
+                                <span class="user-role">
+                                    {% if request.user.is_superuser %}
+                                        Quản trị viên
+                                    {% elif active_membership and active_membership.role %}
+                                        {% if active_membership.role.name|upper == "ADMIN" %}Quản trị viên
+                                        {% elif active_membership.role.name|upper == "MANAGER" %}Quản lý
+                                        {% elif active_membership.role.name|upper == "EMPLOYEE" %}Nhân viên
+                                        {% elif active_membership.role.name|upper == "VIEWER" %}Người xem
+                                        {% else %}{{ active_membership.role.name }}{% endif %}
+                                    {% elif active_role %}
+                                        {% if active_role|upper == "ADMIN" %}Quản trị viên
+                                        {% elif active_role|upper == "MANAGER" %}Quản lý
+                                        {% elif active_role|upper == "EMPLOYEE" %}Nhân viên
+                                        {% elif active_role|upper == "VIEWER" %}Người xem
+                                        {% else %}{{ active_role }}{% endif %}
+                                    {% else %}
+                                        Nhân viên
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <a href="/accounts/logout/" class="btn-logout" id="btn-logout" title="Đăng xuất khỏi hệ thống">
+                            <span>🚪</span>
+                            <span>Đăng xuất</span>
+                        </a>
+                        {% else %}
+                        <a href="/accounts/login/" class="btn-login" id="btn-login">
+                            <span>Đăng nhập</span>
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
-                <nav class="header-nav">
-                    <a href="/" class="nav-link active">System Status</a>
-                    <a href="/api/health/" target="_blank" class="nav-link">JSON Health API ↗</a>
-                    <a href="/admin/" target="_blank" class="nav-link">Django Admin ↗</a>
-                </nav>
+
+                <!-- Bottom Bar: Domain Navigation Links -->
+                <div class="header-bottom">
+                    <nav class="header-nav">
+                        <a href="/noibo/" class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}">📊 Bảng điều khiển</a>
+                        
+                        <!-- Direct Primary Access Links Requested by User -->
+                        <a href="/noibo/retail/products/" class="nav-link {% if active_tab == 'retail_products' %}active{% endif %}" id="nav-direct-products" style="font-weight: 600; color: #a5b4fc; background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3);">
+                            💻 Sản phẩm
+                        </a>
+                        <a href="/noibo/services/" class="nav-link {% if 'service' in active_tab and active_tab != 'service_services' and active_tab != 'service_requests' %}active{% endif %}" id="nav-direct-services" style="font-weight: 600; color: #fcd34d; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);">
+                            ⚙️ Dịch vụ Kỹ thuật
+                        </a>
+                        <a href="/noibo/ai/" class="nav-link {% if active_nav == 'ai' %}active{% endif %}" id="nav-direct-ai" style="font-weight: 600; color: #d8b4fe; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.3);">
+                            🧠 AI & Dữ liệu
+                        </a>
+                        
+                        <a href="/noibo/bao-cao-dieu-hanh/" class="nav-link {% if active_tab == 'executive_report' %}active{% endif %}">📄 Báo cáo Điều hành</a>
+                        <a href="/noibo/telemetry/" class="nav-link {% if active_tab == 'telemetry' %}active{% endif %}">⚡ Giám sát AI & GIS</a>
+                        <a href="/noibo/thong-bao/" class="nav-link {% if active_tab == 'notifications' %}active{% endif %}">🔔 Thông báo</a>
+
+                        <!-- BÁN LẺ Menu Mở rộng -->
+                        <div class="nav-dropdown" id="nav-dropdown-retail">
+                            <button type="button" class="nav-dropdown-btn {% if 'retail' in active_tab and active_tab != 'retail_products' %}active{% endif %}" id="btn-dropdown-retail" title="Các phân hệ Bán lẻ khác">
+                                <span>🛒 Menu Bán lẻ</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </button>
+                            <div class="nav-dropdown-menu" id="menu-dropdown-retail">
+                                <a href="/noibo/retail/" class="nav-dropdown-item {% if active_tab == 'retail_dashboard' %}active{% endif %}" id="nav-item-retail-dash">📊 Bảng điều khiển Bán lẻ</a>
+                                <a href="/noibo/retail/products/" class="nav-dropdown-item {% if active_tab == 'retail_products' %}active{% endif %}" id="nav-item-retail-products">💻 Quản lý Sản phẩm</a>
+                                <a href="/noibo/retail/goods-receiving/" class="nav-dropdown-item {% if active_tab == 'retail_goods_receiving' %}active{% endif %}">📥 Nhập hàng</a>
+                                <a href="/noibo/retail/orders/" class="nav-dropdown-item {% if active_tab == 'retail_orders' %}active{% endif %}">📦 Đơn hàng</a>
+                                <a href="/noibo/retail/customers/" class="nav-dropdown-item {% if active_tab == 'retail_customers' %}active{% endif %}">👥 Khách hàng</a>
+                                <a href="/noibo/retail/branches/" class="nav-dropdown-item {% if active_tab == 'retail_branches' %}active{% endif %}">🏬 Chi nhánh</a>
+                                <a href="/noibo/retail/gis/" class="nav-dropdown-item {% if active_tab == 'retail_gis' %}active{% endif %}">🗺️ Bản đồ GIS Bán lẻ</a>
+                            </div>
+                        </div>
+
+                        <!-- DỊCH VỤ KỸ THUẬT Menu Mở rộng -->
+                        <div class="nav-dropdown" id="nav-dropdown-service">
+                            <button type="button" class="nav-dropdown-btn {% if 'service' in active_tab and active_tab != 'service_dashboard' %}active{% endif %}" id="btn-dropdown-service" title="Các phân hệ Dịch vụ khác">
+                                <span>⚙️ Menu Dịch vụ</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </button>
+                            <div class="nav-dropdown-menu" id="menu-dropdown-service">
+                                <a href="/noibo/services/" class="nav-dropdown-item {% if active_tab == 'service_dashboard' %}active{% endif %}" id="nav-item-service-dash">📊 Bảng điều khiển Dịch vụ</a>
+                                <a href="/noibo/services/services/" class="nav-dropdown-item {% if active_tab == 'service_services' %}active{% endif %}" id="nav-item-service-services">🛠️ Danh mục Dịch vụ</a>
+                                <a href="/noibo/services/requests/" class="nav-dropdown-item {% if active_tab == 'service_requests' %}active{% endif %}">📋 Ticket & Yêu cầu</a>
+                                <a href="/noibo/services/employees/" class="nav-dropdown-item {% if active_tab == 'service_employees' %}active{% endif %}">👷 Kỹ thuật viên</a>
+                                <a href="/noibo/services/tasks/" class="nav-dropdown-item {% if active_tab == 'service_tasks' %}active{% endif %}">📌 Công việc</a>
+                                <a href="/noibo/services/schedules/" class="nav-dropdown-item {% if active_tab == 'service_schedules' %}active{% endif %}">📅 Lịch làm việc</a>
+                                <a href="/noibo/services/slas/" class="nav-dropdown-item {% if active_tab == 'service_slas' %}active{% endif %}">⏱️ Cam kết SLA</a>
+                                <a href="/noibo/services/labor-cost/" class="nav-dropdown-item {% if active_tab == 'service_labor' %}active{% endif %}">💰 Chi phí nhân công</a>
+                                <a href="/noibo/services/gis/" class="nav-dropdown-item {% if active_tab == 'service_gis' %}active{% endif %}">🗺️ Bản đồ GIS Dịch vụ</a>
+                            </div>
+                        </div>
+
+                        <!-- AI & DỮ LIỆU Menu Mở rộng -->
+                        <div class="nav-dropdown" id="nav-dropdown-ai">
+                            <button type="button" class="nav-dropdown-btn {% if active_nav in 'knowledge,integration,mapping,forecasting,recommendations,approvals' %}active{% endif %}" id="btn-dropdown-ai" title="Công cụ AI & Dữ liệu nâng cao">
+                                <span>🧠 Công cụ AI & Data</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </button>
+                            <div class="nav-dropdown-menu" id="menu-dropdown-ai">
+                                <a href="/noibo/ai/" class="nav-dropdown-item {% if active_nav == 'ai' %}active{% endif %}" id="nav-item-ai-assistant">🤖 Trợ lý AI Thông minh</a>
+                                <a href="/noibo/knowledge/" class="nav-dropdown-item {% if active_nav == 'knowledge' %}active{% endif %}" id="nav-item-ai-knowledge">📚 Kho tri thức RAG</a>
+                                <a href="/noibo/integration/" class="nav-dropdown-item {% if 'integration' in active_nav %}active{% endif %}">📥 Tích hợp dữ liệu</a>
+                                <a href="/noibo/mapping/" class="nav-dropdown-item {% if active_nav == 'mapping' %}active{% endif %}">🔄 Ánh xạ dữ liệu</a>
+                                <a href="/noibo/forecasting/" class="nav-dropdown-item {% if active_nav == 'forecasting' %}active{% endif %}">📈 Dự báo XGBoost</a>
+                                <a href="/noibo/recommendations/" class="nav-dropdown-item {% if active_nav == 'recommendations' %}active{% endif %}">💡 Khuyến nghị</a>
+                                <a href="/noibo/approvals/" class="nav-dropdown-item {% if active_nav == 'approvals' %}active{% endif %}">🛡️ Phê duyệt kiểm toán</a>
+                            </div>
+                        </div>
+
+                        <!-- Status & External Links -->
+                        <a href="/noibo/status/" class="nav-link {% if active_tab == 'health' %}active{% endif %}">Trạng thái</a>
+                        <a href="/" target="_blank" class="nav-link" style="color: #38bdf8;" title="Mở trang chủ Website công khai">🌐 Website ↗</a>
+                        <a href="/admin/" target="_blank" class="nav-link" style="color: #94a3b8;">Django Admin ↗</a>
+                    </nav>
+                </div>
+
             </div>
         </header>
 
@@ -38,7 +489,7 @@
 
         <footer class="app-footer">
             <div class="footer-content">
-                <p>© 2026 Intelligent Business Operations Platform. Core Architecture & Environment Lock.</p>
+                <p>© 2026 Nền tảng Quản trị Doanh nghiệp Thông minh với AI. Kiến trúc Đồng nhất & Khóa Môi trường.</p>
                 <div class="footer-tags">
                     <span class="tag">Django 6.0</span>
                     <span class="tag">PostgreSQL 18</span>
@@ -48,6 +499,216 @@
             </div>
         </footer>
     </div>
+
+    <!-- Notification Bell & Dropdown Engine -->
+    <script>
+    (function() {
+        function getCsrfToken() {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, 10) === 'csrftoken=') {
+                        cookieValue = decodeURIComponent(cookie.substring(10));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        window.fetchUnreadCount = function() {
+            fetch('/api/v1/notifications/unread-count/')
+                .then(function(res) {
+                    if (!res.ok) return null;
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (!data) return;
+                    var count = data.unread_count || 0;
+                    var badge = document.getElementById('notif-badge');
+                    var countLabel = document.getElementById('notif-dropdown-count');
+                    var bellBtn = document.getElementById('btn-notif-bell');
+
+                    if (badge) {
+                        if (count > 0) {
+                            badge.textContent = count > 99 ? '99+' : count;
+                            badge.style.display = 'inline-block';
+                            if (bellBtn) bellBtn.title = 'Có ' + count + ' thông báo chưa đọc';
+                        } else {
+                            badge.style.display = 'none';
+                            if (bellBtn) bellBtn.title = 'Không có thông báo mới';
+                        }
+                    }
+                    if (countLabel) {
+                        countLabel.textContent = count + ' chưa đọc';
+                    }
+                })
+                .catch(function(err) {
+                    // Fail silently on network/auth transitions
+                });
+        };
+
+        window.toggleNotificationDropdown = function(e) {
+            if (e) e.stopPropagation();
+            var menu = document.getElementById('notif-dropdown-menu');
+            var bellBtn = document.getElementById('btn-notif-bell');
+            if (!menu) return;
+
+            var isOpening = menu.style.display === 'none' || menu.style.display === '';
+            menu.style.display = isOpening ? 'flex' : 'none';
+            if (bellBtn) {
+                if (isOpening) bellBtn.classList.add('active');
+                else bellBtn.classList.remove('active');
+            }
+
+            if (isOpening) {
+                loadLatestNotifications();
+            }
+        };
+
+        function loadLatestNotifications() {
+            var body = document.getElementById('notif-dropdown-body');
+            if (!body) return;
+
+            fetch('/api/v1/notifications/latest/')
+                .then(function(res) {
+                    if (!res.ok) throw new Error('API error');
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (!data || !data.notifications || data.notifications.length === 0) {
+                        body.innerHTML = '<div class="notif-empty">Không có thông báo nào</div>';
+                        return;
+                    }
+
+                    var html = '';
+                    data.notifications.forEach(function(item) {
+                        var unreadCls = item.is_read ? '' : 'unread';
+                        html += '<a href="' + item.target_url + '" class="notif-dropdown-item ' + unreadCls + '" onclick="handleNotifClick(event, ' + item.id + ', \'' + item.target_url + '\')">';
+                        html += '  <div class="notif-item-icon">' + (item.event_icon || '🔔') + '</div>';
+                        html += '  <div class="notif-item-content">';
+                        html += '    <div class="notif-item-title">';
+                        html += '      <span>' + escapeHtml(item.title) + '</span>';
+                        if (item.workspace_name) {
+                            var wsIcon = (item.workspace_code && item.workspace_code.indexOf('service') !== -1) ? '⚙️ ' : '🛒 ';
+                            html += '      <span class="notif-ws-badge">' + wsIcon + escapeHtml(item.workspace_name) + '</span>';
+                        }
+                        html += '    </div>';
+                        html += '    <div class="notif-item-message">' + escapeHtml(item.message) + '</div>';
+                        html += '    <div class="notif-item-time">' + escapeHtml(item.time_ago) + '</div>';
+                        html += '  </div>';
+                        html += '</a>';
+                    });
+                    body.innerHTML = html;
+
+                    if (typeof data.unread_count !== 'undefined') {
+                        var badge = document.getElementById('notif-badge');
+                        var countLabel = document.getElementById('notif-dropdown-count');
+                        if (badge) {
+                            badge.style.display = data.unread_count > 0 ? 'inline-block' : 'none';
+                            badge.textContent = data.unread_count;
+                        }
+                        if (countLabel) {
+                            countLabel.textContent = data.unread_count + ' chưa đọc';
+                        }
+                    }
+                })
+                .catch(function(err) {
+                    body.innerHTML = '<div class="notif-empty">Không thể tải thông báo</div>';
+                });
+        }
+
+        window.handleNotifClick = function(e, notifId, targetUrl) {
+            var csrf = getCsrfToken();
+            fetch('/api/v1/notifications/' + notifId + '/read/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'Content-Type': 'application/json'
+                }
+            }).catch(function(){});
+        };
+
+        window.markAllNotificationsRead = function(e) {
+            if (e) e.stopPropagation();
+            var csrf = getCsrfToken();
+
+            fetch('/api/v1/notifications/read-all/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                var badge = document.getElementById('notif-badge');
+                var countLabel = document.getElementById('notif-dropdown-count');
+                if (badge) badge.style.display = 'none';
+                if (countLabel) countLabel.textContent = '0 chưa đọc';
+
+                var unreadItems = document.querySelectorAll('.notif-dropdown-item.unread');
+                unreadItems.forEach(function(el) {
+                    el.classList.remove('unread');
+                });
+            })
+            .catch(function(err) {
+                console.error('Failed to mark all notifications as read', err);
+            });
+        };
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            var container = document.getElementById('notif-bell-container');
+            var menu = document.getElementById('notif-dropdown-menu');
+            var bellBtn = document.getElementById('btn-notif-bell');
+            if (container && !container.contains(e.target)) {
+                if (menu) menu.style.display = 'none';
+                if (bellBtn) bellBtn.classList.remove('active');
+            }
+        });
+
+        // Nav Dropdown Click Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            var dropdownBtns = document.querySelectorAll('.nav-dropdown-btn');
+            dropdownBtns.forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var parent = btn.closest('.nav-dropdown');
+                    if (!parent) return;
+                    var isOpen = parent.classList.contains('open');
+                    document.querySelectorAll('.nav-dropdown.open').forEach(function(dd) {
+                        dd.classList.remove('open');
+                    });
+                    if (!isOpen) {
+                        parent.classList.add('open');
+                    }
+                });
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.nav-dropdown')) {
+                    document.querySelectorAll('.nav-dropdown.open').forEach(function(dd) {
+                        dd.classList.remove('open');
+                    });
+                }
+            });
+
+            fetchUnreadCount();
+            setInterval(fetchUnreadCount, 35000);
+        });
+    })();
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

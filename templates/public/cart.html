@@ -1,0 +1,228 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}Giỏ hàng của bạn | ABC Tech Store{% endblock %}
+
+{% block content %}
+<!-- Page Hero Banner -->
+<div class="page-hero-banner">
+    <div class="page-hero-grid">
+        <div class="page-breadcrumb">
+            <a href="{% url 'public_home' %}">Trang chủ</a>
+            <span>/</span>
+            <a href="{% url 'public_products' %}">Sản phẩm</a>
+            <span>/</span>
+            <span>Giỏ hàng</span>
+        </div>
+        <div style="margin-bottom: 0.75rem;">
+            <span class="page-domain-tag retail">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                Khối Bán Lẻ Thiết Bị
+            </span>
+        </div>
+        <h1 class="page-hero-title">
+            Giỏ Hàng Mua Sắm
+        </h1>
+        <p class="page-hero-subtitle">
+            Kiểm tra danh mục thiết bị, số lượng và thông số kỹ thuật trước khi tiến hành thanh toán đơn hàng.
+        </p>
+    </div>
+</div>
+
+<div class="pub-section" style="padding-top: 2.5rem;">
+    <!-- Step Progress Indicator -->
+    <div class="checkout-stepper">
+        <div class="step-item active">
+            <div class="step-bubble">1</div>
+            <span class="step-label">Giỏ hàng</span>
+        </div>
+        <div class="step-item">
+            <div class="step-bubble">2</div>
+            <span class="step-label">Thông tin giao hàng</span>
+        </div>
+        <div class="step-item">
+            <div class="step-bubble">3</div>
+            <span class="step-label">Xác nhận & Đặt mua</span>
+        </div>
+    </div>
+
+    {% if added_notice %}
+    <div style="background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; padding: 14px 20px; border-radius: 12px; font-size: 0.92rem; margin-bottom: 1.75rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span style="font-weight: 600;">Sản phẩm đã được thêm vào giỏ hàng thành công!</span>
+        </div>
+        <a href="{% url 'public_products' %}" style="color: #065F46; font-weight: 700; text-decoration: underline; font-size: 0.88rem; white-space: nowrap;">
+            Tiếp tục xem sản phẩm khác →
+        </a>
+    </div>
+    {% endif %}
+
+    {% if items %}
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2.25rem; align-items: start;">
+        <!-- Left: Cart Items List -->
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--pub-text-heading); margin: 0; letter-spacing: -0.01em;">
+                    Danh sách sản phẩm ({{ summary.total_quantity }})
+                </h2>
+                <form method="POST" action="/gio-hang/xoa-tat-ca/" onsubmit="return confirm('Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?');">
+                    {% csrf_token %}
+                    <button type="submit" style="background: none; border: none; color: var(--pub-danger); font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0; display: inline-flex; align-items: center; gap: 4px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <span>Xóa toàn bộ giỏ hàng</span>
+                    </button>
+                </form>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for item in items %}
+                <div class="pub-card" style="padding: 1.25rem 1.5rem; display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap;">
+                    <!-- Thumbnail -->
+                    <div style="width: 84px; height: 84px; background: #F8FAFC; border-radius: 10px; border: 1px solid var(--pub-border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                        {% if item.image_url %}
+                        <img src="{{ item.image_url }}" alt="{{ item.product.name }}" style="width: 100%; height: 100%; object-fit: contain; padding: 4px;">
+                        {% else %}
+                        <div style="color: #94A3B8;">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Product Info -->
+                    <div style="flex: 1; min-width: 200px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            <span class="pub-sku-label">SKU: {{ item.product.sku }}</span>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #2563EB; background: #EFF6FF; padding: 2px 8px; border-radius: 4px;">
+                                {{ item.product.category.name|default:"Thiết bị công nghệ" }}
+                            </span>
+                        </div>
+                        <h3 style="font-size: 1rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 4px; line-height: 1.35;">
+                            <a href="{% url 'public_product_detail' item.product.id %}" style="color: inherit; text-decoration: none;">
+                                {{ item.product.name }}
+                            </a>
+                        </h3>
+                        <div style="font-size: 0.92rem; font-weight: 700; color: var(--pub-primary); font-family: var(--pub-font-mono);">
+                            {{ item.unit_price|floatformat:0 }} VNĐ
+                        </div>
+                    </div>
+
+                    <!-- Quantity Control -->
+                    <div>
+                        <form method="POST" action="/gio-hang/cap-nhat/{{ item.product.id }}/" style="display: inline-flex; align-items: center; border: 1px solid #CBD5E1; border-radius: 8px; overflow: hidden; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            {% csrf_token %}
+                            <button type="submit" name="quantity" value="{{ item.quantity|add:'-1' }}" style="border: none; background: #F8FAFC; width: 34px; height: 34px; font-size: 1.1rem; font-weight: 700; color: var(--pub-text-heading); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;" aria-label="Giảm số lượng">-</button>
+                            <span style="width: 44px; text-align: center; font-size: 0.92rem; font-weight: 800; color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ item.quantity }}</span>
+                            <button type="submit" name="quantity" value="{{ item.quantity|add:'1' }}" style="border: none; background: #F8FAFC; width: 34px; height: 34px; font-size: 1.1rem; font-weight: 700; color: var(--pub-text-heading); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;" aria-label="Tăng số lượng">+</button>
+                        </form>
+                    </div>
+
+                    <!-- Line Total -->
+                    <div style="text-align: right; min-width: 120px;">
+                        <div style="font-size: 0.75rem; color: var(--pub-text-muted); font-weight: 600; text-transform: uppercase;">Thành tiền</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--pub-text-heading); font-family: var(--pub-font-mono); margin-top: 2px;">
+                            {{ item.line_total|floatformat:0 }} VNĐ
+                        </div>
+                    </div>
+
+                    <!-- Remove Button -->
+                    <div>
+                        <form method="POST" action="/gio-hang/xoa/{{ item.product.id }}/">
+                            {% csrf_token %}
+                            <button type="submit" title="Xóa sản phẩm này" style="background: none; border: 1px solid var(--pub-border); width: 34px; height: 34px; border-radius: 8px; color: var(--pub-text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="margin-top: 1.75rem;">
+                <a href="{% url 'public_products' %}" class="pub-btn-secondary" style="font-size: 0.9rem; padding: 11px 20px; display: inline-flex; align-items: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <span>Tiếp tục mua sắm</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Right: Order Summary Sidebar -->
+        <div class="pub-card" style="padding: 1.75rem; position: sticky; top: 90px; border-top: 3px solid #2563EB;">
+            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 1.25rem; letter-spacing: -0.01em;">
+                Tóm tắt đơn hàng
+            </h3>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.92rem; border-bottom: 1px solid var(--pub-border); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; color: var(--pub-text-muted);">
+                    <span>Tổng tiền sản phẩm</span>
+                    <strong style="color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ summary.subtotal|floatformat:0 }} VNĐ</strong>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; color: var(--pub-text-muted);">
+                    <span>Phí vận chuyển (tạm tính)</span>
+                    <strong style="color: {% if summary.is_free_shipping %}#10B981{% else %}var(--pub-text-heading){% endif %}; font-family: var(--pub-font-mono); text-align: right;">
+                        {% if summary.is_free_shipping %}
+                        Miễn phí{% if summary.delivery_method == 'HOME_DELIVERY' %} (Đơn >= 5.000.000 VNĐ){% endif %}
+                        {% else %}
+                        {{ summary.shipping_fee|floatformat:0 }} VNĐ
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; color: var(--pub-text-muted);">
+                    <span>VAT</span>
+                    <span style="font-weight: 600; color: #10B981;">Đã bao gồm trong giá</span>
+                </div>
+            </div>
+
+            <!-- Grand Total -->
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.5rem;">
+                <span style="font-size: 1rem; font-weight: 700; color: var(--pub-text-heading);">Tổng thanh toán</span>
+                <span style="font-size: 1.55rem; font-weight: 900; color: var(--pub-primary); font-family: var(--pub-font-mono);">
+                    {{ summary.total_amount|floatformat:0 }} VNĐ
+                </span>
+            </div>
+
+            <!-- Proceed to Checkout Button -->
+            <a href="{% url 'public_checkout' %}" class="pub-btn-primary" id="btn-proceed-checkout" style="width: 100%; justify-content: center; padding: 14px; font-size: 1rem; font-weight: 800; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                <span>Tiến hành đặt hàng</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </a>
+
+            <!-- Customer Trust Notes -->
+            <div style="font-size: 0.82rem; color: var(--pub-text-muted); display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--pub-border); padding-top: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span>Thanh toán khi nhận hàng (COD) an toàn</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <span>Bảo hành chính hãng 12 - 24 tháng</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <span>Đổi mới trong 30 ngày nếu lỗi kỹ thuật</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty Cart State -->
+    <div class="pub-empty-state" style="max-width: 600px; margin: 2rem auto;">
+        <div class="pub-empty-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        </div>
+        <h2 class="pub-empty-title">
+            Giỏ hàng của bạn đang trống
+        </h2>
+        <p class="pub-empty-desc">
+            Hãy khám phá các thiết bị công nghệ chính hãng, linh kiện và phụ kiện máy tính chất lượng cao tại ABC Tech Store.
+        </p>
+        <a href="{% url 'public_products' %}" class="pub-btn-primary" style="padding: 12px 28px; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            <span>Khám phá sản phẩm ngay</span>
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

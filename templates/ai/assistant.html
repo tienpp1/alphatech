@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}Trợ lý Tri thức AI — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <h1 class="page-title">🤖 Trợ lý Tri thức Doanh nghiệp (AI Knowledge Assistant)</h1>
+        <p class="page-subtitle">Hỏi đáp chính xác được kiểm chứng trên tài liệu nội bộ và số liệu vận hành thời gian thực.</p>
+    </div>
+    <div class="header-actions">
+        <span class="badge badge-success">● Grounded RAG & Telemetry Thời gian thực</span>
+        <a href="/knowledge/" class="btn btn-secondary">📚 Quản lý Tài liệu</a>
+    </div>
+</div>
+
+<div class="chat-container-layout">
+    <!-- Left Sidebar: Conversation History -->
+    <aside class="chat-sidebar">
+        <div class="sidebar-header">
+            <button id="btn-new-chat" class="btn btn-primary btn-block">➕ Cuộc trò chuyện mới</button>
+        </div>
+        <div class="sidebar-section-title">Lịch sử hội thoại</div>
+        <ul class="session-list" id="session-list">
+            {% for s in sessions %}
+            <li class="session-item {% if forloop.first %}active{% endif %}" data-session-id="{{ s.id }}">
+                <span class="session-icon">💬</span>
+                <span class="session-title">{{ s.title|truncatechars:28 }}</span>
+            </li>
+            {% empty %}
+            <li class="session-empty">Chưa có hội thoại nào</li>
+            {% endfor %}
+        </ul>
+        <div class="sidebar-footer">
+            <small class="text-muted">Không gian làm việc: <strong>{{ active_workspace.name }}</strong></small>
+        </div>
+    </aside>
+
+    <!-- Main Chat Window -->
+    <section class="chat-main">
+        <div class="chat-messages" id="chat-messages">
+            <!-- Welcome message -->
+            <div class="message-row assistant">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        <p>Xin chào! Tôi là Trợ lý Tri thức của <strong>{{ active_workspace.name }}</strong>. Tôi có thể trả lời các câu hỏi về chính sách quy trình doanh nghiệp và số liệu vận hành thực tế.</p>
+                        <div class="suggestion-chips">
+                            {% if active_workspace.workspace_type == 'SERVICE' %}
+                            <button class="chip" data-query="Ticket nào đang có nguy cơ vi phạm SLA?">⏱️ Ticket có nguy cơ trễ SLA</button>
+                            <button class="chip" data-query="Kỹ thuật viên nào phù hợp với ticket này?">👨‍💻 Gợi ý kỹ thuật viên</button>
+                            <button class="chip" data-query="Chi phí nhân công của ticket này là bao nhiêu?">💰 Chi phí nhân công ticket</button>
+                            <button class="chip" data-query="Quy trình xử lý sự cố máy chủ là gì?">⚙️ Quy trình sự cố máy chủ</button>
+                            {% else %}
+                            <button class="chip" data-query="Chi nhánh nào có doanh thu thấp nhất?">🏬 Chi nhánh doanh thu thấp nhất</button>
+                            <button class="chip" data-query="Sản phẩm laptop nào bán chạy nhất?">💻 Laptop bán chạy nhất</button>
+                            <button class="chip" data-query="Chính sách bảo hành laptop của công ty là gì?">🛡️ Chính sách bảo hành laptop</button>
+                            <button class="chip" data-query="Tổng doanh thu và số đơn hàng hiện tại là bao nhiêu?">📊 Doanh số & đơn hàng</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Input Form -->
+        <div class="chat-input-area">
+            <form id="chat-form" class="chat-form">
+                <input 
+                    type="text" 
+                    id="chat-input" 
+                    class="form-control chat-input" 
+                    placeholder="Bạn muốn hỏi điều gì?" 
+                    autocomplete="off"
+                    required
+                />
+                <button type="submit" id="btn-send" class="btn btn-primary btn-send">
+                    <span id="btn-text">Gửi</span>
+                    <span id="btn-spinner" class="spinner" style="display: none;"></span>
+                </button>
+            </form>
+            <div class="input-note">
+                <small class="text-muted">🔒 Câu trả lời được đối chiếu và trích dẫn trực tiếp từ tài liệu đã duyệt. Tuyệt đối không suy diễn không căn cứ.</small>
+            </div>
+        </div>
+    </section>
+
+    <!-- Right Side Panel: Live Grounded Citations -->
+    <aside class="chat-citations-panel" id="citations-panel">
+        <div class="citations-header">
+            <h3>📑 Nguồn tham khảo</h3>
+        </div>
+        <div class="citations-body" id="citations-body">
+            <p class="text-muted text-center" style="margin-top: 3rem;">Khi AI trả lời, các nguồn tham khảo tài liệu và công cụ dữ liệu kiểm chứng sẽ hiển thị tại đây.</p>
+        </div>
+    </aside>
+</div>
+
+<style>
+.chat-container-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr 320px;
+    gap: 1.5rem;
+    height: calc(100vh - 170px);
+    min-height: 560px;
+}
+.chat-sidebar {
+    background: var(--card-bg, #1a1f2c);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+}
+.session-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex: 1;
+    overflow-y: auto;
+}
+.session-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+    transition: background 0.15s ease;
+}
+.session-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+.session-item.active {
+    background: var(--primary-light, rgba(59, 130, 246, 0.2));
+    border-left: 3px solid var(--primary, #3b82f6);
+    font-weight: 500;
+}
+.chat-main {
+    background: var(--card-bg, #1a1f2c);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+.message-row {
+    display: flex;
+    gap: 0.8rem;
+    max-width: 85%;
+}
+.message-row.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+.message-row.assistant {
+    align-self: flex-start;
+}
+.message-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    background: rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+}
+.message-bubble {
+    padding: 0.85rem 1.15rem;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+.message-row.assistant .message-bubble {
+    background: var(--bubble-assistant, rgba(255, 255, 255, 0.05));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.message-row.user .message-bubble {
+    background: var(--primary, #2563eb);
+    color: #ffffff;
+}
+.suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+}
+.chip {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: inherit;
+    padding: 0.4rem 0.8rem;
+    border-radius: 16px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.chip:hover {
+    background: rgba(59, 130, 246, 0.3);
+    border-color: #3b82f6;
+}
+.chat-input-area {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    background: rgba(0, 0, 0, 0.15);
+}
+.chat-form {
+    display: flex;
+    gap: 0.8rem;
+}
+.chat-input {
+    flex: 1;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+}
+.btn-send {
+    padding: 0.75rem 1.5rem;
+}
+.chat-citations-panel {
+    background: var(--card-bg, #1a1f2c);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 12px;
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+.citation-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 3px solid #10b981;
+    border-radius: 8px;
+    padding: 0.8rem;
+    margin-bottom: 0.8rem;
+    font-size: 0.88rem;
+}
+.citation-badge {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    margin-bottom: 0.4rem;
+}
+.tool-used-card {
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-left: 3px solid #3b82f6;
+    border-radius: 8px;
+    padding: 0.8rem;
+    margin-bottom: 0.8rem;
+    font-size: 0.88rem;
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    let currentSessionId = document.querySelector(".session-item.active")?.dataset.sessionId || null;
+    const chatMessages = document.getElementById("chat-messages");
+    const chatForm = document.getElementById("chat-form");
+    const chatInput = document.getElementById("chat-input");
+    const btnSend = document.getElementById("btn-send");
+    const btnText = document.getElementById("btn-text");
+    const btnSpinner = document.getElementById("btn-spinner");
+    const citationsBody = document.getElementById("citations-body");
+
+    // Click suggestion chips
+    document.querySelectorAll(".chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+            chatInput.value = chip.dataset.query;
+            chatForm.dispatchEvent(new Event("submit"));
+        });
+    });
+
+    // New Chat Button
+    document.getElementById("btn-new-chat").addEventListener("click", () => {
+        currentSessionId = null;
+        document.querySelectorAll(".session-item").forEach(s => s.classList.remove("active"));
+        chatMessages.innerHTML = `
+            <div class="message-row assistant">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        <p>Bắt đầu cuộc trò chuyện mới. Bạn có thể hỏi bất kỳ thông tin nào về quy trình, chính sách hoặc số liệu kinh doanh.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        citationsBody.innerHTML = `<p class="text-muted text-center" style="margin-top: 3rem;">Chưa có trích dẫn nào trong cuộc trò chuyện này.</p>`;
+    });
+
+    // Form Submit
+    chatForm.addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        // Append User Message
+        appendMessage("user", "👤", text);
+        chatInput.value = "";
+
+        // UI Loading state
+        btnSend.disabled = true;
+        btnText.style.display = "none";
+        btnSpinner.style.display = "inline-block";
+
+        try {
+            const csrfToken = document.cookie.split("; ").find(r => r.startsWith("csrftoken="))?.split("=")[1];
+            const response = await fetch("/api/v1/ai/chat/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken || "",
+                },
+                body: JSON.stringify({
+                    message: text,
+                    session_id: currentSessionId ? parseInt(currentSessionId) : null
+                })
+            });
+
+            const resData = await response.json();
+
+            if (resData.success && resData.data) {
+                const data = resData.data;
+                currentSessionId = data.session_id;
+
+                // Append Assistant Message
+                appendMessage("assistant", "🤖", data.answer);
+
+                // Update Citations Side Panel
+                renderCitations(data.sources, data.tools_used);
+            } else {
+                appendMessage("assistant", "⚠️", resData.error?.message || "Đã xảy ra lỗi khi kết nối với trợ lý.");
+            }
+        } catch (err) {
+            appendMessage("assistant", "⚠️", "Không thể kết nối đến máy chủ AI: " + err.message);
+        } finally {
+            btnSend.disabled = false;
+            btnText.style.display = "inline-block";
+            btnSpinner.style.display = "none";
+            chatInput.focus();
+        }
+    });
+
+    function appendMessage(role, avatar, content) {
+        const row = document.createElement("div");
+        row.className = `message-row ${role}`;
+        row.innerHTML = `
+            <div class="message-avatar">${avatar}</div>
+            <div class="message-content">
+                <div class="message-bubble">
+                    <p>${escapeHtml(content).replace(/\n/g, "<br>")}</p>
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(row);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function renderCitations(sources, toolsUsed) {
+        if ((!sources || sources.length === 0) && (!toolsUsed || toolsUsed.length === 0)) {
+            citationsBody.innerHTML = `<p class="text-muted text-center" style="margin-top: 3rem;">Không tìm thấy thông tin đủ tin cậy trong tài liệu của doanh nghiệp.</p>`;
+            return;
+        }
+
+        let html = "";
+
+        if (toolsUsed && toolsUsed.length > 0) {
+            toolsUsed.forEach(t => {
+                html += `
+                    <div class="tool-used-card">
+                        <div style="font-weight: 600; color: #3b82f6;">🛠️ Công cụ đã sử dụng</div>
+                        <div style="font-family: monospace; font-size: 0.85rem; margin-top: 0.2rem;">${escapeHtml(t.tool)}()</div>
+                        <div class="text-muted" style="font-size: 0.75rem; margin-top: 0.2rem;">Trạng thái: ${escapeHtml(t.status)}</div>
+                    </div>
+                `;
+            });
+        }
+
+        if (sources && sources.length > 0) {
+            sources.forEach((s, idx) => {
+                const pageText = s.page_number ? ` • Trang ${s.page_number}` : "";
+                const simScore = Math.round(s.similarity * 100);
+                html += `
+                    <div class="citation-card">
+                        <span class="citation-badge">Khớp ${simScore}%</span>
+                        <div style="font-weight: 600; color: var(--text-color);">${escapeHtml(s.document_title)}</div>
+                        <div class="text-muted" style="font-size: 0.75rem; margin-top: 0.2rem;">Đoạn trích #${s.chunk_id}${pageText}</div>
+                    </div>
+                `;
+            });
+        }
+
+        citationsBody.innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Thùng rác Sản phẩm - {{ active_workspace.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.trash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.trash-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+.trash-table th {
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    text-align: left;
+    padding: 1rem;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.trash-table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: #f8fafc;
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+.trash-table tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+.days-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.days-safe {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.days-warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.days-critical {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="trash-header">
+    <div>
+        <a href="/retail/products/" style="color: #94a3b8; text-decoration: none; font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">
+            ← Quay lại Danh mục sản phẩm
+        </a>
+        <h1 style="font-size: 2rem; font-weight: 800; color: #f8fafc; margin: 0;">
+            🗑️ Thùng rác Sản phẩm
+        </h1>
+    </div>
+
+    <div>
+        <form method="GET" action="" style="display: flex; gap: 8px;">
+            <input type="text" name="q" value="{{ search_q }}" placeholder="Tìm trong thùng rác..." style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.88rem;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1rem;">Tìm</button>
+            {% if search_q %}
+            <a href="/retail/products/trash/" class="btn btn-secondary">Đặt lại</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 12px 16px; margin-bottom: 1.5rem; color: #bae6fd; font-size: 0.88rem; display: flex; align-items: center; gap: 10px;">
+    <span>ℹ️</span>
+    <span>Sản phẩm bị xóa sẽ được lưu trữ trong Thùng rác tối đa <strong>7 ngày</strong> trước khi bị xóa vĩnh viễn. Bạn có thể khôi phục lại danh mục bán hàng bất kỳ lúc nào.</span>
+</div>
+
+<div style="overflow-x: auto;">
+    <table class="trash-table">
+        <thead>
+            <tr>
+                <th style="width: 70px;">Ảnh</th>
+                <th>Sản phẩm & SKU</th>
+                <th>Danh mục</th>
+                <th>Ngày xóa</th>
+                <th>Người xóa</th>
+                <th>Thời gian còn lại</th>
+                <th style="text-align: right; min-width: 180px;">Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in deleted_products %}
+            <tr>
+                <td>
+                    {% if p.primary_image and p.primary_image.image %}
+                    <img src="{{ p.primary_image.image.url }}" alt="{{ p.name }}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                    {% else %}
+                    <div style="width: 44px; height: 44px; background: rgba(255,255,255,0.05); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 18px;">💻</div>
+                    {% endif %}
+                </td>
+                <td>
+                    <div style="font-weight: 700; color: #f8fafc;">{{ p.name }}</div>
+                    <div style="font-size: 0.78rem; font-family: monospace; color: #94a3b8;">{{ p.sku }}</div>
+                </td>
+                <td>
+                    <span style="color: #818cf8; font-size: 0.85rem;">{{ p.category.name }}</span>
+                </td>
+                <td>
+                    <div style="font-size: 0.85rem; color: #94a3b8;">{{ p.deleted_at|date:"d/m/Y" }}</div>
+                    <div style="font-size: 0.75rem; color: #64748b;">{{ p.deleted_at|date:"H:i" }}</div>
+                </td>
+                <td>
+                    <span style="color: #cbd5e1; font-size: 0.85rem;">{{ p.deleted_by.username|default:"Hệ thống" }}</span>
+                </td>
+                <td>
+                    {% if p.days_until_permanent_delete > 2 %}
+                    <span class="days-badge days-safe">Còn {{ p.days_until_permanent_delete }} ngày</span>
+                    {% elif p.days_until_permanent_delete > 0 %}
+                    <span class="days-badge days-warning">Còn {{ p.days_until_permanent_delete }} ngày</span>
+                    {% else %}
+                    <span class="days-badge days-critical">Hôm nay sẽ bị xóa vĩnh viễn</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: right;">
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        {% if can_manage %}
+                        <!-- Restore Form -->
+                        <form method="POST" action="/retail/products/{{ p.id }}/restore/" style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary" style="padding: 5px 12px; font-size: 0.8rem;">
+                                🔄 Khôi phục
+                            </button>
+                        </form>
+
+                        <!-- Permanent Delete Form -->
+                        <form method="POST" action="/retail/products/{{ p.id }}/permanent-delete/" onsubmit="return confirm('CẢNH BÁO: Thao tác này không thể hoàn tác. Bạn có chắc chắn muốn XÓA VĨNH VIỄN sản phẩm \'{{ p.name }}\'?');" style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; color: #f87171; border-color: rgba(239,68,68,0.3);">
+                                ✕ Xóa vĩnh viễn
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 3.5rem 1rem; color: #64748b;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+                    <div style="font-size: 1.05rem; font-weight: 600; color: #94a3b8; margin-bottom: 0.25rem;">Thùng rác trống</div>
+                    <div style="font-size: 0.85rem;">Không có sản phẩm nào đang nằm trong thùng rác.</div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

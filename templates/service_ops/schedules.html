@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Lịch Điều phối Kỹ thuật — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">Lịch Làm việc & Điều phối Kỹ thuật viên</h1>
+        <p class="text-secondary">Khung thời gian vận hành và lịch công tác hiện trường được phân công</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Kỹ thuật viên</th>
+                    <th>Công việc & Phiếu Ticket</th>
+                    <th>Bắt đầu</th>
+                    <th>Kết thúc</th>
+                    <th>Ghi chú</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in schedules %}
+                <tr>
+                    <td><strong>👨‍🔧 {{ s.employee.full_name }}</strong></td>
+                    <td>
+                        <div><strong>{{ s.task.title }}</strong></div>
+                        <a href="/services/requests/{{ s.task.service_request.id }}/"><code>{{ s.task.service_request.request_number }}</code></a>
+                    </td>
+                    <td><code>{{ s.start_time|date:"Y-m-d H:i" }}</code></td>
+                    <td><code>{{ s.end_time|date:"Y-m-d H:i" }}</code></td>
+                    <td class="text-secondary">{{ s.notes|default:"-" }}</td>
+                    <td>
+                        <span class="badge {% if s.status == 'DONE' %}bg-success{% elif s.status == 'CANCELLED' %}bg-danger{% else %}bg-primary{% endif %}">
+                            {% if s.status == 'DONE' %}Hoàn thành
+                            {% elif s.status == 'CANCELLED' %}Đã hủy
+                            {% elif s.status == 'IN_PROGRESS' %}Đang thực hiện
+                            {% else %}Đã lên lịch{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-secondary">Chưa có lịch làm việc nào được đăng ký.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

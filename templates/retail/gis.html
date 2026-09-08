@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Phân tích GIS Không gian Bán lẻ — {{ active_workspace.name }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    .gis-layout {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 1.5rem;
+        height: calc(100vh - 180px);
+        min-height: 600px;
+    }
+    .gis-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+    .map-container {
+        position: relative;
+        height: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    #retail-map {
+        height: 100%;
+        width: 100%;
+        background: #111827;
+    }
+    .leaflet-popup-content-wrapper {
+        background: #1f2937 !important;
+        color: #f3f4f6 !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+    }
+    .leaflet-popup-tip {
+        background: #1f2937 !important;
+    }
+    .branch-pin {
+        background: #3b82f6;
+        color: white;
+        border: 2px solid white;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.8);
+    }
+    .legend-box {
+        background: rgba(31, 41, 55, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.35rem;
+    }
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 1rem;">
+    <div class="header-left">
+        <h1 class="page-title">🗺️ Phân tích Không gian & Địa lý Bán lẻ (GIS)</h1>
+        <p class="page-subtitle">Retail Spatial Business Analytics — Phân tích Không gian PostGIS: Vùng phục vụ, Mật độ khách hàng & Phân bổ doanh thu địa lý</p>
+    </div>
+    <div class="header-actions">
+        <span class="badge bg-primary" id="kpi-branch-count">{{ branch_count }} Chi nhánh trên bản đồ</span>
+        <span class="badge bg-info" id="kpi-customer-count">{{ customer_count }} Khách hàng trên bản đồ</span>
+        <span class="badge bg-success" id="kpi-total-revenue">Đang tải doanh thu...</span>
+    </div>
+</div>
+
+<div class="gis-layout">
+    <!-- Sidebar Controls & Spatial KPIs -->
+    <div class="gis-sidebar">
+        <!-- Date Filter Card -->
+        <div class="card bg-gray-900 border-gray-800 p-4">
+            <h3 class="font-bold text-sm text-gray-400 uppercase tracking-wider mb-3">📅 Khoảng thời gian Doanh thu</h3>
+            <div class="flex flex-col gap-2">
+                <button class="btn btn-sm btn-outline active filter-date-btn" data-days="0">Toàn thời gian</button>
+                <button class="btn btn-sm btn-outline filter-date-btn" data-days="90">90 ngày qua</button>
+                <button class="btn btn-sm btn-outline filter-date-btn" data-days="30">30 ngày qua</button>
+                <button class="btn btn-sm btn-outline filter-date-btn" data-days="7">7 ngày qua</button>
+            </div>
+        </div>
+
+        <!-- Customer Segment Filter Card -->
+        <div class="card bg-gray-900 border-gray-800 p-4">
+            <h3 class="font-bold text-sm text-gray-400 uppercase tracking-wider mb-3">👥 Lọc Lớp Khách hàng</h3>
+            <select id="segment-select" class="form-control mb-3">
+                <option value="">Tất cả Phân khúc Khách hàng</option>
+                {% for code, label in customer_segments %}
+                <option value="{{ code }}">
+                    {% if code == 'VIP' %}Hạng Khách VIP
+                    {% elif code == 'ENTERPRISE' %}Hạng Doanh nghiệp
+                    {% else %}Hạng Tiêu chuẩn{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+            <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 cursor-pointer text-sm">
+                    <input type="checkbox" id="toggle-branches" checked class="form-checkbox">
+                    <span>Hiện Chi nhánh</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-sm">
+                    <input type="checkbox" id="toggle-customers" checked class="form-checkbox">
+                    <span>Hiện Khách hàng</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Spatial Branch Revenue Ranking -->
+        <div class="card bg-gray-900 border-gray-800 p-4 flex-1">
+            <h3 class="font-bold text-sm text-gray-400 uppercase tracking-wider mb-3">🏆 Xếp hạng Doanh thu Chi nhánh</h3>
+            <div id="branch-ranking-list" class="flex flex-col gap-2" style="font-size: 0.85rem;">
+                <div class="text-gray-500 text-center py-4">Đang tải dữ liệu không gian...</div>
+            </div>
+        </div>
+
+        <!-- Map Legend -->
+        <div class="legend-box">
+            <div class="font-bold text-gray-300 mb-2">Chú giải Bản đồ GIS</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #3b82f6;"></span> Chi nhánh Cửa hàng Bán lẻ</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #f59e0b;"></span> Khách hàng VIP</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #8b5cf6;"></span> Khách hàng Doanh nghiệp</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> Khách hàng Tiêu chuẩn</div>
+        </div>
+    </div>
+
+    <!-- Map View -->
+    <div class="map-container">
+        <div id="retail-map"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Initialize Leaflet Map centered on Ho Chi Minh City
+    const map = L.map("retail-map", {
+        center: [10.7769, 106.7009],
+        zoom: 12,
+        zoomControl: true,
+    });
+
+    // Dark-themed OpenStreetMap tiles
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | Động cơ Không gian PostGIS',
+        maxZoom: 19,
+    }).addTo(map);
+
+    const branchLayerGroup = L.layerGroup().addTo(map);
+    const customerLayerGroup = L.layerGroup().addTo(map);
+
+    let currentDays = 0;
+    let currentSegment = "";
+
+    // Formatting helpers
+    function formatVND(val) {
+        return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
+    }
+
+    // 2. Fetch and render Branches GeoJSON
+    function loadBranches() {
+        let url = "/api/v1/gis/retail/branches/";
+        if (currentDays > 0) {
+            const now = new Date();
+            const past = new Date(now.getTime() - (currentDays * 24 * 60 * 60 * 1000));
+            url += `?start_date=${past.toISOString().split('T')[0]}`;
+        }
+
+        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(res => res.json())
+            .then(res => {
+                branchLayerGroup.clearLayers();
+                if (res.status !== "success" || !res.data || !res.data.features) return;
+
+                const features = res.data.features;
+                let totalRev = res.data.metadata?.total_spatial_revenue || 0;
+                document.getElementById("kpi-total-revenue").textContent = formatVND(totalRev);
+
+                features.forEach(feat => {
+                    const [lon, lat] = feat.geometry.coordinates;
+                    const props = feat.properties;
+
+                    const branchIcon = L.divIcon({
+                        className: "custom-div-icon",
+                        html: `<div class="branch-pin">🏬</div>`,
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16],
+                    });
+
+                    const marker = L.marker([lat, lon], { icon: branchIcon });
+                    marker.bindPopup(`
+                        <div style="min-width: 200px;">
+                            <div style="font-weight: bold; font-size: 1rem; color: #60a5fa; margin-bottom: 4px;">${props.name}</div>
+                            <div style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 8px;">Mã: ${props.code} | Khu vực: ${props.region}</div>
+                            <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 8px;">
+                                <div style="font-size: 0.85rem;">💰 Doanh thu: <strong style="color: #34d399;">${props.formatted_revenue}</strong></div>
+                                <div style="font-size: 0.85rem;">📦 Đơn hàng: <strong>${props.order_count}</strong></div>
+                                <div style="font-size: 0.85rem;">📊 Đơn TB: <strong>${formatVND(props.average_order_value)}</strong></div>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #9ca3af;">📍 ${props.address}</div>
+                        </div>
+                    `);
+                    branchLayerGroup.addLayer(marker);
+                });
+            })
+            .catch(err => console.error("Error loading branches GIS:", err));
+    }
+
+    // 3. Fetch and render Customers GeoJSON
+    function loadCustomers() {
+        let url = "/api/v1/gis/retail/customers/";
+        if (currentSegment) {
+            url += `?segment=${currentSegment}`;
+        }
+
+        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(res => res.json())
+            .then(res => {
+                customerLayerGroup.clearLayers();
+                if (res.status !== "success" || !res.data || !res.data.features) return;
+
+                const features = res.data.features;
+                features.forEach(feat => {
+                    const [lon, lat] = feat.geometry.coordinates;
+                    const props = feat.properties;
+
+                    let color = "#10b981"; // Standard
+                    let segText = "Tiêu chuẩn";
+                    if (props.customer_segment === "VIP") { color = "#f59e0b"; segText = "VIP"; }
+                    if (props.customer_segment === "ENTERPRISE") { color = "#8b5cf6"; segText = "Doanh nghiệp"; }
+
+                    const marker = L.circleMarker([lat, lon], {
+                        radius: 6,
+                        fillColor: color,
+                        color: "#ffffff",
+                        weight: 1.5,
+                        opacity: 1,
+                        fillOpacity: 0.85,
+                    });
+
+                    marker.bindPopup(`
+                        <div>
+                            <div style="font-weight: bold; color: ${color};">${props.name}</div>
+                            <div style="font-size: 0.8rem; color: #9ca3af;">Mã: ${props.code}</div>
+                            <div style="font-size: 0.8rem; margin-top: 4px;">Phân khúc: <span class="badge" style="background: ${color}; color: black;">${segText}</span></div>
+                            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">📍 ${props.address}</div>
+                        </div>
+                    `);
+                    customerLayerGroup.addLayer(marker);
+                });
+            })
+            .catch(err => console.error("Error loading customers GIS:", err));
+    }
+
+    // 4. Fetch and render Spatial Revenue Rankings
+    function loadRankings() {
+        let url = "/api/v1/gis/retail/revenue/";
+        if (currentDays > 0) {
+            const now = new Date();
+            const past = new Date(now.getTime() - (currentDays * 24 * 60 * 60 * 1000));
+            url += `?start_date=${past.toISOString().split('T')[0]}`;
+        }
+
+        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(res => res.json())
+            .then(res => {
+                const rankingContainer = document.getElementById("branch-ranking-list");
+                if (res.status !== "success" || !res.data || !res.data.branch_rankings) {
+                    rankingContainer.innerHTML = `<div class="text-gray-500 text-center py-2">Chưa có dữ liệu xếp hạng.</div>`;
+                    return;
+                }
+
+                const rankings = res.data.branch_rankings;
+                if (rankings.length === 0) {
+                    rankingContainer.innerHTML = `<div class="text-gray-500 text-center py-2">Chưa ghi nhận chi nhánh nào.</div>`;
+                    return;
+                }
+
+                let html = "";
+                rankings.forEach((b, idx) => {
+                    html += `
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px; border-radius: 6px;">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-gray-200">#${idx + 1} ${b.name}</span>
+                                <span class="badge bg-primary" style="font-size: 0.7rem;">${b.revenue_share_pct}% thị phần</span>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-400">
+                                <span>Doanh thu: <strong class="text-emerald-400">${formatVND(b.revenue)}</strong></span>
+                                <span>Đơn hàng: <strong>${b.order_count}</strong></span>
+                            </div>
+                        </div>
+                    `;
+                });
+                rankingContainer.innerHTML = html;
+            })
+            .catch(err => console.error("Error loading spatial rankings:", err));
+    }
+
+    // Event Listeners
+    document.querySelectorAll(".filter-date-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+            document.querySelectorAll(".filter-date-btn").forEach(b => b.classList.remove("active"));
+            this.classList.add("active");
+            currentDays = parseInt(this.getAttribute("data-days") || "0");
+            loadBranches();
+            loadRankings();
+        });
+    });
+
+    document.getElementById("segment-select").addEventListener("change", function() {
+        currentSegment = this.value;
+        loadCustomers();
+    });
+
+    document.getElementById("toggle-branches").addEventListener("change", function() {
+        if (this.checked) map.addLayer(branchLayerGroup);
+        else map.removeLayer(branchLayerGroup);
+    });
+
+    document.getElementById("toggle-customers").addEventListener("change", function() {
+        if (this.checked) map.addLayer(customerLayerGroup);
+        else map.removeLayer(customerLayerGroup);
+    });
+
+    // Initial Load
+    loadBranches();
+    loadCustomers();
+    loadRankings();
+});
+</script>
+{% endblock %}

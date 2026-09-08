@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Khách hàng - Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">Danh bạ Khách hàng Thương mại</h1>
+    <p style="color: #94a3b8;">Hồ sơ khách hàng thuộc quyền quản lý của <strong>{{ active_workspace.name }}</strong></p>
+</div>
+
+<form method="GET" action="" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <input type="text" name="q" value="{{ search_q }}" placeholder="Tìm theo tên, mã khách hàng, số điện thoại hoặc email..." class="filter-input" style="min-width: 280px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 8px;">
+    <button type="submit" class="btn btn-primary">Lọc dữ liệu</button>
+    {% if search_q %}
+    <a href="/retail/customers/" class="btn btn-secondary">Đặt lại</a>
+    {% endif %}
+</form>
+
+<div class="table-card" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.5rem; overflow-x: auto;">
+    <table class="data-table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; color: #94a3b8;">
+                <th style="padding: 0.85rem 1rem;">Mã KH</th>
+                <th style="padding: 0.85rem 1rem;">Họ và tên</th>
+                <th style="padding: 0.85rem 1rem;">Điện thoại</th>
+                <th style="padding: 0.85rem 1rem;">Email</th>
+                <th style="padding: 0.85rem 1rem;">Địa chỉ</th>
+                <th style="padding: 0.85rem 1rem;">Phân khúc</th>
+                <th style="padding: 0.85rem 1rem;">Trạng thái</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in customers %}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                <td style="padding: 0.85rem 1rem;"><code>{{ c.code }}</code></td>
+                <td style="padding: 0.85rem 1rem;"><strong>{{ c.name }}</strong></td>
+                <td style="padding: 0.85rem 1rem; color: #94a3b8;">{{ c.phone|default:"-" }}</td>
+                <td style="padding: 0.85rem 1rem; color: #94a3b8;">{{ c.email|default:"-" }}</td>
+                <td style="padding: 0.85rem 1rem; color: #94a3b8; font-size: 0.85rem;">{{ c.address|default:"-" }}</td>
+                <td style="padding: 0.85rem 1rem;">
+                    <span style="padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; background: {% if c.customer_segment == 'VIP' %}rgba(234,179,8,0.15); color: #facc15;{% elif c.customer_segment == 'ENTERPRISE' %}rgba(168,85,247,0.15); color: #c084fc;{% else %}rgba(99,102,241,0.15); color: #818cf8;{% endif %}">
+                        {% if c.customer_segment == 'VIP' %}Khách VIP
+                        {% elif c.customer_segment == 'ENTERPRISE' %}Doanh nghiệp
+                        {% else %}Tiêu chuẩn{% endif %}
+                    </span>
+                </td>
+                <td style="padding: 0.85rem 1rem;">
+                    <span style="color: {% if c.is_active %}#4ade80{% else %}#f87171{% endif %}; font-size: 0.8rem;">
+                        {% if c.is_active %}● Hoạt động{% else %}○ Ngừng hoạt động{% endif %}
+                    </span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 3rem;">Không tìm thấy khách hàng nào.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

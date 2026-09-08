@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Thêm Sản phẩm Mới - {{ active_workspace.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 2rem 2.5rem;
+}
+.form-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 1.25rem;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.25rem;
+}
+.form-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 0.5rem;
+}
+.form-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    outline: none;
+    font-size: 0.95rem;
+}
+.form-input:focus {
+    border-color: #6366f1;
+    background: rgba(255, 255, 255, 0.08);
+}
+.form-input option {
+    background: #1e293b;
+    color: #f8fafc;
+}
+.file-upload-box {
+    border: 2px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.file-upload-box:hover {
+    border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.05);
+}
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 1.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-header">
+        <div style="font-size: 0.82rem; color: #818cf8; text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem;">
+            {{ active_workspace.name }} • ABC Tech Store
+        </div>
+        <h1 style="font-size: 1.8rem; font-weight: 800; color: #f8fafc; margin: 0;">
+            Thêm Sản phẩm Công nghệ Mới
+        </h1>
+    </div>
+
+    {% if error_message %}
+    <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 12px 16px; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem;">
+        ⚠️ {{ error_message }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="name">Tên sản phẩm <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="name" name="name" required class="form-input" placeholder="Ví dụ: Laptop Dell Latitude 7420">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="sku">Mã SKU <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="sku" name="sku" required class="form-input" placeholder="Ví dụ: DELL-LAT-7420" style="text-transform: uppercase;">
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="category_id">Danh mục sản phẩm <span style="color: #ef4444;">*</span></label>
+                <select id="category_id" name="category_id" required class="form-input">
+                    <option value="">-- Chọn danh mục --</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="unit">Đơn vị tính</label>
+                <input type="text" id="unit" name="unit" value="cái" class="form-input" placeholder="cái, bộ, hộp...">
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="unit_price">Giá bán niêm yết (VND) <span style="color: #ef4444;">*</span></label>
+                <input type="number" id="unit_price" name="unit_price" step="1000" min="0" required class="form-input" placeholder="Ví dụ: 22500000">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="cost_price">Giá vốn nhập hàng (VND)</label>
+                <input type="number" id="cost_price" name="cost_price" step="1000" min="0" value="0" class="form-input" placeholder="Ví dụ: 18000000">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="description">Mô tả sản phẩm / Thông số kỹ thuật</label>
+            <textarea id="description" name="description" rows="4" class="form-input" placeholder="Nhập mô tả chi tiết, cấu hình (CPU, RAM, màn hình...), phụ kiện đi kèm..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Hình ảnh sản phẩm (Tùy chọn tải lên một hoặc nhiều ảnh)</label>
+            <div class="file-upload-box" onclick="document.getElementById('images').click();">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📸</div>
+                <div style="color: #f8fafc; font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                    Nhấp để chọn ảnh từ máy tính
+                </div>
+                <div style="color: #94a3b8; font-size: 0.8rem;">
+                    Hỗ trợ định dạng JPG, PNG, WEBP. Dung lượng tối đa 5MB / tệp.
+                </div>
+                <input type="file" id="images" name="images" multiple accept=".jpg,.jpeg,.png,.webp" style="display: none;" onchange="updateFilePreview(this)">
+            </div>
+            <div id="file-list-preview" style="margin-top: 0.75rem; font-size: 0.85rem; color: #38bdf8;"></div>
+        </div>
+
+        <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 0.5rem;">
+            <input type="checkbox" id="is_active" name="is_active" checked style="width: 18px; height: 18px; cursor: pointer;">
+            <label for="is_active" style="color: #f8fafc; font-size: 0.9rem; cursor: pointer; user-select: none;">
+                Kích hoạt kinh doanh ngay sau khi tạo (hiển thị trên Website công khai)
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <a href="/retail/products/" class="btn btn-secondary">Hủy bỏ</a>
+            <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.75rem; font-weight: 700;">
+                💾 Lưu sản phẩm
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateFilePreview(input) {
+    var preview = document.getElementById('file-list-preview');
+    if (input.files && input.files.length > 0) {
+        var names = [];
+        for (var i = 0; i < input.files.length; i++) {
+            names.push(input.files[i].name);
+        }
+        preview.innerText = 'Đã chọn ' + input.files.length + ' tệp: ' + names.join(', ');
+    } else {
+        preview.innerText = '';
+    }
+}
+</script>
+{% endblock %}

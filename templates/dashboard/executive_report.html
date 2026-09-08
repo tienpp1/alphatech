@@ -1,0 +1,690 @@
+{% extends "base.html" %}
+
+{% block title %}Báo cáo Vận hành Doanh nghiệp & Hiệu quả AI - GIS | {{ report_id }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Toolbar for Screen View */
+    .report-toolbar {
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    /* A4 Document Simulation on Screen */
+    .a4-paper {
+        background: #ffffff;
+        color: #0f172a;
+        width: 100%;
+        max-width: 960px;
+        margin: 0 auto 3rem auto;
+        padding: 3rem 3.5rem;
+        border-radius: 8px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        position: relative;
+    }
+
+    .report-header {
+        border-bottom: 2px solid #0f172a;
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .report-title-section h1 {
+        font-size: 1.65rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0 0 0.25rem 0;
+        text-transform: uppercase;
+        letter-spacing: -0.01em;
+    }
+
+    .report-title-section h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #475569;
+        margin: 0;
+    }
+
+    .report-meta-box {
+        text-align: right;
+        font-size: 0.82rem;
+        color: #64748b;
+    }
+
+    .report-meta-box strong {
+        color: #0f172a;
+    }
+
+    .report-badge {
+        display: inline-block;
+        background: #f1f5f9;
+        color: #0f172a;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 1px solid #cbd5e1;
+        margin-bottom: 0.5rem;
+    }
+
+    .section-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+        border-left: 4px solid #2563eb;
+        padding-left: 0.75rem;
+        margin: 2rem 0 1rem 0;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .kpi-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 0.85rem;
+        text-align: center;
+    }
+
+    .kpi-box .val {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .kpi-box .lbl {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        margin-top: 0.2rem;
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .report-table th {
+        background: #f1f5f9;
+        color: #0f172a;
+        font-weight: 700;
+        text-align: left;
+        padding: 8px 12px;
+        border: 1px solid #cbd5e1;
+    }
+
+    .report-table td {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+    }
+
+    .report-table tr:nth-child(even) td {
+        background: #f8fafc;
+    }
+
+    .signature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3rem;
+        margin-top: 3.5rem;
+        padding-top: 1rem;
+        page-break-inside: avoid;
+    }
+
+    .signature-block {
+        text-align: center;
+    }
+
+    .signature-block .role {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #0f172a;
+    }
+
+    .signature-block .hint {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-bottom: 4.5rem;
+    }
+
+    .signature-block .name {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #0f172a;
+        border-top: 1px dotted #94a3b8;
+        display: inline-block;
+        padding-top: 0.5rem;
+        min-width: 200px;
+    }
+
+    .report-footer {
+        border-top: 1px solid #e2e8f0;
+        padding-top: 1rem;
+        margin-top: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    /* Editable Mode & Toolbar Elements */
+    .edit-mode-banner {
+        display: none;
+        background: #eff6ff;
+        border: 1.5px solid #3b82f6;
+        border-radius: 8px;
+        padding: 12px 18px;
+        margin-bottom: 1.5rem;
+        color: #1e40af;
+        font-size: 0.88rem;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+
+    .edit-mode-active .edit-mode-banner {
+        display: flex;
+    }
+
+    .edit-mode-active .report-editable {
+        border: 1.5px dashed #2563eb !important;
+        background: rgba(37, 99, 235, 0.06) !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+        outline: none !important;
+        transition: all 0.2s ease;
+        cursor: text !important;
+    }
+
+    .edit-mode-active .report-editable:hover,
+    .edit-mode-active .report-editable:focus {
+        background: rgba(37, 99, 235, 0.12) !important;
+        border-color: #1d4ed8 !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+    }
+
+    /* Toast Notification */
+    .report-toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: #0f172a;
+        color: #f8fafc;
+        border: 1px solid #3b82f6;
+        border-radius: 10px;
+        padding: 14px 22px;
+        font-size: 0.92rem;
+        font-weight: 600;
+        box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+        display: none;
+        align-items: center;
+        gap: 10px;
+        z-index: 100000;
+        animation: slideInToast 0.25s ease;
+    }
+
+    @keyframes slideInToast {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Print Stylesheet */
+    @media print {
+        body {
+            background: #ffffff !important;
+            color: #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .app-header, .report-toolbar, .btn, footer, .notif-bell-container, .edit-mode-banner, .report-toast {
+            display: none !important;
+        }
+
+        .a4-paper {
+            box-shadow: none !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        .report-editable {
+            border: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        .section-title {
+            page-break-after: avoid;
+        }
+
+        .report-table {
+            page-break-inside: avoid;
+        }
+
+        .signature-grid {
+            page-break-inside: avoid;
+        }
+    }
+</style>
+
+<!-- Screen Toolbar -->
+<div class="report-toolbar">
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; text-decoration: none; border-radius: 6px;">
+            ← Quay lại Bảng điều khiển
+        </a>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <!-- Nút CẬP NHẬT SỐ LIỆU -->
+        <button type="button" id="btn-refresh-report" onclick="handleRefreshMetrics()" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; font-weight: 700; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" title="Đồng bộ lại toàn bộ số liệu thời gian thực mới nhất từ cơ sở dữ liệu">
+            <span id="refresh-icon" style="display: inline-block;">🔄</span>
+            <span>Cập nhật số liệu</span>
+        </button>
+
+        <!-- Nút CHỈNH SỬA BÁO CÁO -->
+        <button type="button" id="btn-edit-report" onclick="toggleEditMode()" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; font-weight: 700; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: #fbbf24; border-color: rgba(245, 158, 11, 0.4);" title="Bật chế độ chỉnh sửa trực tiếp trên tài liệu">
+            <span id="edit-icon">✏️</span>
+            <span id="edit-btn-text">Chỉnh sửa báo cáo</span>
+        </button>
+
+        <!-- Nút LƯU THAY ĐỔI (Chỉ hiển thị khi đang sửa) -->
+        <button type="button" id="btn-save-report" onclick="saveReportEdits()" class="btn btn-primary" style="display: none; padding: 8px 14px; font-size: 0.85rem; font-weight: 700; border-radius: 6px; align-items: center; gap: 6px; cursor: pointer; background: #16a34a; border-color: #15803d; color: #ffffff;">
+            <span>💾 Lưu thay đổi</span>
+        </button>
+
+        <!-- Nút KHÔI PHỤC (Chỉ hiển thị khi đang sửa) -->
+        <button type="button" id="btn-reset-report" onclick="resetReportEdits()" class="btn btn-secondary" style="display: none; padding: 8px 12px; font-size: 0.82rem; border-radius: 6px; align-items: center; gap: 4px; cursor: pointer; color: #f87171; border-color: rgba(248, 113, 113, 0.3);" title="Khôi phục về nội dung mặc định của hệ thống">
+            <span>↩️ Khôi phục</span>
+        </button>
+
+        <!-- Nút TẢI CSV / EXCEL -->
+        <a href="/noibo/bao-cao-dieu-hanh/export-csv/" id="btn-export-csv" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; font-weight: 600; text-decoration: none; border-radius: 6px; display: flex; align-items: center; gap: 6px;">
+            📥 Tải CSV / Excel
+        </a>
+
+        <!-- Nút IN BÁO CÁO -->
+        <button type="button" id="btn-print-report" onclick="handlePrintReport()" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; font-weight: 700; border-radius: 6px; display: flex; align-items: center; gap: 6px; background: #2563eb; border-color: #1d4ed8; color: #ffffff; cursor: pointer;">
+            🖨️ In / Xuất PDF Báo cáo
+        </button>
+    </div>
+</div>
+
+<!-- Printable A4 Paper Document -->
+<div class="a4-paper" id="a4-paper-doc">
+
+    <!-- Edit Mode Instruction Banner -->
+    <div class="edit-mode-banner" id="edit-mode-banner">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.4rem;">✏️</span>
+            <div>
+                <strong>Chế độ Chỉnh sửa Báo cáo đang Bật:</strong> Bạn có thể nhấp chuột trực tiếp vào tiêu đề phụ, phần đánh giá của Ban điều hành (Mục 6), hoặc chức danh và người ký để chỉnh sửa nội dung văn bản.
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-shrink: 0;">
+            <button type="button" onclick="saveReportEdits()" class="btn btn-primary" style="padding: 5px 12px; font-size: 0.82rem; background: #16a34a; border-color: #15803d; color: #fff; cursor: pointer; border-radius: 4px; font-weight: 700;">
+                💾 Lưu ngay
+            </button>
+            <button type="button" onclick="toggleEditMode(false)" class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.82rem; cursor: pointer; border-radius: 4px; background: #fff; border: 1px solid #cbd5e1; color: #334155;">
+                ✕ Đóng
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="report-header">
+        <div class="report-title-section">
+            <div class="report-badge">AI BUSINESS OPERATIONS PLATFORM · HCMUNRE</div>
+            <h1>BÁO CÁO VẬN HÀNH DOANH NGHIỆP</h1>
+            <h2 class="report-editable" data-edit-key="report_subtitle" id="edit-report-subtitle">Tổng hợp Phân tích Dữ liệu, Dự báo Học máy & Trắc địa GIS</h2>
+        </div>
+        <div class="report-meta-box">
+            <div>Mã số: <strong>{{ report_id }}</strong></div>
+            <div>Thời điểm xuất: <strong>{{ now|date:"d/m/Y H:i" }}</strong></div>
+            <div>Người lập: <strong>{{ operator.username }}</strong></div>
+            <div>Mã tham chiếu: <code style="font-size: 0.75rem; background: #f1f5f9; padding: 2px 4px; border-radius: 3px;">{{ verification_hash }}</code> — không phải chữ ký số.</div>
+        </div>
+    </div>
+
+    <!-- 1. Retail Domain Performance -->
+    <div class="section-title">1. Hiệu quả Kinh doanh Bán lẻ (ABC Tech Store)</div>
+    <div class="kpi-grid">
+        <div class="kpi-box">
+            <div class="val">{{ retail.total_revenue|floatformat:0 }}₫</div>
+            <div class="lbl">Tổng Doanh thu Thực tế</div>
+        </div>
+        <div class="kpi-box">
+            <div class="val">{{ retail.completed_orders }} / {{ retail.total_orders }}</div>
+            <div class="lbl">Đơn hàng Hoàn tất</div>
+        </div>
+        <div class="kpi-box">
+            <div class="val">{{ retail.aov|floatformat:0 }}₫</div>
+            <div class="lbl">Giá trị Trung bình Đơn (AOV)</div>
+        </div>
+        <div class="kpi-box">
+            <div class="val">{{ retail.total_customers }}</div>
+            <div class="lbl">Khách hàng Đã định danh</div>
+        </div>
+    </div>
+
+    <!-- 2. Service Ops & SLA Performance -->
+    <div class="section-title">2. Năng lực Vận hành Dịch vụ IT & Cam kết SLA (XYZ IT Technical Services)</div>
+    <div class="kpi-grid">
+        <div class="kpi-box">
+            <div class="val">{{ service.total_tickets }}</div>
+            <div class="lbl">Tổng Sự cố Tiếp nhận</div>
+        </div>
+        <div class="kpi-box">
+            <div class="val">{{ service.resolved_tickets }}</div>
+            <div class="lbl">Sự cố Đã khắc phục</div>
+        </div>
+        <div class="kpi-box">
+            <div class="val" style="color: #16a34a;">{% if service.resolution_rate != None %}{{ service.resolution_rate }}%{% else %}Chưa có dữ liệu{% endif %}</div>
+            <div class="lbl">Tỷ lệ phiếu đã giải quyết (không phải SLA)</div>
+        </div>
+        <div class="kpi-box">
+            <div class="val">{{ service.active_technicians }}</div>
+            <div class="lbl">Kỹ thuật viên Trực chiến</div>
+        </div>
+    </div>
+
+    <!-- 3. Machine Learning Forecasting Evaluation -->
+    <div class="section-title">3. Đánh giá Dự báo Học máy XGBoost vs Baseline</div>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Mục tiêu Dự báo</th>
+                <th>Không gian Vận hành</th>
+                <th>XGBoost MAE</th>
+                <th>XGBoost RMSE</th>
+                <th>Naive Baseline MAE</th>
+                <th>Cải thiện (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for run in forecast_runs %}
+            <tr>
+                <td><strong>{{ run.target_name }}</strong></td>
+                <td>{{ run.workspace }}</td>
+                <td>{{ run.mae|floatformat:2|default:"Chưa đo" }}</td>
+                <td>{{ run.rmse|floatformat:2|default:"Chưa đo" }}</td>
+                <td>{{ run.baseline_mae|floatformat:2|default:"Chưa đo" }}</td>
+                <td style="font-weight: 700; color: #16a34a;">
+                    {% if run.improvement_pct != None %}
+                        {{ run.improvement_pct }}%
+                    {% else %}
+                        Chưa đủ dữ liệu so sánh
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; color: #94a3b8;">Đang cập nhật các mô hình chuỗi thời gian đã huấn luyện.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 4. Spatial GIS Insights -->
+    <div class="section-title">4. Phân tích Bản đồ Không gian GIS (WGS84 SRID 4326)</div>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Chi nhánh / Trạm Phục vụ</th>
+                <th>Tọa độ Địa lý (Lat, Lon)</th>
+                <th>Địa chỉ Hoạt động</th>
+                <th>Vùng phủ Bán kính</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in retail.branches %}
+            <tr>
+                <td><strong>{{ b.name }}</strong></td>
+                <td>
+                    {% if b.location %}
+                        {{ b.location.y|floatformat:4 }}, {{ b.location.x|floatformat:4 }}
+                    {% else %}
+                        (Chưa gắn tọa độ)
+                    {% endif %}
+                </td>
+                <td>{{ b.address|default:"Chưa có địa chỉ" }}</td>
+                <td>Chưa đánh giá vùng phủ</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align: center; color: #94a3b8;">Không có dữ liệu chi nhánh.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 5. Decision Support & HITL Approvals -->
+    <div class="section-title">5. Khuyến nghị AI & Kiểm soát Phê duyệt (Human-in-the-loop)</div>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Mã Yêu cầu</th>
+                <th>Loại Hành động Đề xuất</th>
+                <th>Người Yêu cầu</th>
+                <th>Trạng thái Phê duyệt</th>
+                <th>Người Phê duyệt</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in recent_approvals %}
+            <tr>
+                <td><code>#{{ app.id|stringformat:".8s" }}</code></td>
+                <td><strong>{{ app.proposed_action }}</strong></td>
+                <td>{{ app.requester.username|default:"AI Engine" }}</td>
+                <td>
+                    {% if app.status == "APPROVED" %}
+                        <span style="color: #16a34a; font-weight: 700;">ĐÃ CHẤP THUẬN</span>
+                    {% elif app.status == "PENDING" %}
+                        <span style="color: #d97706; font-weight: 700;">CHỜ XÉT DUYỆT</span>
+                    {% else %}
+                        <span>{{ app.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ app.reviewer.username|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: #94a3b8;">Không có yêu cầu phê duyệt nào gần đây.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 6. Executive Evaluation & Strategic Directives (Interactive Editable Section) -->
+    <div class="section-title">6. Đánh giá & Kết luận của Ban Điều hành</div>
+    <div style="margin-bottom: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem;">
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">6.1 Đánh giá Tổng quan & Hiệu quả Vận hành</h4>
+        <p class="report-editable" data-edit-key="exec_assessment" id="edit-exec-assessment" style="margin: 0 0 14px 0; color: #334155; line-height: 1.6; font-size: 0.88rem;">
+            Các chỉ số trên phản ánh dữ liệu trong phạm vi quyền truy cập tại thời điểm mở báo cáo. Chưa đánh giá tuân thủ SLA hoặc tác động của tối ưu GIS. Nhận xét chỉnh sửa thủ công không phải kết luận đã được hệ thống kiểm chứng.
+        </p>
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">6.2 Nhận định Rủi ro & Tồn đọng Cần lưu ý</h4>
+        <p class="report-editable" data-edit-key="risk_assessment" id="edit-risk-assessment" style="margin: 0 0 14px 0; color: #334155; line-height: 1.6; font-size: 0.88rem;">
+            Cần theo dõi sát các mặt hàng có tốc độ luân chuyển nhanh để chủ động nhập hàng bù đắp tồn kho an toàn, hạn chế rủi ro đứt gãy cung ứng theo cảnh báo của mô hình XGBoost. Duy trì đào tạo chuyên môn cho kỹ thuật viên hiện trường để đáp ứng các ticket bảo trì cao cấp.
+        </p>
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">6.3 Kế hoạch Hành động & Chỉ đạo Trọng tâm 14 Ngày tới</h4>
+        <p class="report-editable" data-edit-key="action_directives" id="edit-action-directives" style="margin: 0; color: #334155; line-height: 1.6; font-size: 0.88rem;">
+            Ưu tiên giải quyết dứt điểm các yêu cầu phê duyệt chuyển kho và điều phối kỹ sư đang chờ duyệt. Tiếp tục làm giàu kho tri thức RAG với các tài liệu SOP kỹ thuật mới để nâng cao độ chính xác của trợ lý AI hỗ trợ vận hành.
+        </p>
+    </div>
+
+    <!-- Corporate Signatures (Editable Roles and Signatories) -->
+    <div class="signature-grid">
+        <div class="signature-block">
+            <div class="role report-editable" data-edit-key="sig_role_left" id="edit-sig-role-left">TRƯỞNG PHÒNG VẬN HÀNH & KỸ THUẬT</div>
+            <div class="hint">(Ký, ghi rõ họ tên và xác nhận số liệu)</div>
+            <div class="name report-editable" data-edit-key="sig_name_left" id="edit-sig-name-left">{{ operator.username|upper }}</div>
+        </div>
+        <div class="signature-block">
+            <div class="role report-editable" data-edit-key="sig_role_right" id="edit-sig-role-right">GIÁM ĐỐC ĐIỀU HÀNH DOANH NGHIỆP</div>
+            <div class="hint">(Ký duyệt, đóng dấu xác nhận hiệu lực)</div>
+            <div class="name report-editable" data-edit-key="sig_name_right" id="edit-sig-name-right">BAN GIÁM ĐỐC</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <div>Bản quyền © 2026 Nền tảng Doanh nghiệp AI (HCMUNRE) · Sinh viên Hà Minh Tiến · GVHD: ThS. Nguyễn Duy Tuấn</div>
+        <div>Mã tham chiếu: {{ verification_hash }} · Nội dung chỉnh sửa chưa được ký hoặc xác thực.</div>
+    </div>
+</div>
+
+<!-- Floating Toast Notification -->
+<div id="report-toast" class="report-toast"></div>
+
+<script>
+(function() {
+    var STORAGE_KEY = 'executive_report_draft_v3_{{ operator.pk }}_{% for ws in authorized_workspaces %}{{ ws.pk }}_{% endfor %}';
+    var isEditMode = false;
+
+    function showToast(msg, icon) {
+        var toast = document.getElementById('report-toast');
+        if (!toast) return;
+        toast.innerHTML = '<span style="font-size: 1.2rem;">' + (icon || '✅') + '</span> <span>' + msg + '</span>';
+        toast.style.display = 'flex';
+        setTimeout(function() {
+            toast.style.display = 'none';
+        }, 4000);
+    }
+
+    window.handleRefreshMetrics = function() {
+        var icon = document.getElementById('refresh-icon');
+        if (icon) {
+            icon.style.transition = 'transform 0.6s ease';
+            icon.style.transform = 'rotate(360deg)';
+        }
+        var btn = document.getElementById('btn-refresh-report');
+        if (btn) btn.disabled = true;
+
+        showToast('Đang kết nối cơ sở dữ liệu và tính toán lại toàn bộ chỉ số...', '⏳');
+
+        setTimeout(function() {
+            var url = new URL(window.location.href);
+            url.searchParams.set('refresh', 'true');
+            url.searchParams.set('t', Date.now());
+            window.location.href = url.toString();
+        }, 400);
+    };
+
+    window.toggleEditMode = function(force) {
+        isEditMode = (typeof force === 'boolean') ? force : !isEditMode;
+        var paper = document.getElementById('a4-paper-doc');
+        var editBtn = document.getElementById('btn-edit-report');
+        var saveBtn = document.getElementById('btn-save-report');
+        var resetBtn = document.getElementById('btn-reset-report');
+        var editBtnText = document.getElementById('edit-btn-text');
+
+        if (isEditMode) {
+            if (paper) paper.classList.add('edit-mode-active');
+            if (editBtnText) editBtnText.textContent = 'Đang chỉnh sửa...';
+            if (editBtn) editBtn.style.background = 'rgba(245, 158, 11, 0.2)';
+            if (saveBtn) saveBtn.style.display = 'inline-flex';
+            if (resetBtn) resetBtn.style.display = 'inline-flex';
+            document.querySelectorAll('.report-editable').forEach(function(el) {
+                el.setAttribute('contenteditable', 'true');
+            });
+            showToast('Chế độ chỉnh sửa đã BẬT. Nhấp trực tiếp vào các ô nét đứt để sửa nội dung.', '✏️');
+        } else {
+            if (paper) paper.classList.remove('edit-mode-active');
+            if (editBtnText) editBtnText.textContent = 'Chỉnh sửa báo cáo';
+            if (editBtn) editBtn.style.background = '';
+            if (saveBtn) saveBtn.style.display = 'none';
+            if (resetBtn) resetBtn.style.display = 'none';
+            document.querySelectorAll('.report-editable').forEach(function(el) {
+                el.removeAttribute('contenteditable');
+            });
+        }
+    };
+
+    window.saveReportEdits = function() {
+        var data = {};
+        document.querySelectorAll('.report-editable').forEach(function(el) {
+            var key = el.getAttribute('data-edit-key');
+            if (key) {
+                data[key] = el.textContent.trim();
+            }
+        });
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        showToast('Đã lưu bản nháp trong phiên trình duyệt, chưa lưu lên hệ thống.', '💾');
+        toggleEditMode(false);
+    };
+
+    window.resetReportEdits = function() {
+        if (confirm('Bạn có chắc chắn muốn khôi phục nội dung nhận xét và chức danh mặc định của hệ thống?')) {
+            sessionStorage.removeItem(STORAGE_KEY);
+            window.location.reload();
+        }
+    };
+
+    window.handlePrintReport = function() {
+        if (isEditMode) {
+            toggleEditMode(false);
+        }
+        window.print();
+    };
+
+    function loadSavedEdits() {
+        try {
+            var raw = sessionStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            var data = JSON.parse(raw);
+            document.querySelectorAll('.report-editable').forEach(function(el) {
+                var key = el.getAttribute('data-edit-key');
+                if (key && typeof data[key] !== 'undefined' && data[key] !== '') {
+                    el.textContent = data[key];
+                }
+            });
+        } catch(e) {
+            console.error('Error restoring saved edits', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSavedEdits();
+
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('refresh') === 'true') {
+            showToast('Đã làm mới và đồng bộ số liệu thời gian thực mới nhất từ hệ thống!', '🔄');
+            if (window.history.replaceState) {
+                var cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

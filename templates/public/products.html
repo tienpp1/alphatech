@@ -1,0 +1,298 @@
+{% extends "public/base_public.html" %}
+
+{% block title %}Sản phẩm công nghệ chính hãng | ABC Tech Store{% endblock %}
+
+{% block content %}
+<!-- Page Hero Header Banner -->
+<div class="page-hero-banner">
+    <div class="page-hero-grid" aria-hidden="true"></div>
+    <div class="page-hero-container">
+        <div class="page-breadcrumb">
+            <a href="/">Trang chủ</a>
+            <span>/</span>
+            <span style="color: #F8FAFC;">Sản phẩm công nghệ</span>
+        </div>
+        <div class="page-domain-tag retail">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            ABC TECH STORE • HARDWARE CATALOG
+        </div>
+        <h1 class="page-title-main">
+            Danh mục sản phẩm công nghệ &amp; phụ kiện
+        </h1>
+        <p class="page-subtitle-main">
+            Thiết bị chính hãng, cam kết chất lượng 100% CO/CQ, bảo hành minh bạch và sẵn sàng giao hỏa tốc cho cá nhân &amp; doanh nghiệp.
+        </p>
+    </div>
+</div>
+
+<div class="pub-section" style="padding-top: 2rem;">
+    <!-- Filters & Search Toolbar -->
+    <div class="pub-toolbar-card">
+        <form method="GET" action="/san-pham/" id="product-filter-form" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;">
+            <!-- Keyword Search -->
+            <div style="flex: 1; min-width: 280px; display: flex; gap: 8px;">
+                <div style="position: relative; flex: 1;">
+                    <input type="text" name="q" id="product-search-input" value="{{ search_query }}" placeholder="Tìm theo tên sản phẩm, mã SKU..." class="pub-search-input" style="width: 100%; padding-left: 38px;" oninput="liveFilterProducts(this.value)">
+                    <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94A3B8; pointer-events: none;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                </div>
+                <button type="submit" class="pub-btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
+                    Tìm kiếm
+                </button>
+            </div>
+
+            <!-- Sorting & Facets -->
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <label for="sort" style="font-size: 0.85rem; color: var(--pub-text-muted); font-weight: 600;">Sắp xếp:</label>
+                <select name="sort" id="sort" onchange="this.form.submit()" class="pub-select-custom">
+                    <option value="" {% if not sort_option %}selected{% endif %}>Mới nhất</option>
+                    <option value="price_asc" {% if sort_option == 'price_asc' %}selected{% endif %}>Giá tăng dần</option>
+                    <option value="price_desc" {% if sort_option == 'price_desc' %}selected{% endif %}>Giá giảm dần</option>
+                    <option value="name_asc" {% if sort_option == 'name_asc' %}selected{% endif %}>Tên A - Z</option>
+                </select>
+            </div>
+        </form>
+
+        <!-- Category Filter Pills -->
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--pub-border-subtle); align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: var(--pub-text-muted); margin-right: 4px;">Danh mục:</span>
+            <a href="/san-pham/{% if search_query %}?q={{ search_query }}{% endif %}" 
+               class="pub-filter-pill {% if not selected_category %}active-retail{% endif %}">
+                Tất cả ({{ total_results }})
+            </a>
+            {% for cat in categories %}
+            <a href="/san-pham/?category={{ cat.code }}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_option %}&sort={{ sort_option }}{% endif %}" 
+               class="pub-filter-pill {% if selected_category == cat.code or selected_category == cat.name %}active-retail{% endif %}">
+                {{ cat.name }}
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Faceted Quick Filters Bar -->
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.85rem; align-items: center;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: var(--pub-text-muted); margin-right: 4px;">Mức giá nhanh:</span>
+            <button type="button" class="facet-quick-btn" onclick="filterByPriceRange(0, 5000000, this)">&lt; 5 Triệu</button>
+            <button type="button" class="facet-quick-btn" onclick="filterByPriceRange(5000000, 20000000, this)">5 - 20 Triệu</button>
+            <button type="button" class="facet-quick-btn" onclick="filterByPriceRange(20000000, 999999999, this)">&gt; 20 Triệu</button>
+            <button type="button" class="facet-quick-btn active" onclick="filterByPriceRange(0, Infinity, this)">Tất cả mức giá</button>
+        </div>
+    </div>
+
+    <!-- Product Grid -->
+    {% if products %}
+    <div id="pub-products-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+        {% for p in products %}
+        <div class="pub-product-card product-item-card" data-product-id="{{ p.id }}" data-name="{{ p.name|lower }}" data-sku="{{ p.sku|lower }}" data-price="{{ p.unit_price|floatformat:0 }}" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <!-- Product Thumbnail -->
+                <div class="product-thumb-container" style="position: relative;">
+                    {% if p.primary_image and p.primary_image.image %}
+                    <img src="{{ p.primary_image.image.url }}" alt="{{ p.name }}">
+                    {% else %}
+                    <div class="product-thumb-placeholder">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        <span>ABC TECH HARDWARE</span>
+                    </div>
+                    {% endif %}
+
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                    <span style="font-size: 0.76rem; font-weight: 700; color: var(--pub-primary); background: var(--pub-primary-light); padding: 3px 8px; border-radius: 6px;">
+                        {{ p.category.name|default:"Công nghệ" }}
+                    </span>
+                    <span style="font-family: var(--pub-mono-font); font-size: 0.74rem; color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="#10B981" aria-hidden="true"><circle cx="4" cy="4" r="4"/></svg>
+                        Còn hàng
+                    </span>
+                </div>
+
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--pub-text-heading); margin: 0 0 0.35rem; line-height: 1.4;">
+                    <a href="/san-pham/{{ p.id }}/" style="color: inherit; text-decoration: none;">
+                        {{ p.name }}
+                    </a>
+                </h3>
+
+                <div style="margin-bottom: 0.65rem;">
+                    <span class="pub-sku-label">SKU: {{ p.sku }}</span>
+                </div>
+
+                <p style="font-size: 0.88rem; color: var(--pub-text-muted); margin-bottom: 1rem; line-height: 1.5;">
+                    {{ p.description|default:"Thiết bị công nghệ chính hãng với chất lượng đảm bảo và bảo hành chu đáo."|truncatechars:90 }}
+                </p>
+            </div>
+
+            <div style="padding-top: 1rem; border-top: 1px solid var(--pub-border); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 0.72rem; color: var(--pub-text-muted);">Giá bán niêm yết</div>
+                    <div class="pub-price-lg">
+                        {{ p.unit_price|floatformat:0 }} VNĐ
+                    </div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button type="button" class="pub-btn-secondary" onclick="quickAddToCart({{ p.id }}, '{{ p.name|escapejs }}')" style="padding: 7px 10px; font-size: 0.85rem;" title="Thêm vào giỏ">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                    </button>
+                    <a href="/san-pham/{{ p.id }}/" class="pub-btn-primary" style="padding: 7px 14px; font-size: 0.85rem;">
+                        Chi tiết
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div style="display: flex; justify-content: center; gap: 6px; margin: 2rem 0;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_option %}&sort={{ sort_option }}{% endif %}"
+           class="pub-btn-secondary" style="padding: 8px 16px; font-size: 0.88rem;">← Trang trước</a>
+        {% endif %}
+
+        <span style="padding: 8px 16px; font-size: 0.88rem; font-weight: 700; color: var(--pub-text-heading); background: var(--pub-bg-subtle); border-radius: 8px; border: 1px solid var(--pub-border); font-family: var(--pub-mono-font);">
+            Trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_option %}&sort={{ sort_option }}{% endif %}"
+           class="pub-btn-secondary" style="padding: 8px 16px; font-size: 0.88rem;">Trang sau →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="pub-empty-state">
+        <div class="pub-empty-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+        </div>
+        <h3 class="pub-empty-title">
+            Không tìm thấy sản phẩm phù hợp.
+        </h3>
+        <p class="pub-empty-desc">
+            Vui lòng thử tìm với từ khóa khác hoặc chọn danh mục sản phẩm khác từ danh sách phía trên.
+        </p>
+        <a href="/san-pham/" class="pub-btn-primary" style="font-size: 0.9rem;">
+            Xem toàn bộ sản phẩm
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+
+<!-- Toast Notification -->
+<div id="cart-toast" class="cart-toast" role="status" aria-live="polite">
+    <div class="cart-toast-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    </div>
+    <div style="font-size: 0.88rem; font-weight: 600;" id="cart-toast-msg">
+        Đã thêm sản phẩm vào giỏ hàng!
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.facet-quick-btn {
+    background: #FFFFFF;
+    border: 1px solid var(--pub-border);
+    color: var(--pub-text-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.facet-quick-btn:hover {
+    border-color: var(--pub-primary);
+    color: var(--pub-primary);
+}
+.facet-quick-btn.active {
+    background: #2563EB;
+    color: #FFFFFF;
+    border-color: #2563EB;
+}
+</style>
+<script>
+/* --- Quick Add To Cart & Slide-Over Drawer Trigger --- */
+function quickAddToCart(productId, productName) {
+    var toast = document.getElementById('cart-toast');
+    var toastMsg = document.getElementById('cart-toast-msg');
+
+    fetch('/gio-hang/them/' + productId + '/?action=add_to_cart&quantity=1', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.success) {
+            syncHeaderCartBadge(data.total_items);
+            if (toastMsg) toastMsg.textContent = 'Đã thêm "' + productName + '" vào giỏ hàng!';
+            if (toast) {
+                toast.classList.add('show');
+                setTimeout(function() { toast.classList.remove('show'); }, 3000);
+            }
+            if (typeof openCyberCart === 'function') {
+                openCyberCart();
+            }
+        } else {
+            window.location.href = '/gio-hang/';
+        }
+    })
+    .catch(function() {
+        window.location.href = '/gio-hang/them/' + productId + '/';
+    });
+}
+
+/* --- Live Client-Side Search Filter --- */
+function liveFilterProducts(keyword) {
+    var val = (keyword || '').toLowerCase().trim();
+    var cards = document.querySelectorAll('.product-item-card');
+    cards.forEach(function(card) {
+        var name = card.getAttribute('data-name') || '';
+        var sku = card.getAttribute('data-sku') || '';
+        if (!val || name.includes(val) || sku.includes(val)) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+/* --- Quick Price Facet Filter --- */
+function filterByPriceRange(minPrice, maxPrice, btnEl) {
+    document.querySelectorAll('.facet-quick-btn').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+
+    var cards = document.querySelectorAll('.product-item-card');
+    cards.forEach(function(card) {
+        var price = parseFloat(card.getAttribute('data-price') || '0');
+        if (price >= minPrice && price <= maxPrice) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+
+</script>
+{% endblock %}

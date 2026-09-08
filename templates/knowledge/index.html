@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Cơ sở Tri thức — {{ active_workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <h1 class="page-title">📚 Cơ sở Tri thức & Tài liệu (Knowledge Base)</h1>
+        <p class="page-subtitle">Quản lý kho tri thức nội bộ, tiếp nhận tài liệu (PDF, DOCX, TXT, MD) và đánh chỉ mục vector RAG.</p>
+    </div>
+    <div class="header-actions">
+        {% if can_manage %}
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-create-kb').style.display='block'">➕ Tạo Kho Tri thức</button>
+        <button class="btn btn-primary" onclick="document.getElementById('modal-upload-doc').style.display='block'">📤 Tải lên Tài liệu</button>
+        {% endif %}
+        <a href="/ai/" class="btn btn-success">🤖 Trợ lý AI</a>
+    </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-title">Kho Tri thức (Knowledge Bases)</div>
+        <div class="kpi-value">{{ knowledge_bases|length }}</div>
+        <div class="kpi-subtitle">Không gian lưu trữ độc lập</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-title">Tài liệu đã tiếp nhận</div>
+        <div class="kpi-value">{{ total_docs }}</div>
+        <div class="kpi-subtitle">PDF, Word DOCX, TXT, Markdown</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-title">Tổng số Đoạn trích (Chunks)</div>
+        <div class="kpi-value">{{ total_chunks }}</div>
+        <div class="kpi-subtitle">Đã mã hóa vector tìm kiếm</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-title">Không gian Tenancy</div>
+        <div class="kpi-value" style="font-size: 1.4rem;">{{ active_workspace.code }}</div>
+        <div class="kpi-subtitle">Cách ly dữ liệu 100%</div>
+    </div>
+</div>
+
+<!-- Knowledge Base Section -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+        <h2>📂 Danh sách Kho Tri thức (Knowledge Bases)</h2>
+    </div>
+    <div class="card-body">
+        {% if knowledge_bases %}
+        <div class="grid-cards-3">
+            {% for kb in knowledge_bases %}
+            <div class="kb-card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-color);">📁 {{ kb.name }}</h3>
+                    <span class="badge badge-success">{{ kb.documents.count }} tài liệu</span>
+                </div>
+                <p class="text-muted" style="margin: 0.6rem 0; font-size: 0.88rem;">{{ kb.description|default:"Chưa có mô tả chi tiết." }}</p>
+                <div class="text-muted" style="font-size: 0.78rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem;">
+                    Tạo ngày: {{ kb.created_at|date:"d/m/Y H:i" }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>Chưa có kho tri thức nào trong workspace này. Hãy bấm <strong>Tạo Kho Tri thức</strong> để bắt đầu.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Documents Section -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+        <h2>📄 Tài liệu & Trạng thái Đánh chỉ mục (Documents & Indexing)</h2>
+    </div>
+    <div class="card-body">
+        {% if documents %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Tên Tài liệu</th>
+                        <th>Loại File</th>
+                        <th>Kho Tri thức</th>
+                        <th>Kích thước</th>
+                        <th>Số Chunks</th>
+                        <th>Trạng thái Ingestion</th>
+                        <th>Ngày tải lên</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td>
+                            <strong>{{ doc.title }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge badge-info">{{ doc.file_type }}</span>
+                        </td>
+                        <td>{{ doc.knowledge_base.name }}</td>
+                        <td>{{ doc.file_size|filesizeformat }}</td>
+                        <td>
+                            <span class="badge badge-secondary">{{ doc.chunk_count }}</span>
+                        </td>
+                        <td>
+                            {% if doc.status == 'READY' %}
+                            <span class="badge badge-success">✓ SẴN SÀNG</span>
+                            {% elif doc.status == 'PROCESSING' %}
+                            <span class="badge badge-warning">⚡ ĐANG XỬ LÝ</span>
+                            {% elif doc.status == 'FAILED' %}
+                            <span class="badge badge-danger" title="{{ doc.error_message }}">✗ THẤT BẠI</span>
+                            {% else %}
+                            <span class="badge badge-secondary">⏳ CHỜ</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ doc.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="inspectChunks({{ doc.id }}, '{{ doc.title|escapejs }}')">🔍 Chunks</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>Chưa có tài liệu nào được tải lên. Nhấn <strong>Tải lên Tài liệu</strong> để nạp tài liệu PDF, Word, Text vào hệ thống RAG.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal: Create Knowledge Base -->
+{% if can_manage %}
+<div id="modal-create-kb" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>➕ Tạo Kho Tri thức mới</h3>
+            <button class="close-btn" onclick="document.getElementById('modal-create-kb').style.display='none'">&times;</button>
+        </div>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_kb">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Tên Kho Tri thức *</label>
+                    <input type="text" name="name" class="form-control" placeholder="Ví dụ: Quy chế Bán hàng, Tài liệu Kỹ thuật..." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mô tả mục đích</label>
+                    <textarea name="description" class="form-control" rows="3" placeholder="Mô tả phạm vi tài liệu lưu trữ..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-create-kb').style.display='none'">Hủy</button>
+                <button type="submit" class="btn btn-primary">Tạo mới</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal: Upload Document -->
+{% if can_manage %}
+<div id="modal-upload-doc" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>📤 Tải lên Tài liệu vào Kho Tri thức</h3>
+            <button class="close-btn" onclick="document.getElementById('modal-upload-doc').style.display='none'">&times;</button>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="upload_doc">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Chọn Kho Tri thức *</label>
+                    <select name="knowledge_base_id" class="form-control" required>
+                        {% for kb in knowledge_bases %}
+                        <option value="{{ kb.id }}">{{ kb.name }}</option>
+                        {% empty %}
+                        <option disabled>Vui lòng tạo Kho Tri thức trước</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tiêu đề Tài liệu</label>
+                    <input type="text" name="title" class="form-control" placeholder="Để trống để dùng tên file gốc">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tệp đính kèm (PDF, DOCX, TXT, MD) *</label>
+                    <input type="file" name="file" class="form-control" accept=".pdf,.docx,.txt,.md" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-upload-doc').style.display='none'">Hủy</button>
+                <button type="submit" class="btn btn-primary" {% if not knowledge_bases %}disabled{% endif %}>Bắt đầu Ingestion</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal: Chunks Inspector -->
+<div id="modal-inspect-chunks" class="modal">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h3 id="inspect-title">🔍 Đoạn trích (Chunks)</h3>
+            <button class="close-btn" onclick="document.getElementById('modal-inspect-chunks').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body" id="inspect-body" style="max-height: 500px; overflow-y: auto;">
+            <p class="text-center text-muted">Đang tải danh sách chunks...</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-inspect-chunks').style.display='none'">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.grid-cards-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.kb-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 1.2rem;
+}
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+.modal-content {
+    background: var(--card-bg, #1a1f2c);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+    border-radius: 12px;
+    margin: 8% auto;
+    width: 90%;
+    max-width: 540px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+.modal-lg {
+    max-width: 800px;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.modal-body {
+    padding: 1.5rem;
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: inherit;
+    cursor: pointer;
+}
+.chunk-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+</style>
+
+<script>
+async function inspectChunks(docId, title) {
+    document.getElementById('inspect-title').innerText = '🔍 Đoạn trích: ' + title;
+    const body = document.getElementById('inspect-body');
+    body.innerHTML = '<p class="text-center text-muted">Đang tải...</p>';
+    document.getElementById('modal-inspect-chunks').style.display = 'block';
+
+    try {
+        const resp = await fetch(`/api/v1/knowledge/documents/${docId}/chunks/`);
+        const res = await resp.json();
+        if (res.success && res.data) {
+            if (res.data.length === 0) {
+                body.innerHTML = '<p class="text-center text-muted">Không có chunk nào được lưu cho tài liệu này.</p>';
+                return;
+            }
+            let html = '';
+            res.data.forEach(ch => {
+                const page = ch.metadata?.page_number ? ` • Trang ${ch.metadata.page_number}` : '';
+                const heading = ch.metadata?.heading ? ` • ${ch.metadata.heading}` : '';
+                html += `
+                    <div class="chunk-box">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span class="badge badge-primary">Chunk #${ch.chunk_index}</span>
+                            <span class="text-muted" style="font-size: 0.8rem;">~${ch.token_count} từ${page}${heading}</span>
+                        </div>
+                        <p style="white-space: pre-wrap; margin: 0; line-height: 1.5;">${escapeHtml(ch.content)}</p>
+                    </div>
+                `;
+            });
+            body.innerHTML = html;
+        } else {
+            body.innerHTML = `<p class="text-danger">Lỗi: ${res.error?.message || 'Không thể tải chunks.'}</p>`;
+        }
+    } catch (e) {
+        body.innerHTML = `<p class="text-danger">Lỗi kết nối: ${e.message}</p>`;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}
