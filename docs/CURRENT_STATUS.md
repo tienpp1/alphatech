@@ -1,5 +1,25 @@
 # Current repository status
 
+## 2026-09-08 Render Cloud Production Deployment & Live Auto-Seeding Resolution
+
+- **Live URL:** `https://alphatech-26uv.onrender.com` (PostgreSQL + PostGIS 3.6, Gunicorn, WhiteNoise).
+- **Static Asset Serving via WhiteNoise:**
+  - Added `whitenoise>=6.6.0` to `requirements.txt`.
+  - Added `whitenoise.middleware.WhiteNoiseMiddleware` immediately after `SecurityMiddleware` in `config/settings.py`.
+  - Configured `STORAGES` with `whitenoise.storage.CompressedStaticFilesStorage`.
+  - Configured dynamic `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` for `.onrender.com` and `RENDER_EXTERNAL_HOSTNAME`.
+  - Verified static assets (`/static/css/public_pages.css`, `/static/js/home_three_scene.js`, `/static/video/hero_matrix.mp4`) return HTTP 200 with gzip/brotli compression.
+- **Production Database Migration & Demo Data Auto-Seeding:**
+  - Created `apps/accounts/management/commands/seed_student_admin.py` to idempotently ensure student administrator accounts (`minhtien147896325@gmail.com` and `1250080194@sv.hcmunre.edu.vn`, password `AdminPass123!`) exist with full superuser and workspace `ADMIN` roles across both `abc-retail` and `xyz-service`.
+  - Added self-healing bootstrap in `config/wsgi.py` and `config/views.py` (`get_health_status()`) to run `collectstatic`, `migrate`, `seed_demo`, and `seed_student_admin` automatically if the database has not yet been seeded.
+  - Added `build.sh` and `render.yaml` for Render Blueprint and deployment build automation.
+- **Live Verification via Browser Subagent:**
+  - Homepage: 3D WebGL Holo Quantum Core interactive canvas, hero matrix, and hardware matrix fully rendered.
+  - Products (`/san-pham/`): 44 active technology products across 8 categories with search, faceted price filtering, and pagination.
+  - Services (`/dich-vu/`): 18 IT services across 4 service categories with SLA commitments and booking.
+  - GIS Branches (`/chi-nhanh/`): 3 branch store stations with Leaflet PostGIS WGS84 coordinates.
+  - Internal Management Portal (`/noibo/`): Fully authenticated as student admin (`minhtien147896325@gmail.com`), unified dashboard displays 44 products, 160 multi-item orders (3,159,460,000 VND revenue), 18 services, 10 technicians, and all 5 AI/ML/GIS engines.
+
 ## 2026-09-08 update review
 
 New public Copilot and executive report/telemetry surfaces were reviewed. Fixed

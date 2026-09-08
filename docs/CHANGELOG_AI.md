@@ -2,6 +2,33 @@
 
 Do not log cosmetic edits.
 
+### 2026-09-08 — Render Cloud Production Deployment & Database Auto-Seeding Automation
+
+- **Feature/Fix:**
+  1. **WhiteNoise Production Static Asset Pipeline:**
+     - Integrated `whitenoise>=6.6.0` and `WhiteNoiseMiddleware` with `CompressedStaticFilesStorage` in `config/settings.py`.
+     - Added auto-discovery for `RENDER_EXTERNAL_HOSTNAME` and `.onrender.com` in `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`.
+     - Fixed HTTP 404 on CSS, JS, WebGL 3D canvas, video, and fonts on the live domain (`https://alphatech-26uv.onrender.com`).
+  2. **Production Database Migration & Demo Data Auto-Seeding:**
+     - Created `apps/accounts/management/commands/seed_student_admin.py` to ensure student administrator accounts (`minhtien147896325@gmail.com` and `1250080194@sv.hcmunre.edu.vn`) exist with full superuser and workspace ADMIN roles across both `abc-retail` and `xyz-service`.
+     - Implemented self-healing bootstrap in `config/wsgi.py` and `config/views.py` (`get_health_status()`) to automatically apply migrations, collect static files, and seed initial demo data if the product catalog has fewer than 10 items.
+     - Added `build.sh` and `render.yaml` for Render Blueprint and deployment build automation.
+  3. **Live Verification via Browser Subagent:**
+     - Verified live Render site: Homepage (WebGL Holo Quantum Core, video hero, products), Product Catalog (44 products across 8 categories), Technical Services (18 services across 4 categories), GIS Branch Network (3 branches with PostGIS WGS84 coordinates), and Internal Management Portal (`/noibo/` authenticated as student admin).
+- **Files/Modules:**
+  - `requirements.txt`
+  - `config/settings.py`
+  - `config/wsgi.py`
+  - `config/views.py`
+  - `apps/accounts/management/commands/seed_student_admin.py`
+  - `build.sh`
+  - `render.yaml`
+  - `.gitignore`
+- **Database changes:** Applied migrations to Render PostgreSQL + PostGIS 3.6 database and seeded 44 technology products, 8 categories, 3 branch locations, 18 IT services, 160 commercial orders (3.15B VND revenue), 10 field technicians, and student admin users.
+- **Route changes:** No public route changes; enhanced `get_health_status()` on `/health/` and `/api/health/` to return live database metrics and auto-seed if empty.
+- **Behavior changes:** Static files are served directly by WhiteNoise with compression; database automatically self-heals if deployed empty to Render cloud.
+- **Tests:** 6/6 tests passed in `tests.test_noibo_route_convergence` and `tests.test_smoke`; live HTTP 200 verification across all public and internal endpoints on `https://alphatech-26uv.onrender.com`.
+
 ### 2026-09-08 — Dashboard authorization and measured release gates
 
 - Added capability-derived dashboard scopes, recipient-only contact activity,
