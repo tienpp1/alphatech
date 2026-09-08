@@ -5,9 +5,16 @@ Django settings for AI Business Operations Platform project.
 from pathlib import Path
 import os
 import sys
+import dj_database_url
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
 
+DATABASES = {
+    'default': dj_database_url.config(
+        default=f"postgres://{os.getenv('DB_USER', 'postgres')}:{os.getenv('DB_PASSWORD', 'postgres')}@{os.getenv('DB_HOST', '127.0.0.1')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'ai_business_platform_db')}",
+        conn_max_age=600
+    )
+}
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
