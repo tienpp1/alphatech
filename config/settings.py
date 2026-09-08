@@ -188,6 +188,8 @@ ASGI_APPLICATION = "config.asgi.application"
 
 # Database Configuration
 # Uses PostGIS by default with configuration parameters from .env
+# Database Configuration
+# Uses PostGIS by default with configuration parameters from .env
 DB_ENGINE = os.getenv("DB_ENGINE", "django.contrib.gis.db.backends.postgis")
 DB_NAME = os.getenv("DB_NAME", "ai_business_platform_db")
 DB_USER = os.getenv("DB_USER", "postgres")
@@ -198,7 +200,8 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 DATABASES = {
     'default': dj_database_url.config(
         default=f"postgres://{os.getenv('DB_USER', 'postgres')}:{os.getenv('DB_PASSWORD', 'postgres')}@{os.getenv('DB_HOST', '127.0.0.1')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'ai_business_platform_db')}",
-        conn_max_age=600
+        conn_max_age=600,
+        engine="django.contrib.gis.db.backends.postgis"
     )
 }
 
