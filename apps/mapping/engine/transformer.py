@@ -3,7 +3,7 @@ Transformation Pipeline Coordinator for Data Mapping.
 Applies active MappingRules sequentially to raw external record payloads.
 """
 
-from typing import Dict, Any, List, Tuple, Sequence
+from typing import Dict, Any, List, Tuple, Sequence, Optional
 from apps.mapping.models import MappingRule, RuleType, AIConfirmationStatus
 from apps.mapping.engine.converters import (
     to_string,
