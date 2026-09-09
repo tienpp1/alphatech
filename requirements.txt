@@ -28,3 +28,4 @@ python-docx>=1.1.0
 gunicorn
 dj-database-url
 whitenoise>=6.6.0
+sentry-sdk

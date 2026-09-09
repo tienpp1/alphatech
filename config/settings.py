@@ -352,6 +352,13 @@ CSP_REPORT_ONLY = os.getenv("CSP_REPORT_ONLY", "True").lower() in ("true", "1", 
 CSP_ENFORCE = os.getenv("CSP_ENFORCE", "False").lower() in ("true", "1", "t")
 
 SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
+if SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        send_default_pii=True,
+    )
+
 OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip()
 OTEL_SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "ai-business-platform").strip()
 
