@@ -10,6 +10,7 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.measure import D
 from django.db.models import QuerySet
+from apps.workspaces.models import Workspace
 
 
 def find_objects_within_radius(
