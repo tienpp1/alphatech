@@ -107,14 +107,8 @@ def get_health_status():
             "services": s_count,
             "workspaces": ws_list,
         }
-        if p_count == 0:
-            from django.core.management import call_command
-            call_command("seed_demo")
-            call_command("seed_student_admin")
-            status_data["metrics"]["products_after_seed"] = Product.objects.count()
-            status_data["metrics"]["services_after_seed"] = Service.objects.count()
-    except Exception as exc:
-        status_data["metrics"]["error"] = str(exc)
+    except Exception:
+        status_data["metrics"]["error"] = "metrics_unavailable"
 
     return status_data
 
