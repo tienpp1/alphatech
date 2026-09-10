@@ -227,4 +227,14 @@ Weak/missing coverage: real Google OAuth/Inbox evidence; home-delivery stock res
 
 ## 23. Implementation conventions
 
+Email may use the opt-in Brevo HTTPS Django backend on Render Free. Existing
+outbox SENT means provider acceptance, not inbox receipt. Timeout outcome is
+unknown and must be reconciled against provider logs before retry. See
+docs/BREVO_HTTPS_EMAIL.md for supported message formats and activation.
+
+Production WSGI imports and health probes must not migrate, seed or reset users.
+Build produces artifacts; database migrations run explicitly during release.
+Render trust is limited to configured domains. See September 10 release evidence
+for deployed-versus-local status and prior administrator seed exposure.
+
 Keep customer UI Vietnamese; identifiers/enums are English/uppercase. Use `.for_workspace()` or an authorized set. Put mutation/calculation in services and reads in selectors. Use atomic transactions/locks for checkout, stock and approvals. Use explicit enums/transitions and historical snapshots. Audit significant mutations. Bound and validate uploads. Add migrations only intentionally, run schema checks, and add focused workspace/RBAC/IDOR tests. Reuse existing abstractions; do not create parallel models/routes/services.

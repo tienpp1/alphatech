@@ -1,5 +1,43 @@
 # Current repository status
 
+## 2026-09-10 — HTTPS transactional email implementation
+
+Operator selected keeping Render Free and using HTTPS email. Added a Brevo
+Django backend with separate single-recipient plain/HTML delivery, bounded
+timeouts, redirects disabled and sanitized failures integrated with the existing
+outbox/retry. Readiness accepts configured Brevo without SMTP credentials.
+Provider key and verified sender are still required. Remote EMAIL_BACKEND has
+not changed; no live send/deployment or inbox receipt is claimed. Setup:
+docs/BREVO_HTTPS_EMAIL.md.
+Validation: Brevo backend, production readiness and existing Google/email tests
+25/25 passed in 78.569s. Check/migration drift passed. Local test invocation used
+.venv-quality/Lib/site-packages via PYTHONPATH because machine-wide requests is
+absent (it remains declared in requirements). Network calls were mocked; no
+provider or inbox acceptance is implied. CI includes the new regression modules.
+
+## 2026-09-10 — Authenticated Render configuration inspection
+
+Render API access works for srv-dafrcr5g1s2s73frbl1g. Live deployment still uses
+caa6a1a (local startup/security fixes are not deployed). Actual remote OAuth/email
+public URLs still target HTTP localhost; remote SMTP is Gmail:587 on a free
+compute instance, where Render blocks outbound SMTP. Google/SMTP/Sentry/DB
+configuration values are present but do not establish functional acceptance.
+Paid compute versus HTTPS email delivery requires an operator choice before
+completing delivery. No remote settings, deployments or data were modified.
+See docs/RELEASE_EVIDENCE_2026_09_10.md for redacted evidence.
+
+## 2026-09-10 — Render release safety correction
+
+Confirmed canonical URL: https://alphatech-26uv.onrender.com. GitHub run
+34353691709 succeeded on caa6a1a, including focused tests and dependency audit,
+but Bandit used --exit-zero. Local patches remove WSGI/build auto-seeding and
+password resets, restore the blocking scan, redact public business metrics and
+limit Render host/CSRF trust. These corrections are not deployed yet. Existing
+administrator credentials/tokens need review; no account data was modified.
+Evidence and pending external checks: docs/RELEASE_EVIDENCE_2026_09_10.md.
+Local release-boundary/health/readiness tests: 12/12 pass (6.296s); system check,
+migration drift and diff whitespace checks pass. No deployment performed.
+
 ## 2026-09-08 Render Cloud Production Deployment & Live Auto-Seeding Resolution
 
 - **Live URL:** `https://alphatech-26uv.onrender.com` (PostgreSQL + PostGIS 3.6, Gunicorn, WhiteNoise).

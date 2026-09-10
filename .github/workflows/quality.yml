@@ -45,10 +45,13 @@ jobs:
         run: pip-audit --progress-spinner off --format json --output pip-audit.json
       - name: Static security scan
         if: ${{ !cancelled() }}
-        run: bandit --exit-zero -q -r apps config -x "*/migrations/*" -f json -o bandit.json
+        run: bandit -q -r apps config -x "*/migrations/*" -f json -o bandit.json
       - name: Focused regressions with coverage
         if: ${{ !cancelled() }}
         run: coverage run --branch manage.py test tests.test_customer_account_identity tests.test_approval_state_integrity tests.test_approvals tests.test_recommendations tests.test_public_ecommerce_cart_and_checkout tests.test_production_readiness tests.test_health tests.test_web_auth_routing tests.test_phase10_demonstration_scenarios tests.test_executive_reporting_and_telemetry tests.test_authorization_convergence tests.test_public_copilot_and_cart_api tests.test_internal_notifications tests.test_noibo_route_convergence --noinput
+      - name: HTTPS email and deployment regressions
+        if: ${{ !cancelled() }}
+        run: coverage run --append --branch manage.py test tests.test_brevo_email_backend tests.test_deployment_boundaries tests.test_report_metric_truthfulness --noinput
       - name: Coverage gate
         if: ${{ !cancelled() }}
         run: coverage report --include="apps/accounts/*,apps/approvals/*,apps/public_web/*,apps/retail/*,apps/recommendations/*,apps/forecasting/*,config/*" --fail-under=40

@@ -93,23 +93,6 @@ def get_health_status():
         },
     }
 
-    try:
-        from apps.retail.models import Product, Category
-        from apps.service_ops.models import Service
-        from apps.workspaces.models import Workspace
-        p_count = Product.objects.count()
-        c_count = Category.objects.count()
-        s_count = Service.objects.count()
-        ws_list = list(Workspace.objects.values("code", "workspace_type"))
-        status_data["metrics"] = {
-            "products": p_count,
-            "categories": c_count,
-            "services": s_count,
-            "workspaces": ws_list,
-        }
-    except Exception:
-        status_data["metrics"]["error"] = "metrics_unavailable"
-
     return status_data
 
 

@@ -44,6 +44,7 @@ class Command(BaseCommand):
             "database": {"ok": db_ok, "pending_migrations": migrations_pending, "error": db_error},
             "email": {
                 "backend": settings.EMAIL_BACKEND,
+                "brevo_key_present": _configured(getattr(settings, "BREVO_API_KEY", "")),
                 "host": settings.EMAIL_HOST,
                 "port": settings.EMAIL_PORT,
                 "tls": settings.EMAIL_USE_TLS,
@@ -81,11 +82,15 @@ class Command(BaseCommand):
             blockers.append("database")
         if production and settings.DEBUG:
             blockers.append("debug_enabled")
-        if production and settings.EMAIL_BACKEND != "django.core.mail.backends.smtp.EmailBackend":
-            blockers.append("smtp_backend_required")
+        smtp = settings.EMAIL_BACKEND == "django.core.mail.backends.smtp.EmailBackend"
+        brevo = settings.EMAIL_BACKEND == "apps.public_web.email_backends.BrevoEmailBackend"
+        if production and not (smtp or brevo):
+            blockers.append("delivery_backend_required")
+        if production and brevo and not checks["email"]["brevo_key_present"]:
+            blockers.append("brevo_credentials")
         if settings.EMAIL_USE_TLS and settings.EMAIL_USE_SSL:
             blockers.append("email_tls_ssl_conflict")
-        if production and (not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD):
+        if production and smtp and (not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD):
             blockers.append("smtp_credentials")
         if production and (not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET):
             blockers.append("google_credentials")

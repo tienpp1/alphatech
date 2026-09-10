@@ -19,6 +19,7 @@ class Command(BaseCommand):
         active_redirect = configured_redirect if redirect_valid else ""
         rows = {
             "EMAIL_BACKEND": settings.EMAIL_BACKEND,
+            "BREVO_API_KEY_PRESENT": bool(getattr(settings, "BREVO_API_KEY", "")),
             "EMAIL_HOST": settings.EMAIL_HOST,
             "EMAIL_PORT": settings.EMAIL_PORT,
             "EMAIL_USE_TLS": settings.EMAIL_USE_TLS,
@@ -38,4 +39,6 @@ class Command(BaseCommand):
         smtp_ready = bool(settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD)
         oauth_ready = bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET and redirect_valid)
         self.stdout.write(self.style.SUCCESS(f"SMTP_CONFIGURED={smtp_ready}"))
+        brevo_ready = settings.EMAIL_BACKEND == "apps.public_web.email_backends.BrevoEmailBackend" and bool(getattr(settings, "BREVO_API_KEY", ""))
+        self.stdout.write(f"BREVO_CONFIGURED={brevo_ready}")
         self.stdout.write(self.style.SUCCESS(f"GOOGLE_OAUTH_CONFIGURED={oauth_ready}"))

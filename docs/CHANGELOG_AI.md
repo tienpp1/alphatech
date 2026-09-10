@@ -2,6 +2,23 @@
 
 Do not log cosmetic edits.
 
+### 2026-09-10 — Brevo HTTPS mail transport
+
+- Added opt-in Brevo Django backend, retaining customer outbox/recipient policy.
+- Require 201 plus provider messageId; reject multi-recipient payloads, sanitize
+  errors, bound HTTP timeouts and disable redirects/implicit retries.
+- Readiness/diagnostics support HTTPS delivery independently of SMTP credentials.
+- Provider activation, sender verification and live inbox evidence remain pending.
+
+### 2026-09-10 — Render startup, public health and CI safety
+
+- Removed automatic migrations/seeding/admin password resets from WSGI and
+  build; release migrations are an explicit operator step.
+- Removed global business metrics from public health; narrowed Render host
+  and CSRF origin trust; disabled default Sentry PII collection.
+- Restored blocking Bandit and configured the operator-confirmed canonical
+  Render URL/secure cookies. Existing production accounts remain untouched.
+
 ### 2026-09-08 — Render Cloud Production Deployment & Database Auto-Seeding Automation
 
 - **Feature/Fix:**

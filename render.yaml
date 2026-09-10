@@ -9,3 +9,15 @@ services:
         value: "False"
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings
+      - key: PUBLIC_BASE_URL
+        value: https://alphatech-26uv.onrender.com
+      - key: GOOGLE_REDIRECT_URI
+        value: https://alphatech-26uv.onrender.com/accounts/google/callback/
+      - key: ALLOWED_HOSTS
+        value: alphatech-26uv.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://alphatech-26uv.onrender.com
+      - key: SESSION_COOKIE_SECURE
+        value: "True"
+      - key: CSRF_COOKIE_SECURE
+        value: "True"

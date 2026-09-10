@@ -74,6 +74,8 @@ def _delivery_configuration_error() -> str:
     backend = settings.EMAIL_BACKEND
     if backend == "django.core.mail.backends.locmem.EmailBackend":
         return ""
+    if backend == "apps.public_web.email_backends.BrevoEmailBackend":
+        return "" if getattr(settings, "BREVO_API_KEY", "") else "BREVO_CONFIG_MISSING"
     if backend == "django.core.mail.backends.smtp.EmailBackend":
         return "" if settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD else "SMTP_CONFIG_MISSING"
     if backend in {"django.core.mail.backends.console.EmailBackend", "django.core.mail.backends.dummy.EmailBackend"}:
@@ -111,7 +113,10 @@ def deliver_outbox_record(delivery: CustomerEmailDelivery) -> DeliveryResult:
         logger.info("Customer email accepted event=%s delivery=%s", delivery.event_type, delivery.public_id)
         return DeliveryResult(delivery.recipient, delivery.status, 1, public_id=str(delivery.public_id))
     except Exception as exc:
+        from .email_backends import EmailTransportError
         error_code = f"BACKEND_{exc.__class__.__name__.upper()}"[:80]
+        if isinstance(exc, EmailTransportError):
+            error_code = exc.code
         delivery.status = CustomerEmailDelivery.Status.FAILED
         delivery.last_error_code = error_code
         delivery.save(update_fields=("attempt_count", "attempted_at", "status", "last_error_code", "updated_at"))

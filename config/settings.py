@@ -60,8 +60,6 @@ ALLOWED_HOSTS = [
 RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-if ".onrender.com" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(".onrender.com")
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -70,8 +68,6 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
-if "https://*.onrender.com" not in CSRF_TRUSTED_ORIGINS:
-    CSRF_TRUSTED_ORIGINS.append("https://*.onrender.com")
 
 # Application definition
 
@@ -126,6 +122,7 @@ LOGOUT_REDIRECT_URL = "/"
 # Email Configuration (SMTP / Console)
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "").strip()
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip()
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
 
 # When real SMTP credentials (EMAIL_HOST_USER & EMAIL_HOST_PASSWORD) are provided, activate SMTP backend
 if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
@@ -356,7 +353,7 @@ if SENTRY_DSN:
     import sentry_sdk
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        send_default_pii=True,
+        send_default_pii=False,
     )
 
 OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip()
