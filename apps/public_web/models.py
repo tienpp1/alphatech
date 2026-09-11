@@ -51,6 +51,18 @@ class SocialIdentity(models.Model):
         ]
 
 
+class RegistrationCode(models.Model):
+    """One bounded mailbox challenge per pending account; secrets are hashed."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    code_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    sent_at = models.DateTimeField()
+    window_started_at = models.DateTimeField()
+    sends = models.PositiveSmallIntegerField(default=1)
+    failures = models.PositiveSmallIntegerField(default=0)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+
 class CustomerEmailDelivery(models.Model):
     class EventType(models.TextChoices):
         EMAIL_VERIFICATION = "EMAIL_VERIFICATION", "Email verification"

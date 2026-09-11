@@ -1,4 +1,5 @@
 import json
+import re
 from io import StringIO
 from unittest.mock import patch
 
@@ -42,10 +43,10 @@ class EmailVerificationRegistrationTests(TestCase):
             user=user, event_type=CustomerEmailDelivery.EventType.EMAIL_VERIFICATION
         )
         self.assertEqual(delivery.status, CustomerEmailDelivery.Status.SENT)
-        self.assertIn("/xac-minh-email/", mail.outbox[0].body)
+        code = re.search(r"Mã đăng ký AlphaTech của bạn: (\d{6})", mail.outbox[0].body).group(1)
 
         with self.captureOnCommitCallbacks(execute=True):
-            activated = self.client.get(f"/xac-minh-email/{_email_verification_token(user)}/")
+            activated = self.client.post("/dang-ky/xac-minh-ma/", {"code": code})
         self.assertEqual(activated.url, "/tai-khoan/?registered=1&email_verified=1")
         user.refresh_from_db()
         self.assertTrue(user.is_active)
@@ -67,6 +68,13 @@ class EmailVerificationRegistrationTests(TestCase):
         response = self.client.post("/dang-ky/", self.payload)
         self.assertContains(response, "Email này đã tồn tại")
         self.assertEqual(User.objects.filter(email__iexact="VERIFY@example.com").count(), 1)
+
+    def test_invalid_email_does_not_create_pending_account_or_delivery(self):
+        for email in ("bad space@example.com", "two@@example.com"):
+            response = self.client.post("/dang-ky/", {**self.payload, "email": email})
+            self.assertContains(response, "Địa chỉ email không đúng định dạng")
+            self.assertFalse(User.objects.filter(email=email).exists())
+        self.assertFalse(CustomerEmailDelivery.objects.exists())
 
     def test_inactive_duplicate_can_request_one_throttled_resend(self):
         user = User.objects.create_user(
@@ -315,6 +323,7 @@ class GoogleOAuthSecuritySimulationTests(TestCase):
         self.assertEqual(response.status_code, 302)
         pending.refresh_from_db()
         self.assertTrue(pending.is_active)
+        self.assertFalse(pending.has_usable_password())
         self.assertEqual(User.objects.filter(email__iexact="VERIFIED@example.com").count(), 1)
         self.assertTrue(SocialIdentity.objects.filter(user=pending, subject="subject-1").exists())
 

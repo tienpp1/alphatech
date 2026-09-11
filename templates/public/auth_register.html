@@ -272,14 +272,14 @@
                 </a>
             </div>
 
-            {% if verification_sent %}
+            {% if verification_sent and not verification_delivery_failed %}
             <div style="background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;padding:12px 16px;border-radius:10px;font-size:.88rem;margin-bottom:1.25rem;line-height:1.5;">
-                Nếu địa chỉ email hợp lệ và đang chờ xác minh, AlphaTech đã gửi một liên kết kích hoạt. Vui lòng kiểm tra Inbox và Spam.
+                {% if pending_code %}Vui lòng kiểm tra Inbox hoặc Spam và nhập mã 6 chữ số trong email AlphaTech. Mã có hiệu lực 10 phút.{% else %}Vui lòng kiểm tra Inbox hoặc Spam để xác minh email đăng ký.{% endif %}
             </div>
             {% endif %}
 
             {% if verification_error %}
-            <div class="alert-error">
+            <div class="alert-error" role="alert">
                 <span>Liên kết xác minh không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu gửi lại email xác minh.</span>
             </div>
             {% endif %}
@@ -291,52 +291,67 @@
             {% endif %}
 
             {% if error %}
-            <div class="alert-error">
+            <div class="alert-error" role="alert">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                 <span>{{ error }}</span>
             </div>
             {% endif %}
 
             {% if pending_verification %}
+            {% if pending_code %}
+            <form method="POST" action="{% url 'public_verify_registration_code' %}" style="margin-bottom:1.25rem;">
+                {% csrf_token %}
+                <label for="registration_code" class="form-label">Mã xác minh đăng ký</label>
+                <p id="code_help" style="font-size:.88rem;line-height:1.5;">Nhập mã mới nhất gồm 6 chữ số. Bạn có thể sao chép và dán mã từ email. Tối đa 5 lần nhập sai.</p>
+                <input type="text" id="registration_code" name="code" class="form-input" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required autofocus aria-describedby="code_help" style="margin-bottom:1rem;">
+                <button type="submit" class="btn-submit">Xác minh và hoàn tất đăng ký</button>
+            </form>
+            {% endif %}
             <form method="POST" action="{% url 'public_resend_verification' %}" style="margin-bottom:1.25rem;">
                 {% csrf_token %}
+                {% if pending_code %}
+                <p style="font-size:.88rem;line-height:1.5;">Chưa nhận được? Kiểm tra Spam hoặc gửi lại sau 60 giây (tối đa 5 mã mỗi giờ). Mã cũ sẽ hết hiệu lực.</p>
+                <button type="submit" class="btn-submit">Gửi lại mã xác minh</button>
+                {% else %}
                 <label for="resend_email" class="form-label">Gửi lại email xác minh</label>
                 <div style="display:flex;gap:8px;">
                     <input type="email" id="resend_email" name="email" required placeholder="Nhập lại email đã đăng ký" class="form-input">
                     <button type="submit" class="btn-submit" style="width:auto;white-space:nowrap;">Gửi lại</button>
                 </div>
+                {% endif %}
             </form>
             {% endif %}
 
             <!-- Registration Form -->
+            {% if not pending_code %}
             <form method="POST" action="/dang-ky/">
                 {% csrf_token %}
 
                 <div class="form-group">
                     <label for="name" class="form-label">Họ và tên <span class="req">*</span></label>
-                    <input type="text" id="name" name="name" required autofocus placeholder="Ví dụ: Nguyễn Văn An" class="form-input">
+                    <input type="text" id="name" name="name" autocomplete="name" required autofocus placeholder="Ví dụ: Nguyễn Văn An" class="form-input">
                 </div>
 
                 <div class="form-group">
                     <label for="email" class="form-label">Địa chỉ Email <span class="req">*</span></label>
-                    <input type="email" id="email" name="email" required placeholder="an.nguyen@example.com" class="form-input">
+                    <input type="email" id="email" name="email" autocomplete="email" required placeholder="an.nguyen@example.com" class="form-input">
                 </div>
 
                 <div class="form-group">
                     <label for="phone" class="form-label">Số điện thoại liên hệ <span class="req">*</span></label>
-                    <input type="tel" id="phone" name="phone" required placeholder="Ví dụ: 0901234567" class="form-input">
+                    <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="Ví dụ: 0901234567" class="form-input">
                 </div>
 
                 <div class="form-group">
                     <label for="address" class="form-label">Địa chỉ giao hàng / hỗ trợ</label>
-                    <input type="text" id="address" name="address" placeholder="Ví dụ: 123 Lê Lợi, Quận 1, TP.HCM" class="form-input">
+                    <input type="text" id="address" name="address" autocomplete="street-address" placeholder="Ví dụ: 123 Lê Lợi, Quận 1, TP.HCM" class="form-input">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.15rem;">
                     <div>
                         <label for="password" class="form-label">Mật khẩu <span class="req">*</span></label>
                         <div style="position: relative;">
-                            <input type="password" id="password" name="password" required minlength="8" placeholder="Ít nhất 8 ký tự" class="form-input" style="padding-right: 38px;">
+                            <input type="password" id="password" name="password" autocomplete="new-password" required minlength="8" placeholder="Ít nhất 8 ký tự" class="form-input" style="padding-right: 38px;">
                             <button type="button" onclick="togglePasswordVisibility('password', this)" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--pub-text-muted); display: flex; align-items: center; padding: 4px;" aria-label="Hiển thị mật khẩu">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                             </button>
@@ -345,7 +360,7 @@
                     <div>
                         <label for="confirm_password" class="form-label">Xác nhận MK <span class="req">*</span></label>
                         <div style="position: relative;">
-                            <input type="password" id="confirm_password" name="confirm_password" required minlength="8" placeholder="Nhập lại mật khẩu" class="form-input" style="padding-right: 38px;">
+                            <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" required minlength="8" placeholder="Nhập lại mật khẩu" class="form-input" style="padding-right: 38px;">
                             <button type="button" onclick="togglePasswordVisibility('confirm_password', this)" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--pub-text-muted); display: flex; align-items: center; padding: 4px;" aria-label="Hiển thị mật khẩu">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                             </button>
@@ -362,10 +377,11 @@
                 </div>
 
                 <button type="submit" class="btn-submit" id="btn-register-submit">
-                    <span>Đăng ký tài khoản</span>
+                    <span>Nhận mã đăng ký qua email</span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </button>
             </form>
+            {% endif %}
 
             <!-- Social Divider -->
             <div class="divider">

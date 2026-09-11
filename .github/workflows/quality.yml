@@ -51,7 +51,7 @@ jobs:
         run: coverage run --branch manage.py test tests.test_customer_account_identity tests.test_approval_state_integrity tests.test_approvals tests.test_recommendations tests.test_public_ecommerce_cart_and_checkout tests.test_production_readiness tests.test_health tests.test_web_auth_routing tests.test_phase10_demonstration_scenarios tests.test_executive_reporting_and_telemetry tests.test_authorization_convergence tests.test_public_copilot_and_cart_api tests.test_internal_notifications tests.test_noibo_route_convergence --noinput
       - name: HTTPS email and deployment regressions
         if: ${{ !cancelled() }}
-        run: coverage run --append --branch manage.py test tests.test_brevo_email_backend tests.test_deployment_boundaries tests.test_report_metric_truthfulness --noinput
+        run: coverage run --append --branch manage.py test tests.test_brevo_email_backend tests.test_deployment_boundaries tests.test_report_metric_truthfulness tests.test_registration_codes tests.test_customer_email_outbox_and_oauth_security tests.test_google_oauth_and_email_notifications tests.test_public_auth_and_customer_experience --noinput
       - name: Coverage gate
         if: ${{ !cancelled() }}
         run: coverage report --include="apps/accounts/*,apps/approvals/*,apps/public_web/*,apps/retail/*,apps/recommendations/*,apps/forecasting/*,config/*" --fail-under=40

@@ -8,6 +8,7 @@ Covers:
 """
 
 import json
+import re
 from decimal import Decimal
 from unittest.mock import patch
 from django.conf import settings
@@ -278,7 +279,7 @@ class GoogleOAuthAndEmailNotificationsTestCase(TestCase):
     # =========================================================================
 
     def test_standard_customer_registration_verifies_email_then_sends_welcome(self):
-        """Password registration stays inactive until the mailbox link is opened."""
+        """Password registration stays inactive until the mailbox code is entered."""
         payload = {
             "name": "Vũ Minh Khách",
             "email": "vuminh@gmail.com",
@@ -297,16 +298,16 @@ class GoogleOAuthAndEmailNotificationsTestCase(TestCase):
         self.assertFalse(created_user.is_active)
         self.assertEqual(len(mail.outbox), 1)
         email_msg = mail.outbox[0]
-        self.assertIn("Xác minh email", email_msg.subject)
+        self.assertIn("Mã xác minh", email_msg.subject)
         self.assertEqual(email_msg.to, ["vuminh@gmail.com"])
         self.assertEqual(
             CustomerEmailDelivery.objects.get(user=created_user).event_type,
             CustomerEmailDelivery.EventType.EMAIL_VERIFICATION,
         )
 
-        token = _email_verification_token(created_user)
+        code = re.search(r"Mã đăng ký AlphaTech của bạn: (\d{6})", email_msg.body).group(1)
         with self.captureOnCommitCallbacks(execute=True):
-            verified = self.client.get(f"/xac-minh-email/{token}/")
+            verified = self.client.post("/dang-ky/xac-minh-ma/", {"code": code})
         self.assertEqual(verified.url, "/tai-khoan/?registered=1&email_verified=1")
         created_user.refresh_from_db()
         self.assertTrue(created_user.is_active)

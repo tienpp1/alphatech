@@ -18,6 +18,8 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.core import signing
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 import uuid
@@ -29,6 +31,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.http import JsonResponse, HttpResponse
 from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.decorators.http import require_POST
+from django.views.decorators.debug import sensitive_post_parameters
 
 from apps.accounts.models import User
 from apps.accounts.services import authenticate_user
@@ -64,7 +67,8 @@ from apps.public_web.email_service import (
     send_service_request_confirmation_email,
     send_contact_confirmation_email,
 )
-from apps.public_web.models import CustomerEmailDelivery, SocialIdentity
+from apps.public_web.models import CustomerEmailDelivery, SocialIdentity, RegistrationCode
+from apps.public_web.registration import issue_registration_code, consume_registration_code
 
 logger = logging.getLogger(__name__)
 
@@ -576,7 +580,7 @@ def public_login_view(request):
             Q(email__iexact=username_or_email) | Q(username__iexact=username_or_email),
             is_active=False,
         ).first()
-        if inactive_user:
+        if inactive_user and inactive_user.check_password(password):
             request.session["pending_verification_user_id"] = inactive_user.pk
             error_message = "Tài khoản chưa xác minh email. Vui lòng kiểm tra Inbox/Spam hoặc gửi lại email xác minh."
             context = {
@@ -639,6 +643,7 @@ def public_login_view(request):
 
 
 @transaction.atomic
+@sensitive_post_parameters("password", "confirm_password")
 def public_register_view(request):
     """
     Public Customer Registration View (GET & POST /dang-ky/).
@@ -659,10 +664,16 @@ def public_register_view(request):
         confirm_password = request.POST.get("confirm_password", "")
         terms = request.POST.get("terms")
 
+        try:
+            validate_email(email)
+            valid_email = True
+        except ValidationError:
+            valid_email = False
+
         # Validation rules
         if not name or not email or not phone or not password:
             error_message = "Vui lòng điền đầy đủ các thông tin bắt buộc (Họ tên, Email, SĐT, Mật khẩu)."
-        elif "@" not in email or "." not in email:
+        elif not valid_email:
             error_message = "Địa chỉ email không đúng định dạng."
         elif len(password) < 8:
             error_message = "Mật khẩu phải có ít nhất 8 ký tự để đảm bảo an toàn."
@@ -670,58 +681,37 @@ def public_register_view(request):
             error_message = "Mật khẩu xác nhận không khớp. Vui lòng nhập lại."
         elif not terms:
             error_message = "Vui lòng xác nhận đồng ý với Điều khoản sử dụng và Chính sách bảo mật."
+        elif SocialIdentity.objects.filter(provider_email__iexact=email).exists():
+            error_message = "Email này đã tồn tại và đã liên kết Google. Vui lòng chọn Đăng nhập bằng Google."
         elif User.objects.filter(Q(email__iexact=email) | Q(username__iexact=email)).exists():
             existing_user = User.objects.filter(Q(email__iexact=email) | Q(username__iexact=email)).first()
             if existing_user and not existing_user.is_active:
-                request.session["pending_verification_user_id"] = existing_user.pk
+                if existing_user.check_password(password):
+                    request.session["pending_verification_user_id"] = existing_user.pk
                 error_message = "Email này đã tồn tại nhưng chưa được xác minh. Bạn có thể yêu cầu gửi lại email xác minh."
             else:
                 error_message = "Email này đã tồn tại. Vui lòng đăng nhập hoặc sử dụng chức năng quên mật khẩu."
         else:
             try:
-                # 1. Create User Authentication Account
-                user = User.objects.create_user(
-                    username=email,
-                    email=email,
-                    password=password,
-                    first_name=name,
-                    is_active=False,
-                )
-
-                # 2. Link or Create Customer Profile in Retail Workspace
-                retail_ws = Workspace.objects.filter(workspace_type=WorkspaceType.RETAIL).first() or Workspace.objects.first()
-                existing_customer = Customer.objects.filter(user=user, workspace=retail_ws).first()
-                customer_record = existing_customer
-
-                if existing_customer:
-                    if not existing_customer.phone and phone:
-                        existing_customer.phone = phone
-                    if not existing_customer.address and address:
-                        existing_customer.address = address
-                    if not existing_customer.name and name:
-                        existing_customer.name = name
-                    existing_customer.save()
-                elif retail_ws:
-                    cust_code = f"CUST-ONL-{random.randint(10000, 99999)}"
-                    customer_record = Customer.objects.create(
-                        workspace=retail_ws,
-                        user=user,
-                        code=cust_code,
-                        name=name,
-                        email=email,
-                        phone=phone,
-                        address=address,
+                # Savepoint rolls back the entire pending registration on failure.
+                with transaction.atomic():
+                    user = User.objects.create_user(
+                        username=email, email=email, password=password,
+                        first_name=name, is_active=False,
                     )
-
-                if customer_record:
-                    transaction.on_commit(lambda c=customer_record: dispatch_new_customer_notification(c))
-
-                # Send ownership verification first. Welcome is sent only after activation.
-                if user.email:
-                    _send_registration_verification(user, defer_delivery=True)
+                    retail_ws = Workspace.objects.filter(workspace_type=WorkspaceType.RETAIL).first() or Workspace.objects.first()
+                    if retail_ws:
+                        Customer.objects.create(
+                            workspace=retail_ws, user=user,
+                            code=f"CUST-ONL-{uuid.uuid4().hex[:12]}",
+                            name=name, email=email, phone=phone, address=address,
+                        )
+                    issue_registration_code(user)
 
                 request.session["pending_verification_user_id"] = user.pk
                 return redirect("/dang-ky/?verification_sent=1")
+            except IntegrityError:
+                error_message = "Email này đã tồn tại hoặc thông tin vừa được cập nhật. Vui lòng đăng nhập hoặc thử lại."
             except Exception:
                 logger.exception("Unable to create pending public registration")
                 error_message = "Đã xảy ra lỗi trong quá trình tạo tài khoản. Vui lòng thử lại sau."
@@ -730,17 +720,18 @@ def public_register_view(request):
     pending_user = User.objects.filter(pk=pending_user_id, is_active=False).first() if pending_user_id else None
     verification_delivery_failed = False
     if pending_user:
-        verification_delivery_failed = CustomerEmailDelivery.objects.filter(
+        latest_verification = CustomerEmailDelivery.objects.filter(
             user=pending_user,
             event_type=CustomerEmailDelivery.EventType.EMAIL_VERIFICATION,
-            status=CustomerEmailDelivery.Status.FAILED,
-        ).exists()
+        ).order_by("-created_at").first()
+        verification_delivery_failed = bool(latest_verification and latest_verification.status == CustomerEmailDelivery.Status.FAILED)
     context = {
         "page_title": "Đăng ký tài khoản khách hàng | Nền tảng Doanh nghiệp AI",
-        "error": error_message,
+        "error": error_message or request.session.pop("registration_code_error", None),
         "verification_sent": request.GET.get("verification_sent") == "1",
         "verification_error": request.GET.get("verification_error") == "invalid",
         "pending_verification": bool(pending_user),
+        "pending_code": bool(pending_user and RegistrationCode.objects.filter(user=pending_user).exists()),
         "verification_delivery_failed": verification_delivery_failed,
         "google_client_id": getattr(settings, "GOOGLE_CLIENT_ID", ""),
     }
@@ -749,7 +740,18 @@ def public_register_view(request):
 
 @require_POST
 def public_resend_verification_view(request):
-    """Enumeration-safe, session-throttled resend for inactive registrations."""
+    """Only the browser that started registration may rotate its code."""
+    pending_id = request.session.get("pending_verification_user_id")
+    user = User.objects.filter(pk=pending_id, is_active=False).first() if pending_id else None
+    if user and RegistrationCode.objects.filter(user=user).exists():
+        outcome = issue_registration_code(user)
+        if outcome != "sent":
+            request.session["registration_code_error"] = (
+                "Vui lòng chờ 60 giây trước khi gửi lại mã." if outcome == "cooldown"
+                else "Đã đạt giới hạn xác minh. Vui lòng thử lại sau một giờ."
+            )
+        return redirect("/dang-ky/?verification_sent=1")
+    # Existing link registrations remain supported during rollout.
     now_ts = timezone.now().timestamp()
     last_sent = request.session.get("verification_resend_at", 0)
     try:
@@ -758,12 +760,45 @@ def public_resend_verification_view(request):
         throttled = False
     email = request.POST.get("email", "").strip().lower()
     user = User.objects.filter(email__iexact=email, is_active=False).first() if email else None
+    if user and (RegistrationCode.objects.filter(user=user).exists() or SocialIdentity.objects.filter(user=user).exists()):
+        user = None
     if user:
         request.session["pending_verification_user_id"] = user.pk
         if not throttled:
             _send_registration_verification(user)
             request.session["verification_resend_at"] = now_ts
     return redirect("/dang-ky/?verification_sent=1")
+
+
+@require_POST
+@sensitive_post_parameters("code")
+def public_verify_registration_code_view(request):
+    pending_id = request.session.get("pending_verification_user_id")
+    with transaction.atomic():
+        user = User.objects.select_for_update().filter(pk=pending_id, is_active=False).first() if pending_id else None
+        if (not user or SocialIdentity.objects.filter(user=user).exists()
+                or not consume_registration_code(user, request.POST.get("code", "").strip())):
+            request.session["registration_code_error"] = "Mã không đúng, đã hết hạn hoặc đã đạt giới hạn 5 lần nhập sai. Hãy kiểm tra email hoặc yêu cầu mã mới sau thời gian chờ."
+            return redirect("/dang-ky/")
+        _activate_registered_customer(user)
+    request.session.pop("pending_verification_user_id", None)
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    return redirect("/tai-khoan/?registered=1&email_verified=1")
+
+
+def _activate_registered_customer(user):
+    """Called under the user lock; welcome delivery runs after commit."""
+    user.is_active = True
+    user.save(update_fields=("is_active", "updated_at"))
+    customer = Customer.objects.filter(user=user).first()
+    if customer:
+        transaction.on_commit(lambda c=customer: dispatch_new_customer_notification(c))
+    send_customer_welcome_email(
+        user_email=user.email, name=user.first_name or user.username,
+        customer_code=getattr(customer, "code", ""), phone=getattr(customer, "phone", ""),
+        user=user, deduplication_key=f"welcome:user:{user.pk}:{user.email.lower()}",
+        defer_delivery=True,
+    )
 
 
 def public_verify_email_view(request, token):
@@ -781,6 +816,8 @@ def public_verify_email_view(request, token):
             return redirect("/dang-ky/?verification_error=invalid")
         if user.is_active:
             return redirect("/dang-nhap/?verified=already")
+        if RegistrationCode.objects.filter(user=user).exists():
+            return redirect("/dang-ky/?verification_error=invalid")
 
         user.is_active = True
         user.save(update_fields=("is_active", "updated_at"))
@@ -1155,7 +1192,7 @@ def public_google_callback_view(request):
                     identity.provider_email = email
                     identity.save(update_fields=("provider_email", "updated_at"))
             else:
-                user = User.objects.filter(Q(email__iexact=email) | Q(username__iexact=email)).first()
+                user = User.objects.select_for_update().filter(Q(email__iexact=email) | Q(username__iexact=email)).first()
                 if user and SocialIdentity.objects.filter(
                     provider=SocialIdentity.Provider.GOOGLE, user=user
                 ).exists():
@@ -1174,6 +1211,8 @@ def public_google_callback_view(request):
             if not user.is_active:
                 user.is_active = True
                 activated_by_google = True
+                # An unverified registration may have been initiated by someone else.
+                user.set_unusable_password()
             first_name_changed = False
             if not user.first_name and name:
                 user.first_name = name
@@ -1181,6 +1220,7 @@ def public_google_callback_view(request):
             update_fields = []
             if activated_by_google:
                 update_fields.append("is_active")
+                update_fields.append("password")
             if first_name_changed:
                 update_fields.append("first_name")
             if update_fields:

@@ -335,3 +335,12 @@ Do not log cosmetic edits.
 - Hardened order-success/history ownership and approval idempotency/state fencing.
 - Replaced in-process forecast async execution with a durable database queue and worker lease/retry/cancel lifecycle; added dimensional product-demand selectors and backtest/drift metadata.
 - Added PostgreSQL/PostGIS CI quality workflow and documented external production acceptance gates.
+# 2026-09-11 — Mailbox registration codes
+
+Added RegistrationCode and migration 0005: six-digit expiring codes, database
+serialized consumption/rotation, attempt/send limits and session/CSRF enforcement.
+New registrations remain inactive until code confirmation; welcome and internal
+signup notifications occur after activation. Reject existing Google provider emails
+case-insensitively; Google activation invalidates unverified pending passwords.
+Preserve existing signed-link registration compatibility without permitting a code
+bypass. Vietnamese registration UI supports paste/autofill and failed-mail warnings.

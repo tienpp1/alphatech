@@ -1,5 +1,34 @@
 # Current repository status
 
+## 2026-09-11 — Registration by mailbox code (local implementation)
+
+New password registrations use a six-digit, 10-minute code before activation.
+Google-linked emails are rejected case-insensitively, including provider email.
+Database User locks serialize code issue/consumption; codes have hashed verifiers,
+single use, five failures per hourly window, 60-second resend cooldown and five
+sends per hour. Verification requires CSRF and the pending browser session;
+resuming that session through login requires the pending password. Google activation
+discards an unverified password. Welcome/internal signup notifications wait for
+activation. Existing link registrations remain compatible but cannot bypass a code.
+Vietnamese code input permits paste/autofill; failed delivery remains visible.
+
+Migration public_web.0005_registration_code applied successfully to the configured
+ai_business_platform_db_staging (only creates RegistrationCode). Production rollout
+and receipt of these new OTP/welcome emails are not yet verified. During release,
+run `python manage.py migrate public_web 0005_registration_code --noinput` before
+serving the updated application. Existing email backend credentials are reused.
+
+Initial focused validation: `python manage.py test tests.test_registration_codes
+tests.test_customer_email_outbox_and_oauth_security
+tests.test_google_oauth_and_email_notifications --keepdb --noinput --verbosity=1`:
+42/42 passed in 383.863s. Final validation after recovery/rollback hardening:
+`python manage.py test tests.test_registration_codes
+tests.test_public_auth_and_customer_experience --keepdb --noinput --verbosity=1`:
+29/29 passed in 417.885s (includes 13 code regressions; overlaps the first group).
+Django check: zero issues; migration drift:
+no changes; diff whitespace check: clean. Email transport/OAuth in these tests are
+simulated, not live inbox or Google acceptance evidence.
+
 ## 2026-09-10 — HTTPS transactional email implementation
 
 Operator selected keeping Render Free and using HTTPS email. Added a Brevo

@@ -17,6 +17,7 @@ from apps.public_web.views import (
     public_register_view,
     public_resend_verification_view,
     public_verify_email_view,
+    public_verify_registration_code_view,
     public_logout_view,
     public_forgot_password_view,
     public_password_reset_confirm_view,
@@ -57,6 +58,7 @@ urlpatterns = [
     # 6. Public Customer Authentication Flow
     path("dang-nhap/", public_login_view, name="public_login"),
     path("dang-ky/", public_register_view, name="public_register"),
+    path("dang-ky/xac-minh-ma/", public_verify_registration_code_view, name="public_verify_registration_code"),
     path("dang-ky/gui-lai-xac-minh/", public_resend_verification_view, name="public_resend_verification"),
     path("xac-minh-email/<str:token>/", public_verify_email_view, name="public_verify_email"),
     path("dang-xuat/", public_logout_view, name="public_logout"),
