@@ -2,6 +2,14 @@
 
 Do not log cosmetic edits.
 
+### 2026-09-11 — Public branch location and routing tools
+
+- `/chi-nhanh/` now provides opt-in geolocation, manual origin selection, explicit Photon address lookup, OSRM road-distance nearest-branch lookup and actual route geometry, Google Maps directions links, and independent 1–10 km Haversine-radius filtering.
+- Removed invented travel-time calculation and straight-line pseudo-directions from this page. Route copy distinguishes shortest returned alternative from globally shortest path and real traffic.
+- Added safe public JSON serialization, missing/zero-coordinate handling, independent request cancellation/timeouts, Vietnamese recovery states and accessible toolbar controls. CSP permits the exact map CDN/geocoder/router origins; map tile image referrers contain origin only, leaving global same-origin referrer policy unchanged.
+- 7 JavaScript and 4 focused Django tests pass. Live local routing/radius verified; Photon network timeout and real-device GPS/production acceptance remain open. No schema change, database mutation, commit or deployment.
+
+
 ### 2026-09-11 — Render Free migration release path
 
 The Render build script now runs `python manage.py migrate --no-input` before

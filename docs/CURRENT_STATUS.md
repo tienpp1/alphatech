@@ -1,5 +1,14 @@
 # Current repository status
 
+## 2026-09-11 — Public branch finder (local implementation, partial live verification)
+
+- Replaced broken dark tactical tiles/straight-line pseudo-routing with light OSM tiles, Leaflet attribution, opt-in browser location, address-search UI, map-point origin, OSRM road-distance comparison/directions, Google Maps handoff, and independent 1–10 km radius filtering.
+- Preserved the existing public active RETAIL branch query. Public JSON exposes only directory fields; missing coordinates remain listed and cannot route; zero coordinates are valid. No migration or business-data mutation.
+- Automated: 7 Node tests passed (`node --test --test-isolation=none tests/branch_finder.test.cjs`); 4 Django tests passed (3 new serialization/template tests plus existing public branch view test); `manage.py check`: zero issues; migration drift: no changes.
+- Live local browser: all 3 branch markers/OSM tiles loaded; manually selected public map point; OSRM compared all 3 branches and returned nearest Quận 1 at 2.2 km; real route rendered at 2.2 km / ~3 minutes (estimate); radius 1/3/10 km yielded 0/1/3 branches. Responsive layout inspected at 1440px and 375px (no horizontal overflow).
+- NOT complete: Photon geocoder timed out in browser and independent HTTPS probes (including IPv4); no successful live address result claimed. Device GPS permission/accuracy remains user acceptance work; production not deployed/tested. Public demo services have no SLA; no guaranteed globally shortest path or live traffic. See `docs/BRANCH_FINDER_REPORT_2026_09_11.md`.
+- Other agents' uncommitted auth, checkout, AI and knowledge changes were preserved, not bundled or pushed.
+
 Render Free deployment note: migrations now run in `build.sh` during build.
 Keep the service Start Command as `gunicorn config.wsgi:application`; do not put
 `manage.py migrate` in Start Command because a failed migration prevents the web

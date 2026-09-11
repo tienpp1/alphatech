@@ -441,9 +441,25 @@ def public_branches_view(request):
     """
     branches = Branch.objects.filter(is_active=True, workspace__workspace_type="RETAIL").order_by("name")
 
+    # Serialize only public directory fields; JSON avoids locale-dependent decimals
+    # and HTML/script interpolation. Keep branches without coordinates in the list.
+    map_branches = []
+    for branch in branches:
+        lat, lng = branch.latitude, branch.longitude
+        if (lat is None or lng is None) and branch.location:
+            lat, lng = branch.location.y, branch.location.x
+        valid = lat is not None and lng is not None and -90 <= lat <= 90 and -180 <= lng <= 180
+        map_branches.append({
+            "id": branch.pk, "name": branch.name, "address": branch.address,
+            "phone": branch.phone,
+            "lat": float(lat) if valid else None,
+            "lng": float(lng) if valid else None,
+        })
+
     context = {
         "page_title": "Hệ thống chi nhánh | ABC Tech Store & XYZ Services",
         "branches": branches,
+        "map_branches": map_branches,
         "active_nav": "branches",
     }
     return render(request, "public/branches.html", context)
