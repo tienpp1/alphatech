@@ -6,7 +6,10 @@ echo "==> [BUILD] Installing Python Dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
+echo "==> [BUILD] Applying Django database migrations..."
+python manage.py migrate --no-input
+
 echo "==> [BUILD] Collecting Static Files via WhiteNoise..."
 python manage.py collectstatic --no-input
 
-echo "==> [BUILD] Artifact build completed. Run migrations as an explicit release step."
+echo "==> [BUILD] Artifact build completed."

@@ -1,5 +1,10 @@
 # Current repository status
 
+Render Free deployment note: migrations now run in `build.sh` during build.
+Keep the service Start Command as `gunicorn config.wsgi:application`; do not put
+`manage.py migrate` in Start Command because a failed migration prevents the web
+process from opening its port.
+
 ## 2026-09-11 — Registration by mailbox code (local implementation)
 
 New password registrations use a six-digit, 10-minute code before activation.
@@ -28,6 +33,68 @@ tests.test_public_auth_and_customer_experience --keepdb --noinput --verbosity=1`
 Django check: zero issues; migration drift:
 no changes; diff whitespace check: clean. Email transport/OAuth in these tests are
 simulated, not live inbox or Google acceptance evidence.
+
+## Homepage presentation follow-up
+
+At operator request, paused pg_dump/pg_restore work. Moved the existing Holo
+WebGL card from the hero to #console and replaced terminal copy/typewriter
+strings with a Vietnamese customer introduction. Animation scripts, timings,
+Three.js implementation, video and visual effects are unchanged. Browser local
+verification: canvas renders, mode buttons and typewriter work; desktop layout
+and 375px mobile intro checked (content/client width 360/360). Not deployed.
+
+## 2026-09-10 — Dedicated TEMPLATE restore verification
+
+Operator confirmed staging contains migration/seed/test data and the dedicated
+ai_business_platform_db_restore was cloned with TEMPLATE, not restored from a
+production dump. Both databases connect on PostgreSQL 18.6 / PostGIS 3.6.2.
+Column schema, 51 applied migration records and enabled audit trigger match.
+Restore has 6 users/2 workspaces vs current staging 7/3; snapshot provenance/time
+does not establish when those differences arose. Both have 160 orders, 85
+customers and 22 audit rows; restore has 427 order items.
+
+Restore validation: zero pending Django migrations; ORM order/service reads pass;
+PostGIS SRID smoke passes; zero service/customer or order/customer workspace
+mismatches; no case-insensitive duplicate nonempty email groups. The database
+audit trigger rejected a no-op UPDATE (SQLSTATE P0001), and the transaction was
+rolled back. No production/staging data modified; restore was not overwritten.
+This validates the existing clone's basic usability, not backup-file recovery,
+production disaster recovery, RPO/RTO or whole-dataset equality.
+
+## 2026-09-10 — Customer journey review after production OAuth confirmation
+
+This entry supersedes earlier September 10 statements that Brevo/HTTPS were not
+deployed. Render API now confirms live commit dbad3f26, Brevo backend, canonical
+HTTPS public/callback URLs, DEBUG=False and secure session/CSRF cookies. Brevo,
+Sentry and database configuration is present. User confirmed Google login and
+prior two-inbox diagnostic receipt; full production business-event delivery and
+Sentry event arrival remain unverified.
+
+Local changes (not deployed): checkout validates all pickup stock before any
+deduction; invalid email/delivery methods fail before creating orders; email
+attempts lock/reload the outbox record to prevent concurrent/stale resends;
+prefetched primary images no longer query per product. Mobile header overflow
+fixed, auth autocomplete/search accessible name added using ui-ux-pro-max.
+CI includes existing OAuth/verification/outbox/auth regressions.
+
+Validation: baseline 78 tests passed in 347.486s; affected final groups 46 passed
+in 254.760s, including two concurrent database connections sending one message.
+These groups overlap. Django check passed; migration drift: none. Browser at
+375px: production catalog content overflow 610px vs client 360px; patched local
+catalog is 360/360 and menu opens. Live add-to-cart confirmed in temporary guest
+session; no production order/account created.
+
+GitHub run 34428931579 for deployed dbad3f26 failed Static security scan; dependency
+audit, migration, focused tests and coverage steps passed. Local Bandit has 69
+findings (5 medium, 64 low, zero high); none suppressed. CI is not green.
+Updated External staging URL now connects to ai_business_platform_db_staging
+(PostgreSQL 18.6, PostGIS present), a different database name from production.
+Read-only inspection found 59 public tables, 51 migration records, 7 users,
+160 orders and 85 customers. This target is populated: no restore/overwrite was
+performed, and its provenance/restore evidence remains unconfirmed.
+A safe restore target, Sentry event evidence, authenticated production event
+tests and rollout of this patch remain pending. Details:
+docs/CUSTOMER_JOURNEY_REVIEW_2026_09_10.md.
 
 ## 2026-09-10 — HTTPS transactional email implementation
 

@@ -2,6 +2,28 @@
 
 Do not log cosmetic edits.
 
+### 2026-09-11 — Render Free migration release path
+
+The Render build script now runs `python manage.py migrate --no-input` before
+collecting static assets, so schema migrations run during a Free web-service
+deploy without paid Shell or pre-deploy access. The web Start Command remains
+Gunicorn-only; migration failures stop the build before an incomplete service is
+started.
+
+### 2026-09-10 — Customer checkout and delivery correctness
+
+- Validate all pickup balances before decrementing: a rejected later line no
+  longer commits deductions from earlier lines. Validate checkout email and
+  delivery method, and use Django email validation for public registration.
+- Serialize customer outbox attempts with a database row lock and fresh status;
+  test stale instances and two concurrent connections. Provider-crash/timeout
+  ambiguity remains; this is not provider-level exactly-once delivery.
+- Reuse prefetched product images to eliminate per-product image queries.
+- Repair observed mobile header overflow and improve auth autofill/search naming;
+  extend existing CI coverage to OAuth/email-verification and public auth tests.
+- Record actual deployed configuration and failing security scan without claiming
+  a successful production release.
+
 ### 2026-09-10 — Brevo HTTPS mail transport
 
 - Added opt-in Brevo Django backend, retaining customer outbox/recipient policy.
