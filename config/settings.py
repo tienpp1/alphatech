@@ -139,6 +139,9 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "t")
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() in ("true", "1", "t")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@abctech.vn")
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000" if DEBUG else "").strip().rstrip("/")
+# Switchable without a code deployment; public Nominatim use is operator-approved.
+# All instances of this website MUST share the same DB for the geocoder rate gate.
+OSM_GEOCODER_SEARCH_URL = os.getenv("OSM_GEOCODER_SEARCH_URL", "https://nominatim.openstreetmap.org/search").strip()
 
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise ImproperlyConfigured("EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be enabled.")

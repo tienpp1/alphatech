@@ -3,7 +3,7 @@
 Last verified against source: 2026-09-06  
 Authority: current source code and migrations. Historical phase documents are secondary and may be stale.
 
-Public branch directory update (2026-09-11): `/chi-nhanh/` retains its active RETAIL branch visibility contract and sends only public directory fields to browser JSON. Leaflet/OSM renders the map; browser-only opt-in location/manual origin is not persisted. Explicit address queries go to Photon, road-distance/routing requests go to OSRM, and navigation may be handed off to Google Maps. Radius is Haversine distance, distinct from road distance. These public providers are best-effort, not a production SLA; address-search live verification is currently blocked by Photon timeout. No membership or internal GIS permissions are granted by these tools.
+Public branch directory update (2026-09-11): `/chi-nhanh/` retains its active RETAIL branch visibility contract and sends only public directory fields to browser JSON. Leaflet/OSM renders the map; browser-only opt-in location/manual origin is not persisted. Explicit public-place address queries POST to a CSRF-protected Django endpoint backed by switchable, HTTPS-only Nominatim with shared PostgreSQL rate gate and cache; road-distance/routing requests go to OSRM, and navigation may be handed off to Google Maps. Radius is Haversine distance, distinct from road distance. Device GPS is supplied by browser Geolocation, not OSM. These public providers are best-effort, not a production SLA; address-search live verification is currently blocked by external timeout. No membership or internal GIS permissions are granted by these tools.
 
 ## 1. Project purpose and stack
 

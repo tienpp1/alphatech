@@ -15,16 +15,22 @@
   <div class="bf-layout">
     <aside class="bf-panel" aria-label="Công cụ tìm chi nhánh">
       <h2>Bạn đang ở đâu?</h2>
-      <form id="bf-search" class="bf-search">
-        <label for="bf-address">Nhập địa chỉ của bạn</label>
+      <form id="bf-search" class="bf-search" action="{% url 'public_geocode' %}" method="post">
+        {% csrf_token %}
+        <label for="bf-address">Tìm địa điểm, đường phố gần bạn</label>
         <div class="bf-input-row"><input id="bf-address" type="search" maxlength="200" required minlength="3" placeholder="Ví dụ: chợ Bến Thành, TP.HCM" autocomplete="off"><button type="submit" id="bf-search-button">Tìm</button></div>
       </form>
+      <p class="bf-small">Chỉ nhập địa điểm công khai tại Việt Nam; không nhập tên, số điện thoại hoặc thông tin riêng tư. Bấm Tìm để tra cứu qua Nominatim / © OpenStreetMap contributors.</p>
       <div id="bf-search-results" aria-label="Kết quả địa chỉ"></div>
       <div class="bf-actions">
         <button type="button" id="bf-locate">Lấy vị trí của tôi</button>
         <button type="button" id="bf-pick" aria-pressed="false">Chọn vị trí trên bản đồ</button>
       </div>
       <p id="bf-origin" class="bf-muted">Chưa chọn điểm xuất phát.</p>
+      <p id="bf-accuracy" class="bf-warning" role="status" hidden></p>
+      <p class="bf-small">Vị trí do thiết bị/trình duyệt cung cấp, không phải OSM. Nếu chấm xanh lệch, kéo chấm tới vị trí đúng hoặc bấm “Chọn vị trí trên bản đồ”. Có thể bấm lấy vị trí lần nữa để đo lại.</p>
+      <label for="bf-route-preference">Ưu tiên tuyến ô tô</label>
+      <select id="bf-route-preference"><option value="distance">Ít km hơn trong các phương án</option><option value="duration">Ít thời gian ước tính hơn</option></select>
       <button type="button" id="bf-nearest" class="bf-primary" disabled>Tìm cửa hàng gần nhất</button>
       <p class="bf-small">So sánh quãng đường ô tô do dịch vụ định tuyến cung cấp, không phải khoảng cách đường chim bay.</p>
       <div class="bf-radius">
@@ -44,8 +50,9 @@
       <section id="bf-route" class="bf-route" hidden aria-label="Thông tin dẫn đường">
         <h2 id="bf-route-title">Đường đến cửa hàng</h2>
         <p id="bf-route-summary"></p>
+        <details id="bf-steps-panel" hidden><summary>Các bước đi theo dữ liệu OSM</summary><ol id="bf-steps"></ol></details>
         <a id="bf-google-route" target="_blank" rel="noopener noreferrer">Mở dẫn đường trên Google Maps ↗</a>
-        <p class="bf-small">Tuyến ô tô tham khảo: chọn quãng đường ngắn nhất trong các phương án được trả về. Không bảo đảm ngắn nhất tuyệt đối; không có dữ liệu kẹt xe trực tiếp. Kiểm tra biển báo và điều kiện thực tế.</p>
+        <p class="bf-small">Tuyến ô tô từ dữ liệu OSM, theo ưu tiên bạn chọn trong các phương án được trả về. Không bảo đảm ngắn nhất tuyệt đối; không có dữ liệu kẹt xe trực tiếp. Kiểm tra biển báo và điều kiện thực tế.</p>
       </section>
     </div>
   </div>
@@ -65,7 +72,7 @@
       {% empty %}<p>Hiện chưa có chi nhánh được công bố.</p>{% endfor %}
     </div>
   </section>
-  <p class="bf-privacy">Vị trí chỉ được lấy khi bạn cho phép. Địa chỉ tìm kiếm được gửi tới Photon; tọa độ được gửi tới OSRM khi tìm cửa hàng gần nhất hoặc dẫn đường. Trang này không lưu vị trí của bạn vào tài khoản. Các dịch vụ bản đồ công cộng có thể giới hạn hoặc tạm ngừng phục vụ.</p>
+  <p class="bf-privacy">Vị trí chỉ được lấy khi bạn cho phép. Tên địa điểm công khai được chuyển qua server tới Nominatim và kết quả được cache tối đa 24 giờ; tọa độ được gửi tới OSRM khi tìm cửa hàng gần nhất hoặc dẫn đường. Trang này không lưu vị trí thiết bị vào tài khoản. Dịch vụ công cộng có giới hạn và có thể tạm ngừng phục vụ. <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noopener noreferrer">Chính sách Nominatim</a></p>
   <noscript><p>Bật JavaScript để sử dụng bản đồ. Bạn vẫn có thể gọi cửa hàng và mở địa chỉ trên Google Maps ở trên.</p></noscript>
 </section>
 {{ map_branches|json_script:"bf-data" }}

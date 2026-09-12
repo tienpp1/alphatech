@@ -9,6 +9,12 @@ Do not log cosmetic edits.
 - Added safe public JSON serialization, missing/zero-coordinate handling, independent request cancellation/timeouts, Vietnamese recovery states and accessible toolbar controls. CSP permits the exact map CDN/geocoder/router origins; map tile image referrers contain origin only, leaving global same-origin referrer policy unchanged.
 - 7 JavaScript and 4 focused Django tests pass. Live local routing/radius verified; Photon network timeout and real-device GPS/production acceptance remain open. No schema change, database mutation, commit or deployment.
 
+Follow-up OSM hardening:
+
+- Replaced client-side Photon calls with a CSRF-protected Django POST endpoint backed by the user-approved public Nominatim service. Queries are limited to public Vietnamese places, validated, cached for 24 hours, and serialized with a PostgreSQL advisory transaction lock so all web instances respect the public one-request-per-second policy. Redirects and invalid HTTPS endpoint configuration fail closed; raw query/result data is not logged.
+- Added device-accuracy messaging, draggable origin marker, distance/time route preference, and expandable turn steps from OSRM. OSM remains map data, not a GPS provider; OSRM demo routing has no traffic feed or global shortest-path guarantee.
+- Follow-up totals: 10 JavaScript tests and 12 focused Django tests pass. Nominatim live search remains unverified after browser verification was blocked by the account usage limit; earlier timeout evidence applied to Photon.
+
 
 ### 2026-09-11 — Render Free migration release path
 

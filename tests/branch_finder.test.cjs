@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {validPoint, distanceKm, inRadius, googleURL, shortestReturned} = require('../static/public/js/branch-finder.js');
+const {validPoint, distanceKm, inRadius, googleURL, shortestReturned, chooseRoute, accuracyMessage, stepText} = require('../static/public/js/branch-finder.js');
 test('coordinates: zero allowed, absent/non-finite/out-of-range rejected', () => {
   assert.ok(validPoint({lat:0,lng:0}));
   for (const p of [{lat:null,lng:1},{lat:NaN,lng:1},{lat:91,lng:1},{lat:1,lng:181},{lat:'10',lng:106}]) assert.ok(!validPoint(p));
@@ -36,4 +36,20 @@ test('missing or malformed routing data never produces a fake route', () => {
   assert.equal(shortestReturned([{distance:100,duration:10}]),undefined);
   assert.equal(shortestReturned([null, {distance:1,duration:1,geometry:{type:'LineString'}}]),undefined);
   assert.equal(shortestReturned({}),undefined);
+});
+test('route preference distinguishes distance from duration', () => {
+  const geometry={type:'LineString',coordinates:[[106,10],[107,11]]};
+  const a={distance:200,duration:20,geometry},b={distance:100,duration:30,geometry};
+  assert.equal(chooseRoute([a,b],'distance'),b);
+  assert.equal(chooseRoute([a,b],'duration'),a);
+  assert.equal(chooseRoute([],'duration'),undefined);
+});
+test('coarse or unknown GPS accuracy is never represented as precise', () => {
+  assert.match(accuracyMessage(2500),/chỉ gần đúng/);
+  assert.match(accuracyMessage(undefined),/chưa cung cấp sai số/);
+  assert.match(accuracyMessage(20),/20 m/);
+});
+test('OSM steps are translated to Vietnamese without inventing a street', () => {
+  assert.equal(stepText({maneuver:{type:'turn',modifier:'right'},name:'Nguyễn Huệ',distance:52}), 'Rẽ phải · Nguyễn Huệ · 52 m');
+  assert.equal(stepText({maneuver:{type:'arrive'}}),'Đến điểm đích');
 });

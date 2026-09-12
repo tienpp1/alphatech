@@ -10,7 +10,18 @@
   const inRadius = (branches, center, km) => branches.filter(b => validPoint(b) && distanceKm(center, b) <= km);
   const googleURL = (origin, destination) => 'https://www.google.com/maps/dir/?' + new URLSearchParams({api: '1', origin: `${origin.lat},${origin.lng}`, destination: `${destination.lat},${destination.lng}`, travelmode: 'driving'});
   const shortestReturned = routes => (Array.isArray(routes) ? routes : []).filter(r => r && Number.isFinite(r.distance) && r.distance >= 0 && Number.isFinite(r.duration) && r.duration >= 0 && r.geometry?.type === 'LineString' && Array.isArray(r.geometry.coordinates) && r.geometry.coordinates.length >= 2 && r.geometry.coordinates.every(c => Array.isArray(c) && validPoint({lat: c[1], lng: c[0]}))).sort((a, b) => a.distance - b.distance)[0];
-  if (typeof module !== 'undefined' && module.exports) module.exports = {validPoint, distanceKm, inRadius, googleURL, shortestReturned};
+  const chooseRoute = (routes, preference) => {
+    const valid = (Array.isArray(routes) ? routes : []).filter(route => shortestReturned([route]));
+    return valid.sort((a, b) => preference === 'duration' ? a.duration - b.duration : a.distance - b.distance)[0];
+  };
+  const accuracyMessage = accuracy => !Number.isFinite(accuracy) || accuracy < 0 ? 'Thiết bị chưa cung cấp sai số; hãy kiểm tra chấm vị trí trước khi dẫn đường.' : accuracy > 100 ? `Vị trí chỉ gần đúng (sai số khoảng ${Math.round(accuracy)} m). Hãy bật định vị chính xác trên điện thoại, thử ngoài trời hoặc kéo chấm xanh tới đúng vị trí.` : `Sai số thiết bị báo khoảng ${Math.round(accuracy)} m. Hãy kiểm tra chấm xanh trước khi đi.`;
+  function stepText(step) {
+    const m = step.maneuver || {};
+    const turn = {left: 'Rẽ trái', right: 'Rẽ phải', 'slight left': 'Chếch trái', 'slight right': 'Chếch phải', 'sharp left': 'Rẽ gắt trái', 'sharp right': 'Rẽ gắt phải', uturn: 'Quay đầu', straight: 'Đi thẳng'};
+    let action = m.type === 'depart' ? 'Xuất phát' : m.type === 'arrive' ? 'Đến điểm đích' : ['roundabout', 'rotary'].includes(m.type) ? 'Qua vòng xuyến' + (m.exit ? `, lối ra ${m.exit}` : '') : turn[m.modifier] || 'Tiếp tục';
+    return action + (step.name ? ` · ${step.name}` : '') + (Number.isFinite(step.distance) && step.distance > 0 ? ` · ${Math.round(step.distance)} m` : '');
+  }
+  if (typeof module !== 'undefined' && module.exports) module.exports = {validPoint, distanceKm, inRadius, googleURL, shortestReturned, chooseRoute, accuracyMessage, stepText};
   if (typeof document === 'undefined') return;
   const $ = id => document.getElementById(id);
   if (!$('bf-map')) return;
@@ -21,6 +32,7 @@
   let origin = null, userMarker, accuracyCircle, radiusCenter, radiusCircle, routeLayer;
   let picking = false, version = 0, searchVersion = 0, locatingVersion = 0;
   let routingController, searchingController;
+  let routeDestination = null;
   const map = L.map('bf-map', {scrollWheelZoom: false}).setView([10.7769, 106.7009], 12);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19, referrerPolicy: 'origin', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -34,6 +46,8 @@
     if (routingController) routingController.abort();
     if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
     $('bf-route').hidden = true;
+    $('bf-steps').replaceChildren(); $('bf-steps-panel').hidden = true;
+    routeDestination = null;
     $('bf-nearest').disabled = !origin || !branches.length;
   }
   function select(b) {
@@ -64,9 +78,12 @@
     origin = {lat: point.lat, lng: point.lng};
     if (userMarker) map.removeLayer(userMarker);
     if (accuracyCircle) map.removeLayer(accuracyCircle);
-    userMarker = L.marker([origin.lat, origin.lng], {icon: L.divIcon({className: 'bf-marker bf-marker-user', html: '●', iconSize: [24, 24]}), title: 'Điểm xuất phát của bạn'}).bindPopup(node('span', label)).addTo(map);
+    userMarker = L.marker([origin.lat, origin.lng], {draggable: true, icon: L.divIcon({className: 'bf-marker bf-marker-user', html: '●', iconSize: [24, 24]}), title: 'Điểm xuất phát của bạn; có thể kéo để chỉnh'}).bindPopup(node('span', label)).addTo(map);
+    userMarker.on('dragend', event => { const p = event.target.getLatLng(); setOrigin({lat:p.lat,lng:p.lng}, 'Vị trí bạn đã chỉnh'); });
     if (Number.isFinite(accuracy) && accuracy > 0) accuracyCircle = L.circle([origin.lat, origin.lng], {radius: accuracy, color: '#087c56', fillOpacity: .06, interactive: false}).addTo(map);
     $('bf-origin').textContent = `${label} (${origin.lat.toFixed(5)}, ${origin.lng.toFixed(5)})` + (accuracy ? ` · Sai số khoảng ${Math.round(accuracy)} m` : '');
+    $('bf-accuracy').hidden = accuracy === undefined;
+    $('bf-accuracy').textContent = accuracyMessage(accuracy);
     $('bf-nearest').disabled = !branches.length;
     document.querySelectorAll('[data-route]').forEach(button => { button.disabled = !branches.some(b => String(b.id) === button.dataset.route); });
     $('bf-locate').disabled = false; $('bf-search-button').disabled = false;
@@ -85,6 +102,7 @@
   async function directions(b) {
     if (!origin || !validPoint(b)) { status('Hãy chọn điểm xuất phát và chi nhánh có tọa độ trước khi dẫn đường.'); return; }
     cancelRouting(); select(b);
+    routeDestination = b;
     const current = version, start = {...origin};
     routingController = new AbortController();
     $('bf-route').hidden = false;
@@ -93,13 +111,17 @@
     $('bf-route-summary').textContent = 'Đang tìm tuyến đường ô tô…';
     status('Đang tải tuyến đường thật. Bạn cũng có thể mở Google Maps.');
     try {
-      const data = await fetchJSON(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${b.lng},${b.lat}?alternatives=true&overview=full&geometries=geojson`, routingController);
+      const data = await fetchJSON(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${b.lng},${b.lat}?alternatives=true&overview=full&geometries=geojson&steps=true`, routingController);
       if (current !== version) return;
-      const route = data.code === 'Ok' && shortestReturned(data.routes);
+      const preference = $('bf-route-preference').value;
+      const route = data.code === 'Ok' && chooseRoute(data.routes, preference);
       if (!route) throw new Error('no_route');
       routeLayer = L.geoJSON(route.geometry, {style: {color: '#2458dc', weight: 6, opacity: .85}}).addTo(map);
       map.fitBounds(routeLayer.getBounds(), {padding: [36, 36], animate: false});
-      $('bf-route-summary').textContent = `${kmText(route.distance)} · Khoảng ${Math.max(1, Math.round(route.duration / 60))} phút bằng ô tô (ước tính).`;
+      $('bf-route-summary').textContent = `${kmText(route.distance)} · Khoảng ${Math.max(1, Math.round(route.duration / 60))} phút bằng ô tô (ước tính). Ưu tiên ${preference === 'duration' ? 'ít thời gian' : 'ít km'} trong các tuyến nhận được; không tính kẹt xe.`;
+      const steps = (route.legs || []).flatMap(leg => leg.steps || []);
+      steps.forEach(step => $('bf-steps').append(node('li', stepText(step))));
+      $('bf-steps-panel').hidden = !steps.length;
       status('Đã hiển thị tuyến đường ô tô tham khảo tới ' + b.name + '.');
     } catch (_) {
       if (current !== version) return;
@@ -115,6 +137,7 @@
     marker.on('click', () => { cancelRouting(); select(b); }); markers.set(b.id, marker);
     card(b).querySelector('[data-focus]').disabled = false;
   });
+  $('bf-route-preference').addEventListener('change', () => { if (routeDestination) directions(routeDestination); });
   all.filter(b => !validPoint(b)).forEach(b => { card(b).querySelector('.bf-distance').textContent = 'Chưa có tọa độ; vui lòng xem địa chỉ hoặc gọi cửa hàng.'; });
   fit(branches);
   document.querySelectorAll('[data-focus]').forEach(button => button.addEventListener('click', () => {
@@ -177,15 +200,21 @@
     searchingController = new AbortController(); const current = ++searchVersion;
     $('bf-search-button').disabled = true; $('bf-search-results').replaceChildren(); status('Đang tìm địa chỉ…');
     try {
-      const center = map.getCenter();
-      const data = await fetchJSON('https://photon.komoot.io/api/?' + new URLSearchParams({q: query, limit: '5', lat: center.lat, lon: center.lng}), searchingController);
+      const form = $('bf-search');
+      const timeout = setTimeout(() => searchingController.abort(), 18000);
+      let data;
+      try {
+        const response = await fetch(form.action, {method: 'POST', credentials: 'same-origin', signal: searchingController.signal,
+          headers: {'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value}, body: new URLSearchParams({q: query})});
+        data = await response.json();
+        if (!response.ok) { if (current === searchVersion) status(data.error || 'Không tìm được địa điểm. Hãy thử lại.'); return; }
+      } finally { clearTimeout(timeout); }
       if (current !== searchVersion) return;
-      const results = (data.features || []).filter(f => f.geometry?.type === 'Point' && validPoint({lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0]}));
-      results.forEach(feature => {
-        const p = feature.properties || {}, c = feature.geometry.coordinates;
-        const label = [...new Set([p.name, [p.housenumber, p.street].filter(Boolean).join(' '), p.district, p.city, p.state, p.country].filter(Boolean))].join(', ') || `${c[1]}, ${c[0]}`;
+      const results = (data.results || []).filter(validPoint);
+      results.forEach(result => {
+        const label = result.label;
         const button = node('button', label); button.type = 'button'; button.className = 'bf-search-result';
-        button.addEventListener('click', () => setOrigin({lat: c[1], lng: c[0]}, label)); $('bf-search-results').append(button);
+        button.addEventListener('click', () => setOrigin(result, label)); $('bf-search-results').append(button);
       });
       status(results.length ? 'Chọn địa chỉ đúng trong các kết quả bên dưới ô tìm kiếm.' : 'Chưa tìm thấy địa chỉ. Thử thêm quận, thành phố hoặc chọn trực tiếp trên bản đồ.');
     } catch (_) { if (current === searchVersion) status('Không kết nối được dịch vụ tìm địa chỉ. Hãy thử lại hoặc dùng Lấy vị trí / Chọn vị trí trên bản đồ.'); }

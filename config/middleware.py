@@ -43,7 +43,7 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         "font-src 'self' data: https://fonts.gstatic.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
-        "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://photon.komoot.io https://router.project-osrm.org; "
+        "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://router.project-osrm.org; "
         "frame-src https://accounts.google.com; form-action 'self' https://accounts.google.com"
     )
 

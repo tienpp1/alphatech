@@ -3,6 +3,7 @@ URL Configuration for Public Business Website & Customer Authentication.
 """
 
 from django.urls import path
+from apps.public_web.geocoding import public_geocode_view
 from apps.public_web.views import (
     public_home_view,
     public_products_view,
@@ -41,6 +42,7 @@ from apps.public_web.views import (
 )
 
 urlpatterns = [
+    path("chi-nhanh/tim-dia-diem/", public_geocode_view, name="public_geocode"),
     # 1. Homepage & Discovery
     path("", public_home_view, name="public_home"),
     # 2. Public Retail Products
