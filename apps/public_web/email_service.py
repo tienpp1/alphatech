@@ -84,7 +84,19 @@ def _delivery_configuration_error() -> str:
 
 
 def deliver_outbox_record(delivery: CustomerEmailDelivery) -> DeliveryResult:
-    """Attempt one delivery and persist a truthful, sanitized outcome."""
+    """Serialize attempts and re-read persisted status, including stale callers.
+
+    The lock covers the bounded provider call. A provider timeout/crash can still
+    leave an unknown delivery outcome; this does not promise exactly-once SMTP.
+    """
+    with transaction.atomic():
+        CustomerEmailDelivery.objects.select_for_update().get(pk=delivery.pk)
+        delivery.refresh_from_db()
+        return _deliver_locked_outbox_record(delivery)
+
+
+def _deliver_locked_outbox_record(delivery: CustomerEmailDelivery) -> DeliveryResult:
+    """Caller holds this outbox row's database lock."""
     if delivery.status == CustomerEmailDelivery.Status.SENT:
         return DeliveryResult(delivery.recipient, delivery.status, 1, public_id=str(delivery.public_id))
     delivery.attempt_count += 1

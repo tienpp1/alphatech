@@ -3,6 +3,7 @@ URL Configuration for Public Business Website & Customer Authentication.
 """
 
 from django.urls import path
+from apps.public_web.approval_notices import pending_approval_notices, acknowledge_approval_notice
 from apps.public_web.geocoding import public_geocode_view
 from apps.public_web.views import (
     public_home_view,
@@ -19,6 +20,8 @@ from apps.public_web.views import (
     public_resend_verification_view,
     public_verify_email_view,
     public_verify_registration_code_view,
+    public_registration_status_view,
+    public_verify_registration_link_view,
     public_logout_view,
     public_forgot_password_view,
     public_password_reset_confirm_view,
@@ -42,6 +45,8 @@ from apps.public_web.views import (
 )
 
 urlpatterns = [
+    path("tai-khoan/thong-bao-duyet/", pending_approval_notices, name="customer_approval_notices"),
+    path("tai-khoan/thong-bao-duyet/<int:notice_id>/da-xem/", acknowledge_approval_notice, name="customer_approval_notice_ack"),
     path("chi-nhanh/tim-dia-diem/", public_geocode_view, name="public_geocode"),
     # 1. Homepage & Discovery
     path("", public_home_view, name="public_home"),
@@ -61,8 +66,10 @@ urlpatterns = [
     path("dang-nhap/", public_login_view, name="public_login"),
     path("dang-ky/", public_register_view, name="public_register"),
     path("dang-ky/xac-minh-ma/", public_verify_registration_code_view, name="public_verify_registration_code"),
+    path("dang-ky/trang-thai-ma/", public_registration_status_view, name="public_registration_status"),
     path("dang-ky/gui-lai-xac-minh/", public_resend_verification_view, name="public_resend_verification"),
     path("xac-minh-email/<str:token>/", public_verify_email_view, name="public_verify_email"),
+    path("xac-minh-dang-ky/<str:token>/", public_verify_registration_link_view, name="public_verify_registration_link"),
     path("dang-xuat/", public_logout_view, name="public_logout"),
     path("quen-mat-khau/", public_forgot_password_view, name="public_forgot_password"),
     path("quen-mat-khau/xac-nhan/<str:uidb64>/<str:token>/", public_password_reset_confirm_view, name="public_password_reset_confirm"),

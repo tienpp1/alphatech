@@ -112,6 +112,11 @@ class Product(WorkspaceScopedModel):
 
     @property
     def primary_image(self):
+        cached = getattr(self, "_prefetched_objects_cache", {}).get("images")
+        if cached is not None:
+            images = list(cached)
+            primary = next((image for image in images if image.is_primary), None)
+            return primary or min(images, key=lambda image: (image.sort_order, image.created_at), default=None)
         primary = self.images.filter(is_primary=True).first()
         if primary:
             return primary

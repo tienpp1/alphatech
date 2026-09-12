@@ -1,0 +1,15 @@
+{% load static %}
+{% if request.user.is_authenticated %}
+<dialog id="customer-celebration" aria-labelledby="celebration-title" aria-describedby="celebration-message" data-feed="{% url 'customer_approval_notices' %}">
+  <div class="celebration-confetti" aria-hidden="true"></div>
+  <div class="celebration-check" aria-hidden="true">✓</div>
+  <p class="celebration-eyebrow">CẢM ƠN BẠN ĐÃ TIN TƯỞNG</p>
+  <h2 id="celebration-title"></h2>
+  <p id="celebration-message"></p>
+  <form id="celebration-form">{% csrf_token %}<button type="submit">Tuyệt vời, cảm ơn!</button></form>
+  <p id="celebration-error" role="status" hidden>Chưa lưu được xác nhận. Bạn có thể đóng và thử lại sau.</p>
+  <button type="button" id="celebration-close" aria-label="Đóng thông báo">×</button>
+</dialog>
+<link rel="stylesheet" href="{% static 'public/css/approval-celebration.css' %}">
+<script src="{% static 'public/js/approval-celebration.js' %}"></script>
+{% endif %}

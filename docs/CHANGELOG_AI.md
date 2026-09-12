@@ -2,6 +2,12 @@
 
 Do not log cosmetic edits.
 
+### 2026-09-12 — Customer approval thank-you celebration
+
+- Customer orders and service requests now create one persistent, ownership-scoped notification at the approved/accepted transition.
+- The public account shell polls only while visible, shows Vietnamese thank-you copy with a reduced-motion-safe celebration animation, and acknowledges the notice through a CSRF-protected endpoint.
+- Added notification event choices, database uniqueness constraint/migration, focused ownership/rollback/CSRF tests, and no email or payment behavior changes.
+
 ### 2026-09-11 — Public branch location and routing tools
 
 - `/chi-nhanh/` now provides opt-in geolocation, manual origin selection, explicit Photon address lookup, OSRM road-distance nearest-branch lookup and actual route geometry, Google Maps directions links, and independent 1–10 km Haversine-radius filtering.
@@ -15,6 +21,50 @@ Follow-up OSM hardening:
 - Added device-accuracy messaging, draggable origin marker, distance/time route preference, and expandable turn steps from OSRM. OSM remains map data, not a GPS provider; OSRM demo routing has no traffic feed or global shortest-path guarantee.
 - Follow-up totals: 10 JavaScript tests and 12 focused Django tests pass. Nominatim live search remains unverified after browser verification was blocked by the account usage limit; earlier timeout evidence applied to Photon.
 
+
+### 2026-09-11 — Phase 5 Core Universal Enterprise Handbook Knowledge Base & Training
+
+- Authored and ingested 6 universal enterprise SOP documents into pgvector vector store across both workspaces (`abc-retail` and `xyz-service`), addressing standard enterprise daily operations (HR, IT, Finance, Culture, Benefits) without requiring specialized niche domain technical jargon:
+  - `SOP_CORE_WORKING_HOURS_LEAVE_2026.md`: Standard hours (8:00 - 17:30, lunch 12:00 - 13:30), 15-min grace period (max 3/mo), 12 annual leave days (+1 day per 5 years), notice requirements (24h/3d/7d), marriage/bereavement leave, sick leave (C65).
+  - `SOP_CORE_EXPENSE_TRAVEL_REIMBURSEMENT_2026.md`: Per diem (350,000 VND Tier 1 / 250,000 VND other), hotel caps (800,000 VND staff / 1,200,000 VND manager), advance up to 80%, reimbursement within 7 working days with VAT e-invoice.
+  - `SOP_CORE_IT_SECURITY_DEVICE_USAGE_2026.md`: Password policy (min 10 chars, 3/4 groups, 90-day rotation), MFA/2FA, Clean Desk & Clear Screen policy (Windows + L, 10-min timeout), prohibition of cracked software.
+  - `SOP_CORE_ONBOARDING_PROBATION_2026.md`: Day-1 onboarding, asset handover, buddy/mentor assignment, probation durations (60 days manager/specialist, 30 days staff), 85% salary minimum, 75% KPI threshold for permanent contract.
+  - `SOP_CORE_CODE_OF_CONDUCT_CULTURE_2026.md`: Core values, dress code (Smart Casual Mon-Thu, Casual Friday), respectful communication, 3-step internal conflict resolution, whistleblower protection.
+  - `SOP_CORE_PERFORMANCE_BENEFITS_BONUS_2026.md`: Semi-annual KPI/OKR grading (A/B/C/D), 13th-month salary formula based on active service months, annual health checkups, birthday/marriage gifts, annual company trip.
+- Total knowledge base expanded to 20 documents per workspace (138 vector chunks for `abc-retail`, 128 for `xyz-service`, 266 vector embeddings total).
+- Updated `apps/knowledge/intent_router.py` with 6 new `BusinessIntent` constants (`CORE_WORKING_HOURS_LEAVE`, `CORE_EXPENSE_TRAVEL_REIMBURSEMENT`, `CORE_IT_SECURITY_DEVICE_USAGE`, `CORE_ONBOARDING_PROBATION`, `CORE_CODE_OF_CONDUCT_CULTURE`, `CORE_PERFORMANCE_BENEFITS_BONUS`).
+- Updated `apps/knowledge/services.py` to return the resolved intent in query results.
+- Enhanced UI in `templates/ai/assistant.html` with prominent, everyday suggestion chips for quick access to core handbook questions.
+- Expanded benchmark suite in `tests/test_ai_advanced_context_benchmark.py` with 6 new test cases (Q125 to Q130), achieving 133/133 passing tests (100%).
+- Verified end-to-end client HTTP query execution with accurate citations, Vietnamese text generation, and strict workspace isolation.
+
+### 2026-09-11 — Phase 4 Enterprise SOP Knowledge Base Ingestion & Grounded RAG Training
+
+- Authored and ingested 6 additional enterprise SOP markdown documents into pgvector vector store across both workspaces (`abc-retail` and `xyz-service`), reaching 14 SOPs per workspace (184 vector chunks total) with zero duplicate contexts:
+  - Retail: `SOP_RETAIL_PROMO_FRAUD_2026.md` (Fraud Hold on bursts >3 orders/15m, Staff Discount 15% cap 2 devices/yr & 90-day retention), `SOP_RETAIL_INVENTORY_AUDIT_2026.md` (Cycle Count for items >10M with zero tolerance, shrinkage >0.2% camera lockdown, fire-resistant sand container for swollen Li-ion), `SOP_RETAIL_TRADE_IN_2026.md` (Grade A-D matrix, rejection of iCloud/MDM/Knox/FRP locks, Zero Data Leak guarantee).
+  - Service: `SOP_SVC_CHANGE_MANAGEMENT_2026.md` (ITIL Standard/Normal/Emergency CAB, 15-min rollback, Friday >17h Change Freeze), `SOP_SVC_ASSET_DECOMMISSION_2026.md` (NIST SP 800-88 Clear, Purge via Degaussing >=10,000 Gauss, Destroy via shredding <2mm, CISO certificate), `SOP_SVC_BACKUP_RETENTION_2026.md` (3-2-1-1 backup, WORM immutable storage, monthly sandbox recovery drills vs RTO).
+- Updated `apps/knowledge/intent_router.py` with 6 new `BusinessIntent` constants (`PROMOTION_FRAUD_CONTROL`, `INVENTORY_AUDIT_DISPOSAL`, `TRADE_IN_DATA_SECURITY`, `ITIL_CHANGE_MANAGEMENT`, `DATA_SANITIZATION_NIST`, `BACKUP_DISASTER_RECOVERY_DRILL`), prioritized backup drill matching over general DRP.
+- Added interactive suggestion chips in `templates/ai/assistant.html` for both Retail and Service portals.
+- Expanded benchmark test suite in `tests/test_ai_advanced_context_benchmark.py` with 12 new test cases (Q113 to Q124), achieving 127/127 passing tests (100%).
+- Successfully executed live browser subagent verification on `/noibo/ai/`, verifying Vietnamese responses, exact citations for Promo Fraud SOP, and captured screenshots and WebP session video.
+
+### 2026-09-11 — Phase 3 Enterprise SOP Knowledge Base Ingestion & Grounded RAG Training
+
+- Authored and ingested 6 comprehensive enterprise SOP markdown documents into pgvector vector store across both workspaces (`abc-retail` and `xyz-service`), reaching 12 SOPs total without duplicate contexts:
+  - Retail: `SOP_RETAIL_RMA_WARRANTY_2026.md` (DOA 72h, CID 30%, laptop >25M loaner), `SOP_SUPPLIER_CONTRACT_PENALTIES_2026.md` (0.5%/day delay, MIL-STD-105E AQL 2.0%, price protection), `SOP_OMNICHANNEL_FULFILLMENT_2026.md` (BOPIS 30-min/48h hold, packaging & video recording for orders >5M VND).
+  - Service: `SOP_CYBERSECURITY_INCIDENT_DRP_2026.md` (P0 Ransomware 5-min quarantine, strict No-Reboot Rule for forensics, RTO <= 4h, RPO <= 1h), `SOP_SLA_ESCALATION_DISPUTE_2026.md` (3-tier SLA escalation, 10km GIS backup dispatch, independent dispute board), `SOP_DATACENTER_THERMAL_ENERGY_2026.md` (Cold aisle 18-24°C, ATS <= 15s generator sync, 72h fuel reserve).
+- Updated `apps/knowledge/intent_router.py` with 6 new `BusinessIntent` classes, refined keyword patterns, and inquiry detection guards to distinguish read-only policy questions from state mutations.
+- Enhanced `apps/knowledge/services.py` with markdown table preservation during text chunk rendering, heading-level section citations, and Human-in-the-Loop (HITL) `ApprovalRequest` creation for DOA replacements and emergency technician dispatches.
+- Added interactive suggestion chips in `templates/ai/assistant.html`.
+- Added 18 new automated benchmark scenarios (Q95 to Q112) to `tests/test_ai_advanced_context_benchmark.py`, achieving 115/115 passing tests.
+- Successfully conducted automated browser verification on `/noibo/ai/` confirming responsive UI, accurate Vietnamese answers, exact citations, similarity scores, and strict workspace boundary isolation.
+
+### 2026-09-11 — Cross-device registration confirmation
+
+Added a single-use confirmation URL beside the registration code. Opening the URL
+on a phone activates the pending account; the original browser polls only its own
+pending-registration session and automatically logs in after activation. The code
+path remains available as a paste/autofill fallback.
 
 ### 2026-09-11 — Render Free migration release path
 

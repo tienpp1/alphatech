@@ -68,7 +68,10 @@ from apps.public_web.email_service import (
     send_contact_confirmation_email,
 )
 from apps.public_web.models import CustomerEmailDelivery, SocialIdentity, RegistrationCode
-from apps.public_web.registration import issue_registration_code, consume_registration_code
+from apps.public_web.registration import (
+    issue_registration_code, consume_registration_code, registration_link_user,
+    consume_registration_link,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -798,6 +801,33 @@ def public_verify_registration_code_view(request):
             return redirect("/dang-ky/")
         _activate_registered_customer(user)
     request.session.pop("pending_verification_user_id", None)
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    return redirect("/tai-khoan/?registered=1&email_verified=1")
+
+
+@require_POST
+def public_registration_status_view(request):
+    """Poll from the original browser; never accepts a user id from the client."""
+    pending_id = request.session.get("pending_verification_user_id")
+    user = User.objects.filter(pk=pending_id).first() if pending_id else None
+    challenge = RegistrationCode.objects.filter(user=user).first() if user else None
+    if user and challenge and challenge.consumed_at and user.is_active:
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        request.session.pop("pending_verification_user_id", None)
+        return JsonResponse({"verified": True, "redirect": "/tai-khoan/?registered=1&email_verified=1"})
+    return JsonResponse({"verified": False})
+
+
+def public_verify_registration_link_view(request, token):
+    """Cross-device email action; the original browser completes via polling."""
+    user = registration_link_user(token)
+    if not user:
+        return redirect("/dang-ky/?verification_error=invalid")
+    with transaction.atomic():
+        user = User.objects.select_for_update().get(pk=user.pk)
+        if user.is_active or not consume_registration_link(user):
+            return redirect("/dang-nhap/?verified=already")
+        _activate_registered_customer(user)
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     return redirect("/tai-khoan/?registered=1&email_verified=1")
 
@@ -1755,6 +1785,16 @@ def public_checkout_place_order_view(request):
         request.session["checkout_error"] = "Vui lòng điền đầy đủ Họ tên, Số điện thoại và Email."
         return redirect("/thanh-toan/")
 
+    try:
+        validate_email(email)
+    except ValidationError:
+        request.session["checkout_error"] = "Địa chỉ email không đúng định dạng."
+        return redirect("/thanh-toan/")
+
+    if delivery_method not in {"HOME_DELIVERY", "STORE_PICKUP"}:
+        request.session["checkout_error"] = "Phương thức nhận hàng không hợp lệ."
+        return redirect("/thanh-toan/")
+
     if delivery_method == "HOME_DELIVERY" and not address:
         request.session["checkout_error"] = "Vui lòng nhập địa chỉ nhận hàng chi tiết."
         return redirect("/thanh-toan/")
@@ -1792,6 +1832,7 @@ def public_checkout_place_order_view(request):
 
     # Optional Stock Balance validation & safe deduction if branch stock balance exists
     if branch:
+        deductions = []
         for item in cart_items:
             stock = StockBalance.objects.select_for_update().filter(
                 workspace=retail_ws,
@@ -1802,8 +1843,12 @@ def public_checkout_place_order_view(request):
                 if stock.quantity_on_hand < item.quantity:
                     request.session["checkout_error"] = f"Sản phẩm '{item.product.name}' tại chi nhánh '{branch.name}' chỉ còn {stock.quantity_on_hand} sản phẩm (yêu cầu: {item.quantity})."
                     return redirect("/gio-hang/")
-                stock.quantity_on_hand -= item.quantity
-                stock.save(update_fields=["quantity_on_hand", "updated_at"])
+                deductions.append((stock, item.quantity))
+        # A normal rejection redirect commits the enclosing transaction. Validate
+        # every line before mutating any balance, so rejected carts lose no stock.
+        for stock, quantity in deductions:
+            stock.quantity_on_hand -= quantity
+            stock.save(update_fields=["quantity_on_hand", "updated_at"])
 
     from .customer_identity import customer_for_submission
     customer = customer_for_submission(

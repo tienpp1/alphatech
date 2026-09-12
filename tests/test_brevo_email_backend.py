@@ -5,13 +5,46 @@ from unittest.mock import Mock, patch
 import requests
 from django.core.mail import EmailMultiAlternatives
 from django.core.management import call_command
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings, skipUnlessDBFeature
 
 from apps.public_web.email_backends import BrevoEmailBackend, EmailTransportError
 from apps.public_web.email_service import queue_and_deliver_email, deliver_outbox_record
 from apps.public_web.models import CustomerEmailDelivery
 
 BACKEND = "apps.public_web.email_backends.BrevoEmailBackend"
+
+
+@override_settings(EMAIL_BACKEND=BACKEND, BREVO_API_KEY="test-only-key",
+                   DEFAULT_FROM_EMAIL="sender@example.com")
+class ConcurrentOutboxTests(TransactionTestCase):
+    @skipUnlessDBFeature("has_select_for_update")
+    @patch("requests.post")
+    def test_two_workers_send_one_record_once(self, post):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+        from django.db import close_old_connections
+
+        delivery = CustomerEmailDelivery.objects.create(event_type="CONTACT",
+            recipient="one@example.com", subject="Liên hệ", plain_body="Đã ghi nhận",
+            deduplication_key="concurrent-brevo-record")
+        barrier = Barrier(2)
+        post.return_value = response()
+
+        def attempt():
+            close_old_connections()
+            try:
+                stale = CustomerEmailDelivery.objects.get(pk=delivery.pk)
+                barrier.wait(timeout=10)
+                return deliver_outbox_record(stale).status
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(attempt) for _ in range(2)]
+            self.assertEqual([future.result(timeout=20) for future in futures], ["SENT", "SENT"])
+        post.assert_called_once()
+        delivery.refresh_from_db()
+        self.assertEqual(delivery.attempt_count, 1)
 
 
 def response(status=201, body=None):
@@ -89,6 +122,20 @@ class BrevoBackendTests(SimpleTestCase):
 @override_settings(EMAIL_BACKEND=BACKEND, BREVO_API_KEY="test-only-key",
                    DEFAULT_FROM_EMAIL="sender@example.com")
 class BrevoOutboxTests(TestCase):
+    @patch("requests.post")
+    def test_stale_pending_instance_cannot_resend_a_sent_record(self, post):
+        delivery = CustomerEmailDelivery.objects.create(
+            event_type="CONTACT", recipient="one@example.com", subject="Liên hệ",
+            plain_body="Đã ghi nhận", deduplication_key="stale-brevo-record",
+        )
+        stale = CustomerEmailDelivery.objects.get(pk=delivery.pk)
+        post.return_value = response()
+        self.assertEqual(deliver_outbox_record(delivery).status, "SENT")
+        self.assertEqual(deliver_outbox_record(stale).status, "SENT")
+        post.assert_called_once()
+        stale.refresh_from_db()
+        self.assertEqual(stale.attempt_count, 1)
+
     @patch("requests.post")
     def test_failed_record_can_retry_then_remains_idempotent(self, post):
         post.return_value = response(429)

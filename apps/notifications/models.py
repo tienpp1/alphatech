@@ -13,6 +13,8 @@ class NotificationEventType(models.TextChoices):
     NEW_ORDER = "NEW_ORDER", "Đơn hàng mới"
     NEW_SERVICE_REQUEST = "NEW_SERVICE_REQUEST", "Yêu cầu dịch vụ mới"
     NEW_CONTACT = "NEW_CONTACT", "Liên hệ mới"
+    CUSTOMER_ORDER_APPROVED = "CUSTOMER_ORDER_APPROVED", "Đơn hàng của bạn đã được duyệt"
+    CUSTOMER_SERVICE_APPROVED = "CUSTOMER_SERVICE_APPROVED", "Yêu cầu dịch vụ đã được tiếp nhận"
 
 
 class Notification(models.Model):
@@ -55,6 +57,13 @@ class Notification(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Notification"
         verbose_name_plural = "Notifications"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "recipient", "event_type", "entity_type", "entity_id"],
+                condition=models.Q(event_type__in=["CUSTOMER_ORDER_APPROVED", "CUSTOMER_SERVICE_APPROVED"]),
+                name="unique_customer_approval_notice",
+            ),
+        ]
         indexes = [
             models.Index(fields=["recipient", "workspace", "is_read", "-created_at"]),
             models.Index(fields=["workspace", "event_type", "-created_at"]),

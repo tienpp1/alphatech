@@ -303,6 +303,7 @@
                 {% csrf_token %}
                 <label for="registration_code" class="form-label">Mã xác minh đăng ký</label>
                 <p id="code_help" style="font-size:.88rem;line-height:1.5;">Nhập mã mới nhất gồm 6 chữ số. Bạn có thể sao chép và dán mã từ email. Tối đa 5 lần nhập sai.</p>
+                <p style="font-size:.88rem;line-height:1.5;">Bạn có thể bấm liên kết xác minh trong email trên điện thoại; trang này sẽ tự chuyển sang tài khoản sau khi xác minh thành công.</p>
                 <input type="text" id="registration_code" name="code" class="form-input" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required autofocus aria-describedby="code_help" style="margin-bottom:1rem;">
                 <button type="submit" class="btn-submit">Xác minh và hoàn tất đăng ký</button>
             </form>
@@ -414,6 +415,27 @@
     </div>
 
     <script>
+    {% if pending_code %}
+    (function () {
+        var csrf = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (!csrf) return;
+        var checking = false;
+        var poll = function () {
+            if (checking) return;
+            checking = true;
+            fetch("{% url 'public_registration_status' %}", {
+                method: "POST",
+                headers: {"X-CSRFToken": csrf.value, "X-Requested-With": "XMLHttpRequest"},
+                credentials: "same-origin"
+            }).then(function (response) { return response.ok ? response.json() : null; })
+              .then(function (data) {
+                  if (data && data.verified && data.redirect) window.location.href = data.redirect;
+              }).catch(function () {}).finally(function () { checking = false; });
+        };
+        poll();
+        window.setInterval(poll, 3000);
+    }());
+    {% endif %}
     function togglePasswordVisibility(fieldId, btn) {
         var input = document.getElementById(fieldId);
         if (input.type === 'password') {

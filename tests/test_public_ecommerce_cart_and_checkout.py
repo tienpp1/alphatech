@@ -496,6 +496,21 @@ class PublicEcommerceCartAndCheckoutTestCase(TestCase):
         stock_q1.refresh_from_db()
         self.assertEqual(stock_q1.quantity_on_hand, 3)
 
+    def test_prefetched_product_images_do_not_query_per_product(self):
+        from apps.retail.models import ProductImage
+        first = ProductImage.objects.create(workspace=self.ws_retail,
+            product=self.prod_mouse, image="products/first.png", sort_order=0)
+        primary = ProductImage.objects.create(workspace=self.ws_retail,
+            product=self.prod_mouse, image="products/primary.png", is_primary=True, sort_order=2)
+        product = Product.objects.prefetch_related("images").get(pk=self.prod_mouse.pk)
+        with self.assertNumQueries(0):
+            self.assertEqual(product.primary_image.pk, primary.pk)
+        primary.is_primary = False
+        primary.save(update_fields=["is_primary"])
+        product = Product.objects.prefetch_related("images").get(pk=self.prod_mouse.pk)
+        with self.assertNumQueries(0):
+            self.assertEqual(product.primary_image.pk, first.pk)
+
     def test_insufficient_branch_stock_rejects_checkout(self):
         """If branch stock is less than requested quantity, checkout is safely rejected."""
         StockBalance.objects.create(
@@ -521,6 +536,34 @@ class PublicEcommerceCartAndCheckoutTestCase(TestCase):
 
         # Verify no order was created
         self.assertFalse(Order.objects.filter(customer__email="levanc@testmail.vn").exists())
+
+    def test_later_insufficient_line_does_not_deduct_earlier_stock(self):
+        first = StockBalance.objects.create(workspace=self.ws_retail,
+            branch=self.branch_q1, product=self.prod_mouse, quantity_on_hand=5)
+        last = StockBalance.objects.create(workspace=self.ws_retail,
+            branch=self.branch_q1, product=self.prod_keyboard, quantity_on_hand=0)
+        for product in (self.prod_mouse, self.prod_keyboard):
+            self.client.post(f"/gio-hang/them/{product.pk}/", {"quantity": "2"})
+        response = self.client.post("/thanh-toan/dat-hang/", {
+            "name": "Khách hàng", "phone": "0900000000", "email": "buyer@example.com",
+            "delivery_method": "STORE_PICKUP", "branch_id": str(self.branch_q1.pk),
+        })
+        self.assertEqual(response.url, "/gio-hang/")
+        first.refresh_from_db()
+        last.refresh_from_db()
+        self.assertEqual(first.quantity_on_hand, 5)
+        self.assertEqual(last.quantity_on_hand, 0)
+        self.assertFalse(Order.objects.filter(customer__email="buyer@example.com").exists())
+        self.assertEqual(len(self.client.session["public_shopping_cart"]), 2)
+
+    def test_invalid_checkout_email_and_delivery_method_create_no_order(self):
+        self.client.post(f"/gio-hang/them/{self.prod_mouse.pk}/", {"quantity": "1"})
+        payload = {"name": "Khách hàng", "phone": "0900000000",
+            "email": "buyer@example.com", "delivery_method": "HOME_DELIVERY", "address": "HCM"}
+        for change in ({"email": "invalid@@example.com"}, {"delivery_method": "INVALID"}):
+            response = self.client.post("/thanh-toan/dat-hang/", {**payload, **change})
+            self.assertEqual(response.url, "/thanh-toan/")
+        self.assertFalse(Order.objects.exists())
 
     # =========================================================================
     # F. CUSTOMER ORDER HISTORY & STRICT IDOR PROTECTION

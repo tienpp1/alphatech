@@ -5,6 +5,8 @@ Authority: current source code and migrations. Historical phase documents are se
 
 Public branch directory update (2026-09-11): `/chi-nhanh/` retains its active RETAIL branch visibility contract and sends only public directory fields to browser JSON. Leaflet/OSM renders the map; browser-only opt-in location/manual origin is not persisted. Explicit public-place address queries POST to a CSRF-protected Django endpoint backed by switchable, HTTPS-only Nominatim with shared PostgreSQL rate gate and cache; road-distance/routing requests go to OSRM, and navigation may be handed off to Google Maps. Radius is Haversine distance, distinct from road distance. Device GPS is supplied by browser Geolocation, not OSM. These public providers are best-effort, not a production SLA; address-search live verification is currently blocked by external timeout. No membership or internal GIS permissions are granted by these tools.
 
+Customer approval celebration (2026-09-12): notification signals create a deduplicated public customer event on `Order PENDING→CONFIRMED` and `ServiceRequest OPEN→ASSIGNED/IN_PROGRESS`. The public shell fetches only the authenticated user's unread, currently owned events; acknowledgement is CSRF-protected. Animation runs only in the browser and respects `prefers-reduced-motion`.
+
 ## 1. Project purpose and stack
 
 This Django modular monolith serves two domains: **ABC Tech Store** (retail catalog, customers, branches, sales, suppliers, receiving, stock and analytics) and **XYZ IT Technical Services** (service catalog, technicians, tickets, assignments, schedules, SLA and labor cost). Shared capabilities include PostGIS, ingestion/mapping, RAG/assistant, XGBoost forecasts, recommendations, controlled approvals, notifications and audit.
@@ -60,7 +62,7 @@ APIs: `/api/v1/auth/*`, `/workspaces/*`, `/retail/*`, `/service-ops/*`, `/gis/*`
 
 - `accounts.User` extends `AbstractUser`; email is unique.
 - `/accounts/login/` is internal browser login, creates a DRF token and stores the default workspace. `/dang-nhap/` routes members/superusers to `/noibo/`, customers to `/tai-khoan/`.
-- Public password registration creates one inactive User and a customer profile, sends a six-digit mailbox code valid for 10 minutes, and activates that same User only after a session-bound CSRF-protected verification POST. RegistrationCode serializes issuance/consumption under the User lock, stores a password hash, limits resends to 60 seconds/5 per hour and failed attempts to 5 per hourly window (resend does not reset failures). Existing signed-link registrations without RegistrationCode remain compatible. It never creates membership/role; welcome and internal new-customer notifications wait for activation.
+- Public password registration creates one inactive User and a customer profile, sends a six-digit mailbox code valid for 10 minutes plus a single-use signed confirmation link. Code activation is a session-bound CSRF-protected POST; link activation may occur on another device, after which the original browser polls a session-bound CSRF-protected status endpoint and logs the same User in. RegistrationCode serializes issuance/consumption under the User lock, stores a password hash, limits resends to 60 seconds/5 per hour and failed attempts to 5 per hourly window (resend does not reset failures). Existing signed-link registrations without RegistrationCode remain compatible. It never creates membership/role; welcome and internal new-customer notifications wait for activation.
 - `Customer.user` is an optional workspace-local FK with a unique `(workspace,user)` constraint. Legacy guest identity is handled explicitly by the public identity service.
 - Password reset uses Django tokens and an enumeration-safe response; development email defaults to console.
 - Google OAuth uses authorization-code exchange plus UserInfo, requires a verified normalized email and stable `sub`, and persists the provider link in `public_web.SocialIdentity`. A verified Google email activates/links the same pending password-registration User instead of creating a duplicate, invalidating its unverified password; an existing account/provider email cannot be registered again (case insensitive). State is single-use and expires after ten minutes. Production callbacks must be an environment-configured HTTPS URI; public OAuth never grants workspace membership/staff privileges.
@@ -233,6 +235,13 @@ Email may use the opt-in Brevo HTTPS Django backend on Render Free. Existing
 outbox SENT means provider acceptance, not inbox receipt. Timeout outcome is
 unknown and must be reconciled against provider logs before retry. See
 docs/BREVO_HTTPS_EMAIL.md for supported message formats and activation.
+
+Customer email delivery serializes attempts with a database row lock held across
+the bounded provider request and reloads persisted state before checking SENT.
+This prevents concurrent or stale callers from duplicating a completed attempt;
+it cannot guarantee exactly-once delivery after a provider timeout/process crash.
+Pickup checkout validates every available stock row before mutating any balance,
+so a rejection redirect cannot commit a partially deducted cart.
 
 Production WSGI imports and health probes must not migrate, seed or reset users.
 Build produces artifacts; database migrations run explicitly during release.

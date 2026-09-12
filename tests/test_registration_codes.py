@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.public_web.models import RegistrationCode, SocialIdentity, CustomerEmailDelivery
 from apps.public_web.views import _email_verification_token
+from apps.public_web.registration import registration_link_user
 
 
 class RegistrationCodeTests(TestCase):
@@ -39,6 +40,21 @@ class RegistrationCodeTests(TestCase):
         self.verify()
         self.assertNotIn("_auth_user_id", self.client.session)
         self.assertEqual(len(mail.outbox), 2)
+
+    def test_email_link_activates_on_phone_and_original_session_can_poll(self):
+        self.start()
+        token_match = re.search(r"https?://[^\s]+/xac-minh-dang-ky/([^/\s]+)/", mail.outbox[-1].body)
+        self.assertIsNotNone(token_match)
+        token = token_match.group(1)
+        phone = Client()
+        with self.captureOnCommitCallbacks(execute=True):
+            phone_response = phone.get(f"/xac-minh-dang-ky/{token}/")
+        self.assertIn("registered=1", phone_response.url)
+        self.assertIsNone(registration_link_user(token))
+        with self.captureOnCommitCallbacks(execute=True):
+            status = self.client.post("/dang-ky/trang-thai-ma/", HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertTrue(status.json()["verified"])
+        self.assertIn("_auth_user_id", self.client.session)
 
     def test_wrong_code_locks_after_five_and_resend_does_not_reset(self):
         self.start()

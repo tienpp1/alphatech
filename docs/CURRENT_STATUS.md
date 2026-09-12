@@ -1,5 +1,11 @@
 # Current repository status
 
+## 2026-09-12 — Customer approval celebration
+
+- Added persistent customer notices when an order transitions `PENDING → CONFIRMED` or a service request transitions `OPEN → ASSIGNED/IN_PROGRESS`.
+- Public authenticated pages poll for the customer's own unread notice and show a Vietnamese thank-you dialog with accessible confetti/check animation. Notices are acknowledged with CSRF-protected POST, deduplicated by database constraint, and filtered again by current ownership/status before display.
+- Added notification migration `notifications.0002_customer_approval_notices`. Focused test suite: 6 tests pass; Django check and migration drift pass.
+
 ## 2026-09-11 — Public branch finder (local implementation, partial live verification)
 
 - Replaced broken dark tactical tiles/straight-line pseudo-routing with light OSM tiles, Leaflet attribution, opt-in browser location, address-search UI, map-point origin, OSRM road-distance comparison/directions, Google Maps handoff, and independent 1–10 km radius filtering.
@@ -11,6 +17,69 @@
 - Follow-up OSM hardening: address lookup now POSTs to the Django endpoint, which uses operator-approved public Nominatim with a PostgreSQL advisory lock (one upstream request at a time across app instances), 24-hour result cache, Vietnam scope, HTTPS-only endpoint validation, no redirects, bounded timeout, CSRF and sanitized public results. The browser no longer sends address text directly to Photon.
 - Device location remains browser Geolocation API (OSM cannot provide GPS). Accuracy is shown, coarse fixes are warned, and the green marker is draggable. OSRM route preferences now expose distance versus duration among returned alternatives and expandable OSM turn steps; no traffic or global-shortest claim.
 - Follow-up automated validation: 10 Node tests and 12 Django tests pass; `manage.py check` has no issues; `makemigrations --check --dry-run` reports no changes. The new browser session could not be reopened because the browser tool hit the account usage limit; prior browser verification covered tiles, routing, radius, and mobile layout. Nominatim live search remains unverified; the earlier timeout evidence was for Photon.
+
+## 2026-09-11 — Core Enterprise Handbook & Universal Corporate Policy Training (Phase 5)
+
+Per operator request to provide universal core corporate contexts without deep specialized domain jargon, created and ingested 6 fundamental company handbook policies into both `abc-retail` and `xyz-service`:
+- Added 6 Core Enterprise SOPs in `data/knowledge/`:
+  1. `SOP_CORE_WORKING_HOURS_LEAVE_2026.md`: Working hours (8:00 - 17:30, lunch 12:00 - 13:30), 15-min grace period (max 3/mo), 12 annual leave days (+1 day per 5 years), leave notice requirements (24h/3d/7d), marriage/bereavement leave, sick leave (C65).
+  2. `SOP_CORE_EXPENSE_TRAVEL_REIMBURSEMENT_2026.md`: Per diem (350k Tier 1 / 250k other), accommodation caps (800k staff / 1.2M manager), advance up to 80%, reimbursement within 7 working days with VAT e-invoice.
+  3. `SOP_CORE_IT_SECURITY_DEVICE_USAGE_2026.md`: Password policy (min 10 chars, 3/4 groups, 90-day rotation), MFA requirement, Clean Desk & Clear Screen policy (Windows + L, 10-min timeout), prohibition of cracked software.
+  4. `SOP_CORE_ONBOARDING_PROBATION_2026.md`: Day-1 onboarding, asset handover, buddy assignment, probation durations (60 days manager/specialist, 30 days staff), 85% salary minimum, 75% KPI threshold for permanent contract.
+  5. `SOP_CORE_CODE_OF_CONDUCT_CULTURE_2026.md`: Core values, dress code (Smart Casual Mon-Thu, Casual Friday), respectful communication, 3-step internal conflict resolution, whistleblower protection.
+  6. `SOP_CORE_PERFORMANCE_BENEFITS_BONUS_2026.md`: Semi-annual KPI/OKR grading (A/B/C/D), 13th-month salary formula based on active service months, annual health checkups, birthday/marriage gifts, annual company trip.
+- Database & pgvector status:
+  - `abc-retail`: **20 documents / 138 vector chunks** (Status: `READY`).
+  - `xyz-service`: **20 documents / 128 vector chunks** (Status: `READY`).
+  - Total: 40 document instances, 266 vector embeddings across workspaces.
+- `apps/knowledge/intent_router.py`: added 6 core intents (`CORE_WORKING_HOURS_LEAVE`, `CORE_EXPENSE_TRAVEL_REIMBURSEMENT`, `CORE_IT_SECURITY_DEVICE_USAGE`, `CORE_ONBOARDING_PROBATION`, `CORE_CODE_OF_CONDUCT_CULTURE`, `CORE_PERFORMANCE_BENEFITS_BONUS`).
+- `templates/ai/assistant.html`: restructured suggestion chips to prominently feature the 6 core daily employee questions.
+- Automated validation: `tests/test_ai_advanced_context_benchmark.py` passes **133/133 tests** in 100.4s.
+- Live verification: verified via `scripts/execute_core_enterprise_prompts.py` and simulated client chat endpoint `scripts/verify_client_chat.py`.
+
+## 2026-09-11 — Internal AI Assistant Enterprise Knowledge Expansion (Phase 4)
+
+Expanded internal AI knowledge base in `/noibo/ai/` and pgvector vector store to 14 production SOP documents (184 total vector chunks across workspaces) with zero context duplication:
+- Added 6 new enterprise SOPs in `data/knowledge/`:
+  1. `SOP_RETAIL_PROMO_FRAUD_2026.md`: Anti-Fraud & Voucher Abuse Protocol (1 voucher/device/24h, Fraud Hold on duplicate bursts >3 orders/15m, Staff discount 15% cap 2 devices/yr & 90-day retention rule).
+  2. `SOP_RETAIL_INVENTORY_AUDIT_2026.md`: Inventory Cycle Count & Hazardous Battery Disposal (Weekly cycle count for high-value items >10M with zero tolerance, shrinkage >0.2% camera lockdown, fire-resistant metal container with dry sand for swollen Li-ion).
+  3. `SOP_RETAIL_TRADE_IN_2026.md`: Trade-in Valuation & Customer Data Wipe (4-tier Grade A-D matrix, rejection on iCloud/MDM/Knox/FRP locks, Zero Data Leak guarantee with on-site factory reset and certificate).
+  4. `SOP_SVC_CHANGE_MANAGEMENT_2026.md`: ITIL Change Advisory Board & Emergency Change Protocol (Standard/Normal/Emergency classes, 15-min rollback requirement, Change Freeze windows on Friday >17h & holidays).
+  5. `SOP_SVC_ASSET_DECOMMISSION_2026.md`: NIST SP 800-88 Data Sanitization & Asset Decommission (Clear, Purge via Degaussing >=10,000 Gauss, Destroy via physical shredding <2mm, Certificate of Data Destruction signed by CISO).
+  6. `SOP_SVC_BACKUP_RETENTION_2026.md`: 3-2-1-1 Backup & Recovery Drill Protocol (3 copies, 2 media, 1 offsite >50km, 1 immutable WORM, monthly sandbox recovery drills vs RTO).
+- Database & pgvector status:
+  - `abc-retail`: 14 documents / 97 vector chunks (all status `READY`).
+  - `xyz-service`: 14 documents / 87 vector chunks (all status `READY`).
+- `apps/knowledge/intent_router.py`: added 6 new `BusinessIntent` constants, refined keyword regex and priority ordering.
+- `templates/ai/assistant.html`: added interactive suggestion chips for both Retail and Service domains.
+- Automated validation: `tests/test_ai_advanced_context_benchmark.py` passes **127/127 benchmark tests** in 71.8s.
+- Live verification: automated browser subagent executed test queries on `/noibo/ai/`, verifying Vietnamese responses, exact citations for Promo Fraud SOP, and captured screenshots and WebP session video.
+
+## 2026-09-11 — Internal AI Assistant Knowledge Base & Enterprise Multi-Domain Training (Phase 3)
+
+Expanded internal AI knowledge base in `/noibo/ai/` and pgvector vector store to 12 production SOP documents without duplicate contexts:
+- Added 6 new enterprise SOPs in `data/knowledge/`:
+  1. `SOP_RETAIL_RMA_WARRANTY_2026.md`: DOA 72h 100% fullbox replacement, standard 7-14d manufacturer RMA, Customer-Induced Damage (CID) with 30% parts subsidy, loaner PC for laptops >25M when repair >7 days.
+  2. `SOP_SUPPLIER_CONTRACT_PENALTIES_2026.md`: 0.5%/day delivery delay penalty (cap 8%), unilateral PO cancellation if >10 days with 15% damages, MIL-STD-105E AQL 2.0% total batch rejection within 48h, 30-day price protection credit note.
+  3. `SOP_OMNICHANNEL_FULFILLMENT_2026.md`: BOPIS 30-min preparation and 48-hour stock hold reservation, 3-layer bubble packaging with tamper-evident security tape, mandatory video recording for tech orders >5,000,000 VND.
+  4. `SOP_CYBERSECURITY_INCIDENT_DRP_2026.md`: P0 Cyber Emergency (Ransomware, data exfiltration, DDoS >10Gbps), 5-minute network quarantine, strict "No-Reboot Rule" to preserve volatile RAM for digital forensics, RTO <= 4.0h, RPO <= 1.0h, mandatory RCA report within 48h.
+  5. `SOP_SLA_ESCALATION_DISPUTE_2026.md`: 3-Tier proactive escalation (Tier 1 at 50% SLA to Tech Lead, Tier 2 at 75% SLA to Service Manager + dispatching backup engineer within 10km GIS, Tier 3 at 100% SLA to CTO with penalty rebate), independent 24h technical dispute arbitration board.
+  6. `SOP_DATACENTER_THERMAL_ENERGY_2026.md`: Cold aisle 18.0°C - 24.0°C, 45% - 55% humidity, 27°C warning, 30°C critical, 35°C Emergency Power Off (EPO), N+1 dual-feed power, automatic ATS Diesel generator synchronization in <= 15 seconds with 72-hour onsite fuel.
+- Ingestion pipeline (`scripts/ingest_all_enterprise_sops.py`) indexed all documents into pgvector vector store across both workspaces (`abc-retail`: 11 documents / 74 vector chunks; `xyz-service`: 11 documents / 66 vector chunks; all status `READY`).
+- `apps/knowledge/intent_router.py`: added 6 new `BusinessIntent` classes, updated Vietnamese regex classification, keyword exclusions, and inquiry detection guards.
+- `apps/knowledge/services.py`: expanded grounded answer generation (preserving markdown tables and lists), citation section metadata, and HITL `ApprovalRequest` creation for DOA replacements and backup engineer dispatches (strict zero direct DB mutation).
+- `templates/ai/assistant.html`: added interactive suggestion chips for the new enterprise scenarios in both Retail and Service domains.
+- Automated validation: `tests/test_ai_advanced_context_benchmark.py` passes 115/115 benchmark scenarios covering retail, service, and governance contexts.
+- Live verification: automated browser subagent executed test queries on `/noibo/ai/`, verifying Vietnamese responses, exact document citations, similarity match %, and tenant isolation between `abc-retail` and `xyz-service`.
+
+## 2026-09-11 — Cross-device registration confirmation
+
+Registration emails now contain a single-use, ten-minute confirmation link in
+addition to the six-digit code. A phone or other device can open the link; the
+original registration browser polls a CSRF-protected, session-bound status
+endpoint every three seconds and logs that same User in when activation completes.
+The endpoint never accepts a client-supplied user ID. Newest challenge timestamps
+invalidate older links; code verification remains available as a fallback.
 
 Render Free deployment note: migrations now run in `build.sh` during build.
 Keep the service Start Command as `gunicorn config.wsgi:application`; do not put

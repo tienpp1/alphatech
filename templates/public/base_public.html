@@ -472,6 +472,33 @@
         }
 
         @media (max-width: 640px) {
+            .pub-nav-container {
+                flex-wrap: wrap;
+                gap: 0.6rem;
+                padding: 0.75rem 1rem;
+            }
+            .pub-brand {
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+            .pub-brand-text {
+                min-width: 0;
+                overflow-wrap: anywhere;
+            }
+            .pub-nav-container > nav {
+                display: none;
+            }
+            .pub-header-auth {
+                width: 100%;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                gap: 0.5rem;
+            }
+            .pub-btn-account {
+                max-width: 100%;
+                min-width: 0;
+                overflow-wrap: anywhere;
+            }
             .pub-footer-container {
                 grid-template-columns: 1fr;
             }
@@ -1101,5 +1128,6 @@
     }
     </script>
     {% block extra_js %}{% endblock %}
+    {% include "public/approval_celebration.html" %}
 </body>
 </html>
