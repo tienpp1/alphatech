@@ -77,8 +77,84 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIn("AI Copilot", data["reply"])
+        self.assertIn("AI AlphaTech", data["reply"])
         self.assertTrue(len(data.get("suggestions", [])) > 0)
+
+    def test_public_copilot_get_status_and_identity(self):
+        """GET /api/v1/public/copilot/ returns online status and AI AlphaTech assistant name."""
+        resp = self.client.get("/api/v1/public/copilot/")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["status"], "online")
+        self.assertEqual(data["assistant"], "AI AlphaTech")
+        self.assertIn("warranty_doa", data["capabilities"])
+
+    def test_public_copilot_warranty_and_doa_policy(self):
+        """POST /api/v1/public/copilot/ explains 72h DOA 1-to-1 replacement and official warranty."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "chính sách bảo hành và đổi trả 1 đổi 1 như thế nào"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("DOA", data["reply"])
+        self.assertIn("72 giờ", data["reply"])
+        self.assertIn("1 Đổi 1", data["reply"])
+        self.assertIn("1900 6868", data["reply"])
+
+    def test_public_copilot_shipping_payment_vat(self):
+        """POST /api/v1/public/copilot/ explains payment methods, express shipping, and e-VAT."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "công ty có xuất hóa đơn VAT và giao hàng hỏa tốc không"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("VAT", data["reply"])
+        self.assertIn("hỏa tốc", data["reply"])
+        self.assertIn("5.000.000₫", data["reply"])
+        self.assertIn("Trả góp 0%", data["reply"])
+
+    def test_public_copilot_trade_in_upgrade(self):
+        """POST /api/v1/public/copilot/ explains trade-in program, subsidies, and zero data leak."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "tôi muốn thu cũ đổi mới lên đời laptop"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("Trade-In", data["reply"])
+        self.assertIn("15%", data["reply"])
+        self.assertIn("Zero Data Leak", data["reply"])
+
+    def test_public_copilot_workflow_specific_laptop_consulting(self):
+        """POST /api/v1/public/copilot/ provides tailored advice for design / architecture."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "tư vấn laptop làm đồ họa 3d và kiến trúc cad"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("Đồ họa", data["reply"])
+        self.assertIn("RTX", data["reply"])
+        self.assertIn("RAM", data["reply"])
+
+    def test_public_copilot_emergency_network_sla(self):
+        """POST /api/v1/public/copilot/ emphasizes <15m SLA response for emergency network outage."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "công ty bị rớt mạng khẩn cấp cần kỹ thuật viên gấp"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("KHẨN CẤP", data["reply"])
+        self.assertIn("15 phút", data["reply"])
+        self.assertIn("30 – 45 phút", data["reply"])
 
     def test_order_tracking_requires_exact_code_and_owner(self):
         from apps.accounts.models import User

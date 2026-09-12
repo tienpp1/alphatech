@@ -1551,19 +1551,25 @@ def public_cart_clear_view(request):
 
 def public_copilot_api_view(request):
     """
-    Public Customer AI Copilot API (POST /api/v1/public/copilot/).
-    Safe customer-facing assistant providing:
-    - Product specs, prices, and stock availability
+    Public Customer AI AlphaTech API (POST /api/v1/public/copilot/).
+    Intelligent customer-facing consultant providing:
+    - Product specs, prices, stock, and workflow-specific laptop recommendations
     - IT service recommendations and SLA commitments (< 15 min response)
     - Branch locations, addresses, and hotlines
-    - Order tracking by order number
+    - Official warranty policy, 72h DOA 1-to-1 replacement, and loaner policy
+    - Payment methods (COD, VietQR, POS, 0% installment), express delivery & e-VAT
+    - Trade-In upgrade program with Zero Data Leak guarantee
+    - Safe order tracking by order number
     Zero leakage of internal business metrics (cost prices, labor rates, suppliers, workload).
     """
     if request.method != "POST":
         return JsonResponse({
             "status": "online",
-            "assistant": "ABC Tech & XYZ IT Public Copilot",
-            "capabilities": ["product_recommendation", "service_sla", "branch_locator", "order_tracking"]
+            "assistant": "AI AlphaTech",
+            "capabilities": [
+                "product_recommendation", "service_sla", "branch_locator",
+                "order_tracking", "warranty_doa", "payment_shipping_vat", "trade_in"
+            ]
         })
 
     try:
@@ -1580,130 +1586,10 @@ def public_copilot_api_view(request):
     if len(user_query) > 2000:
         return JsonResponse({"error": "Câu hỏi không được vượt quá 2000 ký tự."}, status=400)
 
-    if not user_query:
-        return JsonResponse({
-            "reply": "Xin chào! Tôi là **AI Copilot** – Trợ lý điều phối công nghệ của ABC Tech Store & XYZ IT Services. Bạn có thể hỏi tôi về cấu hình máy tính, linh kiện, dịch vụ kỹ thuật, hoặc tra cứu chi nhánh gần nhất.",
-            "suggestions": ["Tư vấn Laptop doanh nghiệp", "Chuột & phụ kiện cao cấp", "Dịch vụ IT khẩn cấp (SLA 15m)", "Hệ thống chi nhánh & Hotline"]
-        })
+    from .alphatech_ai import process_alphatech_query
+    result = process_alphatech_query(request, user_query)
+    return JsonResponse(result)
 
-    q_lower = user_query.lower()
-    
-    # 1. Order tracking intent
-    import re
-    order_match = re.search(r'(ORD-[A-Z0-9\-]+|[0-9]{5,})', user_query, re.IGNORECASE)
-    if any(k in q_lower for k in ["đơn hàng", "tra cứu", "vận chuyển", "kiểm tra đơn", "order"]) and order_match:
-        matched_code = order_match.group(1).upper()
-        from .customer_identity import customer_orders
-        if request.user.is_authenticated:
-            orders = customer_orders(request.user)
-        else:
-            orders = Order.objects.filter(
-                workspace__workspace_type=WorkspaceType.RETAIL,
-                created_by__isnull=True,
-                order_number__in=request.session.get("public_order_success_numbers", []),
-            )
-        order = orders.filter(order_number__iexact=matched_code).first()
-        if order:
-            items_count = order.items.count()
-            status_display = order.get_status_display() if hasattr(order, "get_status_display") else order.status
-            total_vnd = f"{int(order.total_amount):,}₫".replace(",", ".")
-            created_date = order.created_at.strftime("%d/%m/%Y %H:%M")
-            reply = (
-                f"📦 **Thông tin đơn hàng {order.order_number}:**\n"
-                f"- **Trạng thái:** `{status_display}`\n"
-                f"- **Ngày đặt:** {created_date}\n"
-                f"- **Số lượng sản phẩm:** {items_count} mặt hàng\n"
-                f"- **Tổng giá trị:** {total_vnd}\n"
-                f"Quý khách có thể xem chi tiết hành trình tại [Lịch sử đơn hàng](/tai-khoan/don-hang/{order.order_number}/)."
-            )
-            return JsonResponse({
-                "reply": reply,
-                "suggestions": ["Mua thêm phụ kiện", "Yêu cầu kỹ thuật cài đặt", "Hỗ trợ bảo hành"]
-            })
-        else:
-            return JsonResponse({
-                "reply": f"Không tìm thấy đơn hàng mã `{matched_code}`. Quý khách vui lòng kiểm tra lại mã đơn hàng hoặc đăng nhập tại [Tài khoản khách hàng](/tai-khoan/) để xem toàn bộ lịch sử.",
-                "suggestions": ["Xem lịch sử đơn hàng", "Tư vấn sản phẩm mới", "Liên hệ hỗ trợ"]
-            })
-
-    # 2. Branch & Location intent
-    if any(k in q_lower for k in ["chi nhánh", "địa chỉ", "ở đâu", "vị trí", "quận", "hà nội", "hồ chí minh", "đà nẵng", "hotline", "gần nhất", "bản đồ"]):
-        branches = Branch.objects.filter(is_active=True, workspace__workspace_type=WorkspaceType.RETAIL).order_by("name")[:4]
-        if branches:
-            lines = ["🏢 **Hệ thống Chi nhánh & Trạm kỹ thuật ABC Tech - XYZ IT:**\n"]
-            for b in branches:
-                lines.append(f"📍 **{b.name}**\n   - Địa chỉ: {b.address or 'Trung tâm công nghệ'}\n   - Hotline: `{b.phone or '1900 6868'}` (08:00 - 21:30)")
-            lines.append("\n👉 Quý khách có thể bật định vị GPS để xem trạm gần nhất tại [Bản đồ chiến thuật GIS](/chi-nhanh/).")
-            return JsonResponse({
-                "reply": "\n".join(lines),
-                "suggestions": ["Xem bản đồ chi nhánh", "Đặt lịch hẹn tại trạm kỹ thuật", "Tư vấn sản phẩm"]
-            })
-
-    # 3. Technical Service & SLA intent
-    if any(k in q_lower for k in ["dịch vụ", "kỹ thuật", "sửa", "cài đặt", "mạng", "bảo trì", "server", "sla", "khẩn cấp", "sự cố", "khắc phục", "it"]):
-        services = Service.objects.filter(is_active=True, workspace__workspace_type=WorkspaceType.SERVICE)
-        srv_matches = []
-        for word in user_query.split():
-            if len(word) >= 3:
-                srv_matches.extend(services.filter(Q(name__icontains=word) | Q(description__icontains=word) | Q(category__icontains=word)))
-        matched_services = list({s.id: s for s in srv_matches}.values()) if srv_matches else list(services[:3])
-        
-        lines = [
-            "⚡ **Dịch vụ Kỹ thuật Doanh nghiệp & Xử lý Sự cố (XYZ IT Services):**\n",
-            "🛡️ **Cam kết SLA:** Phản hồi xác nhận trong **< 15 phút** cho sự cố khẩn cấp (P1), kỹ sư có mặt tại hiện trường trong **30-45 phút**.\n"
-        ]
-        for s in matched_services[:3]:
-            lines.append(f"🔹 **{s.name}** ({s.category})\n   - {s.description[:120]}...\n   - [Đặt yêu cầu dịch vụ này](/yeu-cau-dich-vu/?service_id={s.id})")
-        
-        lines.append("\nHoặc gửi yêu cầu trực tiếp qua [Form Điều phối Dịch vụ 3 bước](/yeu-cau-dich-vu/).")
-        return JsonResponse({
-            "reply": "\n".join(lines),
-            "suggestions": ["Gửi yêu cầu dịch vụ", "Sự cố máy chủ/mạng", "Bảo trì định kỳ", "Hỏi mua thiết bị"]
-        })
-
-    # 4. Product Catalog intent (hardware, laptops, accessories, price)
-    products = Product.objects.filter(
-        is_active=True,
-        deleted_at__isnull=True,
-        workspace__workspace_type=WorkspaceType.RETAIL,
-    ).select_related("category")
-    
-    prod_matches = []
-    keywords = [w for w in user_query.split() if len(w) >= 2]
-    q_filter = Q()
-    for kw in keywords:
-        q_filter |= Q(name__icontains=kw) | Q(description__icontains=kw) | Q(sku__icontains=kw) | Q(category__name__icontains=kw)
-    
-    if q_filter:
-        prod_matches = list(products.filter(q_filter)[:4])
-        
-    if not prod_matches and any(k in q_lower for k in ["sản phẩm", "laptop", "máy tính", "chuột", "phím", "thiết bị", "mua", "giá", "hardware"]):
-        prod_matches = list(products[:4])
-
-    if prod_matches:
-        lines = ["💻 **Sản phẩm công nghệ chính hãng tại ABC Tech Store:**\n"]
-        for p in prod_matches:
-            price_str = f"{int(p.unit_price):,}₫".replace(",", ".")
-            lines.append(f"✨ **{p.name}**\n   - Mã SKU: `{p.sku}` | Danh mục: {p.category.name if p.category else 'Thiết bị'}\n   - Giá niêm yết: **{price_str}**\n   - [Xem chi tiết & Mua hàng](/san-pham/{p.id}/)")
-        lines.append("\n🚚 *Miễn phí vận chuyển toàn quốc cho đơn hàng từ 5.000.000₫. Cam kết 100% hàng chính hãng CO/CQ.*")
-        return JsonResponse({
-            "reply": "\n".join(lines),
-            "suggestions": ["Xem toàn bộ sản phẩm", "Chính sách bảo hành", "Tìm chi nhánh mua trực tiếp", "Dịch vụ kỹ thuật đi kèm"]
-        })
-
-    # 5. Default smart guidance
-    return JsonResponse({
-        "reply": (
-            "Xin chào! Tôi là **AI Copilot** – Trợ lý điều phối công nghệ của ABC Tech Store & XYZ IT Services. "
-            "Tôi có thể hỗ trợ bạn tìm kiếm bất kỳ thông tin nào trên hệ thống:\n\n"
-            "1. 🖥️ **Sản phẩm & Cấu hình:** Tìm kiếm laptop, máy trạm, linh kiện chính hãng và giá ưu đãi.\n"
-            "2. 🛠️ **Hỗ trợ Kỹ thuật:** Tiếp nhận sự cố IT, điều phối kỹ sư lưu động với cam kết SLA < 15 phút.\n"
-            "3. 📍 **Trạm kỹ thuật & Chi nhánh:** Vị trí 3 showroom & trạm dịch vụ trung tâm.\n"
-            "4. 📦 **Tra cứu đơn hàng:** Kiểm tra tiến độ xử lý và hành trình giao nhận.\n\n"
-            "Bạn có thể chọn một trong các gợi ý bên dưới hoặc nhập câu hỏi cụ thể!"
-        ),
-        "suggestions": ["Tư vấn Laptop doanh nghiệp", "Dịch vụ IT khẩn cấp", "Tìm chi nhánh gần tôi", "Chính sách bảo hành"]
-    })
 
 
 def public_checkout_view(request):

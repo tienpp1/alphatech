@@ -790,12 +790,12 @@
     </div>
 
     <!-- ==========================================
-         FLOATING CYBER AI COPILOT WIDGET
+         FLOATING CYBER AI ALPHATECH WIDGET
          ========================================== -->
-    <div class="copilot-launcher" id="copilot-launcher" onclick="toggleCopilot()" aria-label="Mở trợ lý AI Copilot">
+    <div class="copilot-launcher" id="copilot-launcher" onclick="toggleCopilot()" aria-label="Mở trợ lý AI AlphaTech">
         <div class="copilot-badge-hint">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            <span>Hỏi AI Copilot</span>
+            <span>Hỏi AI AlphaTech</span>
         </div>
         <div class="copilot-orb">
             <div class="copilot-ring"></div>
@@ -807,32 +807,35 @@
         </div>
     </div>
 
-    <div class="copilot-chat-modal" id="copilot-chat-modal" role="dialog" aria-modal="true" aria-label="Khung trò chuyện AI Copilot">
+    <div class="copilot-chat-modal" id="copilot-chat-modal" role="dialog" aria-modal="true" aria-label="Khung trò chuyện AI AlphaTech">
         <div class="copilot-chat-header">
             <div class="copilot-chat-identity">
                 <div class="copilot-chat-avatar">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                 </div>
                 <div>
-                    <div class="copilot-chat-name">AI Copilot Dispatch</div>
+                    <div class="copilot-chat-name">AI AlphaTech</div>
                     <div class="copilot-chat-status">
                         <span style="width: 6px; height: 6px; background: #10B981; border-radius: 50%; display: inline-block;"></span>
-                        ONLINE • SLA &lt; 15M
+                        Chuyên viên trực tuyến • SLA &lt; 15m
                     </div>
                 </div>
             </div>
-            <button type="button" class="copilot-chat-close" onclick="toggleCopilot()" aria-label="Thu nhỏ Copilot">
+            <button type="button" class="copilot-chat-close" onclick="toggleCopilot()" aria-label="Thu nhỏ AI AlphaTech">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
 
         <div class="copilot-chat-body" id="copilot-chat-body">
             <div class="copilot-msg bot">
-                Xin chào! Tôi là <strong>AI Copilot</strong> của hệ thống ABC Tech Store &amp; XYZ IT Services. Tôi có thể hỗ trợ bạn tìm kiếm cấu hình máy tính, tư vấn dịch vụ kỹ thuật khẩn cấp (SLA &lt; 15m), hoặc tra cứu trạm kỹ thuật gần nhất.
+                Xin chào Quý khách! Tôi là <strong>AI AlphaTech</strong> – Chuyên viên tư vấn &amp; Điều phối dịch vụ công nghệ của hệ sinh thái ABC Tech Store &amp; XYZ IT Services. Tôi luôn sẵn sàng trực tuyến 24/7 để đồng hành cùng Quý khách: tư vấn cấu hình máy tính theo nhu cầu, hỗ trợ sự cố IT khẩn cấp (SLA &lt; 15m), tra cứu bảo hành, chính sách mua hàng và tìm kiếm chi nhánh gần nhất.
                 <div class="copilot-chips-wrap" style="margin-top: 10px;">
-                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tư vấn Laptop doanh nghiệp Dell')">💻 Laptop Dell chính hãng</button>
-                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Sự cố mạng khẩn cấp cam kết SLA')">⚡ Sự cố mạng (SLA 15m)</button>
-                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tìm chi nhánh gần nhất')">📍 Chi nhánh &amp; Hotline</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tư vấn cấu hình Laptop theo nhu cầu công việc')">💻 Tư vấn Laptop theo nhu cầu</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Sự cố mạng khẩn cấp cam kết SLA')">⚡ Báo sự cố mạng / Server (SLA 15m)</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Chính sách bảo hành và 1 đổi 1 DOA 72h')">🛡️ Chính sách bảo hành &amp; 1 đổi 1 (DOA)</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Chính sách giao hàng, thanh toán và hóa đơn VAT')">🚚 Giao hàng &amp; Hóa đơn VAT</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Chương trình thu cũ đổi mới Trade-In')">🔄 Thu cũ đổi mới (Trade-In)</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tìm chi nhánh showroom gần nhất và Hotline')">📍 Chi nhánh &amp; Hotline 24/7</button>
                     <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tra cứu đơn hàng')">📦 Tra cứu đơn hàng</button>
                 </div>
             </div>
@@ -844,7 +847,7 @@
         </div>
 
         <div class="copilot-chat-footer">
-            <input type="text" class="copilot-input" id="copilot-input" placeholder="Hỏi cấu hình, dịch vụ IT, bảo hành, chi nhánh..." onkeydown="if(event.key==='Enter') submitCopilot();">
+            <input type="text" class="copilot-input" id="copilot-input" placeholder="Hỏi tư vấn cấu hình, dịch vụ IT, bảo hành, chi nhánh..." onkeydown="if(event.key==='Enter') submitCopilot();">
             <button type="button" class="copilot-send-btn" onclick="submitCopilot()" aria-label="Gửi tin nhắn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>

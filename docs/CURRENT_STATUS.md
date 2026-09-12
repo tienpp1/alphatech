@@ -1,6 +1,22 @@
 # Current repository status
 
-## 2026-09-12 — Customer approval celebration
+
+## 2026-09-12 — AI AlphaTech Branding & Public Customer Consultation Engine
+
+- Rebranded the public customer assistant from "AI Copilot" to "AI AlphaTech" across all public web surfaces (launcher badge, modal header, online consultant status, welcome message, accessibility labels, input placeholder).
+- Implemented modular, dedicated consultation engine in `apps/public_web/alphatech_ai.py` and hooked into `apps/public_web/views.py:public_copilot_api_view`.
+- Trained 8 comprehensive customer pre-sales & support consulting domains:
+  1. Persona & workflow-tailored laptop/hardware consulting (Office/Student, 2D-3D Design/CAD/Revit, Software Developers/Docker, Gaming/Streaming, Executive ultraportable) with live product catalog DB queries and deep-links.
+  2. IT enterprise solutions & Emergency response with strict SLA commitment (< 15 min response, 30-45 min on-site arrival, network isolation triage, server setup, monthly maintenance).
+  3. Warranty & 72h DOA 1-to-1 replacement policy, 12-36 months manufacturer warranty, and loaner machine policy for repairs > 48h.
+  4. Payment methods (COD, VietQR, POS, 0% installment), express 2h delivery in HCM, nationwide free shipping >= 5M VND, and e-VAT invoices within 24h.
+  5. Trade-In upgrade program with 15-20% subsidy, 4-tier grading matrix, and Zero Data Leak data sanitization guarantee.
+  6. Showrooms, technical dispatch hubs, and 24/7 hotline (Q.1 Flagship, Tân Bình, Thủ Đức, 08:00 - 21:30 daily, 24/7 on-site IT dispatch).
+  7. Secure, ownership-scoped order tracking (`ORD-...`).
+  8. Conversational greeting & courteous guidance representing AlphaTech 24/7.
+- Expanded automated test suite in `tests/test_public_copilot_and_cart_api.py` from 6 to 12 tests (100% pass).
+- Verified live end-to-end user experience in browser via `browser_subagent` on `http://127.0.0.1:8000/dich-vu/`, confirming branding, quick chips, and live responses for laptop consulting, DOA warranty, and emergency IT triage.
+
 
 - Added persistent customer notices when an order transitions `PENDING → CONFIRMED` or a service request transitions `OPEN → ASSIGNED/IN_PROGRESS`.
 - Public authenticated pages poll for the customer's own unread notice and show a Vietnamese thank-you dialog with accessible confetti/check animation. Notices are acknowledged with CSRF-protected POST, deduplicated by database constraint, and filtered again by current ownership/status before display.
