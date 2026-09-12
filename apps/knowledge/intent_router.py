@@ -266,6 +266,24 @@ class BusinessIntent:
     INTER_BRANCH_TRANSFER = "INTER_BRANCH_TRANSFER"
     TECHNICIAN_COMPLIANCE = "TECHNICIAN_COMPLIANCE"
     RECOMMENDATIONS = "RECOMMENDATIONS"
+    RMA_WARRANTY_PROTOCOL = "RMA_WARRANTY_PROTOCOL"
+    SUPPLIER_CONTRACT_PENALTIES = "SUPPLIER_CONTRACT_PENALTIES"
+    OMNICHANNEL_FULFILLMENT = "OMNICHANNEL_FULFILLMENT"
+    CYBERSECURITY_INCIDENT_DRP = "CYBERSECURITY_INCIDENT_DRP"
+    SLA_ESCALATION_MATRIX = "SLA_ESCALATION_MATRIX"
+    DATACENTER_ENVIRONMENT = "DATACENTER_ENVIRONMENT"
+    PROMOTION_FRAUD_CONTROL = "PROMOTION_FRAUD_CONTROL"
+    INVENTORY_AUDIT_DISPOSAL = "INVENTORY_AUDIT_DISPOSAL"
+    TRADE_IN_DATA_SECURITY = "TRADE_IN_DATA_SECURITY"
+    ITIL_CHANGE_MANAGEMENT = "ITIL_CHANGE_MANAGEMENT"
+    DATA_SANITIZATION_NIST = "DATA_SANITIZATION_NIST"
+    BACKUP_DISASTER_RECOVERY_DRILL = "BACKUP_DISASTER_RECOVERY_DRILL"
+    CORE_WORKING_HOURS_LEAVE = "CORE_WORKING_HOURS_LEAVE"
+    CORE_EXPENSE_TRAVEL_REIMBURSEMENT = "CORE_EXPENSE_TRAVEL_REIMBURSEMENT"
+    CORE_IT_SECURITY_DEVICE_USAGE = "CORE_IT_SECURITY_DEVICE_USAGE"
+    CORE_ONBOARDING_PROBATION = "CORE_ONBOARDING_PROBATION"
+    CORE_CODE_OF_CONDUCT_CULTURE = "CORE_CODE_OF_CONDUCT_CULTURE"
+    CORE_PERFORMANCE_BENEFITS_BONUS = "CORE_PERFORMANCE_BENEFITS_BONUS"
     DOCUMENT_RAG = "DOCUMENT_RAG"
     MUTATION_ACTION = "MUTATION_ACTION"
     AMBIGUOUS = "AMBIGUOUS"
@@ -416,6 +434,8 @@ def classify_business_intent(
     has_explicit_mutation = _contains_word_or_phrase(norm, [
         "tao de xuat", "lap de xuat", "tao phieu", "tao nhiem vu",
         "cap nhat", "dieu chinh gia", "ha gia", "giam gia", "xa kho",
+        "de xuat doi moi", "lap de xuat doi moi", "de xuat phat", "lap de xuat phat",
+        "de xuat chi vien", "lap de xuat chi vien",
     ])
     if _contains_word_or_phrase(norm, [
         "neu", "gia dinh", "mo phong", "gia su",
@@ -459,6 +479,228 @@ def classify_business_intent(
             "parameters": {},
         }
 
+    # 1b. New Phase 3 Enterprise SOP Intents (RMA, Supplier Penalties, Omnichannel, DRP, Escalation, Datacenter)
+    if _contains_word_or_phrase(norm, [
+        "doa", "dead on arrival", "doi moi trong 72 gio", "doi moi 72h", "72 gio doi moi", "72h doi moi",
+        "loi trong 72 gio", "loi trong 72h", "trong 72 gio", "trong 72h",
+        "loi ban dau", "diem chet", "diem sang", "rma", "bao hanh hang", "gui hang bao hanh",
+        "tem void", "tem niem phong", "loi do nguoi dung", "vao nuoc", "roi vo",
+        "tro gia sua chua", "tro gia 30%", "cid", "muon may", "cho muon may",
+        "may tinh thay the", "loaner pc", "loaner", "chinh sach rma"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.RMA_WARRANTY_PROTOCOL,
+            "tools": [],
+            "parameters": {"policy_topic": "RMA_WARRANTY"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "phat giao tre", "phat tre han", "giao hang cham", "phat nha cung cap",
+        "che tai phat", "0.5%", "tran 8%", "huy po", "tre qua 10 ngay",
+        "aql", "aql 2.0%", "mil-std-105e", "tu choi ca lo", "tu choi lo hang",
+        "thu hoi lo hang", "batch rejection", "lo hang loi", "bao ho gia",
+        "price protection", "credit note", "bu chenh lech gia", "hop dong nha cung cap"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.SUPPLIER_CONTRACT_PENALTIES,
+            "tools": [],
+            "parameters": {"policy_topic": "SUPPLIER_PENALTIES"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "bopis", "mua online nhan tai cua hang", "nhan tai cua hang", "chuan bi hang 30 phut",
+        "giu hang 48 gio", "giu hang 48h", "huy lenh giu hang", "hoan kho bopis",
+        "dong goi cong nghe", "dong goi de vo", "xop bong khi", "3 lop xop",
+        "bang keo an ninh", "tamper evident", "quay video dong hang", "video dong hang",
+        "video tren 5 trieu", "don hang tren 5 trieu", "video 5 trieu", "omnichannel"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.OMNICHANNEL_FULFILLMENT,
+            "tools": [],
+            "parameters": {"policy_topic": "OMNICHANNEL"},
+        }
+
+    # Backup 3-2-1-1 & Recovery Drill (Evaluated before general DRP to catch backup-specific queries)
+    if _contains_word_or_phrase(norm, [
+        "3-2-1-1", "sao luu 3-2-1", "sao luu 3-2-1-1", "immutable storage", "worm", "write once read many",
+        "object lock", "offsite backup", "cach xa 50km", "incremental snapshot", "hourly backup",
+        "differential backup", "retention policy", "vong doi luu tru", "dien tap phuc hoi",
+        "recovery drill", "monthly recovery drill", "sandbox phuc hoi"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.BACKUP_DISASTER_RECOVERY_DRILL,
+            "tools": [],
+            "parameters": {"policy_topic": "BACKUP_RETENTION"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "ransomware", "ma doc tong tien", "ddos", "10gbps", "su co p0", "an ninh mang",
+        "ro ri du lieu", "data exfiltration", "co lap mang", "co lap mang 5 phut",
+        "ngat vlan", "ngat switch", "no reboot", "khong khoi dong lai", "tuyet doi khong reboot",
+        "bao ton ram", "digital forensics", "phap y so", "rto", "rpo", "rto 4 gio",
+        "rpo 1 gio", "phuc hoi tham hoa", "drp", "air-gapped", "rca 48 gio", "bao cao rca"
+    ]) and not _contains_word_or_phrase(norm, ["3-2-1-1", "sao luu", "worm", "dien tap", "recovery drill"]):
+        return {
+            "intent": BusinessIntent.CYBERSECURITY_INCIDENT_DRP,
+            "tools": [],
+            "parameters": {"policy_topic": "CYBERSECURITY"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "leo thang sla", "escalation", "tier 1", "tier 2", "tier 3", "50% sla", "75% sla",
+        "100% sla", "canh bao leo thang", "chi vien hien truong", "dieu dong chi vien",
+        "bao dong do", "tranh chap ky thuat", "hoa giai tranh chap", "hoi dong tham dinh",
+        "bien ban lien tich", "do fluke", "kiem tra lai hien truong", "leo thang",
+        "ma tran leo thang", "50%", "75%", "100%", "leo thang su co"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.SLA_ESCALATION_MATRIX,
+            "tools": [],
+            "parameters": {"policy_topic": "SLA_ESCALATION"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "hanh lang lanh", "cold aisle", "nhiet do phong server", "18 den 24", "18-24",
+        "ashrae", "do am 45", "canh bao 27", "bao dong 30", "ngat dien khan cap", "epo",
+        "35 do", "nguon dien n+1", "nguon a nguon b", "dual feed", "may phat dien diesel",
+        "ats", "15 giay", "hoa dien 15s", "72 gio chay", "dien tap cup dien", "blackout drill"
+    ]):
+        return {
+            "intent": BusinessIntent.DATACENTER_ENVIRONMENT,
+            "tools": [],
+            "parameters": {"policy_topic": "DATACENTER"},
+        }
+
+    # 1c. Phase 4 Enterprise SOP Intents (Promo Fraud, Inventory Audit & Disposal, Trade-In & Data Security, ITIL CAB, NIST 800-88 Decommission, Backup 3-2-1-1)
+    if _contains_word_or_phrase(norm, [
+        "fraud hold", "gian lan khuyen mai", "lam dung voucher", "lam dung ma giam gia", "clone tai khoan",
+        "voucher new user", "staff discount", "chiet khau nhan vien", "uu dai nhan vien",
+        "90-day retention", "giu may 90 ngay", "kich hoat 90 ngay", "giai toa fraud hold",
+        "dau co voucher", "dau co ma", "gom don"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.PROMOTION_FRAUD_CONTROL,
+            "tools": [],
+            "parameters": {"policy_topic": "PROMO_FRAUD"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "cycle count", "kiem ke cuon chieu", "kiem ke kho", "kiem ke hang tuan",
+        "hang gia tri cao", "zero tolerance", "wall-to-wall", "kiem ke toan dien",
+        "that thoat kho", "0.2% doanh so", "niem phong camera", "pin phong", "pin chai phong",
+        "pin lithium", "thung kim loai chong chay", "cat kho", "tieu huy pin", "chat thai nguy hai"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.INVENTORY_AUDIT_DISPOSAL,
+            "tools": [],
+            "parameters": {"policy_topic": "INVENTORY_AUDIT"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "trade in", "trade-in", "thu cu doi moi", "dinh gia may cu", "grade a", "grade b", "grade c", "grade d",
+        "tro gia doi moi", "icloud an", "activation lock", "mdm", "mobile device management",
+        "knox", "no cuoc", "blacklisted", "xoa trang du lieu", "zero data leak", "bien ban ban giao xoa du lieu"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.TRADE_IN_DATA_SECURITY,
+            "tools": [],
+            "parameters": {"policy_topic": "TRADE_IN"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "itil", "change advisory board", "cab", "standard change", "normal change", "emergency change",
+        "thay doi tieu chuan", "thay doi thong thuong", "thay doi khan cap", "ke hoach rollback",
+        "rollback 15 phut", "change freeze", "khung gio cam thay doi", "cam thay doi chieu thu sau",
+        "pre-change snapshot", "request for change", "rfc"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.ITIL_CHANGE_MANAGEMENT,
+            "tools": [],
+            "parameters": {"policy_topic": "CHANGE_MANAGEMENT"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "nist 800-88", "nist sp 800-88", "tieu huy du lieu", "xoa du lieu", "degauss", "degausser",
+        "10000 gauss", "10,000 gauss", "ata secure erase", "cryptographic erase",
+        "nghien nat vat ly", "physical shredding", "duoi 2mm", "certificate of data destruction",
+        "chung chi tieu huy du lieu"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.DATA_SANITIZATION_NIST,
+            "tools": [],
+            "parameters": {"policy_topic": "DATA_SANITIZATION"},
+        }
+
+    # 1d. Core Enterprise Handbook & Fundamental Corporate Policies (Applicable across all workspaces)
+    if _contains_word_or_phrase(norm, [
+        "gio lam viec", "thoi gio lam viec", "cham cong", "di muon", "ve som", "grace period",
+        "nghi phep", "phep nam", "annual leave", "12 ngay phep", "don xin nghi phep", "chuyen phep",
+        "nghi viec rieng", "nghi ket hon", "nghi tang", "nghi om", "nghi thai san", "c65", "bhxh"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.CORE_WORKING_HOURS_LEAVE,
+            "tools": [],
+            "parameters": {"policy_topic": "WORKING_HOURS_LEAVE"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "cong tac phi", "di cong tac", "per diem", "phu cap tien an", "tien khach san",
+        "luu tru cong tac", "tam ung", "de nghi tam ung", "80% du toan", "hoan ung",
+        "thanh toan cong tac phi", "quyet toan", "7 ngay lam viec", "hoa don gtgt", "e-invoice",
+        "hoa don tren 5 trieu", "chuyen khoan cong tac"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.CORE_EXPENSE_TRAVEL_REIMBURSEMENT,
+            "tools": [],
+            "parameters": {"policy_topic": "EXPENSE_TRAVEL"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "mat khau may tinh", "do phuc tap mat khau", "doi mat khau", "90 ngay doi mat khau",
+        "xac thuc hai lop", "mfa", "2fa", "clean desk", "clear screen", "khoa man hinh",
+        "windows + l", "inactivity timeout", "10 phut tu dong khoa", "phan mem crack", "phan mem lau",
+        "usb ngoai", "wifi cong cong", "bao mat noi bo"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.CORE_IT_SECURITY_DEVICE_USAGE,
+            "tools": [],
+            "parameters": {"policy_topic": "IT_SECURITY_DEVICE"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "onboarding", "nhan vien moi", "ngay dau tien", "ho so nhan su", "cap phat may tinh",
+        "ban giao tai san", "buddy", "mentor", "thoi gian thu viec", "thu viec 2 thang", "thu viec 1 thang",
+        "luong thu viec", "85% luong", "danh gia thu viec", "probation review", "75% kpi", "ky hop dong chinh thuc"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.CORE_ONBOARDING_PROBATION,
+            "tools": [],
+            "parameters": {"policy_topic": "ONBOARDING_PROBATION"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "van hoa doanh nghiep", "quy tac ung xu", "gia tri cot loi", "dress code", "trang phuc cong so",
+        "smart casual", "business casual", "thu sau tu do", "casual friday", "dong phuc", "pantry",
+        "khong gian chung", "xung dot noi bo", "hoa giai xung dot", "to giac an danh", "whistleblower"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.CORE_CODE_OF_CONDUCT_CULTURE,
+            "tools": [],
+            "parameters": {"policy_topic": "CODE_OF_CONDUCT"},
+        }
+
+    if _contains_word_or_phrase(norm, [
+        "danh gia hieu suat", "xep loai kpi", "loai a", "loai b", "loai c", "loai d",
+        "luong thang 13", "thuong tet", "thuong luong thang 13", "kham suc khoe", "kham dinh ky",
+        "bao hiem suc khoe", "qua sinh nhat", "hieu hi", "du lich", "teambuilding", "company trip"
+    ]) and not has_explicit_mutation:
+        return {
+            "intent": BusinessIntent.CORE_PERFORMANCE_BENEFITS_BONUS,
+            "tools": [],
+            "parameters": {"policy_topic": "BENEFITS_BONUS"},
+        }
+
+
     # 2. Controlled Mutation Actions (Zero Direct Mutations)
     mutation_keywords = [
         "dieu chinh gia", "cap nhat gia", "doi gia", "tang gia", "giam gia",
@@ -468,7 +710,10 @@ def classify_business_intent(
         "xac nhan nhap hang", "nhan hang vao kho", "nhap kho",
         "tao phieu nhap", "tao phieu nhap kho", "de xuat tao phieu nhap", "de xuat nhap kho",
         "dieu chuyen", "dieu chuyen noi bo", "lap de xuat dieu chuyen", "de xuat dieu chuyen",
-        "ha gia", "giam gia xa kho", "xa kho", "chuyen hang giua chi nhanh"
+        "ha gia", "giam gia xa kho", "xa kho", "chuyen hang giua chi nhanh",
+        "doi moi doa", "de xuat doi moi", "lap de xuat doi moi", "doi moi 100%",
+        "de xuat phat", "lap de xuat phat", "phat nha cung cap", "phat giao tre",
+        "de xuat chi vien", "dieu dong chi vien", "lap de xuat chi vien",
     ]
     is_read_only_transfer = _contains_word_or_phrase(norm, [
         "dieu chuyen ton kho", "chuyen hang giua", "chuyen giua cac chi nhanh",
@@ -495,7 +740,7 @@ def classify_business_intent(
 
         return {
             "intent": BusinessIntent.ROOT_CAUSE_EXPLANATION,
-            "tools": ["get_recommendations"] if target_t == "BRANCH_WARNING" and _contains_word_or_phrase(norm, ["canh bao", "flagged"]) else ["explain_root_cause"],
+            "tools": ["explain_root_cause"],
             "parameters": {
                 "target_type": target_t,
                 "entity_name": category or extract_branch_name(query) or "",
@@ -712,7 +957,7 @@ def classify_business_intent(
             ticket_id = int(m_ticket.group(1)) if m_ticket else follow_up.get("ticket_id")
             return {
                 "intent": BusinessIntent.TECHNICIAN_RECOMMENDATION,
-                "tools": ["query_nearby_technicians"] if ticket_id else ["get_recommendations", "get_technician_workload_summary"],
+                "tools": ["get_recommendations", "query_nearby_technicians"] if ticket_id else ["get_recommendations", "get_technician_workload_summary"],
                 "parameters": {"ticket_id": ticket_id},
             }
         elif _contains_word_or_phrase(norm, ["qua tai", "ban nhat", "nhieu viec", "score cao", "ranh nhat", "san sang", "danh sach", "tai cong viec", "nao dang", "nhan viec"]):

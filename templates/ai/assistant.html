@@ -46,16 +46,19 @@
                     <div class="message-bubble">
                         <p>Xin chào! Tôi là Trợ lý Tri thức của <strong>{{ active_workspace.name }}</strong>. Tôi có thể trả lời các câu hỏi về chính sách quy trình doanh nghiệp và số liệu vận hành thực tế.</p>
                         <div class="suggestion-chips">
+                            <!-- Core Enterprise Handbook (Chính sách chung cho mọi doanh nghiệp) -->
+                            <button class="chip" data-query="Nội quy thời giờ làm việc, quy định đi muộn và số ngày phép năm của nhân viên?">📅 Giờ làm việc & Phép năm</button>
+                            <button class="chip" data-query="Quy chế thanh toán công tác phí, hạn mức tiền ăn và thời hạn nộp hóa đơn hoàn ứng?">💰 Công tác phí & Hoàn ứng</button>
+                            <button class="chip" data-query="Quy định đặt mật khẩu máy tính, xác thực hai lớp MFA và khóa màn hình khi rời bàn?">🔒 Mật khẩu & Khóa máy tính</button>
+                            <button class="chip" data-query="Thời gian thử việc tối đa là bao lâu và tiêu chuẩn đánh giá ký hợp đồng chính thức?">📋 Thử việc & Ký hợp đồng</button>
+                            <button class="chip" data-query="Quy định trang phục công sở từ thứ 2 đến thứ 6 và chuẩn mực văn hóa ứng xử?">👔 Trang phục & Văn hóa ứng xử</button>
+                            <button class="chip" data-query="Điều kiện hưởng thưởng lương tháng 13 và chế độ khám sức khỏe định kỳ hàng năm?">🎁 Lương tháng 13 & Phúc lợi</button>
                             {% if active_workspace.workspace_type == 'SERVICE' %}
-                            <button class="chip" data-query="Ticket nào đang có nguy cơ vi phạm SLA?">⏱️ Ticket có nguy cơ trễ SLA</button>
-                            <button class="chip" data-query="Kỹ thuật viên nào phù hợp với ticket này?">👨‍💻 Gợi ý kỹ thuật viên</button>
-                            <button class="chip" data-query="Chi phí nhân công của ticket này là bao nhiêu?">💰 Chi phí nhân công ticket</button>
-                            <button class="chip" data-query="Quy trình xử lý sự cố máy chủ là gì?">⚙️ Quy trình sự cố máy chủ</button>
+                            <button class="chip" data-query="Ticket nào đang có nguy cơ vi phạm SLA?">⏱️ Ticket nguy cơ trễ SLA</button>
+                            <button class="chip" data-query="Kỹ thuật viên nào phù hợp nhất với ticket này theo khoảng cách GIS và chuyên môn?">👨‍💻 Gợi ý kỹ thuật viên GIS</button>
                             {% else %}
-                            <button class="chip" data-query="Chi nhánh nào có doanh thu thấp nhất?">🏬 Chi nhánh doanh thu thấp nhất</button>
-                            <button class="chip" data-query="Sản phẩm laptop nào bán chạy nhất?">💻 Laptop bán chạy nhất</button>
-                            <button class="chip" data-query="Chính sách bảo hành laptop của công ty là gì?">🛡️ Chính sách bảo hành laptop</button>
-                            <button class="chip" data-query="Tổng doanh thu và số đơn hàng hiện tại là bao nhiêu?">📊 Doanh số & đơn hàng</button>
+                            <button class="chip" data-query="Sản phẩm laptop nào đang có nguy cơ cháy hàng tại chi nhánh Quận 1?">💻 Laptop nguy cơ cháy hàng</button>
+                            <button class="chip" data-query="Quy chuẩn đổi mới sản phẩm lỗi ban đầu DOA trong 72 giờ và chính sách bảo hành RMA?">🛡️ Đổi mới DOA 72h & RMA</button>
                             {% endif %}
                         </div>
                     </div>

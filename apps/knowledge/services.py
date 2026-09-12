@@ -440,6 +440,43 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
         except Exception:
             pass
 
+    is_inquiry = any(w in q for w in ["khi nào", "khi nao", "quy định", "quy dinh", "thế nào", "the nao", "ra sao", "là gì", "la gi", "áp dụng thế nào"])
+
+    # 7. DOA Replacement & Warranty Proposal (Phase 3 SOP)
+    if not is_inquiry and any(w in q for w in ["lập đề xuất đổi mới", "lap de xuat doi moi", "tạo đề xuất đổi mới", "tao de xuat doi moi", "đề xuất đổi mới doa", "de xuat doi moi doa"]):
+        try:
+            from apps.retail.models import Order, OrderStatus
+            order = Order.objects.for_workspace(workspace).filter(status__in=[OrderStatus.COMPLETED, OrderStatus.CONFIRMED]).order_by("-id").first()
+            if not order:
+                order = Order.objects.for_workspace(workspace).order_by("-id").first()
+            if order:
+                return execute_controlled_tool(
+                    name="update_order_status",
+                    workspace=workspace,
+                    user=user,
+                    parameters={"order_id": order.id, "new_status": OrderStatus.CONFIRMED},
+                    reason=f"Yêu cầu tiếp nhận thẩm định đổi mới sản phẩm DOA trong 72 giờ từ Trợ lý AI: '{query}'"
+                )
+        except Exception:
+            pass
+
+    # 8. Emergency Technician Backup Dispatch (Tier 2 SLA Escalation)
+    if not is_inquiry and any(w in q for w in ["lập đề xuất điều động chi viện", "lap de xuat dieu dong chi vien", "lập đề xuất chi viện", "lap de xuat chi vien", "tạo đề xuất chi viện", "tao de xuat chi vien", "đề xuất chi viện", "de xuat chi vien", "điều động chi viện"]):
+        try:
+            from apps.service_ops.models import ServiceRequest, Employee
+            req = ServiceRequest.objects.for_workspace(workspace).order_by("-id").first()
+            emp = Employee.objects.for_workspace(workspace).filter(is_active=True).first()
+            if req and emp:
+                return execute_controlled_tool(
+                    name="dispatch_technician",
+                    workspace=workspace,
+                    user=user,
+                    parameters={"ticket_id": req.id, "employee_id": emp.id},
+                    reason=f"Yêu cầu điều động kỹ sư chi viện khẩn cấp hiện trường theo ma trận leo thang SLA: '{query}'"
+                )
+        except Exception:
+            pass
+
     return None
 
 
@@ -1003,13 +1040,18 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
     if chunks:
         top_chunk = chunks[0]
         cite_str = f"[Nguồn: {top_chunk['document_title']}"
+        if top_chunk.get("heading"):
+            cite_str += f" - {top_chunk['heading']}"
         if top_chunk.get("page_number"):
             cite_str += f", Trang {top_chunk['page_number']}"
         cite_str += "]"
 
-        # Extract most relevant sentences from primary chunk
-        sentences = [s.strip() for s in re.split(r"[.\n]", top_chunk["content"]) if len(s.strip()) > 15]
-        excerpt = ". ".join(sentences[:3]) + "." if sentences else top_chunk["content"][:300]
+        top_content = top_chunk["content"].strip()
+        if "|" in top_content or "\n-" in top_content or "\n1." in top_content:
+            excerpt = top_content[:600]
+        else:
+            sentences = [s.strip() for s in re.split(r"[.\n]", top_content) if len(s.strip()) > 15]
+            excerpt = ". ".join(sentences[:3]) + "." if sentences else top_content[:300]
         answer_parts.append(f"{excerpt} {cite_str}")
 
         # Multi-chunk synthesis: if additional distinct sections match, append key grounded points
@@ -1324,6 +1366,7 @@ def answer_grounded_query(
         "session_id": session.id,
         "message_id": asst_msg.id,
         "role": "assistant",
+        "intent": intent_result.get("intent"),
         "answer": answer_text,
         "sources": citations,
         "citations": citations,

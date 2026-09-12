@@ -600,6 +600,209 @@ class VietnameseAdvancedContextBenchmarkTestCase(TestCase):
         self.assertIn("get_top_selling_products", r["tools"])
         self.assertIn("get_stock_balance_summary", r["tools"])
 
+    # -------------------------------------------------------------------------
+    # 22. Phase 3 Enterprise Business SOP Benchmarks (Q95-Q112)
+    # -------------------------------------------------------------------------
+    def test_q95_rma_warranty_doa_72h(self):
+        query = "Chính sách đổi mới sản phẩm lỗi DOA trong 72 giờ áp dụng thế nào?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.RMA_WARRANTY_PROTOCOL)
+        self.assertEqual(r["parameters"].get("policy_topic"), "RMA_WARRANTY")
+
+    def test_q96_rma_loaner_pc_policy(self):
+        query = "Khách hàng mua laptop trên 25 triệu có được cho mượn máy tính thay thế khi bảo hành kéo dài không?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.RMA_WARRANTY_PROTOCOL)
+
+    def test_q97_rma_customer_induced_damage_discount(self):
+        query = "Thiết bị bị vào nước hoặc rơi vỡ có được chính sách trợ giá sửa chữa 30% linh kiện không?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.RMA_WARRANTY_PROTOCOL)
+
+    def test_q98_supplier_delivery_delay_penalty(self):
+        query = "Quy định phạt nhà cung cấp giao hàng trễ 0.5% mỗi ngày và mức trần phạt tối đa là bao nhiêu?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.SUPPLIER_CONTRACT_PENALTIES)
+        self.assertEqual(r["parameters"].get("policy_topic"), "SUPPLIER_PENALTIES")
+
+    def test_q99_supplier_aql_batch_rejection(self):
+        query = "Khi tỷ lệ lỗi vượt quá ngưỡng AQL 2.0% thì quy trình từ chối lô hàng và thu hồi lô hàng lỗi thực hiện ra sao?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.SUPPLIER_CONTRACT_PENALTIES)
+
+    def test_q100_supplier_price_protection(self):
+        query = "Chính sách bảo hộ giá 30 ngày từ nhà phân phối và bù trừ chênh lệch giá qua credit note quy định thế nào?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.SUPPLIER_CONTRACT_PENALTIES)
+
+    def test_q101_omnichannel_bopis_hold_window(self):
+        query = "Đơn hàng BOPIS mua online nhận tại cửa hàng được giữ hàng 48 giờ và chuẩn bị hàng trong bao lâu?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.OMNICHANNEL_FULFILLMENT)
+        self.assertEqual(r["parameters"].get("policy_topic"), "OMNICHANNEL")
+
+    def test_q102_omnichannel_fragile_packaging(self):
+        query = "Quy chuẩn đóng gói 3 lớp xốp bóng khí và băng keo an ninh niêm phong hàng công nghệ dễ vỡ?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.OMNICHANNEL_FULFILLMENT)
+
+    def test_q103_omnichannel_video_evidence_high_value(self):
+        query = "Đơn hàng trên 5 triệu đồng có bắt buộc quay video đóng hàng để làm bằng chứng tranh chấp không?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.OMNICHANNEL_FULFILLMENT)
+
+    def test_q104_cybersecurity_p0_ransomware(self):
+        query = "Khi phát hiện sự cố P0 mã độc tống tiền Ransomware thì quy trình cô lập mạng 5 phút thực hiện ra sao?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.CYBERSECURITY_INCIDENT_DRP)
+        self.assertEqual(r["parameters"].get("policy_topic"), "CYBERSECURITY")
+
+    def test_q105_cybersecurity_no_reboot_rule(self):
+        query = "Vì sao có nguyên tắc tuyệt đối không reboot khởi động lại máy chủ khi bị ransomware để bảo tồn RAM cho pháp y số?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.CYBERSECURITY_INCIDENT_DRP)
+
+    def test_q106_cybersecurity_rto_rpo_targets(self):
+        query = "Mục tiêu phục hồi thảm họa DRP với RTO 4 giờ và RPO 1 giờ được cam kết thế nào?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.CYBERSECURITY_INCIDENT_DRP)
+
+    def test_q107_sla_escalation_3_tier_proactive(self):
+        query = "Ma trận leo thang sự cố SLA 3 cấp độ ở các mốc 50% và 75% thời hạn SLA quy định ra sao?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.SLA_ESCALATION_MATRIX)
+        self.assertEqual(r["parameters"].get("policy_topic"), "SLA_ESCALATION")
+
+    def test_q108_sla_technical_dispute_arbitration(self):
+        query = "Quy trình hòa giải tranh chấp kỹ thuật với hội đồng thẩm định độc lập trong 24 giờ?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.SLA_ESCALATION_MATRIX)
+
+    def test_q109_datacenter_cold_aisle_thermal(self):
+        query = "Quy chuẩn nhiệt độ hành lang lạnh phòng Server duy trì 18 đến 24 độ C và ngưỡng ngắt điện khẩn cấp EPO là bao nhiêu?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.DATACENTER_ENVIRONMENT)
+        self.assertEqual(r["parameters"].get("policy_topic"), "DATACENTER")
+
+    def test_q110_datacenter_power_backup_diesel(self):
+        query = "Chuẩn dự phòng nguồn điện N+1 và máy phát điện Diesel tự động hòa điện 15s chạy liên tục 72 giờ?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.DATACENTER_ENVIRONMENT)
+
+    def test_q111_mutation_doa_replacement_proposal(self):
+        query = "Lập đề xuất đổi mới DOA 100% cho khách hàng mua laptop bị lỗi điểm sáng trong 72 giờ"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.MUTATION_ACTION)
+        self.assertIn("mutation_handler", r["tools"])
+
+    def test_q112_mutation_backup_engineer_dispatch(self):
+        query = "Lập đề xuất điều động chi viện kỹ sư hiện trường cho sự cố đang xử lý"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.MUTATION_ACTION)
+        self.assertIn("mutation_handler", r["tools"])
+
+    def test_q113_retail_promo_fraud_hold(self):
+        query = "Đơn hàng có dấu hiệu gom đơn tự động bị tạm giữ Fraud Hold và thẩm quyền giải tỏa thế nào?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.PROMOTION_FRAUD_CONTROL)
+        self.assertEqual(r["parameters"].get("policy_topic"), "PROMO_FRAUD")
+
+    def test_q114_retail_staff_discount_90_day(self):
+        query = "Chính sách ưu đãi nhân viên Staff Discount giảm 15% phụ kiện và quy tắc giữ máy 90 ngày quy định ra sao?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.PROMOTION_FRAUD_CONTROL)
+
+    def test_q115_retail_inventory_cycle_count(self):
+        query = "Quy trình kiểm kê cuốn chiếu Cycle Count hàng tuần đối với hàng giá trị cao High-Value quy định sai số thế nào?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.INVENTORY_AUDIT_DISPOSAL)
+        self.assertEqual(r["parameters"].get("policy_topic"), "INVENTORY_AUDIT")
+
+    def test_q116_retail_hazardous_battery_disposal(self):
+        query = "Quy chuẩn tiêu hủy an toàn pin Lithium-ion phồng rộp trong thùng kim loại chống cháy có cát khô?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.INVENTORY_AUDIT_DISPOSAL)
+
+    def test_q117_retail_trade_in_grading_matrix(self):
+        query = "Ma trận phân loại định giá thu cũ đổi mới Trade-in 4 cấp từ Grade A đến Grade D trợ giá thế nào?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.TRADE_IN_DATA_SECURITY)
+        self.assertEqual(r["parameters"].get("policy_topic"), "TRADE_IN")
+
+    def test_q118_retail_trade_in_zero_data_leak(self):
+        query = "Quy trình xóa trắng dữ liệu khách hàng Zero Data Leak và các trường hợp từ chối thu mua dính iCloud ẩn, MDM?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.TRADE_IN_DATA_SECURITY)
+
+    def test_q119_service_itil_change_classification(self):
+        query = "Phân loại các cấp độ thay đổi ITIL Standard, Normal và Emergency Change cần phê duyệt ra sao?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.ITIL_CHANGE_MANAGEMENT)
+        self.assertEqual(r["parameters"].get("policy_topic"), "CHANGE_MANAGEMENT")
+
+    def test_q120_service_change_freeze_rollback(self):
+        query = "Kế hoạch hoàn nguyên Rollback tối đa 15 phút và khung giờ cấm thay đổi Change Freeze chiều thứ Sáu?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.ITIL_CHANGE_MANAGEMENT)
+
+    def test_q121_service_data_sanitization_nist_levels(self):
+        query = "Ba cấp độ xóa dữ liệu Clear, Purge và Destroy theo tiêu chuẩn NIST SP 800-88 quy định ra sao?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.DATA_SANITIZATION_NIST)
+        self.assertEqual(r["parameters"].get("policy_topic"), "DATA_SANITIZATION")
+
+    def test_q122_service_degaussing_and_ssd_shredding(self):
+        query = "Quy trình khử từ Degaussing 10,000 Gauss cho HDD và nghiền nát vật lý SSD hạt vụn dưới 2mm?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.DATA_SANITIZATION_NIST)
+
+    def test_q123_service_backup_strategy_3211_worm(self):
+        query = "Chiến lược sao lưu dự phòng 3-2-1-1 và cơ chế lưu trữ bất biến WORM chống ransomware thế nào?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.BACKUP_DISASTER_RECOVERY_DRILL)
+        self.assertEqual(r["parameters"].get("policy_topic"), "BACKUP_RETENTION")
+
+    def test_q124_service_monthly_recovery_drill_sandbox(self):
+        query = "Quy chuẩn diễn tập phục hồi dữ liệu hàng tháng trên môi trường Sandbox và cam kết RTO 4 giờ?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.BACKUP_DISASTER_RECOVERY_DRILL)
+
+    def test_q125_core_working_hours_and_leave(self):
+        query = "Nội quy thời giờ làm việc, quy định đi muộn và số ngày phép năm của nhân viên?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.CORE_WORKING_HOURS_LEAVE)
+        self.assertEqual(r["parameters"].get("policy_topic"), "WORKING_HOURS_LEAVE")
+
+    def test_q126_core_expense_travel_reimbursement(self):
+        query = "Quy chế thanh toán công tác phí, hạn mức tiền ăn và thời hạn nộp hóa đơn hoàn ứng?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.CORE_EXPENSE_TRAVEL_REIMBURSEMENT)
+        self.assertEqual(r["parameters"].get("policy_topic"), "EXPENSE_TRAVEL")
+
+    def test_q127_core_it_security_device_usage(self):
+        query = "Quy định đặt mật khẩu máy tính, xác thực hai lớp MFA và khóa màn hình khi rời bàn?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.CORE_IT_SECURITY_DEVICE_USAGE)
+        self.assertEqual(r["parameters"].get("policy_topic"), "IT_SECURITY_DEVICE")
+
+    def test_q128_core_onboarding_probation(self):
+        query = "Thời gian thử việc tối đa là bao lâu và tiêu chuẩn đánh giá ký hợp đồng chính thức?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.CORE_ONBOARDING_PROBATION)
+        self.assertEqual(r["parameters"].get("policy_topic"), "ONBOARDING_PROBATION")
+
+    def test_q129_core_code_of_conduct_culture(self):
+        query = "Quy định trang phục công sở từ thứ 2 đến thứ 6 và chuẩn mực văn hóa ứng xử?"
+        r = classify_business_intent(query, self.service_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.CORE_CODE_OF_CONDUCT_CULTURE)
+        self.assertEqual(r["parameters"].get("policy_topic"), "CODE_OF_CONDUCT")
+
+    def test_q130_core_performance_benefits_bonus(self):
+        query = "Điều kiện hưởng thưởng lương tháng 13 và chế độ khám sức khỏe định kỳ hàng năm?"
+        r = classify_business_intent(query, self.retail_workspace)
+        self.assertEqual(r["intent"], BusinessIntent.CORE_PERFORMANCE_BENEFITS_BONUS)
+        self.assertEqual(r["parameters"].get("policy_topic"), "BENEFITS_BONUS")
+
 
 class TestRAGHybridRetrievalAndEmailEnrichment(TestCase):
     """Verifies hybrid RAG retrieval, multi-chunk synthesis, citations and email enrichment."""
