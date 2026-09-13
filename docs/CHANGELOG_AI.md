@@ -2,6 +2,21 @@
 
 Do not log cosmetic edits.
 
+### 2026-09-13 — AI AlphaTech Phase 2 Fundamental Customer Inquiry Training & Expansion
+
+- Expanded `apps/public_web/alphatech_ai.py` with 8 new core pre-sales and customer service handlers, increasing the customer consultation repertoire to 16 total domains:
+  1. `handle_authenticity_and_cocq`: 100% Brand-new fullbox commitment, CO/CQ origin certificates, Serial/Service Tag checks on manufacturer portals, and 200% refund pledge for counterfeits.
+  2. `handle_installment_procedure`: 0% interest credit card financing (25+ banks, 3-minute approval) and citizen ID card (CCCD chip) financing via Home Credit / HD Saison (10-30% down payment, 15-20 min approval).
+  3. `handle_return_and_refund`: 7-day free replacement for wrong configuration, voluntary exchange policy with 10-15% depreciation, 1-3 business day bank refund SLA.
+  4. `handle_hardware_upgrade_maintenance`: 15-30 minute on-site RAM/SSD upgrades preserving official warranty, Arctic MX-4 thermal paste renewal, and lifetime free interior dusting/cleaning for AlphaTech hardware.
+  5. `handle_software_and_remote_support`: Clean Windows 11 Pro installation, licensed antivirus, high-speed data migration, and 24/7 remote desktop assistance via UltraViewer / AnyDesk.
+  6. `handle_b2b_corporate_quotation`: Tiered volume pricing (5-12% off), 30-minute official quotation/BOM with company seal, 15-30 day credit term, corporate contracts, and dedicated B2B inbox.
+  7. `handle_privacy_and_data_security`: ISO 27001 data protection standards, open glass partition viewing with 24/7 CCTV surveillance, and strict non-disclosure of personal client files.
+  8. `handle_onsite_booking_guide`: 3-step technician dispatch process, clear upfront service fee scale (150,000₫ – 350,000₫), and after-hours/weekend on-site availability until 21:00.
+- Updated 10 quick suggestion chips in `templates/public/base_public.html` for instant customer consultation queries.
+- Expanded automated unit test suite in `tests/test_public_copilot_and_cart_api.py` to 20 tests; all 20 tests pass.
+- Verified live end-to-end functionality via `browser_subagent` on `http://127.0.0.1:8000/dich-vu/`.
+
 
 ### 2026-09-12 — AI AlphaTech Branding & Public Customer Consultation Engine
 

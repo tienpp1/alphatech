@@ -238,3 +238,114 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         # Subtotal is 18,500,000 >= 5,000,000 threshold -> is_free_shipping True
         self.assertTrue(cart_data["is_free_shipping"])
         self.assertEqual(cart_data["shipping_fee"], 0)
+
+    def test_public_copilot_authenticity_and_cocq(self):
+        """POST /api/v1/public/copilot/ confirms 100% genuine CO/CQ and Service Tag check."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "hàng ở shop có chính hãng không có giấy tờ co cq không"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("CO (Certificate of Origin)", data["reply"])
+        self.assertIn("CQ (Certificate of Quality)", data["reply"])
+        self.assertIn("200%", data["reply"])
+        self.assertIn("Service Tag", data["reply"])
+
+    def test_public_copilot_installment_procedure(self):
+        """POST /api/v1/public/copilot/ explains 0% credit card vs CCCD installment procedures."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "thủ tục mua trả góp qua cccd hoặc thẻ tín dụng như thế nào"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("CCCD gắn chip", data["reply"])
+        self.assertIn("Lãi suất 0%", data["reply"])
+        self.assertIn("15 – 20 phút", data["reply"])
+        self.assertIn("10% – 30%", data["reply"])
+
+    def test_public_copilot_return_and_refund(self):
+        """POST /api/v1/public/copilot/ explains 7-day exchange and refund conditions."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "nếu mua về dùng không thích hoặc nhầm cấu hình có được đổi trả không"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("07 ngày", data["reply"])
+        self.assertIn("Miễn phí phí đổi", data["reply"])
+        self.assertIn("10% – 15%", data["reply"])
+        self.assertIn("1 – 3 ngày làm việc", data["reply"])
+
+    def test_public_copilot_hardware_upgrade_maintenance(self):
+        """POST /api/v1/public/copilot/ explains RAM/SSD upgrades, thermal paste, and warranty safety."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "shop có nhận nâng cấp ram ssd và vệ sinh tra keo tản nhiệt lấy liền không"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("15 – 30 Phút", data["reply"])
+        self.assertIn("Arctic MX-4", data["reply"])
+        self.assertIn("không làm mất bảo hành chính hãng", data["reply"])
+        self.assertIn("MIỄN PHÍ vệ sinh máy trọn đời", data["reply"])
+
+    def test_public_copilot_software_and_remote_support(self):
+        """POST /api/v1/public/copilot/ explains clean OS install, data migration, and remote support."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "mua máy có được cài sẵn win bản quyền và hỗ trợ chuyển dữ liệu không"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("Windows 11 Pro", data["reply"])
+        self.assertIn("Data Migration", data["reply"])
+        self.assertIn("UltraViewer / AnyDesk", data["reply"])
+
+    def test_public_copilot_b2b_corporate_quotation(self):
+        """POST /api/v1/public/copilot/ explains corporate volume discounts, quotations, and credit terms."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "công ty muốn xin bảng báo giá mua số lượng lớn cho nhân viên"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("5% đến 12%", data["reply"])
+        self.assertIn("30 phút", data["reply"])
+        self.assertIn("15 đến 30 ngày", data["reply"])
+        self.assertIn("b2b@alphatech.vn", data["reply"])
+
+    def test_public_copilot_privacy_and_data_security(self):
+        """POST /api/v1/public/copilot/ guarantees ISO 27001 customer privacy and open glass bench."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "khi sửa máy dữ liệu cá nhân có bị lộ hay xem trộm không"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("ISO 27001", data["reply"])
+        self.assertIn("nghiêm cấm sao chép", data["reply"])
+        self.assertIn("vách kính trong suốt", data["reply"])
+        self.assertIn("camera", data["reply"])
+
+    def test_public_copilot_onsite_booking_guide(self):
+        """POST /api/v1/public/copilot/ explains 3-step on-site technician booking and transparent fees."""
+        resp = self.client.post(
+            "/api/v1/public/copilot/",
+            data=json.dumps({"message": "tôi muốn đặt thợ kỹ thuật đến tận nhà sửa máy tính thì làm thế nào"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("On-Site IT Service", data["reply"])
+        self.assertIn("150.000₫ – 350.000₫", data["reply"])
+        self.assertIn("21:00", data["reply"])
+

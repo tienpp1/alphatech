@@ -72,6 +72,248 @@ def handle_order_tracking(request, user_query, q_lower):
         }
 
 
+def handle_authenticity_and_cocq(q_lower):
+    """Tư vấn cam kết hàng chính hãng 100%, nguồn gốc xuất xứ CO/CQ và cách kiểm tra Serial/Service Tag."""
+    keywords = [
+        "chính hãng", "nguồn gốc", "xuất xứ", "co/cq", "co cq", "hàng giả", "hàng nhái",
+        "hàng dựng", "mới 100%", "nguyên seal", "fullbox", "serial", "imei", "service tag",
+        "kiểm tra máy", "check hãng", "hàng thật", "chất lượng máy"
+    ]
+    if not any(k in q_lower for k in keywords):
+        return None
+
+    reply = (
+        "✨ **Cam Kết Hàng Chính Hãng 100% & Chứng Nhận Xuất Xứ (CO/CQ) Tại AlphaTech:**\n\n"
+        "AlphaTech hiểu rằng chất lượng và nguồn gốc thiết bị là mối quan tâm hàng đầu của Quý khách. Chúng tôi cam kết tuyệt đối:\n\n"
+        "1. **100% Máy Mới Nguyên Đai Nguyên Kiện (Brand New Fullbox):**\n"
+        "   • Toàn bộ laptop, linh kiện và thiết bị mạng đều là hàng nhập khẩu chính ngạch, nguyên seal nhà sản xuất.\n"
+        "   • Đầy đủ chứng nhận xuất xứ **CO (Certificate of Origin)** và chứng nhận chất lượng **CQ (Certificate of Quality)** từ các đối tác hàng đầu (Dell, HP, Lenovo, ASUS, Apple...).\n\n"
+        "2. **Hướng Dẫn Kiểm Tra Serial / Service Tag Trực Tuyến:**\n"
+        "   • Mỗi thiết bị đều có số Serial/Service Tag riêng biệt in trên thân máy và vỏ hộp trùng khớp 100%.\n"
+        "   • Quý khách có thể tự kiểm tra trực tiếp trên trang chủ của hãng (ví dụ `dell.com/support`, `support.hp.com`, `checkcoverage.apple.com`) để xác thực thời hạn bảo hành gốc.\n\n"
+        "3. **Cam Kết Bồi Thường 200%:**\n"
+        "   • AlphaTech cam kết **bồi hoàn 200% giá trị đơn hàng** nếu Quý khách phát hiện sản phẩm là hàng giả, hàng dựng hoặc linh kiện bị thay thế.\n\n"
+        "👉 Quý khách có thể xem đầy đủ danh mục tại [Sản phẩm chính hãng](/san-pham/) hoặc trải nghiệm trực tiếp tại các [Showroom AlphaTech](/chi-nhanh/)."
+    )
+    return {
+        "reply": reply,
+        "suggestions": ["Xem danh mục Laptop Dell", "Chính sách bảo hành 1 đổi 1", "Hệ thống Showroom"]
+    }
+
+
+def handle_installment_procedure(q_lower):
+    """Tư vấn chi tiết thủ tục mua hàng trả góp 0% qua Thẻ tín dụng và CCCD gắn chip."""
+    keywords = [
+        "thủ tục trả góp", "trả góp qua cccd", "căn cước", "hồ sơ trả góp", "home credit",
+        "fe credit", "hd saison", "duyệt hồ sơ", "trả trước bao nhiêu", "trả góp 0%",
+        "trả góp thẻ tín dụng", "lãi suất trả góp", "hướng dẫn trả góp", "mua góp"
+    ]
+    if not any(k in q_lower for k in keywords):
+        return None
+
+    reply = (
+        "💳 **Hướng Dẫn & Thủ Tục Mua Hàng Trả Góp 0% Lãi Suất Tại AlphaTech:**\n\n"
+        "AlphaTech hợp tác với các tổ chức tài chính hàng đầu để mang đến 2 hình thức trả góp linh hoạt, tiện lợi nhất:\n\n"
+        "1. **Hình thức 1: Trả Góp 0% Qua Thẻ Tín Dụng (Credit Card):**\n"
+        "   • **Điều kiện:** Sở hữu thẻ tín dụng (Visa, Mastercard, JCB) của hơn 25 ngân hàng liên kết (Techcombank, Vietcombank, VPBank, MB, ACB, HSBC, Sacombank...).\n"
+        "   • **Ưu điểm:** **Lãi suất 0%**, không cần chứng minh thu nhập, không giữ giấy tờ, duyệt tự động chỉ sau **3 phút**.\n"
+        "   • **Kỳ hạn linh hoạt:** 3, 6, 9, hoặc 12 tháng.\n\n"
+        "2. **Hình thức 2: Trả Góp Qua Căn Cước Công Dân (CCCD Gắn Chip):**\n"
+        "   • **Đối tác tài chính:** Hỗ trợ qua Home Credit, HD Saison, Mcredit.\n"
+        "   • **Hồ sơ đơn giản:** Chỉ cần **CCCD gắn chip** chính chủ (độ tuổi từ 18 – 60 tuổi).\n"
+        "   • **Khoản trả trước:** Chỉ từ **10% – 30%** giá trị sản phẩm.\n"
+        "   • **Thời gian duyệt:** Xét duyệt hồ sơ online hoặc tại showroom chỉ trong **15 – 20 phút**, nhận máy ngay sau khi duyệt.\n\n"
+        "👉 Quý khách có thể lựa chọn phương thức trả góp trực tiếp tại trang [Giỏ hàng & Thanh toán](/gio-hang/) hoặc đến [Showroom gần nhất](/chi-nhanh/) để nhân viên hỗ trợ làm hồ sơ tận tình!"
+    )
+    return {
+        "reply": reply,
+        "suggestions": ["Xem giỏ hàng", "Tư vấn Laptop dưới 20 triệu", "Hotline tư vấn trả góp"]
+    }
+
+
+def handle_return_and_refund(q_lower):
+    """Tư vấn chính sách đổi trả theo nhu cầu cá nhân, nhầm cấu hình và quy trình hoàn tiền."""
+    keywords = [
+        "đổi trả theo nhu cầu", "không thích", "nhầm cấu hình", "trả hàng", "hoàn tiền",
+        "phí đổi trả", "trả lại máy", "mua nhầm", "đổi máy khác", "chính sách đổi hàng"
+    ]
+    if not any(k in q_lower for k in keywords):
+        return None
+
+    reply = (
+        "🔄 **Chính Sách Đổi Trả Linh Hoạt & Hoàn Tiền Tại AlphaTech:**\n\n"
+        "AlphaTech luôn đặt sự hài lòng của khách hàng lên hàng đầu với chính sách đổi trả minh bạch trong **07 ngày đầu tiên**:\n\n"
+        "1. **Đổi Sang Dòng Máy Khác (Mua Nhầm Cấu Hình / Nhu Cầu Thay Đổi):**\n"
+        "   • Hỗ trợ đổi sang mẫu laptop hoặc cấu hình khác có giá trị tương đương hoặc bù trừ chênh lệch.\n"
+        "   • **Miễn phí phí đổi** trong vòng **07 ngày** nếu máy còn nguyên vẹn như lúc xuất kho (đầy đủ hộp, phụ kiện, không trầy xước, không cấn móp).\n\n"
+        "2. **Trả Hàng & Hoàn Tiền Theo Nhu Cầu Cá Nhân:**\n"
+        "   • Nếu Quý khách không có nhu cầu sử dụng tiếp, áp dụng trả hàng trong 07 ngày với mức phí khấu hao hợp lý **10% – 15%** (chi phí mở hộp đưa về hàng trưng bày demo).\n"
+        "   • Số tiền hoàn lại sẽ được chuyển khoản trực tiếp về tài khoản ngân hàng của Quý khách trong vòng **1 – 3 ngày làm việc**.\n\n"
+        "3. **Lỗi Kỹ Thuật Nhà Sản Xuất (Chính sách DOA 72H):**\n"
+        "   • Nếu máy phát sinh lỗi phần cứng do nhà sản xuất trong 72 giờ đầu, Quý khách được **1 đổi 1 máy mới 100% nguyên seal hoàn toàn miễn phí**.\n\n"
+        "👉 Để được hỗ trợ thủ tục đổi trả nhanh nhất, Quý khách vui lòng liên hệ hotline: `1900 6868` (nhánh 2) hoặc mang máy đến bất kỳ [Chi nhánh AlphaTech](/chi-nhanh/)."
+    )
+    return {
+        "reply": reply,
+        "suggestions": ["Chính sách bảo hành DOA 72h", "Chi nhánh gần nhất", "Tư vấn chọn đúng cấu hình"]
+    }
+
+
+def handle_hardware_upgrade_maintenance(user_query, q_lower):
+    """Tư vấn dịch vụ nâng cấp RAM, SSD NVMe lấy liền, vệ sinh máy tính và tra keo tản nhiệt chuyên sâu."""
+    keywords = [
+        "nâng cấp", "ram", "ssd", "ổ cứng", "vệ sinh", "keo tản nhiệt", "tra keo",
+        "nóng máy", "quạt kêu", "mất bảo hành", "bảo dưỡng", "thay ram", "thay ổ cứng",
+        "vệ sinh laptop", "vệ sinh máy tính"
+    ]
+    if not any(k in q_lower for k in keywords):
+        return None
+
+    reply = (
+        "🛠️ **Dịch Vụ Nâng Cấp Phần Cứng, Vệ Sinh & Bảo Dưỡng Máy Tính — AlphaTech:**\n\n"
+        "1. **Nâng Cấp RAM & Ổ Cứng SSD NVMe Lấy Liền (15 – 30 Phút):**\n"
+        "   • **Linh kiện chuẩn hãng:** Sử dụng RAM/SSD chính hãng từ Samsung, Kingston, Crucial, WD với tốc độ đọc/ghi cao, bảo hành linh kiện **36 tháng**.\n"
+        "   • **Trực quan & Minh bạch:** Quý khách ngồi quan sát kỹ thuật viên thao tác trực tiếp tại quầy dịch vụ mở.\n"
+        "   • **Bảo toàn bảo hành gốc:** Thao tác chuẩn mực theo tài liệu hướng dẫn tháo lắp của hãng (Dell, HP, ASUS), dán tem niêm phong kỹ thuật AlphaTech, **không làm mất bảo hành chính hãng** của máy.\n\n"
+        "2. **Dịch Vụ Vệ Sinh Máy Chuyên Sâu & Tra Keo Tản Nhiệt Cao Cấp:**\n"
+        "   • Thổi sạch bụi bẩn khe tản nhiệt, vệ sinh quạt làm mát, tra dầu bôi trơn trục quạt.\n"
+        "   • Tra keo tản nhiệt cao cấp nhập khẩu (**Arctic MX-4 / Thermal Grizzly**) giúp nhiệt độ CPU/GPU giảm sâu từ **10°C – 15°C**, máy vận hành êm ái, kéo dài tuổi thọ linh kiện.\n"
+        "   • 🎁 **Đặc quyền:** **MIỄN PHÍ vệ sinh máy trọn đời** cho toàn bộ laptop và PC mua tại hệ thống AlphaTech!\n\n"
+        "👉 Quý khách có thể mang máy qua [Trạm kỹ thuật AlphaTech gần nhất](/chi-nhanh/) hoặc gửi yêu cầu tại [Đặt lịch dịch vụ](/yeu-cau-dich-vu/)!"
+    )
+    return {
+        "reply": reply,
+        "suggestions": ["Đặt lịch kỹ thuật viên", "Địa chỉ trạm kỹ thuật", "Tư vấn phụ kiện máy tính"]
+    }
+
+
+def handle_software_and_remote_support(q_lower):
+    """Tư vấn dịch vụ cài đặt phần mềm, Windows bản quyền, chuyển dữ liệu và hỗ trợ từ xa."""
+    keywords = [
+        "cài win", "windows", "office", "phần mềm", "bản quyền", "chuyển dữ liệu",
+        "ultraviewer", "anydesk", "từ xa", "cài lại win", "diệt virus", "hỗ trợ từ xa",
+        "cài phần mềm", "cài đặt máy"
+    ]
+    if not any(k in q_lower for k in keywords):
+        return None
+
+    reply = (
+        "💻 **Dịch Vụ Cài Đặt Phần Mềm, Windows Bản Quyền & Hỗ Trợ Kỹ Thuật Từ Xa:**\n\n"
+        "1. **Cài Đặt Hệ Điều Hành & Phần Mềm Chuẩn Sạch:**\n"
+        "   • 100% máy xuất xưởng được kỹ thuật viên kích hoạt bản quyền Windows 11 Pro sạch, không chứa phần mềm rác (bloatware).\n"
+        "   • Cài đặt sẵn bộ ứng dụng thiết yếu: Bộ gõ tiếng Việt Unikey, trình duyệt web, phần mềm nén file, bộ ứng dụng văn phòng cơ bản hoàn toàn miễn phí.\n"
+        "   • Hỗ trợ tư vấn và cài đặt phần mềm bảo mật diệt virus bản quyền (Kaspersky, Microsoft Defender for Endpoint).\n\n"
+        "2. **Dịch Vụ Sao Lưu & Chuyển Dữ Liệu Tốc Độ Cao (Data Migration):**\n"
+        "   • Kỹ thuật viên hỗ trợ chuyển toàn bộ tài liệu làm việc, hình ảnh, tài khoản email và bookmarks trình duyệt từ máy tính cũ sang máy tính mới an toàn, không lo thất thoát dữ liệu.\n\n"
+        "3. **Hỗ Trợ Kỹ Thuật Trực Tuyến Từ Xa 24/7:**\n"
+        "   • Đội ngũ kỹ sư trực tuyến hỗ trợ kết nối từ xa qua **UltraViewer / AnyDesk** để xử lý nhanh các sự cố phần mềm, cấu hình máy in, chia sẻ mạng nội bộ mà Quý khách không cần mang máy ra showroom.\n\n"
+        "👉 Quý khách cần hỗ trợ gấp vui lòng gọi Hotline kỹ thuật: `1900 6868` (nhánh 2) hoặc gửi tin nhắn tại đây để chuyên viên hướng dẫn!"
+    )
+    return {
+        "reply": reply,
+        "suggestions": ["Yêu cầu hỗ trợ kỹ thuật", "Tư vấn thiết bị mới", "Bảo hành chính hãng"]
+    }
+
+
+def handle_b2b_corporate_quotation(q_lower):
+    """Tư vấn chính sách khách hàng doanh nghiệp, báo giá dự án số lượng lớn và điều khoản công nợ."""
+    b2b_direct_keywords = [
+        "doanh nghiệp", "b2b", "chiết khấu số lượng", "mua sỉ", "mua số lượng lớn",
+        "công nợ", "hợp đồng mua bán", "hợp đồng kinh tế", "nghiệm thu", "procurement",
+        "phòng mua hàng", "mua cho công ty", "trang bị công ty", "trang bị cho công ty",
+        "dự án công ty", "chính sách b2b", "cung cấp số lượng lớn"
+    ]
+    is_quotation_request = "báo giá" in q_lower and any(
+        k in q_lower for k in ["công ty", "dự án", "số lượng", "b2b", "hợp đồng", "pháp nhân", "sỉ", "đối tác"]
+    )
+    if not (any(k in q_lower for k in b2b_direct_keywords) or is_quotation_request):
+        return None
+
+    reply = (
+        "🏢 **Chính Sách Khách Hàng Doanh Nghiệp (B2B) & Dự Án CNTT — AlphaTech:**\n\n"
+        "AlphaTech là đối tác cung cấp thiết bị và giải pháp hạ tầng CNTT tin cậy cho hơn 500+ doanh nghiệp tại Việt Nam:\n\n"
+        "1. **Chính Sách Chiết Khấu Bậc Thang Cực Kỳ Ưu Đãi:**\n"
+        "   • Chiết khấu trực tiếp từ **5% đến 12%** trên giá niêm yết cho các đơn hàng trang bị số lượng từ 3 máy trở lên.\n"
+        "   • Tặng kèm gói bảo trì hệ thống và hỗ trợ kỹ thuật tận nơi trị giá lên đến 10.000.000₫.\n\n"
+        "2. **Cung Cấp Bảng Báo Giá Chính Thức (Quotation/BOM) Trong 30 Phút:**\n"
+        "   • Phòng giải pháp B2B sẵn sàng xuất bảng chào giá cạnh tranh kèm đầy đủ thông số kỹ thuật, dấu mộc tròn pháp nhân chỉ sau **30 phút** nhận yêu cầu.\n\n"
+        "3. **Chính Sách Công Nợ Linh Hoạt (15 – 30 Ngày):**\n"
+        "   • Hỗ trợ kỳ hạn thanh toán công nợ từ **15 đến 30 ngày** cho các doanh nghiệp ký kết hợp đồng cung ứng định kỳ.\n\n"
+        "4. **Đầy Đủ Hồ Sơ Chứng Từ Chuẩn Kế Toán:**\n"
+        "   • Cung cấp Hợp đồng kinh tế, Hóa đơn VAT điện tử, Biên bản giao nhận và nghiệm thu thiết bị theo đúng quy định pháp luật.\n\n"
+        "📩 **Kênh tiếp nhận dành riêng cho Doanh nghiệp:**\n"
+        "• Email: `b2b@alphatech.vn` | Hotline chuyên trách B2B: `1900 6868` (nhánh 3)\n"
+        "• Hoặc Quý khách có thể để lại nhu cầu tại [Biểu mẫu yêu cầu dịch vụ](/yeu-cau-dich-vu/) để chuyên viên B2B gọi lại ngay!"
+    )
+    return {
+        "reply": reply,
+        "suggestions": ["Gửi yêu cầu báo giá B2B", "Tư vấn Laptop văn phòng", "Dịch vụ IT Outsourcing"]
+    }
+
+
+def handle_privacy_and_data_security(q_lower):
+    """Tư vấn cam kết bảo mật dữ liệu riêng tư và an toàn thông tin khách hàng."""
+    keywords = [
+        "bảo mật dữ liệu", "lộ thông tin", "riêng tư", "bán thông tin", "xem trộm",
+        "dữ liệu cá nhân", "quyền riêng tư", "an toàn dữ liệu", "bảo mật thông tin"
+    ]
+    if not any(k in q_lower for k in keywords):
+        return None
+
+    reply = (
+        "🔒 **Cam Kết Bảo Mật Dữ Liệu & Quyền Riêng Tư Của Khách Hàng — AlphaTech:**\n\n"
+        "Chúng tôi thấu hiểu rằng dữ liệu trong máy tính là tài sản vô giá và mang tính riêng tư cao của Quý khách. AlphaTech áp dụng quy trình an toàn thông tin chuẩn **ISO 27001**:\n\n"
+        "1. **Quy Tắc Tuyệt Đối Không Xâm Phạm Dữ Liệu Khách Hàng:**\n"
+        "   • Kỹ thuật viên chỉ được phép kiểm tra các thông số phần cứng và chức năng hệ thống theo biên bản yêu cầu của khách hàng.\n"
+        "   • Tuyệt đối **nghiêm cấm sao chép, truy cập hoặc phát tán** bất kỳ hình ảnh, tin nhắn, tài liệu cá nhân nào trong máy.\n\n"
+        "2. **Khu Vực Kỹ Thuật Mở & Giám Sát Camera 24/7:**\n"
+        "   • Phòng kỹ thuật được thiết kế vách kính trong suốt, Quý khách hoàn toàn có thể ngồi trực tiếp theo dõi từng thao tác sửa chữa.\n"
+        "   • Hệ thống camera an ninh độ nét cao ghi hình liên tục 24/7 và lưu trữ dữ liệu 90 ngày để phục vụ đối soát minh bạch.\n\n"
+        "3. **Cam Kết Bảo Vệ Dữ Liệu Cá Nhân:**\n"
+        "   • Thông tin cá nhân (Họ tên, số điện thoại, địa chỉ, lịch sử đơn hàng) được mã hóa trong cơ sở dữ liệu và **cam kết 100% không bao giờ chia sẻ hay bán cho bên thứ ba**.\n\n"
+        "Quý khách hoàn toàn yên tâm gửi gắm thiết bị tại [Các trung tâm dịch vụ AlphaTech](/chi-nhanh/)!"
+    )
+    return {
+        "reply": reply,
+        "suggestions": ["Xem trạm kỹ thuật gần nhất", "Quy trình sửa chữa minh bạch", "Hotline 1900 6868"]
+    }
+
+
+def handle_onsite_booking_guide(q_lower):
+    """Tư vấn quy trình đặt lịch kỹ thuật viên đến tận nơi, bảng phí minh bạch và hỗ trợ ngoài giờ."""
+    # Never intercept emergency network/server outage questions
+    if any(k in q_lower for k in ["rớt mạng", "sập server", "khẩn cấp", "p1", "sự cố mạng", "gấp"]):
+        return None
+
+    keywords = [
+        "đặt lịch tận nơi", "sửa tại nhà", "thợ đến nhà", "on-site", "onsite",
+        "chi phí tận nơi", "giá sửa tận nơi", "ngoài giờ", "cuối tuần", "đặt thợ",
+        "kỹ thuật viên đến nhà", "đến tận nhà", "sửa tận nhà", "sửa tận nơi", "đặt kỹ thuật",
+        "kỹ thuật đến nhà", "kỹ thuật đến tận nhà", "thợ kỹ thuật", "kỹ thuật tận nơi", "đặt lịch sửa"
+    ]
+    if not any(k in q_lower for k in keywords):
+        return None
+
+    reply = (
+        "🛵 **Quy Trình Đặt Lịch Kỹ Thuật Viên Phục Vụ Tận Nơi (On-Site IT Service):**\n\n"
+        "Nhằm tiết kiệm thời gian cho Quý khách, AlphaTech cung cấp dịch vụ kỹ thuật viên lưu động đến tận nhà hoặc văn phòng công ty:\n\n"
+        "1. **Quy Trình Đặt Lịch Nhanh Chóng Trong 3 Bước:**\n"
+        "   • **Bước 1:** Quý khách điền thông tin sự cố tại [Biểu mẫu Điều phối Dịch vụ](/yeu-cau-dich-vu/) hoặc gọi Hotline `1900 6868`.\n"
+        "   • **Bước 2:** Chuyên viên kỹ thuật liên hệ xác nhận tình trạng, chuẩn bị thiết bị thay thế và hẹn giờ chính xác trong **15 phút**.\n"
+        "   • **Bước 3:** Kỹ thuật viên có mặt tại địa chỉ của Quý khách theo đúng lịch hẹn (hỗ trợ hỏa tốc trong **30 – 45 phút** với các sự cố khẩn cấp).\n\n"
+        "2. **Bảng Phí Minh Bạch & Không Phát Sinh Phí Ẩn:**\n"
+        "   • Phí kiểm tra và xử lý sự cố cơ bản tại chỗ: chỉ từ **150.000₫ – 350.000₫** tùy khu vực.\n"
+        "   • **Quy tắc vàng:** Kỹ thuật viên luôn kiểm tra, giải thích nguyên nhân và báo giá chi tiết trước. Quý khách đồng ý mới tiến hành xử lý.\n\n"
+        "3. **Linh Hoạt Ngoài Giờ & Cuối Tuần:**\n"
+        "   • Đội ngũ kỹ thuật viên phục vụ tất cả các ngày trong tuần (kể cả Thứ Bảy, Chủ Nhật) và hỗ trợ ngoài giờ hành chính đến **21:00**.\n\n"
+        "👉 Quý khách có thể gửi yêu cầu ngay tại [Form Điều Phối Kỹ Thuật 3 Bước](/yeu-cau-dich-vu/) để được xếp lịch sớm nhất!"
+    )
+    return {
+        "reply": reply,
+        "suggestions": ["Đặt lịch kỹ thuật viên ngay", "Sự cố mạng khẩn cấp (SLA 15m)", "Hotline 1900 6868"]
+    }
+
+
 def handle_warranty_and_doa(q_lower):
     """Tư vấn chính sách bảo hành chính hãng và quy chuẩn 1 đổi 1 trong 72h (DOA)."""
     warranty_keywords = [
@@ -372,26 +614,32 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
 def process_alphatech_query(request, user_query):
     """
     Main consultation pipeline for AI AlphaTech.
-    Routes queries across all customer service and technical consulting domains.
+    Routes queries across 16 customer service, sales, and technical consulting domains.
     """
     if not user_query:
         return {
             "reply": (
                 "Xin chào Quý khách! Tôi là **AI AlphaTech** – Chuyên viên tư vấn & Điều phối dịch vụ công nghệ của hệ sinh thái ABC Tech Store & XYZ IT Services.\n\n"
                 "Tôi luôn sẵn sàng trực tuyến 24/7 để đồng hành cùng Quý khách:\n"
-                "1. 💻 **Tư vấn cấu hình máy tính & Laptop:** Lựa chọn đúng nhu cầu (Văn phòng, Đồ họa 3D, Lập trình, Doanh nhân).\n"
+                "1. 💻 **Tư vấn cấu hình Laptop & PC:** Lựa chọn theo đúng nhu cầu (Văn phòng, Đồ họa 3D, Lập trình, Doanh nhân).\n"
                 "2. ⚡ **Dịch vụ Kỹ thuật Doanh nghiệp:** Tiếp nhận sự cố khẩn cấp với cam kết SLA phản hồi **< 15 phút**.\n"
-                "3. 🛡️ **Chính sách Bảo hành & Đổi trả:** Cam kết **1 đổi 1 trong 72h (DOA)** và bảo hành chính hãng 12-36 tháng.\n"
-                "4. 💳 **Thanh toán, Giao hàng & VAT:** Trả góp 0%, miễn phí ship từ 5M, giao hỏa tốc 2h, xuất hóa đơn VAT 24h.\n"
-                "5. 🔄 **Thu cũ Đổi mới (Trade-In):** Trợ giá lên đời 15-20%, bảo mật dữ liệu an toàn tuyệt đối.\n"
-                "6. 📍 **Hệ thống Chi nhánh & Trạm Kỹ thuật:** Địa chỉ 3 showroom trung tâm và hotline hỗ trợ.\n\n"
+                "3. 🛡️ **Bảo hành & 1 Đổi 1 trong 72h (DOA):** 100% hàng chính hãng CO/CQ, chính sách cho mượn máy thay thế.\n"
+                "4. 💳 **Trả góp 0% & Thanh toán linh hoạt:** Trả góp qua thẻ tín dụng hoặc CCCD gắn chip, duyệt hồ sơ 15 phút.\n"
+                "5. 🚚 **Giao hàng hỏa tốc 2h & Hóa đơn VAT:** Miễn phí ship toàn quốc từ 5M, xuất hóa đơn VAT điện tử 24h.\n"
+                "6. 🛠️ **Nâng cấp RAM/SSD & Vệ sinh máy:** Linh kiện chính hãng lấy liền 30 phút, vệ sinh tra keo tản nhiệt MX-4.\n"
+                "7. 🏢 **Báo giá Khách hàng Doanh nghiệp B2B:** Chiết khấu bậc thang 5-12%, cấp bảng chào giá sau 30 phút, công nợ linh hoạt.\n"
+                "8. 🔄 **Thu cũ Đổi mới (Trade-In):** Trợ giá lên đời 15-20%, cam kết bảo mật xóa dữ liệu Zero Data Leak.\n"
+                "9. 📍 **Hệ thống Chi nhánh & Hotline 24/7:** Showroom mở cửa 08:00 - 21:30, hotline hỗ trợ 1900 6868.\n\n"
                 "Quý khách có thể bấm chọn một trong các gợi ý bên dưới hoặc nhập trực tiếp câu hỏi nhé!"
             ),
             "suggestions": [
                 "💻 Tư vấn Laptop theo nhu cầu",
                 "⚡ Báo sự cố mạng / Server (SLA 15m)",
                 "🛡️ Chính sách bảo hành & 1 đổi 1 (DOA)",
+                "💳 Trả góp 0% qua CCCD / Thẻ",
                 "🚚 Giao hàng & Hóa đơn VAT",
+                "🛠️ Nâng cấp RAM/SSD & Vệ sinh máy",
+                "🏢 Báo giá Doanh nghiệp B2B",
                 "🔄 Thu cũ đổi mới (Trade-In)",
                 "📍 Chi nhánh & Hotline 24/7",
                 "📦 Tra cứu đơn hàng"
@@ -405,50 +653,93 @@ def process_alphatech_query(request, user_query):
     if res:
         return res
 
-    # 2. Warranty & DOA
+    # 2. Authenticity, CO/CQ, Serial check
+    res = handle_authenticity_and_cocq(q_lower)
+    if res:
+        return res
+
+    # 3. Installment procedure (0% credit card or CCCD)
+    res = handle_installment_procedure(q_lower)
+    if res:
+        return res
+
+    # 4. Return, Exchange & Refund policy (satisfaction / wrong model)
+    res = handle_return_and_refund(q_lower)
+    if res:
+        return res
+
+    # 5. Hardware upgrade (RAM, SSD) & Cleaning / Thermal paste
+    res = handle_hardware_upgrade_maintenance(user_query, q_lower)
+    if res:
+        return res
+
+    # 6. Software installation, Windows license, Data migration & Remote support
+    res = handle_software_and_remote_support(q_lower)
+    if res:
+        return res
+
+    # 7. B2B Corporate quotations, volume discounts & credit terms
+    res = handle_b2b_corporate_quotation(q_lower)
+    if res:
+        return res
+
+    # 8. Privacy & Data Security guarantee
+    res = handle_privacy_and_data_security(q_lower)
+    if res:
+        return res
+
+    # 9. On-site technician booking & rates guide
+    res = handle_onsite_booking_guide(q_lower)
+    if res:
+        return res
+
+    # 10. Warranty & DOA 72h policy
     res = handle_warranty_and_doa(q_lower)
     if res:
         return res
 
-    # 3. Shipping, Payment & VAT
+    # 11. Shipping, Payment & VAT
     res = handle_shipping_payment_vat(q_lower)
     if res:
         return res
 
-    # 4. Trade-in Upgrade
+    # 12. Trade-in Upgrade
     res = handle_trade_in_upgrade(q_lower)
     if res:
         return res
 
-    # 5. Branch Locator & Contact
+    # 13. Branch Locator & Contact
     res = handle_branch_locator(q_lower)
     if res:
         return res
 
-    # 6. Technical Services & SLA
+    # 14. Technical Services & SLA
     res = handle_technical_services(user_query, q_lower)
     if res:
         return res
 
-    # 7. Laptop & Hardware Catalog Consulting
+    # 15. Laptop & Hardware Catalog Consulting
     res = handle_laptop_and_product_consulting(user_query, q_lower)
     if res:
         return res
 
-    # 8. Default courteous guidance
+    # 16. Default courteous guidance
     return {
         "reply": (
             "Dạ, tôi là **AI AlphaTech** – Chuyên viên tư vấn & Điều phối dịch vụ công nghệ của ABC Tech Store & XYZ IT Services.\n\n"
             "Để hỗ trợ Quý khách một cách chu đáo và chính xác nhất, Quý khách vui lòng cho tôi biết thêm chi tiết về nhu cầu của mình:\n\n"
             "• Quý khách đang tìm kiếm **mẫu máy tính/laptop** với ngân sách hay công việc thế nào (Văn phòng, Đồ họa, Gaming, Lập trình)?\n"
-            "• Quý khách cần hỗ trợ **sự cố kỹ thuật khẩn cấp** hay bảo trì định kỳ cho công ty (SLA < 15m)?\n"
-            "• Quý khách muốn tìm hiểu về **chính sách bảo hành 1 đổi 1 trong 72h**, trả góp 0%, hóa đơn VAT hay chương trình Thu cũ đổi mới?\n\n"
+            "• Quý khách cần **mua trả góp 0%**, xin **báo giá doanh nghiệp B2B**, hay muốn **nâng cấp RAM/SSD/vệ sinh máy**?\n"
+            "• Quý khách cần hỗ trợ **sự cố kỹ thuật khẩn cấp** tại văn phòng hay đặt lịch kỹ thuật viên đến tận nơi (SLA < 15m)?\n"
+            "• Quý khách muốn tìm hiểu về **chính sách bảo hành 1 đổi 1 (DOA 72h)**, đổi trả linh hoạt hay xuất hóa đơn VAT điện tử?\n\n"
             "Hoặc Quý khách có thể chọn nhanh các chủ đề tư vấn được quan tâm nhiều nhất dưới đây ạ:"
         ),
         "suggestions": [
             "💻 Tư vấn Laptop theo nhu cầu",
-            "⚡ Dịch vụ IT khẩn cấp (SLA 15m)",
-            "🛡️ Chính sách bảo hành & Đổi trả",
-            "📍 Chi nhánh & Hotline hỗ trợ"
+            "💳 Trả góp 0% qua CCCD / Thẻ",
+            "🛡️ Chính sách bảo hành & 1 đổi 1",
+            "🛠️ Nâng cấp RAM/SSD & Vệ sinh",
+            "⚡ Báo sự cố mạng (SLA 15m)",
+            "🏢 Báo giá Doanh nghiệp B2B"
         ]
     }

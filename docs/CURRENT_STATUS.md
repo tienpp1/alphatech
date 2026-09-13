@@ -1,5 +1,19 @@
 # Current repository status
 
+## 2026-09-13 — AI AlphaTech Phase 2 Fundamental Customer Inquiry Training & Expansion
+
+- Expanded AI AlphaTech with 8 additional core everyday customer consultation handlers in `apps/public_web/alphatech_ai.py` (totaling 16 comprehensive real-world customer consultation domains):
+  1. **100% Genuine & Origin Guarantee (CO/CQ, Serial/Service Tag):** Brand-new fullbox, official manufacturer verification (Dell, HP, Apple, ASUS), and 200% anti-counterfeit refund pledge.
+  2. **Installment Financing (0% Credit Card & CCCD):** 0% interest via 25+ partner banks (3-minute online approval) vs. finance companies (Home Credit / HD Saison) with CCCD chip, 10-30% down payment, 15-20 min approval.
+  3. **Return, Exchange & Refund Policies:** 7-day free exchange for wrong model/specs, voluntary return with transparent 10-15% depreciation fee, and 1-3 business day bank refund SLA.
+  4. **Hardware Upgrades & Maintenance:** 15-30 minute on-site RAM/SSD upgrades preserving manufacturer warranty, thermal paste renewal with Arctic MX-4, and lifetime free interior cleaning for AlphaTech customers.
+  5. **Software Installation, Licensing & Remote Support:** Genuine Windows 11 Pro, licensed antivirus, high-speed data migration, and 24/7 remote troubleshooting via UltraViewer / AnyDesk.
+  6. **B2B Corporate Quotation & Credit Terms:** Tiered volume discounts (5-12%), 30-minute formal quotation/BOM with company seal, 15-30 day credit term, dedicated corporate desk (`b2b@alphatech.vn`).
+  7. **Data Privacy & Information Security:** ISO 27001 compliant security, open-view glass technical bench with 24/7 CCTV, strictly zero unauthorized data inspection/copying.
+  8. **On-Site Technician Booking Guide:** Transparent 3-step technician dispatch, fixed upfront inspection fee (150,000₫ – 350,000₫), and flexible evening/weekend coverage up to 21:00.
+- Updated frontend quick suggestion chips in `templates/public/base_public.html` with 10 prominent daily customer queries.
+- Expanded automated unit test suite in `tests/test_public_copilot_and_cart_api.py` from 12 to 20 tests; all 20 tests pass (Ran 20 tests in 23.767s OK).
+- Verified live end-to-end user experience in browser via `browser_subagent` on `http://127.0.0.1:8000/dich-vu/`, confirming modal launch, suggestion chips ("Trả góp 0%", "Báo giá Doanh nghiệp B2B", "Chính sách bảo hành & 1 đổi 1"), manual typing, and instant rich Vietnamese guidance.
 
 ## 2026-09-12 — AI AlphaTech Branding & Public Customer Consultation Engine
 
