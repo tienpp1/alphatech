@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.workspaces.models import Workspace, WorkspaceType
-from apps.retail.models import Category, Customer, CustomerSegment, Order, OrderItem, OrderStatus, Product
+from apps.retail.models import Branch, Category, Customer, CustomerSegment, Order, OrderItem, OrderStatus, Product
 from apps.service_ops.models import Service, ServiceRequest, ServiceRequestStatus, SLAPriority, SLA
 from apps.forecasting.models import TargetType, Granularity
 from apps.forecasting.selectors import get_historical_timeseries
@@ -190,6 +190,9 @@ class ForecastingDatasetTestCase(TestCase):
         self.assertEqual(df.loc["2026-01-02", "target"], 0.0)
         # Day 3 total: 200,000
         self.assertEqual(df.loc["2026-01-03", "target"], 200000.0)
+        self.assertEqual(df.attrs["source_observation_count"], 2)
+        self.assertEqual(df.attrs["missing_period_count"], 1)
+        self.assertEqual(df.attrs["missing_period_policy"], "zero_fill_daily_gap")
 
     def test_retail_order_volume_aggregation(self):
         """Tests order volume counting non-cancelled orders and filling gaps."""
@@ -211,6 +214,35 @@ class ForecastingDatasetTestCase(TestCase):
         with self.assertRaises(ValueError):
             get_historical_timeseries(self.retail_ws_b, TargetType.RETAIL_PRODUCT_DEMAND,
                                       dimensions={"product_id": product.pk})
+
+    def test_product_demand_supports_category_and_branch_dimensions(self):
+        product = Product.objects.get(sku="SKU-A")
+        category = product.category
+        branch = Branch.objects.create(
+            workspace=self.retail_ws_a,
+            code="BR-A",
+            name="Branch A",
+        )
+        Order.objects.filter(order_number__in=("ORD-A-01", "ORD-A-02", "ORD-A-04")).update(branch=branch)
+
+        by_category = get_historical_timeseries(
+            self.retail_ws_a,
+            TargetType.RETAIL_PRODUCT_DEMAND,
+            dimensions={"category_id": category.pk},
+        )
+        by_branch = get_historical_timeseries(
+            self.retail_ws_a,
+            TargetType.RETAIL_PRODUCT_DEMAND,
+            dimensions={"branch_id": branch.pk},
+        )
+        self.assertEqual(float(by_category["target"].sum()), 9.0)
+        self.assertEqual(float(by_branch["target"].sum()), 9.0)
+        with self.assertRaises(ValueError):
+            get_historical_timeseries(
+                self.retail_ws_a,
+                TargetType.RETAIL_PRODUCT_DEMAND,
+                dimensions={"store_id": branch.pk},
+            )
 
     def test_retail_product_demand_aggregates_completed_item_quantities(self):
         df = get_historical_timeseries(self.retail_ws_a, TargetType.RETAIL_PRODUCT_DEMAND)

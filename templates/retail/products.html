@@ -12,6 +12,8 @@
     flex-wrap: wrap;
     gap: 1.25rem;
 }
+.product-status-active { color: #4ade80; font-size: 0.75rem; font-weight: 600; }
+.product-status-inactive { color: #f87171; font-size: 0.75rem; font-weight: 600; }
 .header-actions {
     display: flex;
     align-items: center;
@@ -47,8 +49,18 @@
 }
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
     gap: 1.5rem;
+}
+@media (max-width: 640px) {
+    .filters-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    .filter-input {
+        width: 100%;
+    }
 }
 .product-card {
     background: rgba(255, 255, 255, 0.03);
@@ -155,7 +167,10 @@
     </div>
 
     <div class="header-actions">
-        <a href="/retail/products/trash/" class="btn btn-secondary" style="position: relative; display: inline-flex; align-items: center; gap: 8px;">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+            ← Bảng điều khiển
+        </a>
+        <a href="/noibo/retail/products/trash/" class="btn btn-secondary" style="position: relative; display: inline-flex; align-items: center; gap: 8px;">
             <span>🗑️ Thùng rác</span>
             {% if trash_count > 0 %}
             <span style="background: #ef4444; color: #fff; font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 9999px;">
@@ -165,7 +180,7 @@
         </a>
 
         {% if can_manage %}
-        <a href="/retail/products/create/" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+        <a href="/noibo/retail/products/create/" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
             <span>➕ Thêm sản phẩm</span>
         </a>
         {% endif %}
@@ -201,7 +216,7 @@
 
     <button type="submit" class="btn btn-primary">Lọc</button>
     {% if search_q or selected_category or selected_status or sort_option %}
-    <a href="/retail/products/" class="btn btn-secondary">Đặt lại</a>
+    <a href="/noibo/retail/products/" class="btn btn-secondary">Đặt lại</a>
     {% endif %}
 </form>
 
@@ -226,7 +241,7 @@
             </div>
 
             <div class="product-category">{{ p.category.name }}</div>
-            <a href="/retail/products/{{ p.id }}/" class="product-title">{{ p.name }}</a>
+            <a href="/noibo/retail/products/{{ p.id }}/" class="product-title">{{ p.name }}</a>
             <div class="product-sku">
                 <span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-family: monospace;">{{ p.sku }}</span>
                 <span>• {{ p.unit }}</span>
@@ -245,17 +260,17 @@
                     <div class="product-cost">Vốn: {{ p.cost_price|floatformat:0 }} VND</div>
                     {% endif %}
                 </div>
-                <span style="font-size: 0.75rem; color: {% if p.is_active %}#4ade80{% else %}#f87171{% endif %}; font-weight: 600;">
+                <span class="{% if p.is_active %}product-status-active{% else %}product-status-inactive{% endif %}">
                     {% if p.is_active %}● Đang bán{% else %}○ Tạm ngừng{% endif %}
                 </span>
             </div>
 
             <div class="product-card-actions">
-                <a href="/retail/products/{{ p.id }}/" class="btn btn-secondary" style="flex: 1; text-align: center; padding: 6px 10px; font-size: 0.82rem;">
+                <a href="/noibo/retail/products/{{ p.id }}/" class="btn btn-secondary" style="flex: 1; text-align: center; padding: 6px 10px; font-size: 0.82rem;">
                     Chi tiết & Ảnh
                 </a>
                 {% if can_manage %}
-                <form method="POST" action="/retail/products/{{ p.id }}/delete/" onsubmit="return confirm('Bạn có chắc chắn muốn chuyển sản phẩm này vào Thùng rác? (Sản phẩm có thể khôi phục trong 7 ngày)');" style="margin: 0;">
+                <form method="POST" action="/noibo/retail/products/{{ p.id }}/delete/" onsubmit="return confirm('Bạn có chắc chắn muốn chuyển sản phẩm này vào Thùng rác? (Sản phẩm có thể khôi phục trong 7 ngày)');" style="margin: 0;">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-secondary" style="color: #f87171; border-color: rgba(239,68,68,0.3); padding: 6px 10px; font-size: 0.82rem;" title="Xóa vào thùng rác">
                         🗑️ Xóa
@@ -271,7 +286,7 @@
         <h3 style="font-size: 1.2rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.5rem;">Không tìm thấy sản phẩm nào</h3>
         <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 1.25rem;">Thử thay đổi bộ lọc tìm kiếm hoặc thêm sản phẩm công nghệ mới.</p>
         {% if can_manage %}
-        <a href="/retail/products/create/" class="btn btn-primary">➕ Thêm sản phẩm mới</a>
+        <a href="/noibo/retail/products/create/" class="btn btn-primary">➕ Thêm sản phẩm mới</a>
         {% endif %}
     </div>
     {% endfor %}

@@ -5,7 +5,7 @@ UI Template Views for Retail Dashboard, Catalog, Orders, and Customers.
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.contrib import messages
 
 from apps.retail.models import (
@@ -54,6 +54,10 @@ from apps.retail.stockout_services import get_stockout_risk_dashboard_data
 
 def _retail_workspace(request, permission_codename):
     return resolve_authorized_ui_workspace(request, WorkspaceType.RETAIL, permission_codename)
+
+
+def _retail_url_prefix(request):
+    return "/noibo/retail" if request.path.startswith("/noibo/") else "/retail"
 
 
 @login_required
@@ -203,7 +207,7 @@ def retail_product_create_view(request):
                         messages.warning(request, f"Không thể lưu một số hình ảnh: {str(img_err)}")
 
                 messages.success(request, f"Tạo sản phẩm '{product.name}' thành công!")
-                return redirect(f"/retail/products/{product.id}/")
+                return redirect(f"{_retail_url_prefix(request)}/products/{product.id}/")
             except ValidationError as e:
                 if isinstance(e.message_dict if hasattr(e, "message_dict") else None, dict):
                     err_msgs = [f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()]
@@ -299,7 +303,7 @@ def retail_product_edit_view(request, pk):
         except Exception as ex:
             messages.error(request, f"Lỗi cập nhật: {str(ex)}")
 
-    return redirect(f"/retail/products/{product.id}/")
+    return redirect(f"{_retail_url_prefix(request)}/products/{product.id}/")
 
 
 @login_required
@@ -319,7 +323,7 @@ def retail_product_delete_view(request, pk):
         soft_delete_product(product, request.user, ip_address=request.META.get("REMOTE_ADDR"))
         messages.success(request, f"Sản phẩm '{product.name}' đã được chuyển vào Thùng rác. Sản phẩm sẽ được giữ trong 7 ngày.")
 
-    return redirect("/retail/products/")
+    return redirect(f"{_retail_url_prefix(request)}/products/")
 
 
 @login_required
@@ -363,12 +367,12 @@ def retail_product_restore_view(request, pk):
         try:
             restore_product(product, request.user, ip_address=request.META.get("REMOTE_ADDR"))
             messages.success(request, f"Khôi phục sản phẩm '{product.name}' ({product.sku}) thành công!")
-            return redirect(f"/retail/products/{product.id}/")
+            return redirect(f"{_retail_url_prefix(request)}/products/{product.id}/")
         except ValidationError as e:
             messages.error(request, str(e))
-            return redirect("/retail/products/trash/")
+            return redirect(f"{_retail_url_prefix(request)}/products/trash/")
 
-    return redirect("/retail/products/trash/")
+    return redirect(f"{_retail_url_prefix(request)}/products/trash/")
 
 
 @login_required
@@ -395,7 +399,7 @@ def retail_product_permanent_delete_view(request, pk):
         except Exception as ex:
             messages.error(request, f"Lỗi khi xóa vĩnh viễn: {str(ex)}")
 
-    return redirect("/retail/products/trash/")
+    return redirect(f"{_retail_url_prefix(request)}/products/trash/")
 
 
 @login_required
@@ -434,7 +438,7 @@ def retail_product_image_upload_view(request, pk):
             if saved_count > 0:
                 messages.success(request, f"Đã tải lên {saved_count} ảnh thành công cho sản phẩm '{product.name}'.")
 
-    return redirect(f"/retail/products/{product.id}/")
+    return redirect(f"{_retail_url_prefix(request)}/products/{product.id}/")
 
 
 @login_required
@@ -455,7 +459,7 @@ def retail_product_image_delete_view(request, pk, image_id):
         delete_product_image(img)
         messages.success(request, "Đã xóa ảnh sản phẩm thành công.")
 
-    return redirect(f"/retail/products/{product.id}/")
+    return redirect(f"{_retail_url_prefix(request)}/products/{product.id}/")
 
 
 @login_required
@@ -476,7 +480,7 @@ def retail_product_image_set_primary_view(request, pk, image_id):
         set_primary_product_image(product, img)
         messages.success(request, "Đã đặt làm ảnh đại diện chính thành công.")
 
-    return redirect(f"/retail/products/{product.id}/")
+    return redirect(f"{_retail_url_prefix(request)}/products/{product.id}/")
 
 
 @login_required
@@ -527,7 +531,7 @@ def retail_order_detail_view(request, pk):
             transition_order_status(order, OrderStatus.COMPLETED, request.user)
         elif action == "cancel":
             transition_order_status(order, OrderStatus.CANCELLED, request.user)
-        return redirect("retail_order_detail", pk=order.pk)
+        return redirect(f"{_retail_url_prefix(request)}/orders/{order.pk}/")
 
     context = {
         "order": order,
@@ -546,9 +550,14 @@ def retail_customers_view(request):
         return render(request, "retail/no_workspace.html")
 
     qs = Customer.objects.for_workspace(workspace).order_by("name")
-    search_q = request.GET.get("q")
+    search_q = request.GET.get("q", "").strip()
     if search_q:
-        qs = qs.filter(name__icontains=search_q.strip())
+        qs = qs.filter(
+            Q(name__icontains=search_q)
+            | Q(code__icontains=search_q)
+            | Q(phone__icontains=search_q)
+            | Q(email__icontains=search_q)
+        )
 
     context = {
         "customers": qs,
@@ -565,7 +574,11 @@ def retail_branches_view(request):
     if not workspace:
         return render(request, "retail/no_workspace.html")
 
-    branches = Branch.objects.for_workspace(workspace).order_by("region", "name")
+    branches = (
+        Branch.objects.for_workspace(workspace)
+        .annotate(annotated_order_count=Count("orders"))
+        .order_by("region", "name")
+    )
     context = {
         "branches": branches,
         "active_tab": "retail_branches",
@@ -669,7 +682,7 @@ def retail_goods_receiving_create_view(request):
             }
 
             receipt = create_goods_receipt(workspace, request.user, data)
-            return redirect("retail_goods_receiving_detail", pk=receipt.pk)
+            return redirect(f"{_retail_url_prefix(request)}/goods-receiving/{receipt.pk}/")
         except Exception as e:
             context = {
                 "suppliers": suppliers,
@@ -712,7 +725,7 @@ def retail_goods_receiving_detail_view(request, pk):
                 receive_goods_receipt(receipt, request.user)
             elif action == "cancel":
                 cancel_goods_receipt(receipt, request.user)
-            return redirect("retail_goods_receiving_detail", pk=receipt.pk)
+            return redirect(f"{_retail_url_prefix(request)}/goods-receiving/{receipt.pk}/")
         except Exception as e:
             context = {
                 "receipt": receipt,

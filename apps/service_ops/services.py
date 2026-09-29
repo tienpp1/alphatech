@@ -602,6 +602,17 @@ def transition_task_status(task: Task, new_status: str, user, actual_duration_mi
     if new_status not in valid_transitions.get(current, []):
         raise ValidationError(f"Invalid task status transition from '{current}' to '{new_status}'.")
 
+    def _task_audit_snapshot() -> dict:
+        """Return the lifecycle fields needed to reconstruct a task change."""
+        return {
+            "status": task.status,
+            "started_at": task.started_at.isoformat() if task.started_at else None,
+            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+            "actual_duration_minutes": task.actual_duration_minutes,
+            "assigned_to_id": str(task.assigned_to_id) if task.assigned_to_id else None,
+        }
+
+    before = _task_audit_snapshot()
     now = timezone.now()
     if new_status == TaskStatus.IN_PROGRESS and not task.started_at:
         task.started_at = now
@@ -612,7 +623,6 @@ def transition_task_status(task: Task, new_status: str, user, actual_duration_mi
         elif task.started_at:
             task.actual_duration_minutes = max(int((now - task.started_at).total_seconds() / 60), 1)
 
-    old_status = task.status
     task.status = new_status
     task.save()
 
@@ -625,7 +635,7 @@ def transition_task_status(task: Task, new_status: str, user, actual_duration_mi
         action="TASK_STATUS_CHANGED",
         entity_type="Task",
         entity_id=str(task.id),
-        changes={"before": {"status": old_status}, "after": {"status": new_status}},
+        changes={"before": before, "after": _task_audit_snapshot()},
     )
     return task
 

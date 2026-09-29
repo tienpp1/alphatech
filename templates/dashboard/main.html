@@ -3,6 +3,11 @@
 {% block title %}Trung tâm Quản trị Nội bộ Hợp nhất | Bảng điều khiển Điều hành{% endblock %}
 
 {% block content %}
+<style>
+.text-sla-risk { color: #f87171; }
+.text-sla-ok { color: #34d399; }
+.text-sla-muted { color: #94a3b8; }
+</style>
 <!-- Unified Header Hero -->
 <div class="dashboard-hero" style="margin-bottom: 2rem;">
     <div class="hero-badge {% if health.status == 'healthy' %}badge-success{% else %}badge-warning{% endif %}">
@@ -56,51 +61,54 @@
         <a href="/noibo/thong-bao/" id="btn-quick-notifs" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
             🔔 Thông báo
         </a>
-        <a href="/noibo/retail/orders/" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+        <a href="/noibo/retail/orders/" id="btn-quick-orders" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
             🛒 Đơn hàng
         </a>
-        <a href="/noibo/services/requests/" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+        <a href="/noibo/services/requests/" id="btn-quick-requests" class="btn btn-secondary" style="padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
             🎫 Phiếu Dịch vụ
         </a>
     </div>
 </div>
 
 <!-- Dual Business Domains Overview (2 Columns) -->
-<p>Chỉ tổng hợp dữ liệu trong phạm vi quyền được cấp. Dấu — nghĩa là chưa có quyền xem nhóm chỉ số, không phải giá trị bằng không.</p>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+<div class="permission-scope-note" style="margin-bottom: 1.25rem; padding: 10px 16px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.22); border-radius: 10px; font-size: 0.84rem; color: #94a3b8; display: flex; align-items: center; gap: 8px;">
+    <span style="color: #818cf8; font-size: 1rem;">ℹ️</span>
+    <span>Chỉ tổng hợp dữ liệu trong phạm vi quyền được cấp. Ký hiệu <strong style="color: #cbd5e1;">—</strong> nghĩa là tài khoản chưa có quyền truy cập nhóm chỉ số, không phải giá trị bằng không.</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
     <!-- Retail Domain Card -->
     <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; border-top: 4px solid #6366f1;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
-            <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="flex: 1; min-width: 240px;">
                 <span style="font-size: 0.75rem; color: #818cf8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Miền Nghiệp vụ Bán lẻ</span>
                 <h3 style="font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">
                     🛒 Cửa hàng Công nghệ ABC Tech Store
                 </h3>
-                <p style="font-size: 0.85rem; color: #94a3b8;">Phân phối thiết bị công nghệ cao cấp, linh kiện & phụ kiện chính hãng</p>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px; margin-bottom: 0;">Phân phối thiết bị công nghệ cao cấp, linh kiện & phụ kiện chính hãng</p>
             </div>
-            <span class="badge bg-primary" style="font-size: 0.75rem;">abc-retail</span>
+            <span class="badge bg-primary" style="font-size: 0.75rem; font-weight: 600; white-space: nowrap; align-self: flex-start; padding: 4px 10px;">abc-retail</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: 0.75rem; margin-bottom: 1.5rem;">
             <a href="/noibo/retail/products/" id="card-retail-products-link" style="text-decoration: none; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 8px; border-radius: 10px; text-align: center; transition: all 0.2s; display: block;" onmouseover="this.style.background='rgba(99,102,241,0.15)'; this.style.borderColor='#6366f1';" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.06)';">
                 <div style="font-size: 0.72rem; color: #818cf8; font-weight: 600;">Sản phẩm ↗</div>
                 <div style="font-size: 1.4rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">{{ retail.products_count }}</div>
-                <div style="font-size: 0.68rem; color: #64748b;">Đang kinh doanh</div>
+                <div style="font-size: 0.68rem; color: #94a3b8;">Đang kinh doanh</div>
             </a>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 8px; border-radius: 10px; text-align: center;">
                 <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">Đơn Mới / Chờ</div>
                 <div style="font-size: 1.4rem; font-weight: 700; color: #fbbf24; margin-top: 2px;">{{ retail.new_orders_count }}</div>
-                <div style="font-size: 0.68rem; color: #64748b;">/ {{ retail.total_orders_count }} tổng đơn</div>
+                <div style="font-size: 0.68rem; color: #94a3b8;">/ {{ retail.total_orders_count }} tổng đơn</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 8px; border-radius: 10px; text-align: center;">
                 <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">Doanh thu Hoàn tất</div>
-                <div style="font-size: 1.15rem; font-weight: 700; color: #34d399; margin-top: 4px; word-break: break-all;">{{ retail.total_revenue|floatformat:0 }} <span style="font-size: 0.7rem;">VND</span></div>
-                <div style="font-size: 0.68rem; color: #64748b;">Đơn đã xác nhận/giao</div>
+                <div style="font-size: 0.98rem; font-weight: 700; color: #34d399; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{% if retail.total_revenue == "—" %}—{% else %}{{ retail.total_revenue }} <span style="font-size: 0.7rem;">VND</span>{% endif %}</div>
+                <div style="font-size: 0.68rem; color: #94a3b8;">Đơn đã xác nhận/giao</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 8px; border-radius: 10px; text-align: center;">
                 <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">Chi nhánh</div>
                 <div style="font-size: 1.4rem; font-weight: 700; color: #38bdf8; margin-top: 2px;">{{ retail.branches_count }}</div>
-                <div style="font-size: 0.68rem; color: #64748b;">Cửa hàng vật lý</div>
+                <div style="font-size: 0.68rem; color: #94a3b8;">Cửa hàng vật lý</div>
             </div>
         </div>
 
@@ -125,44 +133,44 @@
 
     <!-- Service Domain Card -->
     <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; border-top: 4px solid #f59e0b;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
-            <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="flex: 1; min-width: 240px;">
                 <span style="font-size: 0.75rem; color: #fbbf24; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Miền Nghiệp vụ Dịch vụ Kỹ thuật</span>
                 <h3 style="font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">
                     ⚙️ Dịch vụ Kỹ thuật XYZ IT Technical Services
                 </h3>
-                <p style="font-size: 0.85rem; color: #94a3b8;">Cài đặt hệ thống, bảo trì định kỳ, tư vấn CSDL & sửa chữa thiết bị công nghệ</p>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px; margin-bottom: 0;">Cài đặt hệ thống, bảo trì định kỳ, tư vấn CSDL & sửa chữa thiết bị công nghệ</p>
             </div>
-            <span class="badge bg-warning" style="font-size: 0.75rem;">xyz-service</span>
+            <span class="badge bg-warning" style="font-size: 0.75rem; font-weight: 600; white-space: nowrap; align-self: flex-start; padding: 4px 10px;">xyz-service</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.6rem; margin-bottom: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr)); gap: 0.6rem; margin-bottom: 1.5rem;">
             <a href="/noibo/services/services/" id="card-service-services-link" style="text-decoration: none; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center; transition: all 0.2s; display: block;" onmouseover="this.style.background='rgba(245,158,11,0.15)'; this.style.borderColor='#f59e0b';" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.06)';">
                 <div style="font-size: 0.7rem; color: #fbbf24; font-weight: 600;">Dịch vụ ↗</div>
                 <div style="font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">{{ service.services_count }}</div>
-                <div style="font-size: 0.65rem; color: #64748b;">Gói dịch vụ</div>
+                <div style="font-size: 0.65rem; color: #94a3b8;">Gói dịch vụ</div>
             </a>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center;">
                 <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">Phiếu Mới</div>
                 <div style="font-size: 1.35rem; font-weight: 700; color: #38bdf8; margin-top: 2px;">{{ service.new_requests_count }}</div>
-                <div style="font-size: 0.65rem; color: #64748b;">Chờ tiếp nhận</div>
+                <div style="font-size: 0.65rem; color: #94a3b8;">Chờ tiếp nhận</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center;">
                 <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">Đang xử lý</div>
                 <div style="font-size: 1.35rem; font-weight: 700; color: #a78bfa; margin-top: 2px;">{{ service.in_progress_count }}</div>
-                <div style="font-size: 0.65rem; color: #64748b;">Kỹ sư đang làm</div>
+                <div style="font-size: 0.65rem; color: #94a3b8;">Kỹ sư đang làm</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center;">
                 <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">Rủi ro SLA</div>
-                <div style="font-size: 1.35rem; font-weight: 700; color: {% if service.sla_risk_count > 0 %}#f87171{% else %}#34d399{% endif %}; margin-top: 2px;">
+                <div class="{% if service.sla_risk_count == '—' %}text-sla-muted{% elif service.sla_risk_count > 0 %}text-sla-risk{% else %}text-sla-ok{% endif %}" style="font-size: 1.35rem; font-weight: 700; margin-top: 2px;">
                     {{ service.sla_risk_count }}
                 </div>
-                <div style="font-size: 0.65rem; color: #64748b;">Gần / Quá hạn</div>
+                <div style="font-size: 0.65rem; color: #94a3b8;">Gần / Quá hạn</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 6px; border-radius: 10px; text-align: center;">
                 <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">Kỹ sư</div>
                 <div style="font-size: 1.35rem; font-weight: 700; color: #34d399; margin-top: 2px;">{{ service.technicians_count }}</div>
-                <div style="font-size: 0.65rem; color: #64748b;">Hiện trường</div>
+                <div style="font-size: 0.65rem; color: #94a3b8;">Hiện trường</div>
             </div>
         </div>
 
@@ -210,7 +218,7 @@
     {% if recent_activities %}
     <div style="display: flex; flex-direction: column; gap: 10px;">
         {% for act in recent_activities %}
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; transition: background 0.15s ease;"
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; transition: background 0.15s ease; flex-wrap: wrap; gap: 10px;"
              onmouseover="this.style.background='rgba(255,255,255,0.05)'"
              onmouseout="this.style.background='rgba(255,255,255,0.02)'">
             <div style="display: flex; align-items: center; gap: 14px; min-width: 0;">
@@ -235,7 +243,7 @@
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0; margin-left: 12px;">
-                <span style="font-size: 0.78rem; color: #64748b;">
+                <span style="font-size: 0.78rem; color: #94a3b8;">
                     {{ act.timestamp|date:"d/m/Y H:i" }}
                 </span>
                 <a href="{{ act.url }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.78rem; border-radius: 6px; text-decoration: none;">
@@ -246,8 +254,24 @@
         {% endfor %}
     </div>
     {% else %}
-    <div style="text-align: center; padding: 2rem; color: #64748b; font-size: 0.9rem;">
-        Chưa có hoạt động nghiệp vụ nào được ghi nhận.
+    <div style="text-align: center; padding: 2.75rem 1.5rem; background: rgba(255,255,255,0.015); border: 1px dashed rgba(255,255,255,0.12); border-radius: 14px;">
+        <div style="width: 52px; height: 52px; margin: 0 auto 1rem auto; background: rgba(255,255,255,0.04); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            📭
+        </div>
+        <h4 style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin: 0 0 0.4rem 0;">
+            Chưa có hoạt động nghiệp vụ nào
+        </h4>
+        <p style="font-size: 0.85rem; color: #94a3b8; max-width: 480px; margin: 0 auto 1.25rem auto; line-height: 1.5;">
+            Toàn bộ sự kiện phát sinh từ đơn hàng mới, phiếu sự cố kỹ thuật, khách hàng hoặc liên hệ trực tuyến sẽ tự động hiển thị tập trung tại đây.
+        </p>
+        <div style="display: inline-flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+            <a href="/noibo/retail/orders/" class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                🛒 Quản lý Đơn hàng
+            </a>
+            <a href="/noibo/services/requests/" class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
+                🎫 Quản lý Phiếu Dịch vụ
+            </a>
+        </div>
     </div>
     {% endif %}
 </div>

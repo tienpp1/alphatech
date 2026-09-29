@@ -218,7 +218,7 @@
                                   class="pub-form-control" style="resize: vertical;">{{ request.GET.description }}</textarea>
                     </div>
 
-                    <div style="display: flex; justify-content: flex-end;">
+                    <div class="service-actions-bar" style="justify-content: flex-end;">
                         <button type="button" class="pub-btn-primary" onclick="proceedToStep(2)" style="padding: 12px 24px; font-size: 0.95rem;">
                             <span>Tiếp tục: Mức ưu tiên &amp; SLA →</span>
                         </button>
@@ -275,7 +275,7 @@
                         </div>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between;">
+                    <div class="service-actions-bar">
                         <button type="button" class="pub-btn-secondary" onclick="proceedToStep(1)" style="padding: 12px 20px;">
                             <span>← Quay lại bước 1</span>
                         </button>
@@ -292,7 +292,7 @@
                         <p style="font-size: 0.88rem; color: var(--pub-text-muted); margin: 0;">Điền thông tin để kỹ sư chủ động liên hệ và điều phối hỗ trợ tại hiện trường.</p>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
+                    <div class="service-form-grid-2">
                         <div class="pub-form-group" style="margin-bottom: 0;">
                             <label for="customer_name" class="pub-form-label">
                                 Họ và tên của bạn <span style="color: #EF4444;">*</span>
@@ -311,7 +311,7 @@
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
+                    <div class="service-form-grid-2">
                         <div class="pub-form-group" style="margin-bottom: 0;">
                             <label for="email" class="pub-form-label">
                                 Địa chỉ Email
@@ -335,7 +335,7 @@
                             Thời gian mong muốn
                         </label>
                         <input type="text" id="preferred_time" name="preferred_time" placeholder="Ví dụ: Sớm nhất có thể / Sáng mai 09:00"
-                               class="pub-form-control">
+                                class="pub-form-control">
                         <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
                             <button type="button" class="facet-quick-btn" onclick="document.getElementById('preferred_time').value='Sớm nhất có thể'">⚡ Sớm nhất có thể</button>
                             <button type="button" class="facet-quick-btn" onclick="document.getElementById('preferred_time').value='Hôm nay lúc 14:00'">🕒 Chiều nay 14:00</button>
@@ -343,7 +343,7 @@
                         </div>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                    <div class="service-actions-bar">
                         <button type="button" class="pub-btn-secondary" onclick="proceedToStep(2)" style="padding: 12px 20px;">
                             <span>← Quay lại bước 2</span>
                         </button>

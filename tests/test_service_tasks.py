@@ -13,6 +13,7 @@ from apps.workspaces.models import Workspace, WorkspaceMembership, WorkspaceType
 from apps.retail.models import Customer
 from apps.service_ops.models import Service, Employee, ServiceRequest, Task, TaskStatus
 from apps.service_ops.services import create_task, transition_task_status
+from apps.audit.models import AuditLog
 
 
 class ServiceTaskTests(TestCase):
@@ -79,6 +80,14 @@ class ServiceTaskTests(TestCase):
         self.assertEqual(task.status, TaskStatus.COMPLETED)
         self.assertEqual(task.actual_duration_minutes, 40)
         self.assertIsNotNone(task.completed_at)
+
+        audit = AuditLog.objects.filter(action="TASK_STATUS_CHANGED", entity_id=str(task.id)).latest("timestamp")
+        self.assertEqual(audit.changes["before"]["status"], TaskStatus.IN_PROGRESS)
+        self.assertEqual(audit.changes["after"]["status"], TaskStatus.COMPLETED)
+        self.assertIsNotNone(audit.changes["after"]["started_at"])
+        self.assertIsNotNone(audit.changes["after"]["completed_at"])
+        self.assertEqual(audit.changes["after"]["actual_duration_minutes"], 40)
+        self.assertEqual(audit.changes["after"]["assigned_to_id"], str(self.tech.id))
 
     def test_task_invalid_transition_rejected(self):
         task = create_task(self.req, self.user, {"title": "Test Task"})

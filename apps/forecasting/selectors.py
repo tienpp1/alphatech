@@ -130,7 +130,16 @@ def get_historical_timeseries(
 
     if not data:
         # Return empty DataFrame with appropriate structure
-        return pd.DataFrame(columns=["target"], index=pd.DatetimeIndex([], name="date"))
+        empty = pd.DataFrame(columns=["target"], index=pd.DatetimeIndex([], name="date"))
+        empty.attrs.update(
+            {
+                "source_observation_count": 0,
+                "missing_period_count": 0,
+                "missing_period_policy": "zero_fill_daily_gap",
+                "source_frequency": granularity,
+            }
+        )
+        return empty
 
     # Determine span
     min_d = min(data.keys())
@@ -139,11 +148,21 @@ def get_historical_timeseries(
     # Build continuous daily DatetimeIndex
     full_idx = pd.date_range(start=min_d, end=max_d, freq="D", name="date")
     series_data = [data.get(d.date(), 0.0) for d in full_idx]
+    missing_period_count = len(full_idx) - len(data)
 
     df = pd.DataFrame({"target": series_data}, index=full_idx)
 
     if granularity == Granularity.WEEKLY:
         # Resample to Monday-based weekly totals
         df = df.resample("W-MON").sum()
+
+    df.attrs.update(
+        {
+            "source_observation_count": len(data),
+            "missing_period_count": missing_period_count,
+            "missing_period_policy": "zero_fill_daily_gap",
+            "source_frequency": granularity,
+        }
+    )
 
     return df

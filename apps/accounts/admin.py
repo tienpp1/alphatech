@@ -3,6 +3,7 @@ Django Admin configurations for User, Role, and Permission.
 """
 
 from django.contrib import admin
+from django.db.models import Count
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from apps.accounts.models import User, Role, Permission
 
@@ -45,7 +46,11 @@ class RoleAdmin(admin.ModelAdmin):
     filter_horizontal = ["permissions"]
     readonly_fields = ["created_at", "updated_at"]
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(annotated_permissions_count=Count("permissions"))
+
     def get_permissions_count(self, obj):
-        return obj.permissions.count()
+        return getattr(obj, "annotated_permissions_count", obj.permissions.count())
 
     get_permissions_count.short_description = "Permissions Count"
+    get_permissions_count.admin_order_field = "annotated_permissions_count"

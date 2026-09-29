@@ -74,7 +74,6 @@
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     padding: 1.5rem;
-    overflow-x: auto;
 }
 .data-table {
     width: 100%;
@@ -98,6 +97,18 @@
     display: inline-block;
 }
 .risk-out { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+@media (max-width: 640px) {
+    .filter-box form {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    .select-input {
+        width: 100% !important;
+    }
+}
+
 .risk-high { background: rgba(248, 113, 113, 0.2); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.4); }
 .risk-medium { background: rgba(250, 204, 21, 0.2); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.4); }
 .risk-low { background: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); }
@@ -112,8 +123,9 @@
             Mô hình dự báo nhu cầu bán hàng kết hợp tính toán Lead time (7 ngày) và Safety buffer (3 ngày) để đưa ra đề xuất nhập hàng tự động.
         </p>
     </div>
-    <div style="display: flex; gap: 0.75rem;">
-        <a href="/retail/goods-receiving/create/" class="btn-primary">
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary">← Tổng quan Nội bộ</a>
+        <a href="/noibo/retail/goods-receiving/create/" class="btn btn-primary">
             <span>➕</span>
             <span>Tạo Phiếu Nhập Hàng</span>
         </a>
@@ -161,9 +173,9 @@
             {% endfor %}
         </select>
 
-        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">Lọc</button>
+        <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Lọc</button>
         {% if selected_branch or selected_category %}
-        <a href="/retail/stockout-risk/" class="btn-secondary" style="padding: 0.5rem 0.85rem;">Xóa lọc</a>
+        <a href="?" class="btn btn-secondary" style="padding: 0.5rem 0.85rem;">Xóa lọc</a>
         {% endif %}
     </form>
     <div style="color: #94a3b8; font-size: 0.875rem;">
@@ -172,7 +184,7 @@
 </div>
 
 <!-- Stockout Risk Table -->
-<div class="table-card">
+<div class="table-card table-responsive">
     <table class="data-table">
         <thead>
             <tr>
@@ -203,8 +215,14 @@
                     <span style="color: #ef4444; font-weight: 700;">Hết hàng hôm nay</span>
                     {% elif p.days_to_stockout >= 900 %}
                     <span style="color: #94a3b8;">Không đáng kể</span>
+                    {% elif p.risk_level == 'HIGH' %}
+                    <strong style="color: #f87171;">{{ p.days_to_stockout }} ngày</strong><br>
+                    <small style="color: #64748b;">{{ p.expected_stockout_date }}</small>
+                    {% elif p.risk_level == 'MEDIUM' %}
+                    <strong style="color: #facc15;">{{ p.days_to_stockout }} ngày</strong><br>
+                    <small style="color: #64748b;">{{ p.expected_stockout_date }}</small>
                     {% else %}
-                    <strong style="color: {{ p.risk_color }};">{{ p.days_to_stockout }} ngày</strong><br>
+                    <strong style="color: #4ade80;">{{ p.days_to_stockout }} ngày</strong><br>
                     <small style="color: #64748b;">{{ p.expected_stockout_date }}</small>
                     {% endif %}
                 </td>

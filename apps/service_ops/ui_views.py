@@ -7,6 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from django.utils import timezone, dateparse
 
 from apps.accounts.services import has_workspace_permission
@@ -47,6 +48,10 @@ def _get_service_workspace(request, permission_codename):
         WorkspaceType.SERVICE,
         permission_codename,
     )
+
+
+def _service_url_prefix(request):
+    return "/noibo/services" if request.path.startswith("/noibo/") else "/services"
 
 
 @login_required
@@ -230,11 +235,11 @@ def request_detail_view(request, pk):
                     },
                 )
                 messages.success(request, f"Logged {duration} minutes labor for {emp.full_name}.")
-        except PermissionDenied:
+        except (PermissionDenied, Http404):
             raise
         except Exception as e:
             messages.error(request, f"Action failed: {e}")
-        return redirect("services_ui_request_detail", pk=req.id)
+        return redirect(f"{_service_url_prefix(request)}/requests/{req.id}/")
 
     tasks = req.tasks.select_related("assigned_to").prefetch_related("labor_entries__employee").order_by("created_at")
     now = timezone.now()
@@ -246,9 +251,9 @@ def request_detail_view(request, pk):
     can_manage_labor = has_workspace_permission(
         request.user, workspace, "service.manage_task"
     ) or has_workspace_permission(request.user, workspace, "service.manage_employee")
-    own_employee_ids = set(
-        Employee.objects.filter(workspace=workspace, user=request.user).values_list("id", flat=True)
-    )
+    labor_technicians = available_technicians
+    if not can_manage_labor:
+        labor_technicians = labor_technicians.filter(user=request.user)
 
     return render(
         request,
@@ -263,7 +268,8 @@ def request_detail_view(request, pk):
             "technicians": available_technicians,
             "can_assign": can_assign,
             "can_manage_request": can_manage_request,
-            "can_log_labor": can_manage_labor or bool(own_employee_ids),
+            "labor_technicians": labor_technicians,
+            "can_log_labor": labor_technicians.exists(),
         },
     )
 
@@ -320,14 +326,22 @@ def labor_cost_view(request):
     if not workspace:
         return render(request, "retail/no_workspace.html", {"active_tab": "service_labor"})
 
-    labor_entries = (
-        LaborEntry.objects.filter(task__service_request__workspace=workspace)
-        .select_related("employee", "task", "task__service_request", "task__service_request__customer")
-        .order_by("-started_at")
+    from django.db.models import Sum
+
+    labor_qs = LaborEntry.objects.filter(task__service_request__workspace=workspace)
+    
+    aggs = labor_qs.aggregate(
+        total_minutes=Sum("duration_minutes"),
+        total_cost=Sum("labor_cost")
     )
-    total_minutes = sum(e.duration_minutes for e in labor_entries)
-    total_hours = round(total_minutes / 60, 1)
-    total_cost = sum(e.labor_cost for e in labor_entries)
+    total_minutes = aggs["total_minutes"] or 0
+    total_hours = round(total_minutes / 60.0, 1)
+    total_cost = aggs["total_cost"] or Decimal("0.00")
+    entry_count = labor_qs.count()
+
+    labor_entries = labor_qs.select_related(
+        "employee", "task", "task__service_request", "task__service_request__customer"
+    ).order_by("-started_at")[:100]
 
     return render(
         request,
@@ -335,10 +349,10 @@ def labor_cost_view(request):
         {
             "active_tab": "service_labor",
             "active_workspace": workspace,
-            "labor_entries": labor_entries[:100],
+            "labor_entries": labor_entries,
             "total_minutes": total_minutes,
             "total_hours": total_hours,
             "total_cost": total_cost,
-            "entry_count": len(labor_entries),
+            "entry_count": entry_count,
         },
     )

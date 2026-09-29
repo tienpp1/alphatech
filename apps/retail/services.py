@@ -4,6 +4,7 @@ Enforces transactional safety, server-side revenue calculation, state transition
 """
 
 import uuid
+import logging
 from decimal import Decimal
 from datetime import date, datetime
 from typing import Dict, Any, List, Optional
@@ -13,6 +14,8 @@ from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import Point
 
 from apps.audit.services import log_action
+
+logger = logging.getLogger(__name__)
 from apps.retail.models import (
     Category,
     Product,
@@ -69,6 +72,7 @@ def execute_stock_transfer(workspace, user, data: Dict[str, Any]) -> StockTransf
         if not destination_balance:
             destination_balance = StockBalance.objects.create(workspace=workspace, branch=destination, product=product, quantity_on_hand=0)
 
+        before = {"source_quantity": source_balance.quantity_on_hand, "destination_quantity": destination_balance.quantity_on_hand}
         source_balance.quantity_on_hand -= quantity
         destination_balance.quantity_on_hand += quantity
         source_balance.save(update_fields=["quantity_on_hand", "updated_at"])
@@ -86,7 +90,7 @@ def execute_stock_transfer(workspace, user, data: Dict[str, Any]) -> StockTransf
             executed_by=user,
             executed_at=timezone.now(),
         )
-        log_action(workspace=workspace, actor_user=user, action="STOCK_TRANSFER_EXECUTED", entity_type="StockTransfer", entity_id=transfer.id, changes={"source_branch_id": source.id, "destination_branch_id": destination.id, "product_id": product.id, "quantity": quantity})
+        log_action(workspace=workspace, actor_user=user, action="STOCK_TRANSFER_EXECUTED", entity_type="StockTransfer", entity_id=transfer.id, changes={"source_branch_id": source.id, "destination_branch_id": destination.id, "product_id": product.id, "quantity": quantity, "before": before, "after": {"source_quantity": source_balance.quantity_on_hand, "destination_quantity": destination_balance.quantity_on_hand}})
         return transfer
 
 
@@ -104,6 +108,7 @@ def rollback_stock_transfer(transfer: StockTransfer, user, reason: str) -> Stock
         destination = by_branch.get(transfer.destination_branch_id)
         if not source or not destination or destination.quantity_on_hand < transfer.quantity:
             raise ValidationError("Destination stock is insufficient to compensate this transfer.")
+        before = {"source_quantity": source.quantity_on_hand, "destination_quantity": destination.quantity_on_hand}
         source.quantity_on_hand += transfer.quantity
         destination.quantity_on_hand -= transfer.quantity
         source.save(update_fields=["quantity_on_hand", "updated_at"])
@@ -112,7 +117,7 @@ def rollback_stock_transfer(transfer: StockTransfer, user, reason: str) -> Stock
         transfer.rollback_reason = reason.strip()[:2000]
         transfer.rolled_back_at = timezone.now()
         transfer.save(update_fields=["status", "rollback_reason", "rolled_back_at"])
-        log_action(workspace=transfer.workspace, actor_user=user, action="STOCK_TRANSFER_ROLLED_BACK", entity_type="StockTransfer", entity_id=transfer.id, changes={"reason": transfer.rollback_reason})
+        log_action(workspace=transfer.workspace, actor_user=user, action="STOCK_TRANSFER_ROLLED_BACK", entity_type="StockTransfer", entity_id=transfer.id, changes={"reason": transfer.rollback_reason, "before": before, "after": {"source_quantity": source.quantity_on_hand, "destination_quantity": destination.quantity_on_hand}})
         return transfer
 
 
@@ -375,7 +380,7 @@ def permanent_delete_product(product: Product, user, ip_address: Optional[str] =
             if img.image and hasattr(img.image, "path") and os.path.isfile(img.image.path):
                 img.image.delete(save=False)
         except Exception:
-            pass
+            logger.warning("PRODUCT_IMAGE_FILE_CLEANUP_FAILED")
 
     product.delete()
 
@@ -391,7 +396,16 @@ def permanent_delete_product(product: Product, user, ip_address: Optional[str] =
 
 
 def delete_product(product: Product, user, ip_address: Optional[str] = None) -> None:
-    """Default delete action delegating to soft delete."""
+    """Legacy guarded deletion; explicit trash endpoints use soft_delete_product.
+
+    Preserve the historical refusal contract for callers of this entry point.
+    Trashing an ordered product remains available through the explicit API.
+    """
+    if product.order_items.exists():
+        raise ValidationError(
+            "Không thể xóa sản phẩm có lịch sử đơn hàng qua thao tác này. "
+            "Vui lòng dùng chức năng thùng rác để lưu giữ lịch sử."
+        )
     soft_delete_product(product, user, ip_address=ip_address)
 
 
@@ -620,6 +634,71 @@ def create_order(workspace, user, data: Dict[str, Any], ip_address: Optional[str
     return order
 
 
+def _release_locked_order_fulfillment_stock(
+    order: Order,
+    user,
+    ip_address: Optional[str] = None,
+) -> list[dict[str, Any]]:
+    """Return one stock-backed fulfillment reservation exactly once.
+
+    The reservation flag is deliberately explicit: historical/legacy orders
+    are never inferred to have consumed stock.  All balances are locked and
+    validated before any increment, so a malformed inventory snapshot aborts
+    cancellation without a partial release.
+    """
+    if not order.fulfillment_stock_reserved or order.fulfillment_stock_released_at:
+        return []
+    if not order.branch_id:
+        raise ValidationError("Cannot release fulfillment stock without an assigned branch.")
+
+    quantities: dict[int, int] = {}
+    for item in order.items.select_related("product").all():
+        if item.product.workspace_id != order.workspace_id:
+            raise ValidationError("Order item does not belong to the order workspace.")
+        quantities[item.product_id] = quantities.get(item.product_id, 0) + item.quantity
+
+    balances = list(
+        StockBalance.objects.select_for_update().filter(
+            workspace_id=order.workspace_id,
+            branch_id=order.branch_id,
+            product_id__in=quantities,
+        )
+    )
+    balance_by_product = {balance.product_id: balance for balance in balances}
+    missing = sorted(set(quantities) - set(balance_by_product))
+    if missing:
+        raise ValidationError("Cannot release fulfillment stock because inventory rows are incomplete.")
+
+    changes = []
+    for product_id, quantity in sorted(quantities.items()):
+        balance = balance_by_product[product_id]
+        before = balance.quantity_on_hand
+        balance.quantity_on_hand += quantity
+        balance.save(update_fields=["quantity_on_hand", "updated_at"])
+        changes.append(
+            {
+                "product_id": product_id,
+                "released_quantity": quantity,
+                "before_quantity": before,
+                "after_quantity": balance.quantity_on_hand,
+            }
+        )
+
+    order.fulfillment_stock_released_at = timezone.now()
+    order.save(update_fields=["fulfillment_stock_released_at", "updated_at"])
+    log_action(
+        workspace=order.workspace,
+        actor_user=user,
+        action="ORDER_FULFILLMENT_STOCK_RELEASED",
+        entity_type="Order",
+        entity_id=order.id,
+        changes={"branch_id": order.branch_id, "stock_changes": changes},
+        ip_address=ip_address,
+    )
+    return changes
+
+
+@transaction.atomic
 def transition_order_status(
     order: Order,
     new_status: str,
@@ -640,6 +719,9 @@ def transition_order_status(
         OrderStatus.CANCELLED: [],
     }
 
+    # Lock the canonical row so two admin actions cannot both release the same
+    # reservation or race the state machine.
+    order = Order.objects.select_for_update().select_related("workspace").get(pk=order.pk)
     current = order.status
     allowed_targets = valid_transitions.get(current, [])
 
@@ -649,6 +731,8 @@ def transition_order_status(
         )
 
     before_status = order.status
+    if new_status == OrderStatus.CANCELLED:
+        _release_locked_order_fulfillment_stock(order, user, ip_address)
     order.status = new_status
     order.save(update_fields=["status", "updated_at"])
 
@@ -916,6 +1000,7 @@ def receive_goods_receipt(
     workspace = locked_receipt.workspace
     branch = locked_receipt.branch
 
+    stock_changes = []
     for item in locked_receipt.items.select_related("product").all():
         stock_balance, created = StockBalance.objects.select_for_update().get_or_create(
             workspace=workspace,
@@ -923,8 +1008,18 @@ def receive_goods_receipt(
             product=item.product,
             defaults={"quantity_on_hand": 0},
         )
+        before_quantity = stock_balance.quantity_on_hand
         stock_balance.quantity_on_hand += item.quantity
         stock_balance.save(update_fields=["quantity_on_hand", "updated_at"])
+        stock_changes.append(
+            {
+                "product_id": str(item.product_id),
+                "before_quantity": before_quantity,
+                "received_quantity": item.quantity,
+                "after_quantity": stock_balance.quantity_on_hand,
+                "created_balance": created,
+            }
+        )
 
     # 3. Transition receipt status to RECEIVED
     locked_receipt.status = GoodsReceiptStatus.RECEIVED
@@ -949,6 +1044,7 @@ def receive_goods_receipt(
             "branch": branch.code,
             "status": GoodsReceiptStatus.RECEIVED,
             "items_count": locked_receipt.items.count(),
+            "stock_changes": stock_changes,
         },
         ip_address=ip_address,
     )

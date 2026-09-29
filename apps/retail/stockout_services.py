@@ -71,14 +71,22 @@ def predict_product_daily_demand(
     workspace: Workspace,
     product: Product,
     branch: Optional[Branch] = None,
+    historical_daily_data: Optional[Dict[datetime.date, float]] = None,
 ) -> float:
     """
     Computes forecasted product-level daily demand using historical sales time-series.
     Employs shifted rolling means and lag features to prevent future data leakage.
     Returns expected daily units sold (float).
     """
-    branch_id = branch.id if branch else None
-    df = get_product_historical_timeseries(workspace, product.id, branch_id=branch_id, days=60)
+    if historical_daily_data is not None:
+        today = timezone.now().date()
+        start_date = today - datetime.timedelta(days=60)
+        idx = pd.date_range(start=start_date, end=today, freq="D")
+        series_data = [historical_daily_data.get(d.date(), 0.0) for d in idx]
+        df = pd.DataFrame({"target": series_data}, index=idx)
+    else:
+        branch_id = branch.id if branch else None
+        df = get_product_historical_timeseries(workspace, product.id, branch_id=branch_id, days=60)
 
     if df.empty or df["target"].sum() == 0:
         # Fallback to general product order items if recent window is empty
@@ -126,6 +134,8 @@ def evaluate_product_stockout_risk(
     branch: Optional[Branch] = None,
     lead_time_days: int = DEFAULT_LEAD_TIME_DAYS,
     safety_buffer_days: int = DEFAULT_SAFETY_BUFFER_DAYS,
+    current_stock: Optional[int] = None,
+    historical_daily_data: Optional[Dict[datetime.date, float]] = None,
 ) -> Dict[str, Any]:
     """
     Evaluates deterministic stockout risk for a given product and branch.
@@ -146,25 +156,29 @@ def evaluate_product_stockout_risk(
 
     # 1. Fetch current stock balance
     if branch:
-        stock_obj = StockBalance.objects.filter(
-            workspace=workspace,
-            branch=branch,
-            product=product,
-        ).first()
-        current_stock = stock_obj.quantity_on_hand if stock_obj else 0
         branch_name = branch.name
         branch_code = branch.code
+        if current_stock is None:
+            stock_obj = StockBalance.objects.filter(
+                workspace=workspace,
+                branch=branch,
+                product=product,
+            ).first()
+            current_stock = stock_obj.quantity_on_hand if stock_obj else 0
     else:
-        agg = StockBalance.objects.filter(
-            workspace=workspace,
-            product=product,
-        ).aggregate(total=Sum("quantity_on_hand"))
-        current_stock = agg["total"] or 0
         branch_name = "Tất cả chi nhánh"
         branch_code = "ALL"
+        if current_stock is None:
+            agg = StockBalance.objects.filter(
+                workspace=workspace,
+                product=product,
+            ).aggregate(total=Sum("quantity_on_hand"))
+            current_stock = agg["total"] or 0
 
     # 2. Predicted Demand
-    predicted_daily_demand = predict_product_daily_demand(workspace, product, branch)
+    predicted_daily_demand = predict_product_daily_demand(
+        workspace, product, branch, historical_daily_data=historical_daily_data
+    )
 
     # 3. Determine Days to Stockout & Risk Level
     if current_stock <= 0:
@@ -254,6 +268,39 @@ def get_stockout_risk_dashboard_data(
     if category_code:
         products_qs = products_qs.filter(category__code=category_code)
 
+    # Bulk fetch current stock balances for all active products
+    if branch:
+        stock_qs = StockBalance.objects.filter(workspace=workspace, branch=branch)
+        stock_map = {sb.product_id: sb.quantity_on_hand for sb in stock_qs}
+    else:
+        stock_agg = (
+            StockBalance.objects.filter(workspace=workspace)
+            .values("product_id")
+            .annotate(total=Sum("quantity_on_hand"))
+        )
+        stock_map = {item["product_id"]: (item["total"] or 0) for item in stock_agg}
+
+    # Bulk pre-aggregate daily sales for all products over the last 60 days
+    today = timezone.now().date()
+    start_date = today - datetime.timedelta(days=60)
+    items_qs = OrderItem.objects.filter(
+        order__workspace=workspace,
+        order__status=OrderStatus.COMPLETED,
+        order__order_date__gte=start_date,
+        order__order_date__lte=today,
+    )
+    if branch:
+        items_qs = items_qs.filter(order__branch=branch)
+
+    daily_sales = (
+        items_qs.values("product_id", "order__order_date")
+        .annotate(daily_qty=Sum("quantity"))
+    )
+    from collections import defaultdict
+    history_map = defaultdict(dict)
+    for row in daily_sales:
+        history_map[row["product_id"]][row["order__order_date"]] = float(row["daily_qty"] or 0)
+
     all_analyses: List[Dict[str, Any]] = []
     out_of_stock_count = 0
     high_risk_count = 0
@@ -261,7 +308,15 @@ def get_stockout_risk_dashboard_data(
     low_risk_count = 0
 
     for prod in products_qs:
-        analysis = evaluate_product_stockout_risk(workspace, prod, branch=branch)
+        c_stock = stock_map.get(prod.id, 0)
+        h_data = history_map.get(prod.id, {})
+        analysis = evaluate_product_stockout_risk(
+            workspace,
+            prod,
+            branch=branch,
+            current_stock=c_stock,
+            historical_daily_data=h_data,
+        )
         all_analyses.append(analysis)
 
         r_lvl = analysis["risk_level"]

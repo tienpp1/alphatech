@@ -18,7 +18,7 @@ Các doanh nghiệp vừa và nhỏ (SMEs) hoạt động trong lĩnh vực chu�
 ---
 
 ## 2. Giải pháp Đề xuất (Proposed Solution)
-**Nền tảng Vận hành Doanh nghiệp Thông minh** giải quyết triệt để các thách thức này bằng cách hợp nhất tiếp nhận dữ liệu, ánh xạ chuẩn hóa, truy vấn không gian GIS, khuyến nghị xác định, dự báo chuỗi thời gian và RAG doanh nghiệp dưới một kiến trúc **Quản trị AI có Con người Kiểm duyệt (Human-in-the-Loop AI Governance Monolith)**:
+**Nền tảng Vận hành Doanh nghiệp Thông minh** hỗ trợ xử lý các nhu cầu này trong phạm vi đồ án bằng cách hợp nhất tiếp nhận dữ liệu, ánh xạ chuẩn hóa, truy vấn không gian GIS, khuyến nghị xác định, dự báo chuỗi thời gian và RAG doanh nghiệp dưới một kiến trúc **Quản trị AI có Con người Kiểm duyệt (Human-in-the-Loop AI Governance Monolith)**:
 
 $$\text{Dữ liệu Thô} \to \text{Tiếp nhận} \to \text{Ánh xạ Dữ liệu} \to \text{Mô hình Chuẩn hóa} \to \text{GIS / Tri thức} \to \text{Trí tuệ AI} \to \text{Khuyến nghị} \to \text{Con người Phê duyệt} \to \text{Công cụ Kiểm soát} \to \text{Kiểm toán}$$
 
@@ -136,7 +136,7 @@ Thực thi cơ chế quản trị doanh nghiệp đối với các hệ thống 
 ---
 
 ## 15. Nhật ký Kiểm toán Bất biến (Audit Logging - Phase 3–11)
-Mọi hành động liên quan đến an ninh, nạp dữ liệu, thay đổi quy tắc ánh xạ, truy vấn AI, tạo yêu cầu phê duyệt và thực thi công cụ đều được ghi nối tiếp vào `apps.audit.models.AuditLog`. Các bản ghi này tuyệt đối không thể sửa hoặc xóa thông qua các API.
+Các luồng đã tích hợp audit ghi sự kiện vào `apps.audit.models.AuditLog`; phạm vi action và denial được liệt kê trong hồ sơ kiểm toán. Model guard và trigger PostgreSQL hạn chế UPDATE/DELETE trên các đường ghi đã kiểm thử; không suy ra mọi hành động đều có audit, hoặc audit chống được quyền chủ database và rollback của transaction bao ngoài.
 
 ---
 
@@ -187,7 +187,7 @@ graph TD
 - **Cơ sở dữ liệu & Không gian**: PostgreSQL 18, PostGIS 3.6, pgvector
 - **Khoa học Dữ liệu & Học máy**: XGBoost, Scikit-learn, Pandas, NumPy
 - **Giao diện & Trực quan hóa**: Django HTML5 Server-Rendered, CSS thuần (Vanilla CSS), Leaflet.js, Chart.js
-- **Kiểm thử**: Django Test Runner, `rest_framework.test.APIClient` (276 bài kiểm thử tự động, tỷ lệ vượt qua 100%)
+- **Kiểm thử**: Django Test Runner, `rest_framework.test.APIClient` (các bộ kiểm thử độc lập phân rã theo từng phân hệ: RBAC, GIS, RAG, Dự báo, Bán lẻ, Dịch vụ; chạy với cờ `--keepdb` trên database kiểm thử chuyên dụng). Không cộng dồn các lượt chạy riêng lẻ thành số test duy nhất.
 - **Triển khai**: Chạy cục bộ trên Windows/Linux, Docker & Docker Compose (`docker-compose.yml`)
 
 ---

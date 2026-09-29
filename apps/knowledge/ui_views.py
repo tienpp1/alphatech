@@ -62,10 +62,13 @@ def knowledge_base_ui_view(request: HttpRequest) -> HttpResponse:
                 name = request.POST.get("name", "").strip()
                 desc = request.POST.get("description", "").strip()
                 if name:
-                    create_knowledge_base(ws, request.user, name, desc)
-                    messages.success(request, f"Knowledge base '{name}' created successfully.")
+                    try:
+                        create_knowledge_base(ws, request.user, name, desc)
+                        messages.success(request, f"Đã khởi tạo cơ sở tri thức '{name}' thành công.")
+                    except Exception as exc:
+                        messages.error(request, f"Lỗi khởi tạo cơ sở tri thức: {str(exc)}")
                 else:
-                    messages.error(request, "Knowledge base name is required.")
+                    messages.error(request, "Vui lòng nhập tên cơ sở tri thức.")
 
         elif action == "upload_doc":
             if not can_manage:
@@ -82,20 +85,23 @@ def knowledge_base_ui_view(request: HttpRequest) -> HttpResponse:
                     ext = file_obj.name.split(".")[-1].upper()
                     file_type = ext if ext in ("PDF", "DOCX", "TXT", "MD") else "TXT"
 
-                    doc = upload_and_ingest_document(
-                        workspace=ws,
-                        user=request.user,
-                        knowledge_base=kb,
-                        file_obj=file_obj,
-                        title=title,
-                        file_type=file_type,
-                    )
-                    if doc.status == DocumentStatus.READY:
-                        messages.success(request, f"Document '{doc.title}' ingested successfully ({doc.chunk_count} chunks).")
-                    else:
-                        messages.warning(request, f"Document uploaded with status: {doc.status}. Error: {doc.error_message}")
+                    try:
+                        doc = upload_and_ingest_document(
+                            workspace=ws,
+                            user=request.user,
+                            knowledge_base=kb,
+                            file_obj=file_obj,
+                            title=title,
+                            file_type=file_type,
+                        )
+                        if doc.status == DocumentStatus.READY:
+                            messages.success(request, f"Tài liệu '{doc.title}' đã được nạp thành công ({doc.chunk_count} đoạn tri thức).")
+                        else:
+                            messages.warning(request, f"Tài liệu đã được tải lên với trạng thái: {doc.status}. Ghi chú: {doc.error_message or 'Chưa hoàn tất xử lý.'}")
+                    except Exception as exc:
+                        messages.error(request, f"Lỗi xử lý tài liệu '{title}': {str(exc)}")
                 else:
-                    messages.error(request, "Please provide a valid knowledge base and document file.")
+                    messages.error(request, "Vui lòng chọn cơ sở tri thức và tệp tài liệu hợp lệ.")
 
         return redirect("knowledge_base_ui")
 

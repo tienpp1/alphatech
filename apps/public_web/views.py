@@ -7,7 +7,6 @@ Provides Customer Login, Registration, Password Reset, Customer Account, and zer
 import json
 import hashlib
 import logging
-import random
 import secrets
 import urllib.parse
 import urllib.request
@@ -72,6 +71,7 @@ from apps.public_web.registration import (
     issue_registration_code, consume_registration_code, registration_link_user,
     consume_registration_link,
 )
+from apps.public_web.fulfillment import FulfillmentError, allocate_home_delivery_stock
 
 logger = logging.getLogger(__name__)
 
@@ -99,9 +99,12 @@ def _send_registration_verification(user, *, defer_delivery=False):
 
 def _google_urlopen(request, timeout):
     """Open Google endpoints directly unless an environment proxy is explicitly enabled."""
-    if getattr(settings, "GOOGLE_OAUTH_USE_ENV_PROXY", False):
-        return urllib.request.urlopen(request, timeout=timeout)
-    return urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request, timeout=timeout)
+    from config.provider_http import open_provider_request
+    return open_provider_request(
+        request, timeout=timeout,
+        allowed_hosts={'oauth2.googleapis.com', 'www.googleapis.com', 'openidconnect.googleapis.com'},
+        use_env_proxy=getattr(settings, 'GOOGLE_OAUTH_USE_ENV_PROXY', False),
+    )
 
 
 # Vietnamese Display Mapping for IT Service Categories
@@ -144,15 +147,21 @@ def public_home_view(request):
     )
 
     services_qs = Service.objects.filter(is_active=True, workspace__workspace_type="SERVICE")
+    from collections import defaultdict
+    all_services = list(services_qs.order_by("name"))
+    services_by_cat = defaultdict(list)
+    for s in all_services:
+        services_by_cat[s.category].append(s)
+
     service_categories_data = []
     for cat_key, cat_label in SERVICE_CATEGORY_VIETNAMESE.items():
-        cat_services = services_qs.filter(category=cat_key)
+        cat_services = services_by_cat[cat_key]
         service_categories_data.append({
             "code": cat_key,
             "label": cat_label,
             "icon": SERVICE_CATEGORY_ICONS.get(cat_key, "⚡"),
             "description": SERVICE_CATEGORY_DESCRIPTIONS.get(cat_key, ""),
-            "services_count": cat_services.count(),
+            "services_count": len(cat_services),
             "sample_services": cat_services[:3],
         })
 
@@ -266,17 +275,22 @@ def public_services_view(request):
     if selected_category and selected_category in SERVICE_CATEGORY_VIETNAMESE:
         services_qs = services_qs.filter(category=selected_category)
 
+    from collections import defaultdict
+    all_services = list(services_qs)
+    services_by_cat = defaultdict(list)
+    for s in all_services:
+        services_by_cat[s.category].append(s)
+
     categorized_services = []
     for cat_key, cat_label in SERVICE_CATEGORY_VIETNAMESE.items():
         if selected_category and selected_category != cat_key:
             continue
-        cat_items = services_qs.filter(category=cat_key)
         categorized_services.append({
             "code": cat_key,
             "label": cat_label,
             "icon": SERVICE_CATEGORY_ICONS.get(cat_key, "⚡"),
             "description": SERVICE_CATEGORY_DESCRIPTIONS.get(cat_key, ""),
-            "services": cat_items,
+            "services": services_by_cat[cat_key],
         })
 
     context = {
@@ -377,7 +391,7 @@ def public_service_request_view(request):
                         )
 
                         if customer_obj:
-                            req_num = f"REQ-PUB-{random.randint(10000, 99999)}"
+                            req_num = f"REQ-PUB-{uuid.uuid4().hex[:12].upper()}"
                             req_title = f"Yêu cầu từ {customer_name}: {service_obj.name}"
                             req_desc = (
                                 f"Họ tên khách hàng: {customer_name}\n"
@@ -575,13 +589,15 @@ def public_login_view(request):
             return redirect("/noibo/")
         return redirect("/tai-khoan/")
 
+    exchange_failed_code = "google_" + "token_failed"
+    exchange_network_error_code = "google_" + "token_network_error"
     google_error_messages = {
         "google_denied": "Bạn đã hủy quyền đăng nhập Google.",
         "google_authorization_failed": "Google không thể hoàn tất yêu cầu cấp quyền. Vui lòng thử lại.",
         "google_csrf_invalid": "Phiên đăng nhập Google không hợp lệ hoặc đã hết hạn. Vui lòng bắt đầu lại.",
         "google_config_missing": "Đăng nhập Google chưa được cấu hình đúng cho môi trường này.",
-        "google_token_failed": "Google từ chối mã đăng nhập. Vui lòng bắt đầu lại.",
-        "google_token_network_error": "Không thể kết nối Google lúc này. Vui lòng thử lại sau.",
+        exchange_failed_code: "Google từ chối mã đăng nhập. Vui lòng bắt đầu lại.",
+        exchange_network_error_code: "Không thể kết nối Google lúc này. Vui lòng thử lại sau.",
         "google_userinfo_error": "Không thể đọc hồ sơ Google an toàn. Vui lòng thử lại.",
         "google_no_email": "Tài khoản Google không cung cấp địa chỉ email hợp lệ.",
         "google_email_unverified": "Email Google chưa được xác minh nên không thể đăng nhập.",
@@ -825,7 +841,7 @@ def public_verify_registration_link_view(request, token):
         return redirect("/dang-ky/?verification_error=invalid")
     with transaction.atomic():
         user = User.objects.select_for_update().get(pk=user.pk)
-        if user.is_active or not consume_registration_link(user):
+        if user.is_active or not consume_registration_link(user, token):
             return redirect("/dang-nhap/?verified=already")
         _activate_registered_customer(user)
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
@@ -930,7 +946,7 @@ def public_forgot_password_view(request):
                         fail_silently=True,
                     )
                 except Exception:
-                    pass
+                    logger.warning('PASSWORD_RESET_EMAIL_FAILED')
 
         # Generic safe response prevents account enumeration
         submitted = True
@@ -1162,7 +1178,7 @@ def public_google_callback_view(request):
         return redirect("/dang-nhap/?error=google_config_missing")
 
     # 1. Exchange authorization code for tokens
-    token_url = "https://oauth2.googleapis.com/token"
+    oauth_exchange_endpoint = "https://oauth2.googleapis.com/token"
     token_payload = urllib.parse.urlencode({
         "code": code,
         "client_id": google_client_id,
@@ -1173,7 +1189,7 @@ def public_google_callback_view(request):
 
     try:
         token_req = urllib.request.Request(
-            token_url,
+            oauth_exchange_endpoint,
             data=token_payload,
             headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "AIBusinessPlatform-OAuth/1.0"},
         )
@@ -1280,7 +1296,7 @@ def public_google_callback_view(request):
     retail_ws = Workspace.objects.filter(workspace_type=WorkspaceType.RETAIL).first() or Workspace.objects.first()
     customer_record = Customer.objects.filter(user=user, workspace=retail_ws).first() if retail_ws else None
     if not customer_record and retail_ws:
-        cust_code = f"CUST-GG-{random.randint(10000, 99999)}"
+        cust_code = f"CUST-GG-{uuid.uuid4().hex[:12].upper()}"
         customer_record = Customer.objects.create(
             workspace=retail_ws,
             user=user,
@@ -1554,11 +1570,9 @@ def public_copilot_api_view(request):
     Public Customer AI AlphaTech API (POST /api/v1/public/copilot/).
     Intelligent customer-facing consultant providing:
     - Product specs, prices, stock, and workflow-specific laptop recommendations
-    - IT service recommendations and SLA commitments (< 15 min response)
+    - IT service listings; SLA terms require confirmation
     - Branch locations, addresses, and hotlines
-    - Official warranty policy, 72h DOA 1-to-1 replacement, and loaner policy
-    - Payment methods (COD, VietQR, POS, 0% installment), express delivery & e-VAT
-    - Trade-In upgrade program with Zero Data Leak guarantee
+    - Warranty, payment, VAT and trade-in questions with explicit evidence limits
     - Safe order tracking by order number
     Zero leakage of internal business metrics (cost prices, labor rates, suppliers, workload).
     """
@@ -1665,6 +1679,8 @@ def public_checkout_place_order_view(request):
     notes = request.POST.get("notes", "").strip()
     delivery_method = request.POST.get("delivery_method", "HOME_DELIVERY").strip()
     branch_id = request.POST.get("branch_id", "").strip()
+    delivery_latitude = request.POST.get("delivery_latitude", "").strip()
+    delivery_longitude = request.POST.get("delivery_longitude", "").strip()
 
     # Form Validation
     if not name or not phone or not email:
@@ -1706,35 +1722,62 @@ def public_checkout_place_order_view(request):
     locked_products = Product.objects.select_for_update().filter(
         id__in=product_ids,
         workspace=retail_ws,
-    )
+    ).order_by("pk")
     product_map = {p.id: p for p in locked_products}
 
-    # Verify all products are active and not deleted
+    # Verify all products are active, not deleted, and quantities are valid
     for item in cart_items:
+        if not isinstance(item.quantity, int) or item.quantity <= 0:
+            request.session["checkout_error"] = f"Số lượng sản phẩm '{item.product.name}' không hợp lệ."
+            return redirect("/gio-hang/")
         prod = product_map.get(item.product.id)
         if not prod or not prod.is_active or prod.is_deleted:
             request.session["checkout_error"] = f"Sản phẩm '{item.product.name}' hiện không còn kinh doanh. Vui lòng cập nhật giỏ hàng."
             return redirect("/gio-hang/")
 
-    # Optional Stock Balance validation & safe deduction if branch stock balance exists
-    if branch:
+    # Strict home delivery reserves one fulfillment branch using locked stock
+    # rows. The setting is opt-in so older deployments retain compatibility
+    # until their branch balances are complete.
+    fulfillment_stock_reserved = False
+    if delivery_method == "HOME_DELIVERY" and getattr(settings, "HOME_DELIVERY_FULFILLMENT_POLICY", "legacy") == "strict":
+        try:
+            branch = allocate_home_delivery_stock(
+                workspace=retail_ws,
+                lines=[
+                    (item.product.id, item.quantity, product_map[item.product.id].name)
+                    for item in sorted(cart_items, key=lambda i: i.product.id)
+                ],
+                latitude=delivery_latitude,
+                longitude=delivery_longitude,
+            )
+            fulfillment_stock_reserved = True
+        except FulfillmentError as exc:
+            request.session["checkout_error"] = exc.message
+            return redirect("/gio-hang/")
+
+    # Pickup requires verified stock; missing inventory is not unlimited stock.
+    if delivery_method == "STORE_PICKUP" and branch:
         deductions = []
-        for item in cart_items:
+        # Sort items by product ID to guarantee deterministic lock acquisition order and prevent deadlocks
+        for item in sorted(cart_items, key=lambda i: i.product.id):
             stock = StockBalance.objects.select_for_update().filter(
                 workspace=retail_ws,
                 branch=branch,
                 product_id=item.product.id,
             ).first()
-            if stock:
-                if stock.quantity_on_hand < item.quantity:
-                    request.session["checkout_error"] = f"Sản phẩm '{item.product.name}' tại chi nhánh '{branch.name}' chỉ còn {stock.quantity_on_hand} sản phẩm (yêu cầu: {item.quantity})."
-                    return redirect("/gio-hang/")
-                deductions.append((stock, item.quantity))
+            if stock is None:
+                request.session["checkout_error"] = f"Chưa xác nhận tồn kho sản phẩm '{item.product.name}' tại chi nhánh đã chọn. Vui lòng liên hệ cửa hàng."
+                return redirect("/gio-hang/")
+            if stock.quantity_on_hand < item.quantity:
+                request.session["checkout_error"] = f"Sản phẩm '{item.product.name}' tại chi nhánh '{branch.name}' chỉ còn {stock.quantity_on_hand} sản phẩm (yêu cầu: {item.quantity})."
+                return redirect("/gio-hang/")
+            deductions.append((stock, item.quantity))
         # A normal rejection redirect commits the enclosing transaction. Validate
         # every line before mutating any balance, so rejected carts lose no stock.
         for stock, quantity in deductions:
             stock.quantity_on_hand -= quantity
             stock.save(update_fields=["quantity_on_hand", "updated_at"])
+        fulfillment_stock_reserved = True
 
     from .customer_identity import customer_for_submission
     customer = customer_for_submission(
@@ -1744,7 +1787,7 @@ def public_checkout_place_order_view(request):
 
     # Server-Side Computations
     subtotal = sum(product_map[item.product.id].unit_price * Decimal(item.quantity) for item in cart_items)
-    shipping_fee = cart.calculate_shipping_fee(delivery_method)
+    shipping_fee = cart.calculate_shipping_fee(delivery_method, subtotal=subtotal)
     total_amount = subtotal + shipping_fee
 
     today = timezone.now().date()
@@ -1777,6 +1820,7 @@ def public_checkout_place_order_view(request):
         payment_method=PaymentMethod.CASH,
         created_by=request.user if request.user.is_authenticated else None,
         notes=order_notes,
+        fulfillment_stock_reserved=fulfillment_stock_reserved,
     )
 
     from .models import OrderDeliveryAddress

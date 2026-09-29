@@ -72,6 +72,25 @@
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     padding-top: 1.5rem;
 }
+@media (max-width: 640px) {
+    .form-container {
+        padding: 1.25rem 1rem;
+    }
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+    .form-actions button,
+    .form-actions a {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+}
 </style>
 {% endblock %}
 
@@ -161,7 +180,7 @@
         </div>
 
         <div class="form-actions">
-            <a href="/retail/products/" class="btn btn-secondary">Hủy bỏ</a>
+            <a href="/noibo/retail/products/" id="btn-back-products" class="btn btn-secondary">Hủy bỏ</a>
             <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.75rem; font-weight: 700;">
                 💾 Lưu sản phẩm
             </button>

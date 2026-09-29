@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảo vệ Khóa luận Tốt nghiệp - AlphaTech AI Platform</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Chart.js 4.4.1 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0f1d;
+            --bg-card: rgba(18, 26, 47, 0.75);
+            --border-card: rgba(255, 255, 255, 0.08);
+            --primary: #4f46e5;
+            --primary-glow: rgba(79, 70, 229, 0.35);
+            --cyan: #06b6d4;
+            --cyan-glow: rgba(6, 182, 212, 0.3);
+            --emerald: #10b981;
+            --amber: #f59e0b;
+            --rose: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-heading: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            user-select: none;
+        }
+
+        /* 16:9 Slide Deck Viewport */
+        .slide-deck {
+            position: absolute;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 20% 20%, rgba(79, 70, 229, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 45%),
+                        #070a14;
+        }
+
+        .slide-container {
+            width: 100%;
+            height: 100%;
+            max-width: calc(100vh * 16 / 9);
+            max-height: calc(100vw * 9 / 16);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            padding: 48px 64px 60px 64px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: scale(0.98);
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        /* Slide Header */
+        .slide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid var(--border-card);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .header-meta {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--cyan);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-meta::before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan);
+        }
+        .slide-title {
+            font-family: var(--font-heading);
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 4px;
+        }
+        .slide-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Slide Body */
+        .slide-body {
+            flex: 1;
+            display: flex;
+            gap: 28px;
+            min-height: 0;
+            align-items: stretch;
+        }
+
+        /* Card System (Glassmorphism) */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+
+        /* Grid Layouts */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; }
+        .grid-12-modules {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Module Item Box */
+        .module-item {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+        .module-item:hover {
+            border-color: var(--cyan);
+            background: rgba(30, 41, 59, 0.85);
+            transform: translateY(-2px);
+        }
+        .module-num {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--cyan);
+            font-weight: 700;
+        }
+        .module-name {
+            font-family: var(--font-heading);
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            margin: 4px 0 2px 0;
+        }
+        .module-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+
+        /* Stat Badge */
+        .stat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .stat-badge.warn {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        /* Slide Footer & Navigation */
+        .slide-footer {
+            position: absolute;
+            bottom: 20px;
+            left: 64px;
+            right: 64px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            z-index: 50;
+        }
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-card);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        .slide-dots {
+            display: flex;
+            gap: 6px;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .dot.active {
+            width: 24px;
+            background: var(--cyan);
+            box-shadow: 0 0 8px var(--cyan);
+        }
+
+        /* Hero Slide 1 */
+        .hero-layout {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+            gap: 20px;
+        }
+        .badge-academic {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(79, 70, 229, 0.2);
+            border: 1px solid rgba(79, 70, 229, 0.4);
+            color: #a5b4fc;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .hero-title {
+            font-family: var(--font-heading);
+            font-size: 44px;
+            font-weight: 900;
+            line-height: 1.15;
+            background: linear-gradient(135deg, #ffffff 30%, #93c5fd 70%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            max-width: 900px;
+        }
+        .hero-subtitle {
+            font-size: 18px;
+            color: var(--text-muted);
+            max-width: 750px;
+            line-height: 1.6;
+        }
+        .author-box {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 16px 28px;
+            margin-top: 10px;
+            text-align: left;
+        }
+        .author-label { font-size: 11px; text-transform: uppercase; color: var(--cyan); font-weight: 600; }
+        .author-val { font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px; }
+
+        /* Typography Helpers */
+        .h-tag {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--cyan);
+            margin-bottom: 4px;
+        }
+        .list-clean { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .list-clean li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #cbd5e1; line-height: 1.4; }
+        .list-clean li::before {
+            content: "✓";
+            color: var(--emerald);
+            font-weight: 800;
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            border-radius: 4px;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .metric-big {
+            font-family: var(--font-heading);
+            font-size: 38px;
+            font-weight: 900;
+            color: #fff;
+            line-height: 1;
+        }
+        .metric-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Flow Diagram Container */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 0;
+        }
+        .flow-node {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 12px 14px;
+            text-align: center;
+            flex: 1;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .flow-node.active-node {
+            border-color: var(--cyan);
+            background: rgba(6, 182, 212, 0.15);
+            box-shadow: 0 0 16px rgba(6, 182, 212, 0.2);
+        }
+        .flow-arrow { color: var(--cyan); font-size: 18px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="slide-deck">
+    <div class="slide-container">
+
+        <!-- ================= SLIDE 1: TRANG TIÊU ĐỀ ================= -->
+        <div class="slide active" id="slide-1">
+            <div class="hero-layout">
+                <div class="badge-academic">ĐỒ ÁN TỐT NGHIỆP ĐẠI HỌC • KHÓA 12 CNTT</div>
+                <h1 class="hero-title">Xây Dựng Nền Tảng Quản Lý Vận Hành Doanh Nghiệp Tích Hợp Trợ Lí AI</h1>
+                <p class="hero-subtitle">
+                    Hệ thống Modular Monolith phân lập không gian (Multi-Tenant), tích hợp Bán lẻ đa chi nhánh, Vận hành Dịch vụ SLA, Hệ thông tin địa lý PostGIS, Trợ lý RAG và đánh giá ngoại tuyến và Dự báo chuỗi thời gian XGBoost.
+                </p>
+                <div class="author-box">
+                    <div>
+                        <div class="author-label">Sinh viên thực hiện</div>
+                        <div class="author-val">Hà Minh Tiến</div>
+                    </div>
+                    <div>
+                        <div class="author-label">Mã số sinh viên / Lớp</div>
+                        <div class="author-val">1250080194 • 12_ĐH_CNPM3</div>
+                    </div>
+                    <div>
+                        <div class="author-label">Khoa / Trường</div>
+                        <div class="author-val">CNTT • HCMUNRE</div>
+                    </div>
+                    <div>
+                        <div class="author-label">Giảng viên hướng dẫn</div>
+                        <div class="author-val">ThS. Nguyễn Duy Tuấn</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <span class="stat-badge">Đối chiếu 25/09: 84/97 mục tạm đóng · 13 mục còn thiếu bằng chứng</span>
+                    <span class="stat-badge" style="background: rgba(79, 70, 229, 0.2); color: #c7d2fe; border-color: rgba(79, 70, 229, 0.4);">Kết quả test: xem log thực thi, không suy từ discovery</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SLIDE 2: ĐẶT VẤN ĐỀ & MỤC TIÊU ================= -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <div>
+                    <div class="header-meta">CHƯƠNG 1 • TỔNG QUAN BÀI TOÁN</div>
+                    <div class="slide-title">Đặt Vấn Đề & Tính Cấp Thiết của Đề Tài</div>
+                </div>
+                <div class="stat-badge">Mục tiêu: Chuyển đổi số SMEs</div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card">
+                        <span class="h-tag">Thách thức Vận hành Thực tế của Doanh nghiệp SMEs</span>
+                        <ul class="list-clean" style="margin-top: 14px;">
+                            <li><strong>Phân mảnh Dữ liệu Đa Chi nhánh:</strong> Tồn kho giữa các cửa hàng bán lẻ không liên thông, dẫn đến tình trạng chi nhánh thừa hàng, chi nhánh đứt gãy cung ứng.</li>
+                            <li><strong>Thiếu Minh bạch trong Dịch vụ Kỹ thuật:</strong> Khách hàng không thể tra cứu tiến độ sửa chữa; quản lý khó giám sát thời hạn cam kết dịch vụ (SLA Breach).</li>
+                            <li><strong>Giới hạn của mô hình sinh:</strong> Câu trả lời cần đối chiếu với nguồn. Bộ chấm số liệu của đồ án chạy ngoại tuyến, không bảo đảm loại bỏ ảo giác tại runtime.</li>
+                            <li><strong>Dự báo Doanh số Cảm tính:</strong> Kế hoạch nhập hàng thiếu công cụ chuỗi thời gian (time-series), gây tồn đọng vốn lưu động hoặc đứt hàng lúc cao điểm.</li>
+                        </ul>
+                    </div>
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <span class="h-tag">4 Trụ Cột Đóng Góp của Nền tảng AlphaTech</span>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
+                                <div style="background: rgba(255,255,255,0.04); padding: 12px; border-radius: 10px; border-left: 3px solid var(--cyan);">
+                                    <div style="font-weight: 700; font-size: 13px; color: #fff;">1. Multi-Tenant RBAC</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Phân lập logic `workspace_id`, 4 cấp vai trò an toàn.</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.04); padding: 12px; border-radius: 10px; border-left: 3px solid var(--emerald);">
+                                    <div style="font-weight: 700; font-size: 13px; color: #fff;">2. PostGIS Geodesic</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Định tuyến chi nhánh & điều phối kỹ thuật viên WGS84.</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.04); padding: 12px; border-radius: 10px; border-left: 3px solid var(--primary);">
+                                    <div style="font-weight: 700; font-size: 13px; color: #fff;">3. Grounded RAG</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Bộ chấm số liệu ngoại tuyến; chưa bảo đảm đúng ngữ nghĩa.</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.04); padding: 12px; border-radius: 10px; border-left: 3px solid var(--amber);">
+                                    <div style="font-weight: 700; font-size: 13px; color: #fff;">4. XGBoost Forecast</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Dự báo chuỗi thời gian đối chiếu minh bạch 2 baseline.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #34d399;">
+                            ★ <strong>Mô hình Kiểm soát Con người (Human-in-the-Loop):</strong> Trí tuệ nhân tạo chỉ đưa ra khuyến nghị; hành động giao dịch thực tế bắt buộc phải qua phê duyệt của Quản lý.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SLIDE 3: KIẾN TRÚC HỆ THỐNG TỔNG THỂ ================= -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <div>
+                    <div class="header-meta">CHƯƠNG 3 • THIẾT KẾ HỆ THỐNG</div>
+                    <div class="slide-title">Kiến Trúc Modular Monolith & Phân Tầng An Toàn</div>
+                </div>
+                <div class="stat-badge">Django 5.x + PostgreSQL 18 + PostGIS 3.6</div>
+            </div>
+            <div class="slide-body">
+                <div style="display: flex; flex-direction: column; width: 100%; gap: 12px;">
+                    <!-- Layer 1 -->
+                    <div class="card" style="padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--cyan);">
+                        <div>
+                            <span class="h-tag">1. Tầng Giao Diện & API Gateway</span>
+                            <div style="font-size: 13px; color: #fff; font-weight: 600;">Cổng Web Khách Hàng (Responsive, Leaflet GIS) • Cổng Điều Hành Nội Bộ (Dashboard, Team Chat) • REST API Gateway</div>
+                        </div>
+                        <span class="stat-badge">Phân tách Hoàn toàn</span>
+                    </div>
+                    <!-- Layer 2 -->
+                    <div class="card" style="padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary);">
+                        <div>
+                            <span class="h-tag">2. Tầng Cách Ly Không Gian & Bảo Mật RBAC</span>
+                            <div style="font-size: 13px; color: #fff; font-weight: 600;">WorkspaceIsolationMiddleware (Gắn tenant context) • RBAC 4 Cấp (ADMIN > MANAGER > EMPLOYEE > VIEWER) • AuditLogging</div>
+                        </div>
+                        <span class="stat-badge">Zero-Cross Leak</span>
+                    </div>
+                    <!-- Layer 3 -->
+                    <div class="card" style="padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--emerald);">
+                        <div>
+                            <span class="h-tag">3. Tầng Dịch Vụ Nghiệp Vụ Cốt Lõi (Core Domain Services)</span>
+                            <div style="font-size: 13px; color: #fff; font-weight: 600;">12 Phân hệ Nghiệp vụ Độc lập: Retail, Service Ops, SLA Tracking, Approvals, Notification Outbox, Bulletin, Team Chat</div>
+                        </div>
+                        <span class="stat-badge">Modular Clean Architecture</span>
+                    </div>
+                    <!-- Layer 4 -->
+                    <div class="card" style="padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--amber);">
+                        <div>
+                            <span class="h-tag">4. Tầng Động Cơ AI, Trắc Địa GIS & Học Máy</span>
+                            <div style="font-size: 13px; color: #fff; font-weight: 600;">XGBoost Regressor (Lag-7 Features) • RAG runtime; numeric scoring ngoại tuyến • Haversine Geodesic Engine</div>
+                        </div>
+                        <span class="stat-badge">High Performance</span>
+                    </div>
+                    <!-- Layer 5 -->
+                    <div class="card" style="padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--rose);">
+                        <div>
+                            <span class="h-tag">5. Tầng Dữ Liệu Bền Vững & Hạ Tầng Vận Hành</span>
+                            <div style="font-size: 13px; color: #fff; font-weight: 600;">PostgreSQL 18.x • PostGIS 3.6 (GiST R-Tree Index) • pgvector (HNSW) • Trigger Immutability Audit • Brevo SMTP TLS 587</div>
+                        </div>
+                        <span class="stat-badge">Append-Only Audit</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SLIDE 4: 12 PHÂN HỆ NGHIỆP VỤ ================= -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <div>
+                    <div class="header-meta">CHƯƠNG 3 • CẤU TRÚC PHẦN MỀM</div>
+                    <div class="slide-title">12 Phân Hệ Nghiệp Vụ Cốt Lõi Bắt Buộc</div>
+                </div>
+                <div class="stat-badge">Phạm vi triển khai • kiểm chứng theo từng mục</div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-12-modules">
+                    <div class="module-item">
+                        <span class="module-num">01 • AUTH & RBAC</span>
+                        <div class="module-name">Xác thực & Phân quyền</div>
+                        <div class="module-desc">Mật khẩu Argon2, phân quyền 4 tầng, token JWT phiên làm việc an toàn.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">02 • TENANCY</span>
+                        <div class="module-name">Không gian Làm việc</div>
+                        <div class="module-desc">Phân lập logic `workspace_id` ở tầng ORM, ngăn chặn rò rỉ dữ liệu chéo.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">03 • RETAIL</span>
+                        <div class="module-name">Bán lẻ & Đa chi nhánh</div>
+                        <div class="module-desc">Sản phẩm, danh mục, tồn kho đa điểm, khóa bi quan tránh overselling.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">04 • SERVICE OPS</span>
+                        <div class="module-name">Dịch vụ & SLA</div>
+                        <div class="module-desc">Phiếu sự cố, đồng hồ SLA vi phạm, phân công kỹ thuật viên, tự ghi giờ công `log_labor`.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">05 • GEOSPATIAL GIS</span>
+                        <div class="module-name">Bản đồ Số PostGIS</div>
+                        <div class="module-desc">WGS84 4326, tính khoảng cách Geodesic ellipsoid, bán kính đệm phục vụ 5km.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">06 • DATA & MAPPING</span>
+                        <div class="module-name">Nạp Dữ liệu & Mapping</div>
+                        <div class="module-desc">Nạp CSV/Excel phi chuẩn, gợi ý ánh xạ tự động theo Mô hình Dữ liệu Chuẩn (SDM).</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">07 • KNOWLEDGE RAG</span>
+                        <div class="module-name">Tri thức & đánh giá RAG</div>
+                        <div class="module-desc">Truy xuất pgvector; đánh giá chunk và số liệu ngoại tuyến, chưa bảo đảm đúng ngữ nghĩa.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">08 • FORECASTING</span>
+                        <div class="module-name">Dự báo Chuỗi Thời gian</div>
+                        <div class="module-desc">XGBoost Regressor, đối chiếu 2 baseline minh bạch, Chronological Split 75/25.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">09 • APPROVALS</span>
+                        <div class="module-name">Phê duyệt & HITL</div>
+                        <div class="module-desc">Đề xuất AI có người duyệt, cơ chế chống tự duyệt, giao dịch bù trừ hoàn tác.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">10 • NOTIFICATIONS</span>
+                        <div class="module-name">Hộp thư Outbox & Mail</div>
+                        <div class="module-desc">Transactional Outbox Pattern, Brevo SMTP TLS 587, 4 mẫu email tự động có retry.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">11 • BULLETIN</span>
+                        <div class="module-name">Bảng tin Thông báo</div>
+                        <div class="module-desc">Truyền thông nội bộ theo workspace, ghim thông báo khẩn, kiểm soát quyền đăng.</div>
+                    </div>
+                    <div class="module-item">
+                        <span class="module-num">12 • TEAM CHAT</span>
+                        <div class="module-name">Chat Nhóm Nội bộ</div>
+                        <div class="module-desc">Thảo luận kỹ thuật thời gian thực, bàn giao ca trực, cách ly khách hàng ngoài.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SLIDE 5: BÁN LẺ & CONCURRENCY ================= -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <div>
+                    <div class="header-meta">CHƯƠNG 3 • QUY TRÌNH NGHIỆP VỤ 1</div>
+                    <div class="slide-title">Bán Lẻ Đa Chi Nhánh & Khóa Tồn Kho Đồng Thời</div>
+                </div>
+                <div class="stat-badge">Cổng 73 • Strict Fulfillment Policy</div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <span class="h-tag">Chính sách Strict Fulfillment & Kiểm soát Tồn kho</span>
+                            <ul class="list-clean" style="margin-top: 14px;">
+                                <li><strong>Hai Hình thức Hoàn tất Đơn hàng:</strong> Nhận tại cửa hàng (`STORE_PICKUP`) và Giao hàng tận nơi (`HOME_DELIVERY`).</li>
+                                <li><strong>Kiểm tra tồn kho:</strong> Chạy <code>check_fulfillment_stock</code> trên dữ liệu demo hiện tại; không dùng số SKU cố định thay kết quả kiểm tra.</li>
+                                <li><strong>Chống Overselling Tuyệt đối:</strong> Áp dụng khóa bi quan `select_for_update()` theo thứ tự `product_id` trên PostgreSQL, đảm bảo các giao dịch đồng thời được tuần tự hóa.</li>
+                                <li><strong>Idempotent Rollback:</strong> Khi hủy đơn hàng, hệ thống tự động hoàn kho hoàn tác an toàn (`ORDER_FULFILLMENT_STOCK_RELEASED`).</li>
+                            </ul>
+                        </div>
+                        <div style="background: rgba(79, 70, 229, 0.15); border: 1px solid rgba(79, 70, 229, 0.3); border-radius: 10px; padding: 12px; font-family: var(--font-mono); font-size: 11px; color: #a5b4fc;">
+                            python manage.py check_fulfillment_stock --workspace abc-retail<br>
+                            >> Active SKUs: 44 | Branches: 3 | Missing: 0 | Negative: 0 [PASS]
+                        </div>
+                    </div>
+                    <div class="card">
+                        <span class="h-tag">Luồng Tuần tự Khóa Giao Dịch Đồng Thời</span>
+                        <div class="flow-diagram" style="flex-direction: column; gap: 8px; margin-top: 12px;">
+                            <div class="flow-node" style="width: 100%;">1. Khách hàng bấm Đặt hàng (SKU, Số lượng, Chi nhánh)</div>
+                            <div class="flow-arrow">↓</div>
+                            <div class="flow-node active-node" style="width: 100%; color: var(--cyan);">2. BEGIN TRANSACTION + SELECT FOR UPDATE trên StockBalance</div>
+                            <div class="flow-arrow">↓</div>
+                            <div class="flow-node" style="width: 100%;">3. Kiểm tra Tồn kho: Nếu đủ → Trừ tồn kho & Tạo Order</div>
+                            <div class="flow-arrow">↓</div>
+                            <div class="flow-node" style="width: 100%;">4. Ghi dữ liệu giao dịch và sự kiện; email gửi sau commit</div>
+                            <div class="flow-arrow">↓</div>
+                            <div class="flow-node" style="width: 100%; border-color: var(--emerald); color: #34d399;">5. COMMIT TRANSACTION (Đảm bảo ACID & Nhất quán)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SLIDE 6: DỊCH VỤ & GIS ================= -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <div>
+                    <div class="header-meta">CHƯƠNG 3 • QUY TRÌNH NGHIỆP VỤ 2</div>
+                    <div class="slide-title">Vận Hành Dịch Vụ SLA & Điều Phối Bản Đồ GIS</div>
+                </div>
+                <div class="stat-badge">Cổng 70 • PostGIS 3.6 Geodesic</div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card">
+                        <span class="h-tag">Quy trình Xử lý Sự cố & Phân quyền Kỹ thuật viên (Cổng 70)</span>
+                        <ul class="list-clean" style="margin-top: 14px;">
+                            <li><strong>Phân cấp Mức độ Ưu tiên SLA:</strong> Cấu hình 4 cấp độ SLA (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) với đồng hồ đếm ngược vi phạm thời gian thực.</li>
+                            <li><strong>Phân quyền Least-Privilege cho Kỹ thuật viên:</strong>
+                                Vai trò `EMPLOYEE` tại `xyz-service` được cấp quyền xem task (`service.view_task`), xem lịch trình (`service.view_schedule`), và tự ghi nhận giờ công lao động (`log_labor`).
+                            </li>
+                            <li><strong>Báo cáo theo quyền:</strong> Báo cáo dịch vụ kiểm tra `service.view_analytics` trong workspace. Quyền xem trường chi phí ở các màn hình khác phải kiểm chứng riêng.</li>
+                            <li><strong>Cấm Ghi Khống Giờ công:</strong> Ràng buộc máy chủ bắt buộc `emp.user_id == request.user.id`, ngăn ngừa ghi giờ thay người khác.</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <span class="h-tag">Thuật toán Định tuyến Trắc địa PostGIS Geodesic</span>
+                        <div style="margin-top: 12px; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
+                            Hệ thống sử dụng hệ quy chiếu <strong>WGS84 SRID 4326</strong> kết hợp hàm đo khoảng cách cung tròn lớn trên mặt cầu ellipsoid:
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-card); border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: 11px; color: #38bdf8; margin: 12px 0;">
+                            SELECT id, name, location,<br>
+                            &nbsp;&nbsp;ST_DistanceSphere(location, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)) AS distance_meters<br>
+                            FROM branches_branch<br>
+                            ORDER BY distance_meters ASC LIMIT 1;
+                        </div>
+                        <ul class="list-clean">
+                            <li>Thời gian thực thi câu truy vấn không gian: <strong>&lt; 5 ms</strong> nhờ chỉ mục GiST R-Tree.</li>
+                            <li>Hỗ trợ phân tích vùng đệm phục vụ (Buffer 5.000m) và điều phối kỹ thuật viên gần vị trí sự cố nhất.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SLIDE 7: TRỢ LÝ RAG & FACTGUARD ================= -->
+        <div class="slide" id="slide-7">
+            <div class="slide-header">
+                <div>
+                    <div class="header-meta">CHƯƠNG 3 & 4 • TRÍ TUỆ NHÂN TẠO</div>
+                    <div class="slide-title">Trợ Lý RAG & Đánh Giá Ngoại Tuyến</div>
+                </div>
+                <div class="stat-badge">Cần kiểm chứng đúng, đủ và nguồn</div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <span class="h-tag">Runtime và bộ chấm là hai luồng riêng</span>
+                            <div style="margin-top: 10px; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
+                                AlphaTech có bộ chấm số liệu ngoại tuyến theo rubric, không phải tầng chặn phản hồi bắt buộc tại runtime:
+                            </div>
+                            <ul class="list-clean" style="margin-top: 12px;">
+                                <li><strong>pgvector Cosine Retrieval:</strong> Truy xuất đoạn phù hợp trong workspace; gold chunk chỉ là nhãn đánh giá, không mặc định là kết quả runtime.</li>
+                                <li><strong>Regex Fact Verification:</strong> Trích xuất các đại lượng số học nhạy cảm trong câu trả lời sinh ra (số ngày đổi trả, số giờ cam kết SLA) và đối chiếu rubric có nhãn khi đánh giá ngoại tuyến.</li>
+                                <li><strong>Giới hạn:</strong> Khớp số theo regex không chứng minh đúng nghĩa; cần chấm phủ định, đủ ý và nguồn. Chưa có bằng chứng bộ chặn runtime tự sửa phản hồi.</li>
+                            </ul>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px; padding: 10px; text-align: center;">
+                                <div class="metric-big" style="color: #34d399; font-size: 28px;">Chưa đo</div>
+                                <div class="metric-label">Gold Chunk Recall</div>
+                            </div>
+                            <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 10px; text-align: center; padding: 10px;">
+                                <div class="metric-big" style="color: #38bdf8; font-size: 28px;">Có giới hạn</div>
+                                <div class="metric-label">Không bảo đảm hết ảo giác</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <span class="h-tag">Phân định Ranh giới SOP Nghiệp vụ (Cổng 47)</span>
+                        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px;">
+                            <div style="background: rgba(30, 41, 59, 0.8); border-left: 3px solid var(--emerald); border-radius: 8px; padding: 12px;">
+                                <div style="font-weight: 700; font-size: 13px; color: #fff;">7 SOP Nghiệp vụ Cốt lõi (Primary SOPs)</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Ngữ liệu demo bán lẻ và dịch vụ IT; không thay thế chính sách thương mại được duyệt.</div>
+                            </div>
+                            <div style="background: rgba(30, 41, 59, 0.8); border-left: 3px solid var(--amber); border-radius: 8px; padding: 12px;">
+                                <div style="font-weight: 700; font-size: 13px; color: #fff;">17 SOP Giả lập Thực nghiệm (Supplementary SOPs)</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Dữ liệu benchmark kỹ thuật (nhân sự, pháp chế, hạ tầng) phục vụ kiểm định độ chính xác phân luồng câu hỏi (Intent Routing) và kiểm thử đối kháng mà không tuyên bố tính năng phần mềm HRM.</div>
+                            </div>
+                            <div style="background: rgba(79, 70, 229, 0.1); border: 1px solid rgba(79, 70, 229, 0.3); border-radius: 8px; padding: 10px; font-size: 11px; color: #c7d2fe;">
+                                <strong>Embedding Provenance:</strong> Mọi vector lưu vết đầy đủ mã băm SHA-256, nhà cung cấp, phiên bản mô hình và chiều vector (1536 dims).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SLIDE 8: THỰC NGHIỆM DỰ BÁO XGBOOST ================= -->
+        <div class="slide" id="slide-8">
+            <div class="slide-header">
+                <div>
+                    <div class="header-meta">CHƯƠNG 4 • KẾT QUẢ THỰC NGHIỆM</div>
+                    <div class="slide-title">Dự Báo Chuỗi Thời Gian: XGBoost vs Baselines</div>
+                </div>
+                <div class="stat-badge">Cổng 17, 26, 83, 84 • Đo lường Khoa học</div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card" style="display: flex; flex-direction: column;">
+                        <span class="h-tag">Biểu đồ Đối chiếu Sai số MAE (Thực nghiệm Hệ thống)</span>
+                        <div style="flex: 1; position: relative; min-height: 220px; margin-top: 10px;">
+                            <canvas id="forecastChart"></canvas>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 6px;">
+                            Dữ liệu từ lệnh quản trị <code>python manage.py evaluate_academic_metrics</code>
+                        </div>
+                    </div>
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <span class="h-tag">Phân tích Bản chất Khoa học Đề tài</span>
+                            <ul class="list-clean" style="margin-top: 10px;">
+                                <li><strong>Tính Trung thực Học thuật:</strong> Không giấu diếm kết quả kém ở bài toán Doanh thu Bán lẻ (`RETAIL_REVENUE` kém Baseline -38.70% do phương sai giá trị đơn quá lớn từ vài trăm nghìn đến 50 triệu và hàm phạt $L2$).</li>
+                                <li><strong>Vượt trội ở Bài toán Đếm:</strong>
+                                    Ở các bài toán có miền giá trị ổn định, XGBoost vượt trội Naive Baseline rõ rệt:
+                                    <br>• Số đơn hàng (`ORDER_VOLUME`): <strong>+26,32%</strong> (MAE giảm 0,35 đơn)
+                                    <br>• Số phiếu sự cố (`TICKET_VOLUME`): <strong>+27,13%</strong> (MAE giảm 0,35 phiếu)
+                                </li>
+                                <li><strong>Coverage chưa xác minh:</strong> Thiếu actual/prediction/bounds để tái tính; không coi dải hiển thị là khoảng tin cậy đã hiệu chỉnh.</li>
+                            </ul>
+                        </div>
+                        <div style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #fda4af;">
+                            Hệ số $R^2 < 0$ ở bài toán doanh thu chứng minh việc tự động nhập hàng lúc này là rủi ro; bảo vệ người quản lý nhờ quy trình Human-in-the-Loop.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SLIDE 9: KIỂM THỬ TỰ ĐỘNG & NGHIỆM THU ================= -->
+        <div class="slide" id="slide-9">
+            <div class="slide-header">
+                <div>
+                    <div class="header-meta">CHƯƠNG 4 & 5 • HỒ SƠ NGHIỆM THU</div>
+                    <div class="slide-title">Kiểm Thử Toàn Diện & Hoàn Thành 97 Tiêu Chí</div>
+                </div>
+                <div class="stat-badge">Kết quả kiểm toán tạm thời — chưa chứng nhận production</div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card" style="display: flex; flex-direction: column;">
+                        <span class="h-tag">Trạng thái 97 mục (không phải tỷ lệ test pass)</span>
+                        <div style="flex: 1; position: relative; min-height: 220px; margin-top: 10px;">
+                            <canvas id="testsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <span class="h-tag">Tiến độ Đóng Toàn Bộ 97 Cổng Nghiệm Thu</span>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0;">
+                                <div style="background: rgba(16, 185, 129, 0.12); padding: 12px; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                    <div class="metric-big" style="color: #34d399; font-size: 32px;">75 / 97</div>
+                                    <div class="metric-label" style="font-weight: 700; color: #a7f3d0;">GIỮ ĐÓNG KẾ THỪA — CHƯA TÁI CHỨNG NHẬN TOÀN BỘ</div>
+                                </div>
+                                <div style="background: rgba(255, 255, 255, 0.04); padding: 12px; border-radius: 10px; border: 1px solid var(--border-card);">
+                                    <div class="metric-big" style="color: #94a3b8; font-size: 32px;">0 / 97</div>
+                                    <div class="metric-label">Dở dang / Chưa xác nhận</div>
+                                </div>
+                            </div>
+                            <span class="h-tag">Khắc phục Triệt để 8 Sự cố Kỹ thuật Lịch sử</span>
+                            <div style="font-size: 11px; color: #cbd5e1; line-height: 1.4; margin-top: 4px;">
+                                1. Audit log rollback • 2. Self-approval loophole • 3. Checkout race condition • 4. SLA business hours • 5. Vector dim mismatch • 6. Nominatim rate limits • 7. Forecasting outliers • 8. Policy & SOP leaks.
+                            </div>
+                        </div>
+                        <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #38bdf8;">
+                            Môi trường CI/CD GitHub Actions: Container `postgis/postgis:16-3.4`, kiểm tra `bandit` bảo mật và `pip-audit` đạt chuẩn 0 lỗ hổng.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SLIDE 10: KẾT LUẬN & LỘ TRÌNH ================= -->
+        <div class="slide" id="slide-10">
+            <div class="slide-header">
+                <div>
+                    <div class="header-meta">CHƯƠNG 5 • TỔNG KẾT ĐỒ ÁN</div>
+                    <div class="slide-title">Kết Luận & Lộ Trình Phát Triển Hậu Tốt Nghiệp</div>
+                </div>
+                <div class="stat-badge">Cổng 3 • Future Roadmap Appendix</div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card">
+                        <span class="h-tag">Đóng Góp Khoa Học & Thực Tiễn Cốt Lõi</span>
+                        <ul class="list-clean" style="margin-top: 14px;">
+                            <li><strong>Kiến trúc Tích hợp Dọc Hoàn chỉnh:</strong> Chứng minh tính khả thi của mô hình Modular Monolith kết hợp giữa Bán lẻ, Dịch vụ kỹ thuật, Bản đồ PostGIS và Trợ lý AI trên một cơ sở dữ liệu quan hệ duy nhất.</li>
+                            <li><strong>Giải pháp RAG Đáng tin cậy:</strong> Tách nguồn, tool và bộ chấm ngoại tuyến; vẫn cần người đánh giá ngữ nghĩa, không bảo đảm loại bỏ mọi phản hồi sai.</li>
+                            <li><strong>Sẵn sàng Triển khai Thực tế:</strong> Nền tảng có thể chuyển giao và áp dụng ngay cho các doanh nghiệp bán lẻ công nghệ và dịch vụ sửa chữa với chi phí hạ tầng tối thiểu.</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <span class="h-tag">5 Định Hướng Phát Triển Tương Lai (Hậu Tốt Nghiệp)</span>
+                        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                            <div style="font-size: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border-left: 2px solid var(--cyan);">
+                                <strong>1. Phần cứng POS:</strong> Kết nối máy quét mã vạch 1D/2D HID và máy in nhiệt hóa đơn ESC/POS.
+                            </div>
+                            <div style="font-size: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border-left: 2px solid var(--emerald);">
+                                <strong>2. Hóa đơn Điện tử e-VAT:</strong> Tích hợp API truyền nhận hóa đơn có mã cơ quan thuế (Thông tư 78).
+                            </div>
+                            <div style="font-size: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border-left: 2px solid var(--primary);">
+                                <strong>3. Mobile App Kỹ thuật viên:</strong> Ứng dụng di động Flutter/React Native định vị GPS và chữ ký số.
+                            </div>
+                            <div style="font-size: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border-left: 2px solid var(--amber);">
+                                <strong>4. On-premise Quantized LLM:</strong> Triển khai Llama-3-8B lượng tử hóa qua Ollama / vLLM nội bộ.
+                            </div>
+                            <div style="font-size: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border-left: 2px solid var(--rose);">
+                                <strong>5. Kubernetes Microservices:</strong> Tách các service tải nặng (Analytics, RAG) sang cụm K8s khi mở rộng >100 shop.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Navigation & Footer Bar -->
+    <div class="slide-footer">
+        <div>
+            AlphaTech AI Platform • Khóa luận Tốt nghiệp CNTT — HCMUNRE (2026)
+        </div>
+        <div class="slide-dots" id="dotsContainer"></div>
+        <div class="nav-controls">
+            <span id="slideCounter" style="font-family: var(--font-mono); font-weight: 700; color: #fff;">1 / 10</span>
+            <button class="nav-btn" id="prevBtn" title="Slide trước (Phím mũi tên Trái)">❮</button>
+            <button class="nav-btn" id="nextBtn" title="Slide sau (Phím mũi tên Phải / Phím Cách)">❯</button>
+            <button class="nav-btn" id="fsBtn" title="Toàn màn hình (F)">⛶</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    let currentSlide = 0;
+
+    const counter = document.getElementById('slideCounter');
+    const dotsContainer = document.getElementById('dotsContainer');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const fsBtn = document.getElementById('fsBtn');
+
+    // Create dots
+    for (let i = 0; i < totalSlides; i++) {
+        const dot = document.createElement('div');
+        dot.classList.add('dot');
+        if (i === 0) dot.classList.add('active');
+        dot.addEventListener('click', () => goToSlide(i));
+        dotsContainer.appendChild(dot);
+    }
+    const dots = document.querySelectorAll('.dot');
+
+    function updateSlide() {
+        slides.forEach((s, idx) => {
+            s.classList.toggle('active', idx === currentSlide);
+        });
+        dots.forEach((d, idx) => {
+            d.classList.toggle('active', idx === currentSlide);
+        });
+        counter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+
+        // Lazy render charts on slide activation
+        if (currentSlide === 7) renderForecastChart();
+        if (currentSlide === 8) renderTestsChart();
+    }
+
+    function goToSlide(n) {
+        currentSlide = (n + totalSlides) % totalSlides;
+        updateSlide();
+    }
+
+    prevBtn.addEventListener('click', () => goToSlide(currentSlide - 1));
+    nextBtn.addEventListener('click', () => goToSlide(currentSlide + 1));
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+            goToSlide(currentSlide + 1);
+        } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+            goToSlide(currentSlide - 1);
+        } else if (e.key.toLowerCase() === 'f') {
+            toggleFullscreen();
+        }
+    });
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen();
+        }
+    }
+    fsBtn.addEventListener('click', toggleFullscreen);
+
+    // Chart.js: Slide 8 - Forecast Metrics
+    let forecastChartInstance = null;
+    function renderForecastChart() {
+        if (forecastChartInstance) return;
+        const ctx = document.getElementById('forecastChart');
+        if (!ctx) return;
+
+        forecastChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Đơn Bán lẻ (ORDER_VOLUME)', 'Phiếu Dịch vụ (TICKET_VOLUME)'],
+                datasets: [
+                    {
+                        label: 'XGBoost Regressor (MAE)',
+                        data: [0.98, 0.94],
+                        backgroundColor: '#06b6d4',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Naive Baseline (MAE)',
+                        data: [1.33, 1.29],
+                        backgroundColor: '#64748b',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#cbd5e1', font: { family: 'Inter', size: 12 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterBody: function(context) {
+                                if (context[0].dataIndex === 0) return '>> XGBoost cải thiện +26.32% MAE';
+                                if (context[0].dataIndex === 1) return '>> XGBoost cải thiện +27.13% MAE';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 } }, grid: { display: false } },
+                    y: {
+                        ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 } },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        title: { display: true, text: 'Sai số Tuyệt đối (MAE - Đơn vị đếm)', color: '#94a3b8' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Chart.js: Slide 9 - Test Breakdown
+    let testsChartInstance = null;
+    function renderTestsChart() {
+        if (testsChartInstance) return;
+        const ctx = document.getElementById('testsChart');
+        if (!ctx) return;
+
+        testsChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Giữ đóng theo bằng chứng kế thừa', 'Mở lại / thiếu bằng chứng'],
+                datasets: [{
+                    data: [75, 22],
+                    backgroundColor: [
+                        '#4f46e5', '#06b6d4', '#10b981', '#f59e0b',
+                        '#ec4899', '#8b5cf6', '#3b82f6', '#14b8a6',
+                        '#6366f1', '#f97316', '#a855f7', '#64748b'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#0a0f1d'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#cbd5e1', font: { family: 'Inter', size: 11 }, boxWidth: 12 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.label}: ${context.raw} mục (không chứng nhận production)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '62%'
+            }
+        });
+    }
+</script>
+</body>
+</html>

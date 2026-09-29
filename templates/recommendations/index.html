@@ -63,7 +63,7 @@
 
 .rec-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
 }
@@ -178,6 +178,25 @@
     font-weight: 600;
     cursor: pointer;
 }
+
+@media (max-width: 600px) {
+    .rec-container {
+        padding: 0.75rem 0.5rem;
+    }
+    .studio-header {
+        padding: 1rem;
+    }
+    .rec-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .rec-actions {
+        justify-content: stretch;
+    }
+    .rec-actions button {
+        flex: 1;
+    }
+}
 </style>
 {% endblock %}
 
@@ -188,7 +207,8 @@
             <h1>💡 Khuyến nghị Vận hành &amp; Hỗ trợ Ra Quyết định</h1>
             <p>Động cơ quy tắc kinh doanh xác định cung cấp các khuyến nghị có thể giải trình, dựa trên số liệu thực tế, dự báo và dữ liệu không gian GIS.</p>
         </div>
-        <div>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; background: rgba(255,255,255,0.08);">← Bảng điều khiển</a>
             {% if can_manage %}
             <button class="btn-eval" onclick="triggerEvaluation()">⚡ Kích hoạt Động cơ Quy tắc</button>
             {% endif %}
@@ -265,8 +285,8 @@
 
             {% if rec.status == 'PENDING' and can_manage %}
             <div class="rec-actions">
-                <button class="btn-reject" onclick="decideRec({{ rec.id }}, 'reject')">✕ Từ chối</button>
-                <button class="btn-accept" onclick="decideRec({{ rec.id }}, 'accept')">✓ Chấp thuận</button>
+                <button class="btn-reject" data-rec-id="{{ rec.id }}" onclick="decideRec(this.dataset.recId, 'reject')">✕ Từ chối</button>
+                <button class="btn-accept" data-rec-id="{{ rec.id }}" onclick="decideRec(this.dataset.recId, 'accept')">✓ Chấp thuận</button>
             </div>
             {% endif %}
         </div>

@@ -1,8 +1,11 @@
 """
-Comprehensive Automated Benchmark Test Suite: Vietnamese AI Business Intent Understanding.
-Validates 77 realistic Vietnamese business queries covering all 26 requirement dimensions:
+Deterministic Vietnamese AI Business Intent Parser Benchmark (77 Scenarios).
+
+Validates offline pattern matching, entity extraction, and intent classification rules covering:
 Retail, Service Ops, GIS, Forecasting, RAG, Hybrid, Ranking, Comparison, Trends, Follow-ups,
 Ambiguity, Negation/Exclusion, and Controlled Mutations.
+
+NOTE: This suite tests rule-based intent parsing heuristics, NOT live generative LLM performance.
 """
 
 from decimal import Decimal

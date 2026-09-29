@@ -3,6 +3,10 @@
 {% block title %}Giỏ hàng của bạn | ABC Tech Store{% endblock %}
 
 {% block content %}
+<style>
+.shipping-fee-free { color: #10B981; font-family: var(--pub-font-mono); text-align: right; white-space: nowrap; }
+.shipping-fee-standard { color: var(--pub-text-heading); font-family: var(--pub-font-mono); text-align: right; white-space: nowrap; }
+</style>
 <!-- Page Hero Banner -->
 <div class="page-hero-banner">
     <div class="page-hero-grid">
@@ -58,16 +62,16 @@
     {% endif %}
 
     {% if items %}
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2.25rem; align-items: start;">
+    <div class="cart-grid-layout">
         <!-- Left: Cart Items List -->
         <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px;">
                 <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--pub-text-heading); margin: 0; letter-spacing: -0.01em;">
                     Danh sách sản phẩm ({{ summary.total_quantity }})
                 </h2>
                 <form method="POST" action="/gio-hang/xoa-tat-ca/" onsubmit="return confirm('Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?');">
                     {% csrf_token %}
-                    <button type="submit" style="background: none; border: none; color: var(--pub-danger); font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0; display: inline-flex; align-items: center; gap: 4px;">
+                    <button type="submit" style="background: none; border: none; color: var(--pub-danger); font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         <span>Xóa toàn bộ giỏ hàng</span>
                     </button>
@@ -76,9 +80,9 @@
 
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 {% for item in items %}
-                <div class="pub-card" style="padding: 1.25rem 1.5rem; display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap;">
+                <div class="pub-card cart-item-card">
                     <!-- Thumbnail -->
-                    <div style="width: 84px; height: 84px; background: #F8FAFC; border-radius: 10px; border: 1px solid var(--pub-border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                    <div class="cart-item-thumb" style="width: 84px; height: 84px; background: #F8FAFC; border-radius: 10px; border: 1px solid var(--pub-border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
                         {% if item.image_url %}
                         <img src="{{ item.image_url }}" alt="{{ item.product.name }}" style="width: 100%; height: 100%; object-fit: contain; padding: 4px;">
                         {% else %}
@@ -89,8 +93,8 @@
                     </div>
 
                     <!-- Product Info -->
-                    <div style="flex: 1; min-width: 200px;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <div class="cart-item-info" style="flex: 1; min-width: 180px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
                             <span class="pub-sku-label">SKU: {{ item.product.sku }}</span>
                             <span style="font-size: 0.72rem; font-weight: 700; color: #2563EB; background: #EFF6FF; padding: 2px 8px; border-radius: 4px;">
                                 {{ item.product.category.name|default:"Thiết bị công nghệ" }}
@@ -106,32 +110,35 @@
                         </div>
                     </div>
 
-                    <!-- Quantity Control -->
-                    <div>
-                        <form method="POST" action="/gio-hang/cap-nhat/{{ item.product.id }}/" style="display: inline-flex; align-items: center; border: 1px solid #CBD5E1; border-radius: 8px; overflow: hidden; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                            {% csrf_token %}
-                            <button type="submit" name="quantity" value="{{ item.quantity|add:'-1' }}" style="border: none; background: #F8FAFC; width: 34px; height: 34px; font-size: 1.1rem; font-weight: 700; color: var(--pub-text-heading); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;" aria-label="Giảm số lượng">-</button>
-                            <span style="width: 44px; text-align: center; font-size: 0.92rem; font-weight: 800; color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ item.quantity }}</span>
-                            <button type="submit" name="quantity" value="{{ item.quantity|add:'1' }}" style="border: none; background: #F8FAFC; width: 34px; height: 34px; font-size: 1.1rem; font-weight: 700; color: var(--pub-text-heading); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;" aria-label="Tăng số lượng">+</button>
-                        </form>
-                    </div>
-
-                    <!-- Line Total -->
-                    <div style="text-align: right; min-width: 120px;">
-                        <div style="font-size: 0.75rem; color: var(--pub-text-muted); font-weight: 600; text-transform: uppercase;">Thành tiền</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--pub-text-heading); font-family: var(--pub-font-mono); margin-top: 2px;">
-                            {{ item.line_total|floatformat:0 }} VNĐ
+                    <!-- Actions & Totals Row (Responsive container) -->
+                    <div class="cart-item-bottom-row" style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+                        <!-- Quantity Control -->
+                        <div>
+                            <form method="POST" action="/gio-hang/cap-nhat/{{ item.product.id }}/" style="display: inline-flex; align-items: center; border: 1px solid #CBD5E1; border-radius: 8px; overflow: hidden; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                {% csrf_token %}
+                                <button type="submit" name="quantity" value="{{ item.quantity|add:'-1' }}" style="border: none; background: #F8FAFC; width: 34px; height: 34px; font-size: 1.1rem; font-weight: 700; color: var(--pub-text-heading); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;" aria-label="Giảm số lượng">-</button>
+                                <span style="width: 44px; text-align: center; font-size: 0.92rem; font-weight: 800; color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ item.quantity }}</span>
+                                <button type="submit" name="quantity" value="{{ item.quantity|add:'1' }}" style="border: none; background: #F8FAFC; width: 34px; height: 34px; font-size: 1.1rem; font-weight: 700; color: var(--pub-text-heading); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s;" aria-label="Tăng số lượng">+</button>
+                            </form>
                         </div>
-                    </div>
 
-                    <!-- Remove Button -->
-                    <div>
-                        <form method="POST" action="/gio-hang/xoa/{{ item.product.id }}/">
-                            {% csrf_token %}
-                            <button type="submit" title="Xóa sản phẩm này" style="background: none; border: 1px solid var(--pub-border); width: 34px; height: 34px; border-radius: 8px; color: var(--pub-text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            </button>
-                        </form>
+                        <!-- Line Total -->
+                        <div style="text-align: right; min-width: 110px;">
+                            <div style="font-size: 0.72rem; color: var(--pub-text-muted); font-weight: 600; text-transform: uppercase;">Thành tiền</div>
+                            <div style="font-size: 1.05rem; font-weight: 800; color: var(--pub-text-heading); font-family: var(--pub-font-mono); margin-top: 2px; white-space: nowrap;">
+                                {{ item.line_total|floatformat:0 }} VNĐ
+                            </div>
+                        </div>
+
+                        <!-- Remove Button -->
+                        <div>
+                            <form method="POST" action="/gio-hang/xoa/{{ item.product.id }}/">
+                                {% csrf_token %}
+                                <button type="submit" title="Xóa sản phẩm này" style="background: none; border: 1px solid var(--pub-border); width: 34px; height: 34px; border-radius: 8px; color: var(--pub-text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
@@ -146,7 +153,7 @@
         </div>
 
         <!-- Right: Order Summary Sidebar -->
-        <div class="pub-card" style="padding: 1.75rem; position: sticky; top: 90px; border-top: 3px solid #2563EB;">
+        <div class="pub-card cart-sidebar-card">
             <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 1.25rem; letter-spacing: -0.01em;">
                 Tóm tắt đơn hàng
             </h3>
@@ -154,12 +161,12 @@
             <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.92rem; border-bottom: 1px solid var(--pub-border); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
                 <div style="display: flex; justify-content: space-between; color: var(--pub-text-muted);">
                     <span>Tổng tiền sản phẩm</span>
-                    <strong style="color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ summary.subtotal|floatformat:0 }} VNĐ</strong>
+                    <strong style="color: var(--pub-text-heading); font-family: var(--pub-font-mono); white-space: nowrap;">{{ summary.subtotal|floatformat:0 }} VNĐ</strong>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; color: var(--pub-text-muted);">
                     <span>Phí vận chuyển (tạm tính)</span>
-                    <strong style="color: {% if summary.is_free_shipping %}#10B981{% else %}var(--pub-text-heading){% endif %}; font-family: var(--pub-font-mono); text-align: right;">
+                    <strong class="{% if summary.is_free_shipping %}shipping-fee-free{% else %}shipping-fee-standard{% endif %}">
                         {% if summary.is_free_shipping %}
                         Miễn phí{% if summary.delivery_method == 'HOME_DELIVERY' %} (Đơn >= 5.000.000 VNĐ){% endif %}
                         {% else %}
@@ -175,9 +182,9 @@
             </div>
 
             <!-- Grand Total -->
-            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.5rem;">
-                <span style="font-size: 1rem; font-weight: 700; color: var(--pub-text-heading);">Tổng thanh toán</span>
-                <span style="font-size: 1.55rem; font-weight: 900; color: var(--pub-primary); font-family: var(--pub-font-mono);">
+            <div class="cart-total-headline">
+                <span class="cart-total-label">Tổng thanh toán</span>
+                <span class="cart-total-value">
                     {{ summary.total_amount|floatformat:0 }} VNĐ
                 </span>
             </div>

@@ -102,6 +102,22 @@
         background: rgba(255, 255, 255, 0.08);
         border-color: #3b82f6;
     }
+    @media (max-width: 900px) {
+        .gis-layout {
+            grid-template-columns: 1fr;
+            height: auto;
+            min-height: auto;
+        }
+        .map-container {
+            height: 420px;
+            order: 1;
+        }
+        .gis-sidebar {
+            order: 2;
+            padding-right: 0;
+            max-height: 500px;
+        }
+    }
 </style>
 {% endblock %}
 

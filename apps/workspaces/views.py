@@ -111,7 +111,7 @@ class WorkspaceSwitchAPIView(APIView):
                         "name": workspace.name,
                         "code": workspace.code,
                         "workspace_type": workspace.workspace_type,
-                        "role": membership.role.name if membership and membership.role else None,
+                        "role": membership.role.name if membership and membership.role else ("SUPERUSER" if request.user.is_superuser else None),
                     },
                     "permissions": permissions,
                 },
@@ -151,7 +151,7 @@ class CurrentWorkspaceAPIView(APIView):
                 "success": True,
                 "data": {
                     "workspace": WorkspaceSerializer(active_workspace).data,
-                    "role": active_membership.role.name if active_membership and active_membership.role else None,
+                    "role": active_membership.role.name if active_membership and active_membership.role else ("SUPERUSER" if request.user.is_superuser else None),
                     "is_default": active_membership.is_default if active_membership else False,
                     "permissions": permissions,
                 },

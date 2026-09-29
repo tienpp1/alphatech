@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng tin Điều hành & Thông tri Nội bộ — {{ active_workspace.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.bulletin-header-hero {
+    margin-bottom: 2rem;
+}
+.bulletin-top-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.bulletin-scope-pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+.bulletin-filter-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 1.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.filter-tab-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.filter-tab-btn.active {
+    background: var(--color-primary);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+.filter-tab-btn.inactive {
+    background: rgba(255, 255, 255, 0.04);
+    color: #94a3b8;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bulletin-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 1.5rem;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.bulletin-card:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    transform: translateY(-2px);
+}
+.bulletin-card.is-pinned {
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(30, 41, 59, 0.85));
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.12);
+}
+.bulletin-card.is-urgent {
+    border-left: 4px solid #ef4444;
+}
+
+.priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.priority-badge.pinned {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.priority-badge.urgent {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.priority-badge.normal {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.bulletin-body-text {
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.bulletin-meta-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: #64748b;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.modal-content-card {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    padding: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+}
+@media (max-width: 768px) {
+    .bulletin-top-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bulletin-header-hero">
+    <div class="hero-badge badge-primary">
+        <span class="pulse-dot"></span> THÔNG TRI DOANH NGHIỆP TẬP TRUNG
+    </div>
+    <div class="bulletin-top-actions">
+        <div>
+            <h1 class="hero-title" style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #f8fafc, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 0.5rem;">
+                Bảng tin Điều hành & Thông tri Nội bộ
+            </h1>
+            <p class="hero-subtitle" style="max-width: 820px; color: #94a3b8; font-size: 1rem; margin: 0;">
+                Ban hành và theo dõi các thông báo điều hành, quy chế nghiệp vụ, hướng dẫn chính sách áp dụng nội bộ cho cán bộ nhân viên thuộc <strong>{{ active_workspace.name }}</strong>.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+                ← Tổng quan Nội bộ
+            </a>
+            <a href="/noibo/trao-doi/?workspace_id={{ active_workspace.id }}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+                💬 Kênh Trao đổi Nhân sự
+            </a>
+            {% if can_manage %}
+            <button type="button" onclick="document.getElementById('new-bulletin-modal').style.display='flex'" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                <span>📢</span> Đăng Thông Tri Mới
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+<div style="margin-bottom: 1.5rem;">
+    {% for message in messages %}
+    <div style="padding: 12px 18px; border-radius: 8px; margin-bottom: 8px; font-size: 0.92rem; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Workspace Filter Scope Bar -->
+{% if authorized_workspaces and authorized_workspaces|length > 1 %}
+<div class="bulletin-scope-pills">
+    <span style="font-size: 0.82rem; color: #94a3b8; font-weight: 600;">Không gian làm việc:</span>
+    {% for ws in authorized_workspaces %}
+    <a href="/noibo/bang-tin/?workspace_id={{ ws.id }}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}"
+       class="filter-tab-btn {% if active_workspace.id == ws.id %}active{% else %}inactive{% endif %}">
+       {% if ws.workspace_type == 'SERVICE' %}⚙️{% else %}🛒{% endif %} {{ ws.name }}
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Priority Filter Tabs -->
+<div class="bulletin-filter-tabs">
+    <a href="/noibo/bang-tin/?workspace_id={{ active_workspace.id }}"
+       class="filter-tab-btn {% if not priority_filter %}active{% else %}inactive{% endif %}">
+        Tất cả bản tin ({{ total_bulletins_count }})
+    </a>
+    <a href="/noibo/bang-tin/?workspace_id={{ active_workspace.id }}&priority=PINNED"
+       class="filter-tab-btn {% if priority_filter == 'PINNED' %}active{% else %}inactive{% endif %}">
+        📌 Ghim ưu tiên
+    </a>
+    <a href="/noibo/bang-tin/?workspace_id={{ active_workspace.id }}&priority=URGENT"
+       class="filter-tab-btn {% if priority_filter == 'URGENT' %}active{% else %}inactive{% endif %}">
+        🚨 Thông báo khẩn
+    </a>
+    <a href="/noibo/bang-tin/?workspace_id={{ active_workspace.id }}&priority=NORMAL"
+       class="filter-tab-btn {% if priority_filter == 'NORMAL' %}active{% else %}inactive{% endif %}">
+        ℹ️ Thông thường
+    </a>
+</div>
+
+<!-- Bulletins List -->
+{% if bulletins %}
+<div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 3rem;">
+    {% for b in bulletins %}
+    <div class="bulletin-card {% if b.is_pinned %}is-pinned{% elif b.priority == 'URGENT' %}is-urgent{% endif %}">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                {% if b.is_pinned %}
+                <span class="priority-badge pinned">📌 GHIM ĐẦU TRANG</span>
+                {% elif b.priority == 'URGENT' %}
+                <span class="priority-badge urgent">🚨 KHẨN CẤP</span>
+                {% else %}
+                <span class="priority-badge normal">ℹ️ THÔNG BÁO</span>
+                {% endif %}
+                <span style="font-size: 0.8rem; color: #818cf8; font-weight: 600;">
+                    🏢 {{ b.workspace.name }}
+                </span>
+            </div>
+            <span style="font-size: 0.8rem; color: #94a3b8;">
+                {{ b.created_at|date:"H:i — d/m/Y" }}
+            </span>
+        </div>
+
+        <h2 style="font-size: 1.3rem; font-weight: 800; color: #f8fafc; margin: 0; line-height: 1.35;">
+            {{ b.title }}
+        </h2>
+
+        <div class="bulletin-body-text">
+            {{ b.content }}
+        </div>
+
+        <div class="bulletin-meta-bar">
+            {% if can_manage %}
+            <a href="{% url 'noibo_bulletin_edit' b.pk %}?workspace_id={{ active_workspace.pk }}" class="btn btn-secondary" aria-label="Sửa bản tin: {{ b.title }}">Sửa bản tin</a>
+            {% endif %}
+            <span>
+                Ban hành bởi: <strong style="color: #cbd5e1;">{{ b.author.get_full_name|default:b.author.username }}</strong>
+            </span>
+            <span>
+                Phạm vi: Cán bộ nhân viên {{ b.workspace.code }}
+            </span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div style="text-align: center; padding: 4rem 1.5rem; background: rgba(255, 255, 255, 0.02); border: 1px dashed #334155; border-radius: 16px; color: #64748b; margin-bottom: 3rem;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+    <h3 style="font-size: 1.25rem; font-weight: 700; color: #cbd5e1; margin-bottom: 0.5rem;">Chưa có bản tin nào</h3>
+    <p style="max-width: 460px; margin: 0 auto 1.5rem; font-size: 0.95rem;">
+        Hiện tại không gian làm việc này chưa có thông tri hoặc quyết định điều hành nào được ban hành.
+    </p>
+    {% if can_manage %}
+    <button type="button" onclick="document.getElementById('new-bulletin-modal').style.display='flex'" class="btn btn-primary" style="padding: 9px 20px; border-radius: 8px; font-weight: 600;">
+        + Tạo Bản Tin Đầu Tiên
+    </button>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Create Bulletin Modal -->
+{% if can_manage %}
+<div id="new-bulletin-modal" class="modal-backdrop">
+    <div class="modal-content-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #334155; padding-bottom: 1rem;">
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                <span>📢</span> Ban hành Thông tri / Bản tin Nội bộ
+            </h3>
+            <button type="button" onclick="document.getElementById('new-bulletin-modal').style.display='none'" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+
+        <form method="POST" action="/noibo/bang-tin/create/">
+            {% csrf_token %}
+            <input type="hidden" name="workspace_id" value="{{ active_workspace.id }}">
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.4rem;">
+                    Không gian áp dụng:
+                </label>
+                <div style="padding: 8px 12px; background: rgba(255,255,255,0.04); border: 1px solid #334155; border-radius: 8px; color: #f8fafc; font-size: 0.9rem; font-weight: 600;">
+                    🏢 {{ active_workspace.name }} ({{ active_workspace.code }})
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label for="bulletin-title" style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.4rem;">
+                    Tiêu đề thông tri <span style="color: #f87171;">*</span>
+                </label>
+                <input type="text" id="bulletin-title" name="title" required placeholder="Ví dụ: Quy chế bàn giao ca và chuẩn an toàn thông tin Q3"
+                       style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.95rem; outline: none;">
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label for="bulletin-priority" style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.4rem;">
+                    Mức độ ưu tiên
+                </label>
+                <select id="bulletin-priority" name="priority" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.95rem; outline: none;">
+                    <option value="NORMAL">ℹ️ Thông thường</option>
+                    <option value="PINNED">📌 Ghim đầu trang (Thông báo quan trọng)</option>
+                    <option value="URGENT">🚨 Khẩn cấp (Yêu cầu đọc ngay)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label for="bulletin-content" style="display: block; font-size: 0.85rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.4rem;">
+                    Nội dung thông tri chi tiết <span style="color: #f87171;">*</span>
+                </label>
+                <textarea id="bulletin-content" name="content" rows="6" required placeholder="Nhập đầy đủ nội dung thông báo, quyết định, quy trình cần phổ biến..."
+                          style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #f8fafc; font-size: 0.95rem; outline: none; resize: vertical; line-height: 1.5;"></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" onclick="document.getElementById('new-bulletin-modal').style.display='none'" class="btn btn-secondary" style="padding: 9px 18px; border-radius: 8px; font-weight: 600;">
+                    Hủy bỏ
+                </button>
+                <button type="submit" class="btn btn-primary" style="padding: 9px 22px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                    🚀 Đăng Bản Tin
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

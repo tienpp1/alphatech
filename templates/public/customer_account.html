@@ -108,14 +108,19 @@
     {% endif %}
 
     {% if customer_only_notice and not request.user.is_superuser and not request.user.is_staff %}
-    <div style="background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; padding: 14px 18px; border-radius: 12px; font-size: 0.92rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 12px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-        <span><strong>Thông báo:</strong> Cổng Quản trị Nội bộ (/noibo/) dành riêng cho nhân viên và ban quản lý. Tài khoản khách hàng của bạn được quản trị tại trang này.</span>
+    <div style="background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; padding: 14px 18px; border-radius: 12px; font-size: 0.92rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span><strong>Thông báo:</strong> Cổng Quản trị Nội bộ (/noibo/) dành riêng cho nhân viên và ban quản lý. Tài khoản khách hàng của bạn được quản trị tại trang này.</span>
+        </div>
+        <a href="/san-pham/" style="padding: 7px 14px; font-size: 0.85rem; text-decoration: none; border-radius: 8px; font-weight: 700; white-space: nowrap; background: #2563EB; color: #ffffff; display: inline-flex; align-items: center; gap: 6px;">
+            🛒 Mua sắm sản phẩm
+        </a>
     </div>
     {% endif %}
 
     <!-- Profile Grid -->
-    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
+    <div class="customer-account-layout">
         <!-- Left: Customer Info Card -->
         <div class="pub-card" style="padding: 1.75rem; border-top: 3px solid #2563EB;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--pub-border);">

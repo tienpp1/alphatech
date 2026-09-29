@@ -1,10 +1,14 @@
 # Predictive Analytics & XGBoost Forecasting
 
+Academic primary target: daily RETAIL_REVENUE, fixed before comparison rather
+than selected for favorable results. See [experiment protocol](FORECAST_EXPERIMENT_PROTOCOL.md)
+for run metadata, validation limitations and separate one-step/recursive acceptance.
+
 ## 1. Overview & Business Problem
 
 Modern multi-tenant business platforms require forward-looking visibility to assist staffing, inventory prep, cash-flow projections, and operational readiness. 
 
-The **Predictive Analytics & Forecasting Module** (`apps.forecasting`) provides controlled, reproducible machine learning forecasting powered by **XGBoost**. It translates historical operational transactions into chronological time-series, extracts autoregressive and calendar features, trains gradient-boosted tree regressors, benchmarks performance against naive persistence baselines, and generates recursive multi-step forecasts with approximate 95% prediction bands based on historical test residual standard deviation.
+The **Predictive Analytics & Forecasting Module** (`apps.forecasting`) provides machine learning forecasting powered by **XGBoost**. It translates historical operational transactions into chronological time-series, extracts autoregressive and calendar features, trains gradient-boosted tree regressors, benchmarks performance against transparent lag-7 and trailing moving-average-7 baselines, and generates recursive multi-step forecasts with heuristic uncertainty bands based on historical test RMSE. These bands do not establish 95% coverage.
 
 These forecasts serve as analytical assets that feed directly into downstream recommendation and decision-support systems (Phase 10).
 
@@ -35,6 +39,9 @@ Real-world operational transactional data contains gaps (days with zero sales or
 2. The minimum and maximum transaction dates are determined.
 3. A continuous calendar date index is generated using `pandas.date_range(start, end, freq="D")`.
 4. The series is reindexed over this range, filling missing days with `0.0` (zero revenue, zero orders, or zero tickets).
+5. The selector records the observed-row count, missing-period count and the
+   explicit `zero_fill_daily_gap` policy in the returned dataset metadata. This
+   makes the transformation auditable without copying raw business rows.
 
 ### 3.2 Feature Engineering Pipeline
 Features are derived deterministically in `apps.forecasting.features.build_feature_dataframe`:
@@ -60,6 +67,14 @@ All rolling features are computed using `series.shift(1).rolling(window)` so tha
 ---
 
 ## 4. Chronological Splitting & Training Workflow
+
+Each `ForecastRun` stores a reproducibility snapshot under
+`job_parameters.provenance`: effective feature/training configuration,
+workspace/target/dimensions, model configuration version, horizon, dataset
+period and gap metadata, SHA-256 fingerprint of the input series, chronological
+train/test sizes and runtime library versions. A deployment commit is recorded
+only when supplied by `GIT_COMMIT`, `RENDER_GIT_COMMIT` or `COMMIT_SHA`; otherwise
+the value remains `unknown`.
 
 ### 4.1 Chronological Split
 Time-series data is never randomly partitioned or shuffled. The dataset is divided strictly chronologically:
@@ -99,15 +114,20 @@ Every trained model is evaluated against the held-out test split:
    - Compares predictions against seasonal lag ($y_t = y_{t-7}$) or previous step ($y_{t-1}$).
    - Calculates percentage improvement:
      $$\text{Improvement} = \frac{\text{MAE}_{\text{naive}} - \text{MAE}_{\text{xgb}}}{\text{MAE}_{\text{naive}}} \times 100\%$$
+   - The trainer also stores a trailing MA-7 comparison (`moving_average_7_*`).
+     Every MA-7 prediction uses only observations strictly before the predicted
+     date; it is a second baseline, not evidence that XGBoost is superior.
 
 #### Benchmark Evaluation Summary:
-*Note: Results are dataset-dependent. On this seeded benchmark dataset, models performed better than the naive baseline across all three operational targets:*
+*Note: Stored historical benchmark values below are retained for traceability only.
+They are not a current quality certificate; performance must be recomputed on a
+named, provenance-traceable dataset and compared against both lag-7 and MA-7.*
 
 | Model Target | XGBoost MAE | Naive Baseline MAE | MAE Improvement (%) | XGBoost RMSE | Naive Baseline RMSE | RMSE Improvement (%) | XGBoost MAPE |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Retail Revenue** (`abc-retail`) | **635,078 VND** | 832,234 VND | **+23.69%** | **750,005 VND** | 1,029,425 VND | **+27.14%** | **31.85%** |
-| **Retail Order Volume** (`abc-retail`) | **0.65 orders** | 0.81 orders | **+19.75%** | **0.88 orders** | 1.12 orders | **+21.43%** | **34.45%** |
-| **Service Ticket Volume** (`xyz-service`) | **0.94 tickets** | 1.14 tickets | **+17.54%** | **1.21 tickets** | 1.48 tickets | **+18.24%** | **62.58%** |
+| **Retail Revenue** (`abc-retail`) | 635,078 VND | 832,234 VND | +23.69% (historical) | 750,005 VND | 1,029,425 VND | +27.14% (historical) | 31.85% |
+| **Retail Order Volume** (`abc-retail`) | 0.65 orders | 0.81 orders | +19.75% (historical) | 0.88 orders | 1.12 orders | +21.43% (historical) | 34.45% |
+| **Service Ticket Volume** (`xyz-service`) | 0.94 tickets | 1.14 tickets | +17.54% (historical) | 1.21 tickets | 1.48 tickets | +18.24% (historical) | 62.58% |
 
 ---
 
@@ -121,7 +141,7 @@ To project 14 consecutive future days:
    - Calendar features (`day_of_week`, `is_weekend`, `month`, etc.) are computed for the future date.
    - The model predicts $\hat{y}_t$.
    - The prediction is clamped to non-negative values ($\hat{y}_t = \max(0, \hat{y}_t)$).
-   - Approximate 95% prediction bands based on historical test residual standard deviation:
+   - Diagnostic bands based on historical test RMSE (the scale below is RMSE, not residual standard deviation; no calibrated coverage claim):
      $$\text{Lower Bound} = \max(0, \hat{y}_t - 1.96 \cdot \sigma_{\text{residual}} \cdot \sqrt{1 + 0.05(h-1)})$$
      $$\text{Upper Bound} = \hat{y}_t + 1.96 \cdot \sigma_{\text{residual}} \cdot \sqrt{1 + 0.05(h-1)}$$
      *(where $h = 1 \dots 14$ is the forecast step).*
@@ -130,7 +150,8 @@ To project 14 consecutive future days:
 - **Uncertainty Visualization**: These bands serve as an intuitive uncertainty visualization based on historical test residuals.
 - **Recursive Multi-Step Error Accumulation**: Because recursive multi-step forecasting feeds predicted values back as autoregressive inputs for subsequent steps ($t+1 \to t+2$), prediction errors may compound over the horizon.
 - **Not a Formally Calibrated Interval**: This heuristic is an approximate prediction band, not a formally calibrated probabilistic prediction interval (e.g. from conformal prediction or quantile loss regression), and does not represent a guaranteed coverage probability.
-   - The projected point is appended into the time series to provide autoregressive inputs for subsequent steps.
+- **Measured diagnostic coverage**: Each completed training run now stores `interval_coverage`, `interval_nominal_coverage` and `interval_evaluation`. The measured value uses the one-step chronological holdout and holdout RMSE, so it is diagnostic only; it does not establish coverage for recursive 14-day bands or certify calibration.
+  - The projected point is appended into the time series to provide autoregressive inputs for subsequent steps.
 
 ---
 
@@ -177,7 +198,7 @@ python manage.py train_forecast --workspace abc-retail --target RETAIL_REVENUE -
 ### 8.3 Web UI Dashboard (`/forecasting/`)
 - Accessible via the top navigation bar (`📈 Forecasting`) in Retail and Service workspaces.
 - **KPI Summary Cards**: Latest training run status, MAE, RMSE, MAPE, and baseline relative improvement.
-- **Interactive Chart.js Visualization**: Combined historical actuals, 14-day future forecast, and shaded approximate 95% prediction bands based on historical test residual standard deviation.
+- **Interactive Chart.js Visualization**: Combined historical actuals, 14-day future forecast, and shaded diagnostic bands based on historical test RMSE. UI labels explicitly state that these are uncalibrated reference bands.
 - **Feature Importance Chart**: Top contributing features with explainability disclaimer.
 - **Training History**: Status badge, parameters, metrics, duration, and user trigger metadata.
 - **Training Modal**: Synchronous or non-blocking async training trigger directly from the browser.

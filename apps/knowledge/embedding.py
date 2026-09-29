@@ -1,11 +1,15 @@
 import hashlib
 import json
+import logging
 import math
 import re
 import urllib.request
 import urllib.error
 from typing import List, Optional
 from django.conf import settings
+from config.provider_http import open_provider_request
+
+logger = logging.getLogger(__name__)
 
 
 VI_STOPWORDS = {
@@ -70,7 +74,7 @@ def _call_gemini_embedding_api(text: str, model_name: str, api_key: str) -> Opti
     try:
         data_bytes = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with open_provider_request(req, allowed_hosts={'generativelanguage.googleapis.com'}, timeout=10) as response:
             if response.status == 200:
                 data = json.loads(response.read().decode("utf-8"))
                 values = data.get("embedding", {}).get("values")
@@ -80,7 +84,8 @@ def _call_gemini_embedding_api(text: str, model_name: str, api_key: str) -> Opti
                         return [x / norm for x in values]
                     return values
     except Exception:
-        pass
+        logger.warning('GEMINI_EMBEDDING_UNAVAILABLE')
+        return None
     return None
 
 
@@ -98,18 +103,19 @@ def _call_openai_embedding_api(text: str, model_name: str, api_key: str) -> Opti
     try:
         data_bytes = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data_bytes, headers=headers)
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with open_provider_request(req, allowed_hosts={'api.openai.com'}, timeout=10) as response:
             if response.status == 200:
                 data = json.loads(response.read().decode("utf-8"))
                 results = data.get("data", [])
                 if results and "embedding" in results[0]:
                     return results[0]["embedding"]
     except Exception:
-        pass
+        logger.warning('OPENAI_EMBEDDING_UNAVAILABLE')
+        return None
     return None
 
 
-def get_embedding(text: str, dimension: Optional[int] = None) -> List[float]:
+def get_embedding(text: str, dimension: Optional[int] = None, *, metadata: Optional[dict] = None) -> List[float]:
     """
     Computes an L2-normalized vector embedding for the input text.
     Uses configured external LLM API if key is present, otherwise falls back
@@ -119,21 +125,35 @@ def get_embedding(text: str, dimension: Optional[int] = None) -> List[float]:
     model = getattr(settings, "EMBEDDING_MODEL", "text-embedding-004")
     provider = getattr(settings, "LLM_PROVIDER", "gemini").lower()
     api_key = getattr(settings, "LLM_API_KEY", "")
+    observation = metadata if metadata is not None else {}
+    observation.clear()
 
     if api_key and api_key.strip():
         if provider == "gemini":
             result = _call_gemini_embedding_api(text, model, api_key)
             if result:
+                observation.update(mode="PROVIDER", provider=provider, model=model, dimension=len(result), reason=None)
                 return result
         elif provider == "openai":
             result = _call_openai_embedding_api(text, model, api_key)
             if result:
+                observation.update(mode="PROVIDER", provider=provider, model=model, dimension=len(result), reason=None)
                 return result
 
     # Offline / Test / Fallback
-    return _generate_deterministic_embedding(text, dim)
+    result = _generate_deterministic_embedding(text, dim)
+    observation.update(mode="DETERMINISTIC", provider=None, model="hash-projection-v1",
+                       dimension=len(result), reason=("NO_API_KEY" if not api_key or not api_key.strip()
+                           else "UNSUPPORTED_PROVIDER" if provider not in ("gemini", "openai") else "PROVIDER_UNAVAILABLE"))
+    return result
 
 
-def get_embeddings_batch(texts: List[str], dimension: Optional[int] = None) -> List[List[float]]:
+def get_embeddings_batch(texts: List[str], dimension: Optional[int] = None, *, metadata: Optional[list] = None) -> List[List[float]]:
     """Batch computes embeddings for a list of strings."""
-    return [get_embedding(t, dimension=dimension) for t in texts]
+    vectors = []
+    for text in texts:
+        observation = {}
+        vectors.append(get_embedding(text, dimension=dimension, metadata=observation))
+        if metadata is not None:
+            metadata.append(observation)
+    return vectors

@@ -4,6 +4,7 @@ Hybrid Question Routing, and Grounded Answer Generation.
 """
 
 import os
+import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 from django.conf import settings
@@ -26,6 +27,8 @@ from apps.knowledge.embedding import get_embeddings_batch
 from apps.knowledge.retrieval import search_relevant_chunks
 from apps.knowledge.tools import execute_tool, ToolPermissionDenied
 
+
+logger = logging.getLogger(__name__)
 
 FALLBACK_NO_CONTEXT_MESSAGE = "Không tìm thấy thông tin đủ tin cậy trong tài liệu của doanh nghiệp."
 
@@ -115,7 +118,8 @@ def ingest_document(document_id: int) -> Document:
 
         # 3. Generate embeddings batch
         contents = [c["content"] for c in chunk_dicts]
-        embeddings = get_embeddings_batch(contents)
+        embedding_observations = []
+        embeddings = get_embeddings_batch(contents, metadata=embedding_observations)
 
         # 4. Atomic storage in database
         with transaction.atomic():
@@ -132,7 +136,7 @@ def ingest_document(document_id: int) -> Document:
                         content=c["content"],
                         token_count=c["token_count"],
                         embedding=embeddings[i],
-                        metadata=c["metadata"],
+                        metadata={**c["metadata"], "embedding_provenance": embedding_observations[i]},
                     )
                 )
             DocumentChunk.objects.bulk_create(chunk_objects)
@@ -169,7 +173,7 @@ def delete_document(document: Document, user: User) -> None:
         try:
             document.file.delete(save=False)
         except Exception:
-            pass
+            logger.warning('KNOWLEDGE_FILE_CLEANUP_FAILED')
 
     document.delete()
 
@@ -240,7 +244,7 @@ def detect_tools_for_query(query: str, workspace: Workspace) -> List[str]:
                 evaluate_retail_recommendations(workspace)
                 evaluate_service_recommendations(workspace)
         except Exception:
-            pass
+            logger.warning('RECOMMENDATION_REFRESH_FAILED')
 
     return tool_list
 
@@ -321,7 +325,8 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
                         reason=f"Yêu cầu điều chỉnh đơn giá từ Trợ lý AI: '{query}'"
                     )
             except Exception:
-                pass
+                logger.warning('MUTATION_REQUEST_FAILED')
+                raise
 
     # 4. Schedule task
     if any(k in q for k in ["lập lịch", "lap lich", "tạo nhiệm vụ", "tao nhiem vu", "schedule task"]):
@@ -379,7 +384,8 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
                     reason=f"Yêu cầu tạo phiếu nhập kho dự phòng từ Trợ lý AI: '{query}'"
                 )
         except Exception:
-            pass
+            logger.warning('MUTATION_REQUEST_FAILED')
+            raise
 
     # Inter-branch Stock Transfer.  This branch is intentionally outside the
     # goods-receipt condition: a transfer request must not depend on a
@@ -413,7 +419,8 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
                     reason=f"Yêu cầu điều chuyển tồn kho nội bộ từ Trợ lý AI: '{query}'"
                 )
         except Exception:
-            pass
+            logger.warning('MUTATION_REQUEST_FAILED')
+            raise
 
     # Markdown / Discount Price for slow-moving inventory
     if any(w in q for w in ["hạ giá", "ha gia", "xả kho", "xa kho", "giảm giá", "giam gia"]):
@@ -438,7 +445,8 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
                     reason=f"Yêu cầu điều chỉnh giảm giá xả hàng tồn kho chậm luân chuyển ({discount_pct}%): '{query}'"
                 )
         except Exception:
-            pass
+            logger.warning('MUTATION_REQUEST_FAILED')
+            raise
 
     is_inquiry = any(w in q for w in ["khi nào", "khi nao", "quy định", "quy dinh", "thế nào", "the nao", "ra sao", "là gì", "la gi", "áp dụng thế nào"])
 
@@ -458,7 +466,8 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
                     reason=f"Yêu cầu tiếp nhận thẩm định đổi mới sản phẩm DOA trong 72 giờ từ Trợ lý AI: '{query}'"
                 )
         except Exception:
-            pass
+            logger.warning('MUTATION_REQUEST_FAILED')
+            raise
 
     # 8. Emergency Technician Backup Dispatch (Tier 2 SLA Escalation)
     if not is_inquiry and any(w in q for w in ["lập đề xuất điều động chi viện", "lap de xuat dieu dong chi vien", "lập đề xuất chi viện", "lap de xuat chi vien", "tạo đề xuất chi viện", "tao de xuat chi vien", "đề xuất chi viện", "de xuat chi vien", "điều động chi viện"]):
@@ -475,7 +484,8 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
                     reason=f"Yêu cầu điều động kỹ sư chi viện khẩn cấp hiện trường theo ma trận leo thang SLA: '{query}'"
                 )
         except Exception:
-            pass
+            logger.warning('MUTATION_REQUEST_FAILED')
+            raise
 
     return None
 
@@ -495,7 +505,8 @@ def _call_gemini_chat_api(prompt: str, api_key: str, model_name: str) -> Optiona
     try:
         data_bytes = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=15) as response:
+        from config.provider_http import open_provider_request
+        with open_provider_request(req, allowed_hosts={'generativelanguage.googleapis.com'}, timeout=15) as response:
             if response.status == 200:
                 data = json.loads(response.read().decode("utf-8"))
                 candidates = data.get("candidates", [])
@@ -504,7 +515,8 @@ def _call_gemini_chat_api(prompt: str, api_key: str, model_name: str) -> Optiona
                     if parts and "text" in parts[0]:
                         return parts[0]["text"].strip()
     except Exception:
-        pass
+        logger.warning('GEMINI_GENERATION_UNAVAILABLE')
+        return None
     return None
 
 
@@ -514,12 +526,15 @@ def generate_grounded_answer(
     query: str,
     chunks: List[Dict[str, Any]],
     tools_data: Optional[List[Dict[str, Any]]] = None,
+    generation_metadata: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Synthesizes a strictly grounded answer with source citations.
     Enforces the no-context fallback if confidence is insufficient.
     """
     tools_data = tools_data or []
+    generation = generation_metadata if generation_metadata is not None else {}
+    generation.update(mode="NO_CONTEXT", provider=None, model=None, reason="NO_EVIDENCE")
     sources: List[Dict[str, Any]] = []
 
     # If no chunks and no tools data, strictly return the fallback message
@@ -577,10 +592,17 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
     llm_model = getattr(settings, "LLM_MODEL", "gemini-2.5-flash")
 
     # If live LLM API is available, invoke it
-    if api_key and api_key.strip():
+    # Keep what-if labels and assumptions deterministic, even with a live key.
+    has_simulation = any(td.get("tool") == "simulate_what_if_scenario" for td in tools_data)
+    if api_key and api_key.strip() and not has_simulation:
         llm_response = _call_gemini_chat_api(system_prompt, api_key, llm_model)
         if llm_response:
+            generation.update(mode="LLM_RESPONSE", provider="google", model=llm_model, reason=None)
             return llm_response, sources
+
+    generation.update(mode="DETERMINISTIC", provider=None, model=None,
+                      reason="SIMULATION" if has_simulation else (
+                          "PROVIDER_UNAVAILABLE" if api_key and api_key.strip() else "NO_API_KEY"))
 
     # Deterministic Grounded Synthesizer (Offline / Test / CI mode)
     answer_parts: List[str] = []
@@ -907,7 +929,7 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                     f"- {td.get('impact_analysis')}",
                     f"- Công thức tính toán (Deterministic formula): `{td.get('formula_used')}`",
                     "> [!NOTE]",
-                    "> Đây là kết quả mô phỏng giả định dựa trên số liệu thực tế hiện tại, không thay đổi dữ liệu thật trong hệ thống."
+                    "> Đây là mô phỏng theo giả định, không phải dự báo đã kiểm chứng hoặc sự kiện đã xảy ra; không thay đổi dữ liệu thật trong hệ thống."
                 ]
                 answer_parts.append("\n".join(lines))
 
@@ -1166,14 +1188,20 @@ def answer_grounded_query(
                 "mutation_status": "APPROVAL_REQUIRED",
             }
     except Exception as e:
-        answer_text = f"Không thể tạo yêu cầu thay đổi: {str(e)}"
+        from apps.approvals.registry import ToolPermissionDenied as ApprovalPermissionDenied
+        from django.core.exceptions import PermissionDenied
+        denied = isinstance(e, (ApprovalPermissionDenied, ToolPermissionDenied, PermissionDenied))
+        error_code = 'PERMISSION_DENIED' if denied else 'MUTATION_FAILED'
+        answer_text = ('Bạn không có quyền thực hiện yêu cầu thay đổi này.' if denied
+                       else 'Không thể tạo yêu cầu thay đổi. Vui lòng kiểm tra thông tin và thử lại.')
+        logger.warning('AI_MUTATION_REJECTED code=%s', error_code)
         asst_msg = ChatMessage.objects.create(
             workspace=workspace,
             session=session,
             role=ChatRole.ASSISTANT,
             content=answer_text,
             sources=[],
-            tools_used=[{"tool": "mutation", "status": "FAILED", "error": str(e)}],
+            tools_used=[{"tool": "mutation", "status": "FAILED", "error": error_code}],
         )
         return {
             "session_id": session.id,
@@ -1181,12 +1209,13 @@ def answer_grounded_query(
             "role": "assistant",
             "answer": answer_text,
             "sources": [],
-            "tools_used": [{"tool": "mutation", "status": "FAILED", "error": str(e)}],
-            "error": str(e),
+            "tools_used": [{"tool": "mutation", "status": "FAILED", "error": error_code}],
+            "error": error_code,
         }
 
     # 5. Hybrid Question Routing: Document Retrieval + Business Tools
-    retrieved_chunks = search_relevant_chunks(workspace, clean_message)
+    retrieval_observation = {}
+    retrieved_chunks = search_relevant_chunks(workspace, clean_message, metadata=retrieval_observation)
 
     # -----------------------------------------------------------------------
     # Multi-turn Conversation Context Memory (Workspace & Session Scoped)
@@ -1329,12 +1358,14 @@ def answer_grounded_query(
 
 
     # 5. Generate Grounded Answer
+    generation_metadata = {}
     answer_text, citations = generate_grounded_answer(
         workspace=workspace,
         user=user,
         query=clean_message,
         chunks=retrieved_chunks,
         tools_data=tools_data,
+        generation_metadata=generation_metadata,
     )
 
     # 6. Record assistant message
@@ -1359,6 +1390,8 @@ def answer_grounded_query(
             "retrieved_chunk_count": len(retrieved_chunks),
             "tools_invoked": [t["tool"] for t in tools_used_log],
             "has_sources": bool(citations),
+            "generation_metadata": generation_metadata,
+            "retrieval_metadata": retrieval_observation,
         },
     )
 
@@ -1370,11 +1403,16 @@ def answer_grounded_query(
         "answer": answer_text,
         "sources": citations,
         "citations": citations,
+        "generation_metadata": generation_metadata,
         "tools_used": tools_used_log,
         "retrieval_metadata": {
+            **retrieval_observation,
+            "document_embeddings": [
+                {"chunk_id": chunk["chunk_id"], **chunk.get("embedding_provenance", {"mode": "UNKNOWN"})}
+                for chunk in retrieved_chunks
+            ],
             "chunks_retrieved": len(retrieved_chunks),
             "highest_similarity": retrieved_chunks[0]["similarity"] if retrieved_chunks else 0.0,
-            "threshold": getattr(settings, "RAG_SIMILARITY_THRESHOLD", 0.70),
         },
     }
 
@@ -1400,7 +1438,7 @@ def get_grounded_policy_snippet(workspace: Workspace, query: str) -> Optional[Di
                 "content_snippet": top["content"][:300].strip(),
             }
     except Exception:
-        pass
+        logger.warning('POLICY_SNIPPET_RETRIEVAL_FAILED')
     return None
 
 

@@ -3,12 +3,22 @@
 {% block title %}Chi nhánh - Nền tảng Doanh nghiệp AI{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 2rem;">
-    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">Hệ thống Chi nhánh Bán lẻ</h1>
-    <p style="color: #94a3b8;">Mạng lưới cửa hàng trực tiếp của <strong>{{ active_workspace.name }}</strong></p>
+<style>
+.status-active { color: #4ade80; }
+.status-inactive { color: #f87171; }
+</style>
+<div class="dashboard-header" style="margin-bottom: 2rem;">
+    <div>
+        <h1 class="page-title">Hệ thống Chi nhánh Bán lẻ</h1>
+        <p class="page-subtitle">Mạng lưới cửa hàng trực tiếp của <strong>{{ active_workspace.name }}</strong></p>
+    </div>
+    <div class="header-actions">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary">← Tổng quan Nội bộ</a>
+        <a href="/noibo/retail/gis/" class="btn btn-primary">🗺️ Bản đồ GIS</a>
+    </div>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.5rem;">
     {% for b in branches %}
     <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
@@ -22,10 +32,10 @@
             {% endif %}
         </div>
         <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.8rem; color: {% if b.is_active %}#4ade80{% else %}#f87171{% endif %}; font-weight: 600;">
+            <span class="{% if b.is_active %}status-active{% else %}status-inactive{% endif %}" style="font-size: 0.8rem; font-weight: 600;">
                 {% if b.is_active %}● Đang hoạt động{% else %}○ Ngừng hoạt động{% endif %}
             </span>
-            <span style="font-size: 0.85rem; color: #38bdf8; font-weight: 600;">{{ b.orders.count }} đơn hàng</span>
+            <span style="font-size: 0.85rem; color: #38bdf8; font-weight: 600;">{{ b.annotated_order_count|default:b.orders.count }} đơn hàng</span>
         </div>
     </div>
     {% empty %}

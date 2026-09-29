@@ -3,7 +3,8 @@ Automated tests for SLA policy model, deterministic deadline math, and status co
 """
 
 from datetime import timedelta
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
+from types import SimpleNamespace
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
@@ -13,6 +14,30 @@ from apps.retail.models import Customer
 from apps.service_ops.models import Service, SLA, SLAPriority, ServiceRequest, ServiceRequestStatus
 from apps.service_ops.services import create_sla_policy, create_service_request
 from apps.service_ops.sla_engine import calculate_sla_status, SLAComplianceStatus
+
+
+class MissingSLADataTests(SimpleTestCase):
+    def test_missing_deadlines_and_known_outcomes(self):
+        now = timezone.now()
+        for response, resolution, expected in (
+            (None, None, "UNKNOWN"),
+            (now+timedelta(hours=1), None, "UNKNOWN"),
+            (None, now+timedelta(hours=1), "UNKNOWN"),
+            (now-timedelta(seconds=1), None, "BREACHED"),
+            (None, now-timedelta(seconds=1), "BREACHED"),
+        ):
+            with self.subTest(response=response, resolution=resolution):
+                req = SimpleNamespace(created_at=now-timedelta(hours=1),
+                    response_deadline_at=response, resolution_deadline_at=resolution,
+                    responded_at=None, resolved_at=None, closed_at=None, status="OPEN")
+                result = calculate_sla_status(req, reference_time=now)
+                self.assertEqual(result["overall_status"], expected)
+                if response is None:
+                    self.assertEqual(result["response_status"], "UNKNOWN")
+                    self.assertIsNone(result["response_remaining_minutes"])
+                if resolution is None:
+                    self.assertEqual(result["resolution_status"], "UNKNOWN")
+                    self.assertIsNone(result["resolution_remaining_minutes"])
 
 
 class ServiceSLATests(TestCase):

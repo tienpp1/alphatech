@@ -1115,11 +1115,11 @@ def simulate_what_if_scenario(workspace: Workspace, user: User, **kwargs) -> Dic
         open_tickets = ServiceRequest.objects.for_workspace(workspace).filter(
             status__in=[ServiceRequestStatus.OPEN, ServiceRequestStatus.ASSIGNED, ServiceRequestStatus.IN_PROGRESS]
         ).count()
-        tech_count = Employee.objects.for_workspace(workspace).filter(is_active=True).count() or 1
+        tech_count = Employee.objects.for_workspace(workspace).filter(is_active=True).count()
         
         simulated_tickets = int(open_tickets * (1.0 + change_pct / 100.0))
-        baseline_load = round(open_tickets / tech_count, 1)
-        simulated_load = round(simulated_tickets / tech_count, 1)
+        baseline_load = round(open_tickets / tech_count, 1) if tech_count else None
+        simulated_load = round(simulated_tickets / tech_count, 1) if tech_count else None
 
         return {
             "tool": "simulate_what_if_scenario",
@@ -1135,7 +1135,10 @@ def simulate_what_if_scenario(workspace: Workspace, user: User, **kwargs) -> Dic
             "baseline_workload_per_tech": baseline_load,
             "simulated_workload_per_tech": simulated_load,
             "formula_used": "simulated_tickets = baseline_tickets * (1 + change_pct / 100)",
-            "impact_analysis": f"Nếu lượng ticket {'tăng' if change_pct > 0 else 'giảm'} {abs(change_pct):.0f}%, tải công việc trung bình mỗi kỹ thuật viên sẽ từ {baseline_load} chuyển sang {simulated_load} ticket/người.",
+            "impact_analysis": (
+                f"Nếu lượng ticket {'tăng' if change_pct > 0 else 'giảm'} {abs(change_pct):.0f}%, tải công việc trung bình mỗi kỹ thuật viên sẽ từ {baseline_load} chuyển sang {simulated_load} ticket/người."
+                if tech_count else "Không có kỹ thuật viên đang hoạt động; chưa thể tính tải công việc mỗi người."
+            ),
         }
 
     elif scenario_type == "STOCK_DEPLETION":
@@ -1158,7 +1161,7 @@ def simulate_what_if_scenario(workspace: Workspace, user: User, **kwargs) -> Dic
             "estimated_daily_demand": daily_demand,
             "estimated_days_to_stockout": days_until_empty,
             "formula_used": "days_to_stockout = remaining_units / daily_demand_rate",
-            "impact_analysis": f"Với tồn kho giả định {remaining_units} đơn vị và tốc độ bán trung bình {daily_demand} chiếc/ngày, sản phẩm dự kiến sẽ hết hàng sau khoảng {days_until_empty} ngày.",
+            "impact_analysis": f"Với tồn kho giả định {remaining_units} đơn vị và nhu cầu giả định cố định {daily_demand} chiếc/ngày (không lấy từ lịch sử bán hàng hay mô hình dự báo), thời gian hết hàng trong kịch bản là {days_until_empty} ngày.",
         }
 
     else:
@@ -1189,8 +1192,7 @@ def simulate_what_if_scenario(workspace: Workspace, user: User, **kwargs) -> Dic
 
 def explain_root_cause(workspace: Workspace, user: User, **kwargs) -> Dict[str, Any]:
     """
-    Compiles factual evidence and root causes for alerts, warnings, or recommendation scores.
-    Zero LLM hallucination.
+    Reports available evidence without treating generic heuristics as measured causes.
     """
     target_type = kwargs.get("target_type", "GENERAL")
     entity_name = kwargs.get("entity_name", "")
@@ -1199,52 +1201,45 @@ def explain_root_cause(workspace: Workspace, user: User, **kwargs) -> Dict[str, 
     evidence_parts = []
 
     if "STOCKOUT" in target_type or "HET_HANG" in target_type:
+        if not _check_perm(user, workspace, "retail.view_product"):
+            raise ToolPermissionDenied("User lacks permission to read product evidence.")
         from apps.retail.models import Product, StockBalance
-        prod = Product.objects.for_workspace(workspace).filter(name__icontains=entity_name).first() if entity_name else Product.objects.for_workspace(workspace).first()
-        if prod:
-            bal = StockBalance.objects.filter(product=prod).aggregate(s=Sum("quantity_on_hand"))["s"] or 0
-            evidence_parts.append({
-                "factor": "Tồn kho thực tế",
-                "value": f"{bal} {prod.unit}",
-                "rule": "Ngưỡng cảnh báo: Tồn kho < 7 ngày nhu cầu dự báo",
-            })
-            evidence_parts.append({
-                "factor": "Tốc độ tiêu thụ dự báo",
-                "value": "2.5 chiếc / ngày",
-                "rule": "Thời gian nhập hàng tiêu chuẩn (lead time): 3 ngày",
-            })
-            explanation = f"Sản phẩm '{prod.name}' bị cảnh báo hết hàng vì lượng tồn hiện tại ({bal} đơn vị) thấp hơn tổng nhu cầu dự báo trong thời gian nhập hàng (lead time 3 ngày)."
+        products = Product.objects.for_workspace(workspace)
+        if entity_id:
+            products = products.filter(pk=entity_id)
+        elif entity_name:
+            products = products.filter(name__iexact=entity_name)
         else:
-            explanation = "Cảnh báo hết hàng được kích hoạt khi lượng tồn kho chi nhánh thấp hơn ngưỡng an toàn tính toán từ mô hình dự báo nhu cầu."
+            products = products.none()
+        matches = list(products[:2])
+        prod = matches[0] if len(matches) == 1 else None
+        if prod:
+            bal = StockBalance.objects.filter(workspace=workspace, product=prod).aggregate(s=Sum("quantity_on_hand"))["s"]
+            if bal is None:
+                explanation = "Chưa có bản ghi tồn kho cho sản phẩm này; không thể coi dữ liệu thiếu là tồn bằng 0. Chưa đủ bằng chứng kết luận nguyên nhân cảnh báo."
+            else:
+                evidence_parts.append({
+                    "factor": "Tồn kho thực tế",
+                    "value": f"{bal} {prod.unit}",
+                    "rule": "Tổng tồn hiện tại; chưa chứng minh nguyên nhân cảnh báo",
+                })
+                explanation = f"Tồn hiện tại của '{prod.name}' là {bal} đơn vị. Chưa đối chiếu dự báo nhu cầu, ngưỡng và thời gian nhập hàng nên chưa đủ bằng chứng kết luận nguyên nhân cảnh báo."
+        else:
+            explanation = "Chưa xác định duy nhất sản phẩm trong workspace. Vui lòng cung cấp mã sản phẩm hoặc tên chính xác để đối chiếu tồn kho; chưa đủ bằng chứng kết luận nguyên nhân."
 
     elif "SLA" in target_type or "TRE" in target_type:
-        explanation = "Ticket có nguy cơ trễ SLA do thời gian xử lý còn lại dưới 4 giờ trong khi kỹ thuật viên đang có các tác vụ ưu tiên khác."
-        evidence_parts.append({
-            "factor": "Thời hạn SLA",
-            "value": "Còn dưới 4 giờ",
-            "rule": "Quy chuẩn SLA dịch vụ IT: Cần xử lý trước thời hạn phản hồi",
-        })
+        explanation = "Chưa đối chiếu phiếu dịch vụ, hạn SLA và lịch công việc thực tế. Vui lòng cung cấp mã phiếu; chưa đủ bằng chứng kết luận thời gian còn lại hay nguyên nhân nguy cơ trễ."
 
     elif "RECOMMENDATION" in target_type or "DE_XUAT" in target_type:
-        explanation = "Kỹ thuật viên được đề xuất dựa trên thuật toán tối ưu hóa đa tiêu chí: Khoảng cách địa lý GIS (trọng số 40%), Tải công việc hiện tại (trọng số 40%) và Kỹ năng phù hợp (trọng số 20%)."
-        evidence_parts.append({
-            "factor": "Khoảng cách địa lý",
-            "weight": "40%",
-            "detail": "Kỹ thuật viên ở vị trí gần hiện trường ticket nhất.",
-        })
-        evidence_parts.append({
-            "factor": "Tải công việc (Workload Score)",
-            "weight": "40%",
-            "detail": "Kỹ thuật viên có số lượng tác vụ đang xử lý thấp nhất.",
-        })
-        evidence_parts.append({
-            "factor": "Kỹ năng chuyên môn",
-            "weight": "20%",
-            "detail": "Kỹ thuật viên sở hữu chứng chỉ/kỹ năng phù hợp với loại sự cố.",
-        })
+        explanation = "Chưa đối chiếu một khuyến nghị phân công cụ thể và bảng điểm đã lưu. Vui lòng cung cấp mã khuyến nghị hoặc phiếu dịch vụ; chưa đủ bằng chứng khẳng định trọng số, khoảng cách hay kỹ thuật viên tối ưu."
 
+    elif target_type == "BRANCH_WARNING":
+        if entity_name:
+            explanation = "Chưa có bằng chứng được đối chiếu riêng với chi nhánh được hỏi để kết luận nguyên nhân cảnh báo. Vui lòng cung cấp mã cảnh báo hoặc khuyến nghị."
+        else:
+            explanation = "Chưa xác định chi nhánh cụ thể. Các khuyến nghị kèm theo, nếu có, là dữ liệu đã ghi nhận trong workspace; không chứng minh nguyên nhân của một chi nhánh cụ thể."
     else:
-        explanation = "Hệ thống đưa ra cảnh báo dựa trên các chỉ số hiệu suất kinh doanh và ngưỡng giới hạn an toàn đã được định cấu hình."
+        explanation = "Chưa đủ dữ liệu về đối tượng và cảnh báo để kết luận nguyên nhân."
 
     return {
         "tool": "explain_root_cause",

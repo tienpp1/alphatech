@@ -45,7 +45,7 @@
 {% block content %}
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
     <div>
-        <a href="/retail/orders/" style="color: #6366f1; text-decoration: none; font-size: 0.875rem;">← Quay lại Danh sách Đơn hàng</a>
+        <a href="/noibo/retail/orders/" id="btn-back-orders" style="color: #6366f1; text-decoration: none; font-size: 0.875rem;">← Quay lại Danh sách Đơn hàng</a>
         <h1 style="font-size: 2rem; font-weight: 800; margin-top: 0.5rem;">Đơn hàng #{{ order.order_number }}</h1>
     </div>
     <div>
@@ -64,6 +64,7 @@
     <div>
         <div class="card">
             <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;">Danh mục Hàng hóa Đã mua</h3>
+            <div class="table-responsive">
             <table class="line-items-table">
                 <thead>
                     <tr>
@@ -89,6 +90,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
 
             <!-- Financial Summary -->
             <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">

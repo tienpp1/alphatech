@@ -3,6 +3,7 @@ Django Admin configurations for Workspace and WorkspaceMembership.
 """
 
 from django.contrib import admin
+from django.db.models import Count
 from apps.workspaces.models import Workspace, WorkspaceMembership
 
 
@@ -27,10 +28,14 @@ class WorkspaceAdmin(admin.ModelAdmin):
     readonly_fields = ["id", "created_at", "updated_at"]
     inlines = [WorkspaceMembershipInline]
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(annotated_member_count=Count("memberships"))
+
     def get_member_count(self, obj):
-        return obj.memberships.count()
+        return getattr(obj, "annotated_member_count", obj.memberships.count())
 
     get_member_count.short_description = "Members"
+    get_member_count.admin_order_field = "annotated_member_count"
 
 
 @admin.register(WorkspaceMembership)
@@ -42,3 +47,4 @@ class WorkspaceMembershipAdmin(admin.ModelAdmin):
     search_fields = ["user__username", "user__email", "workspace__name", "role__name"]
     autocomplete_fields = ["user", "workspace", "role"]
     readonly_fields = ["joined_at"]
+    list_select_related = ["user", "workspace", "role"]

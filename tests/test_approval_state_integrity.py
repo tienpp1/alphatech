@@ -7,6 +7,10 @@ from apps.approvals.executor import execute_tool, process_approval_decision
 from apps.approvals.registry import ToolPermissionDenied, ToolValidationError
 from apps.retail.models import Branch, Category, Product, StockBalance, StockTransferStatus
 from apps.retail.services import rollback_stock_transfer
+from apps.audit.models import AuditLog
+from apps.retail.models import Customer, Order
+from apps.service_ops.models import Service, ServiceRequest, Employee
+from django.utils import timezone
 
 
 class ApprovalStateIntegrityTests(TestCase):
@@ -107,3 +111,53 @@ class ApprovalStateIntegrityTests(TestCase):
         self.assertEqual(row.status, StockTransferStatus.ROLLED_BACK)
         self.assertEqual(StockBalance.objects.get(branch=source, product=product).quantity_on_hand, 5)
         self.assertEqual(StockBalance.objects.get(branch=destination, product=product).quantity_on_hand, 1)
+        executed = AuditLog.objects.get(action="STOCK_TRANSFER_EXECUTED", entity_id=str(row.pk))
+        compensated = AuditLog.objects.get(action="STOCK_TRANSFER_ROLLED_BACK", entity_id=str(row.pk))
+        for event in (executed, compensated):
+            self.assertEqual(event.actor_user_id, self.user.pk)
+            self.assertEqual(event.workspace_id, self.ws.pk)
+            self.assertIsNotNone(event.timestamp)
+        self.assertEqual(executed.changes["before"], {"source_quantity": 5, "destination_quantity": 1})
+        self.assertEqual(executed.changes["after"], {"source_quantity": 3, "destination_quantity": 3})
+        self.assertEqual(compensated.changes["before"], executed.changes["after"])
+        self.assertEqual(compensated.changes["after"], executed.changes["before"])
+
+    def test_order_audit_matches_real_transition_and_replay(self):
+        customer = Customer.objects.create(workspace=self.ws, code="C", name="Test")
+        order = Order.objects.create(workspace=self.ws, customer=customer, order_number="O",
+                                     order_date=timezone.now().date(), order_timestamp=timezone.now())
+        result = execute_tool("update_order_status", self.ws, self.user,
+                              {"order_id": order.pk, "new_status": "CONFIRMED"})
+        req = ApprovalRequest.objects.get(pk=result["approval_request_id"])
+        process_approval_decision(req, self.user, "APPROVED")
+        process_approval_decision(req, self.user, "APPROVED")
+        order.refresh_from_db()
+        event = AuditLog.objects.get(action="MUTATION_EXECUTED", entity_id=str(req.pk))
+        self.assertEqual(event.actor_user_id, self.user.pk)
+        self.assertEqual(event.workspace_id, self.ws.pk)
+        self.assertIsNotNone(event.timestamp)
+        self.assertEqual(event.changes["result"]["old_status"], "PENDING")
+        self.assertEqual(event.changes["result"]["new_status"], order.status)
+        self.assertEqual(order.status, "CONFIRMED")
+
+    def test_dispatch_audit_matches_assignment_and_replay(self):
+        ws = Workspace.objects.create(code="service-audit", name="Service", workspace_type="SERVICE")
+        customer = Customer.objects.create(workspace=ws, code="C", name="Test")
+        service = Service.objects.create(workspace=ws, code="S", name="Test")
+        employee = Employee.objects.create(workspace=ws, code="E", full_name="Tech")
+        ticket = ServiceRequest.objects.create(workspace=ws, customer=customer, service=service,
+                                               request_number="T", title="Test", description="Test")
+        result = execute_tool("dispatch_technician", ws, self.user,
+                              {"ticket_id": ticket.pk, "employee_id": employee.pk})
+        req = ApprovalRequest.objects.get(pk=result["approval_request_id"])
+        process_approval_decision(req, self.user, "APPROVED")
+        process_approval_decision(req, self.user, "APPROVED")
+        ticket.refresh_from_db()
+        event = AuditLog.objects.get(action="TECHNICIAN_DISPATCHED", entity_id=str(ticket.pk))
+        self.assertEqual(event.actor_user_id, self.user.pk)
+        self.assertEqual(event.workspace_id, ws.pk)
+        self.assertIsNotNone(event.timestamp)
+        self.assertEqual(event.changes["before"], {"status": "OPEN", "assigned_employee_id": None})
+        self.assertEqual(event.changes["after"], {"status": ticket.status, "assigned_employee_id": ticket.assigned_employee_id})
+        self.assertEqual(ticket.status, "IN_PROGRESS")
+        self.assertEqual(ticket.assigned_employee_id, employee.pk)

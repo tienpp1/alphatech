@@ -3,8 +3,8 @@ AI AlphaTech — Chuyên viên Tư vấn & Điều phối Dịch vụ Công ngh�
 Hệ sinh thái AlphaTech: ABC Tech Store (Bán lẻ thiết bị) & XYZ IT Services (Dịch vụ CNTT).
 
 Đảm bảo:
-- Phục vụ khách hàng 24/7 với phong thái chuyên viên tư vấn tận tâm, chu đáo, am hiểu kỹ thuật.
-- Tuyệt đối bảo mật: Không tiết lộ giá vốn (cost_price), nhà cung cấp, tỷ lệ lợi nhuận hay chi phí nội bộ.
+- Trợ lý tự động; không thay thế xác nhận chính sách từ người phụ trách.
+- Nguyên tắc bảo mật nội bộ: Không tiết lộ giá vốn (cost_price), nhà cung cấp, tỷ lệ lợi nhuận hay chi phí nội bộ.
 - Dữ liệu thực tế: Trích xuất sản phẩm, dịch vụ, chi nhánh trực tiếp từ cơ sở dữ liệu.
 """
 
@@ -59,7 +59,7 @@ def handle_order_tracking(request, user_query, q_lower):
         )
         return {
             "reply": reply,
-            "suggestions": ["Chính sách đổi trả DOA 72h", "Yêu cầu kỹ thuật cài đặt", "Liên hệ Hotline hỗ trợ"]
+            "suggestions": ["Chính sách đổi trả bảo hành", "Yêu cầu kỹ thuật cài đặt", "Liên hệ Hotline hỗ trợ"]
         }
     else:
         return {
@@ -68,7 +68,7 @@ def handle_order_tracking(request, user_query, q_lower):
                 f"Quý khách vui lòng kiểm tra lại chính xác ký tự mã đơn, hoặc đăng nhập tại "
                 f"[Tài khoản khách hàng](/tai-khoan/) để xem toàn bộ danh sách đơn hàng đã mua."
             ),
-            "suggestions": ["Đăng nhập xem lịch sử", "Tư vấn sản phẩm mới", "Hotline 1900 6868"]
+            "suggestions": ["Đăng nhập xem lịch sử", "Tư vấn sản phẩm mới", "Liên hệ hỗ trợ"]
         }
 
 
@@ -77,27 +77,15 @@ def handle_authenticity_and_cocq(q_lower):
     keywords = [
         "chính hãng", "nguồn gốc", "xuất xứ", "co/cq", "co cq", "hàng giả", "hàng nhái",
         "hàng dựng", "mới 100%", "nguyên seal", "fullbox", "serial", "imei", "service tag",
-        "kiểm tra máy", "check hãng", "hàng thật", "chất lượng máy"
+        "kiểm tra máy", "check hãng", "hàng thật", "chất lượng máy", "bồi hoàn", "bồi thường"
     ]
     if not any(k in q_lower for k in keywords):
         return None
 
-    reply = (
-        "✨ **Cam Kết Hàng Chính Hãng 100% & Chứng Nhận Xuất Xứ (CO/CQ) Tại AlphaTech:**\n\n"
-        "AlphaTech hiểu rằng chất lượng và nguồn gốc thiết bị là mối quan tâm hàng đầu của Quý khách. Chúng tôi cam kết tuyệt đối:\n\n"
-        "1. **100% Máy Mới Nguyên Đai Nguyên Kiện (Brand New Fullbox):**\n"
-        "   • Toàn bộ laptop, linh kiện và thiết bị mạng đều là hàng nhập khẩu chính ngạch, nguyên seal nhà sản xuất.\n"
-        "   • Đầy đủ chứng nhận xuất xứ **CO (Certificate of Origin)** và chứng nhận chất lượng **CQ (Certificate of Quality)** từ các đối tác hàng đầu (Dell, HP, Lenovo, ASUS, Apple...).\n\n"
-        "2. **Hướng Dẫn Kiểm Tra Serial / Service Tag Trực Tuyến:**\n"
-        "   • Mỗi thiết bị đều có số Serial/Service Tag riêng biệt in trên thân máy và vỏ hộp trùng khớp 100%.\n"
-        "   • Quý khách có thể tự kiểm tra trực tiếp trên trang chủ của hãng (ví dụ `dell.com/support`, `support.hp.com`, `checkcoverage.apple.com`) để xác thực thời hạn bảo hành gốc.\n\n"
-        "3. **Cam Kết Bồi Thường 200%:**\n"
-        "   • AlphaTech cam kết **bồi hoàn 200% giá trị đơn hàng** nếu Quý khách phát hiện sản phẩm là hàng giả, hàng dựng hoặc linh kiện bị thay thế.\n\n"
-        "👉 Quý khách có thể xem đầy đủ danh mục tại [Sản phẩm chính hãng](/san-pham/) hoặc trải nghiệm trực tiếp tại các [Showroom AlphaTech](/chi-nhanh/)."
-    )
+    reply = "**Nguồn gốc và giấy tờ sản phẩm**\n\nTôi chưa có hồ sơ đã xác minh để cam kết xuất xứ, CO/CQ hoặc mức bồi hoàn cho từng sản phẩm. Quý khách nên yêu cầu thông tin Serial/Service Tag, chứng từ và điều kiện bảo hành của đúng mã hàng trước khi mua.\n\nVui lòng [liên hệ tư vấn](/lien-he/) hoặc xem [sản phẩm](/san-pham/) để được xác nhận."
     return {
         "reply": reply,
-        "suggestions": ["Xem danh mục Laptop Dell", "Chính sách bảo hành 1 đổi 1", "Hệ thống Showroom"]
+        "suggestions": ["Xem danh mục Laptop Dell", "Hỏi điều kiện bảo hành", "Hệ thống Showroom"]
     }
 
 
@@ -111,20 +99,7 @@ def handle_installment_procedure(q_lower):
     if not any(k in q_lower for k in keywords):
         return None
 
-    reply = (
-        "💳 **Hướng Dẫn & Thủ Tục Mua Hàng Trả Góp 0% Lãi Suất Tại AlphaTech:**\n\n"
-        "AlphaTech hợp tác với các tổ chức tài chính hàng đầu để mang đến 2 hình thức trả góp linh hoạt, tiện lợi nhất:\n\n"
-        "1. **Hình thức 1: Trả Góp 0% Qua Thẻ Tín Dụng (Credit Card):**\n"
-        "   • **Điều kiện:** Sở hữu thẻ tín dụng (Visa, Mastercard, JCB) của hơn 25 ngân hàng liên kết (Techcombank, Vietcombank, VPBank, MB, ACB, HSBC, Sacombank...).\n"
-        "   • **Ưu điểm:** **Lãi suất 0%**, không cần chứng minh thu nhập, không giữ giấy tờ, duyệt tự động chỉ sau **3 phút**.\n"
-        "   • **Kỳ hạn linh hoạt:** 3, 6, 9, hoặc 12 tháng.\n\n"
-        "2. **Hình thức 2: Trả Góp Qua Căn Cước Công Dân (CCCD Gắn Chip):**\n"
-        "   • **Đối tác tài chính:** Hỗ trợ qua Home Credit, HD Saison, Mcredit.\n"
-        "   • **Hồ sơ đơn giản:** Chỉ cần **CCCD gắn chip** chính chủ (độ tuổi từ 18 – 60 tuổi).\n"
-        "   • **Khoản trả trước:** Chỉ từ **10% – 30%** giá trị sản phẩm.\n"
-        "   • **Thời gian duyệt:** Xét duyệt hồ sơ online hoặc tại showroom chỉ trong **15 – 20 phút**, nhận máy ngay sau khi duyệt.\n\n"
-        "👉 Quý khách có thể lựa chọn phương thức trả góp trực tiếp tại trang [Giỏ hàng & Thanh toán](/gio-hang/) hoặc đến [Showroom gần nhất](/chi-nhanh/) để nhân viên hỗ trợ làm hồ sơ tận tình!"
-    )
+    reply = "**Thông tin mua trả góp**\n\nTôi chưa có chính sách trả góp đã xác minh về đối tác, lãi suất, phí, kỳ hạn hay điều kiện duyệt hồ sơ. Không thể xác nhận trả góp có sẵn tại bước thanh toán.\n\nQuý khách vui lòng [liên hệ tư vấn](/lien-he/) để được xác nhận bằng văn bản trước khi quyết định. Không gửi ảnh CCCD, số thẻ, mật khẩu hay mã OTP trong cuộc trò chuyện này."
     return {
         "reply": reply,
         "suggestions": ["Xem giỏ hàng", "Tư vấn Laptop dưới 20 triệu", "Hotline tư vấn trả góp"]
@@ -140,22 +115,10 @@ def handle_return_and_refund(q_lower):
     if not any(k in q_lower for k in keywords):
         return None
 
-    reply = (
-        "🔄 **Chính Sách Đổi Trả Linh Hoạt & Hoàn Tiền Tại AlphaTech:**\n\n"
-        "AlphaTech luôn đặt sự hài lòng của khách hàng lên hàng đầu với chính sách đổi trả minh bạch trong **07 ngày đầu tiên**:\n\n"
-        "1. **Đổi Sang Dòng Máy Khác (Mua Nhầm Cấu Hình / Nhu Cầu Thay Đổi):**\n"
-        "   • Hỗ trợ đổi sang mẫu laptop hoặc cấu hình khác có giá trị tương đương hoặc bù trừ chênh lệch.\n"
-        "   • **Miễn phí phí đổi** trong vòng **07 ngày** nếu máy còn nguyên vẹn như lúc xuất kho (đầy đủ hộp, phụ kiện, không trầy xước, không cấn móp).\n\n"
-        "2. **Trả Hàng & Hoàn Tiền Theo Nhu Cầu Cá Nhân:**\n"
-        "   • Nếu Quý khách không có nhu cầu sử dụng tiếp, áp dụng trả hàng trong 07 ngày với mức phí khấu hao hợp lý **10% – 15%** (chi phí mở hộp đưa về hàng trưng bày demo).\n"
-        "   • Số tiền hoàn lại sẽ được chuyển khoản trực tiếp về tài khoản ngân hàng của Quý khách trong vòng **1 – 3 ngày làm việc**.\n\n"
-        "3. **Lỗi Kỹ Thuật Nhà Sản Xuất (Chính sách DOA 72H):**\n"
-        "   • Nếu máy phát sinh lỗi phần cứng do nhà sản xuất trong 72 giờ đầu, Quý khách được **1 đổi 1 máy mới 100% nguyên seal hoàn toàn miễn phí**.\n\n"
-        "👉 Để được hỗ trợ thủ tục đổi trả nhanh nhất, Quý khách vui lòng liên hệ hotline: `1900 6868` (nhánh 2) hoặc mang máy đến bất kỳ [Chi nhánh AlphaTech](/chi-nhanh/)."
-    )
+    reply = "**Yêu cầu đổi trả và hoàn tiền**\n\nQuý khách vui lòng chuẩn bị mã đơn hàng và mô tả tình trạng sản phẩm tại [Liên hệ](/lien-he/). Tôi chưa có chính sách đã xác minh để xác nhận thời hạn đổi trả, mức phí hoặc thời gian hoàn tiền cho đơn hàng này. Cần được nhân viên xác nhận điều kiện áp dụng trước khi gửi trả hàng."
     return {
         "reply": reply,
-        "suggestions": ["Chính sách bảo hành DOA 72h", "Chi nhánh gần nhất", "Tư vấn chọn đúng cấu hình"]
+        "suggestions": ["Chính sách bảo hành bảo hành", "Chi nhánh gần nhất", "Tư vấn chọn đúng cấu hình"]
     }
 
 
@@ -169,18 +132,7 @@ def handle_hardware_upgrade_maintenance(user_query, q_lower):
     if not any(k in q_lower for k in keywords):
         return None
 
-    reply = (
-        "🛠️ **Dịch Vụ Nâng Cấp Phần Cứng, Vệ Sinh & Bảo Dưỡng Máy Tính — AlphaTech:**\n\n"
-        "1. **Nâng Cấp RAM & Ổ Cứng SSD NVMe Lấy Liền (15 – 30 Phút):**\n"
-        "   • **Linh kiện chuẩn hãng:** Sử dụng RAM/SSD chính hãng từ Samsung, Kingston, Crucial, WD với tốc độ đọc/ghi cao, bảo hành linh kiện **36 tháng**.\n"
-        "   • **Trực quan & Minh bạch:** Quý khách ngồi quan sát kỹ thuật viên thao tác trực tiếp tại quầy dịch vụ mở.\n"
-        "   • **Bảo toàn bảo hành gốc:** Thao tác chuẩn mực theo tài liệu hướng dẫn tháo lắp của hãng (Dell, HP, ASUS), dán tem niêm phong kỹ thuật AlphaTech, **không làm mất bảo hành chính hãng** của máy.\n\n"
-        "2. **Dịch Vụ Vệ Sinh Máy Chuyên Sâu & Tra Keo Tản Nhiệt Cao Cấp:**\n"
-        "   • Thổi sạch bụi bẩn khe tản nhiệt, vệ sinh quạt làm mát, tra dầu bôi trơn trục quạt.\n"
-        "   • Tra keo tản nhiệt cao cấp nhập khẩu (**Arctic MX-4 / Thermal Grizzly**) giúp nhiệt độ CPU/GPU giảm sâu từ **10°C – 15°C**, máy vận hành êm ái, kéo dài tuổi thọ linh kiện.\n"
-        "   • 🎁 **Đặc quyền:** **MIỄN PHÍ vệ sinh máy trọn đời** cho toàn bộ laptop và PC mua tại hệ thống AlphaTech!\n\n"
-        "👉 Quý khách có thể mang máy qua [Trạm kỹ thuật AlphaTech gần nhất](/chi-nhanh/) hoặc gửi yêu cầu tại [Đặt lịch dịch vụ](/yeu-cau-dich-vu/)!"
-    )
+    reply = "**Nâng cấp RAM/SSD và vệ sinh máy**\n\nQuý khách có thể gửi model máy và nhu cầu tại [Yêu cầu dịch vụ](/yeu-cau-dich-vu/). Cần được kỹ thuật viên xác nhận tính tương thích, ảnh hưởng đến bảo hành, chi phí và thời gian thực hiện. Tôi chưa có chính sách đã xác minh về bảo dưỡng miễn phí hay linh kiện tặng kèm."
     return {
         "reply": reply,
         "suggestions": ["Đặt lịch kỹ thuật viên", "Địa chỉ trạm kỹ thuật", "Tư vấn phụ kiện máy tính"]
@@ -197,18 +149,7 @@ def handle_software_and_remote_support(q_lower):
     if not any(k in q_lower for k in keywords):
         return None
 
-    reply = (
-        "💻 **Dịch Vụ Cài Đặt Phần Mềm, Windows Bản Quyền & Hỗ Trợ Kỹ Thuật Từ Xa:**\n\n"
-        "1. **Cài Đặt Hệ Điều Hành & Phần Mềm Chuẩn Sạch:**\n"
-        "   • 100% máy xuất xưởng được kỹ thuật viên kích hoạt bản quyền Windows 11 Pro sạch, không chứa phần mềm rác (bloatware).\n"
-        "   • Cài đặt sẵn bộ ứng dụng thiết yếu: Bộ gõ tiếng Việt Unikey, trình duyệt web, phần mềm nén file, bộ ứng dụng văn phòng cơ bản hoàn toàn miễn phí.\n"
-        "   • Hỗ trợ tư vấn và cài đặt phần mềm bảo mật diệt virus bản quyền (Kaspersky, Microsoft Defender for Endpoint).\n\n"
-        "2. **Dịch Vụ Sao Lưu & Chuyển Dữ Liệu Tốc Độ Cao (Data Migration):**\n"
-        "   • Kỹ thuật viên hỗ trợ chuyển toàn bộ tài liệu làm việc, hình ảnh, tài khoản email và bookmarks trình duyệt từ máy tính cũ sang máy tính mới an toàn, không lo thất thoát dữ liệu.\n\n"
-        "3. **Hỗ Trợ Kỹ Thuật Trực Tuyến Từ Xa 24/7:**\n"
-        "   • Đội ngũ kỹ sư trực tuyến hỗ trợ kết nối từ xa qua **UltraViewer / AnyDesk** để xử lý nhanh các sự cố phần mềm, cấu hình máy in, chia sẻ mạng nội bộ mà Quý khách không cần mang máy ra showroom.\n\n"
-        "👉 Quý khách cần hỗ trợ gấp vui lòng gọi Hotline kỹ thuật: `1900 6868` (nhánh 2) hoặc gửi tin nhắn tại đây để chuyên viên hướng dẫn!"
-    )
+    reply = "**Cài đặt phần mềm và chuyển dữ liệu**\n\nQuý khách có thể gửi nhu cầu tại [Yêu cầu dịch vụ](/yeu-cau-dich-vu/). Cần xác nhận phạm vi công việc, chi phí và giấy phép phần mềm trước khi thực hiện; tôi chưa có căn cứ xác nhận máy được tặng bản quyền. Hãy sao lưu dữ liệu cần thiết và không gửi mật khẩu, mã OTP hoặc mã truy cập từ xa vào cuộc trò chuyện."
     return {
         "reply": reply,
         "suggestions": ["Yêu cầu hỗ trợ kỹ thuật", "Tư vấn thiết bị mới", "Bảo hành chính hãng"]
@@ -229,22 +170,7 @@ def handle_b2b_corporate_quotation(q_lower):
     if not (any(k in q_lower for k in b2b_direct_keywords) or is_quotation_request):
         return None
 
-    reply = (
-        "🏢 **Chính Sách Khách Hàng Doanh Nghiệp (B2B) & Dự Án CNTT — AlphaTech:**\n\n"
-        "AlphaTech là đối tác cung cấp thiết bị và giải pháp hạ tầng CNTT tin cậy cho hơn 500+ doanh nghiệp tại Việt Nam:\n\n"
-        "1. **Chính Sách Chiết Khấu Bậc Thang Cực Kỳ Ưu Đãi:**\n"
-        "   • Chiết khấu trực tiếp từ **5% đến 12%** trên giá niêm yết cho các đơn hàng trang bị số lượng từ 3 máy trở lên.\n"
-        "   • Tặng kèm gói bảo trì hệ thống và hỗ trợ kỹ thuật tận nơi trị giá lên đến 10.000.000₫.\n\n"
-        "2. **Cung Cấp Bảng Báo Giá Chính Thức (Quotation/BOM) Trong 30 Phút:**\n"
-        "   • Phòng giải pháp B2B sẵn sàng xuất bảng chào giá cạnh tranh kèm đầy đủ thông số kỹ thuật, dấu mộc tròn pháp nhân chỉ sau **30 phút** nhận yêu cầu.\n\n"
-        "3. **Chính Sách Công Nợ Linh Hoạt (15 – 30 Ngày):**\n"
-        "   • Hỗ trợ kỳ hạn thanh toán công nợ từ **15 đến 30 ngày** cho các doanh nghiệp ký kết hợp đồng cung ứng định kỳ.\n\n"
-        "4. **Đầy Đủ Hồ Sơ Chứng Từ Chuẩn Kế Toán:**\n"
-        "   • Cung cấp Hợp đồng kinh tế, Hóa đơn VAT điện tử, Biên bản giao nhận và nghiệm thu thiết bị theo đúng quy định pháp luật.\n\n"
-        "📩 **Kênh tiếp nhận dành riêng cho Doanh nghiệp:**\n"
-        "• Email: `b2b@alphatech.vn` | Hotline chuyên trách B2B: `1900 6868` (nhánh 3)\n"
-        "• Hoặc Quý khách có thể để lại nhu cầu tại [Biểu mẫu yêu cầu dịch vụ](/yeu-cau-dich-vu/) để chuyên viên B2B gọi lại ngay!"
-    )
+    reply = "**Yêu cầu báo giá doanh nghiệp B2B**\n\nVui lòng cung cấp loại thiết bị, số lượng và yêu cầu sử dụng qua [Liên hệ](/lien-he/). Tôi chưa có chính sách đã xác minh về chiết khấu, công nợ hoặc thời hạn cấp báo giá. Giá và điều kiện giao dịch cần được nhân viên xác nhận cho yêu cầu cụ thể."
     return {
         "reply": reply,
         "suggestions": ["Gửi yêu cầu báo giá B2B", "Tư vấn Laptop văn phòng", "Dịch vụ IT Outsourcing"]
@@ -255,27 +181,15 @@ def handle_privacy_and_data_security(q_lower):
     """Tư vấn cam kết bảo mật dữ liệu riêng tư và an toàn thông tin khách hàng."""
     keywords = [
         "bảo mật dữ liệu", "lộ thông tin", "riêng tư", "bán thông tin", "xem trộm",
-        "dữ liệu cá nhân", "quyền riêng tư", "an toàn dữ liệu", "bảo mật thông tin"
+        "dữ liệu cá nhân", "quyền riêng tư", "an toàn dữ liệu", "bảo mật thông tin", "iso 27001", "iso27001"
     ]
     if not any(k in q_lower for k in keywords):
         return None
 
-    reply = (
-        "🔒 **Cam Kết Bảo Mật Dữ Liệu & Quyền Riêng Tư Của Khách Hàng — AlphaTech:**\n\n"
-        "Chúng tôi thấu hiểu rằng dữ liệu trong máy tính là tài sản vô giá và mang tính riêng tư cao của Quý khách. AlphaTech áp dụng quy trình an toàn thông tin chuẩn **ISO 27001**:\n\n"
-        "1. **Quy Tắc Tuyệt Đối Không Xâm Phạm Dữ Liệu Khách Hàng:**\n"
-        "   • Kỹ thuật viên chỉ được phép kiểm tra các thông số phần cứng và chức năng hệ thống theo biên bản yêu cầu của khách hàng.\n"
-        "   • Tuyệt đối **nghiêm cấm sao chép, truy cập hoặc phát tán** bất kỳ hình ảnh, tin nhắn, tài liệu cá nhân nào trong máy.\n\n"
-        "2. **Khu Vực Kỹ Thuật Mở & Giám Sát Camera 24/7:**\n"
-        "   • Phòng kỹ thuật được thiết kế vách kính trong suốt, Quý khách hoàn toàn có thể ngồi trực tiếp theo dõi từng thao tác sửa chữa.\n"
-        "   • Hệ thống camera an ninh độ nét cao ghi hình liên tục 24/7 và lưu trữ dữ liệu 90 ngày để phục vụ đối soát minh bạch.\n\n"
-        "3. **Cam Kết Bảo Vệ Dữ Liệu Cá Nhân:**\n"
-        "   • Thông tin cá nhân (Họ tên, số điện thoại, địa chỉ, lịch sử đơn hàng) được mã hóa trong cơ sở dữ liệu và **cam kết 100% không bao giờ chia sẻ hay bán cho bên thứ ba**.\n\n"
-        "Quý khách hoàn toàn yên tâm gửi gắm thiết bị tại [Các trung tâm dịch vụ AlphaTech](/chi-nhanh/)!"
-    )
+    reply = "**Thông tin bảo mật dữ liệu**\n\nTôi chưa có bằng chứng xác minh chứng nhận ISO 27001 hoặc các cam kết bảo mật tuyệt đối của đơn vị. Không thể xác nhận điều kiện camera, lưu trữ hay mã hóa chỉ từ cuộc trò chuyện này.\n\nTrước khi bàn giao thiết bị, Quý khách nên sao lưu dữ liệu cần thiết và yêu cầu xác nhận phạm vi truy cập, xử lý dữ liệu. Không gửi mật khẩu, mã OTP hoặc tài liệu nhạy cảm ở đây. Có thể [liên hệ](/lien-he/) để yêu cầu chính sách áp dụng."
     return {
         "reply": reply,
-        "suggestions": ["Xem trạm kỹ thuật gần nhất", "Quy trình sửa chữa minh bạch", "Hotline 1900 6868"]
+        "suggestions": ["Xem trạm kỹ thuật gần nhất", "Quy trình sửa chữa minh bạch", "Liên hệ hỗ trợ"]
     }
 
 
@@ -289,28 +203,16 @@ def handle_onsite_booking_guide(q_lower):
         "đặt lịch tận nơi", "sửa tại nhà", "thợ đến nhà", "on-site", "onsite",
         "chi phí tận nơi", "giá sửa tận nơi", "ngoài giờ", "cuối tuần", "đặt thợ",
         "kỹ thuật viên đến nhà", "đến tận nhà", "sửa tận nhà", "sửa tận nơi", "đặt kỹ thuật",
-        "kỹ thuật đến nhà", "kỹ thuật đến tận nhà", "thợ kỹ thuật", "kỹ thuật tận nơi", "đặt lịch sửa"
+        "kỹ thuật đến nhà", "kỹ thuật đến tận nhà", "thợ kỹ thuật", "kỹ thuật tận nơi", "đặt lịch sửa",
+        "kỹ thuật viên đến tận nơi", "kỹ thuật đến tận nơi"
     ]
     if not any(k in q_lower for k in keywords):
         return None
 
-    reply = (
-        "🛵 **Quy Trình Đặt Lịch Kỹ Thuật Viên Phục Vụ Tận Nơi (On-Site IT Service):**\n\n"
-        "Nhằm tiết kiệm thời gian cho Quý khách, AlphaTech cung cấp dịch vụ kỹ thuật viên lưu động đến tận nhà hoặc văn phòng công ty:\n\n"
-        "1. **Quy Trình Đặt Lịch Nhanh Chóng Trong 3 Bước:**\n"
-        "   • **Bước 1:** Quý khách điền thông tin sự cố tại [Biểu mẫu Điều phối Dịch vụ](/yeu-cau-dich-vu/) hoặc gọi Hotline `1900 6868`.\n"
-        "   • **Bước 2:** Chuyên viên kỹ thuật liên hệ xác nhận tình trạng, chuẩn bị thiết bị thay thế và hẹn giờ chính xác trong **15 phút**.\n"
-        "   • **Bước 3:** Kỹ thuật viên có mặt tại địa chỉ của Quý khách theo đúng lịch hẹn (hỗ trợ hỏa tốc trong **30 – 45 phút** với các sự cố khẩn cấp).\n\n"
-        "2. **Bảng Phí Minh Bạch & Không Phát Sinh Phí Ẩn:**\n"
-        "   • Phí kiểm tra và xử lý sự cố cơ bản tại chỗ: chỉ từ **150.000₫ – 350.000₫** tùy khu vực.\n"
-        "   • **Quy tắc vàng:** Kỹ thuật viên luôn kiểm tra, giải thích nguyên nhân và báo giá chi tiết trước. Quý khách đồng ý mới tiến hành xử lý.\n\n"
-        "3. **Linh Hoạt Ngoài Giờ & Cuối Tuần:**\n"
-        "   • Đội ngũ kỹ thuật viên phục vụ tất cả các ngày trong tuần (kể cả Thứ Bảy, Chủ Nhật) và hỗ trợ ngoài giờ hành chính đến **21:00**.\n\n"
-        "👉 Quý khách có thể gửi yêu cầu ngay tại [Form Điều Phối Kỹ Thuật 3 Bước](/yeu-cau-dich-vu/) để được xếp lịch sớm nhất!"
-    )
+    reply = "**Yêu cầu kỹ thuật tận nơi**\n\nQuý khách có thể gửi mô tả sự cố, địa điểm và thời gian mong muốn tại [Yêu cầu dịch vụ](/yeu-cau-dich-vu/). Gửi biểu mẫu chưa đồng nghĩa lịch hẹn đã được duyệt. Phạm vi phục vụ, chi phí và thời gian đến cần được nhân viên xác nhận; tôi chưa có bảng phí hay lịch trực đã xác minh."
     return {
         "reply": reply,
-        "suggestions": ["Đặt lịch kỹ thuật viên ngay", "Sự cố mạng khẩn cấp (SLA 15m)", "Hotline 1900 6868"]
+        "suggestions": ["Đặt lịch kỹ thuật viên ngay", "Sự cố mạng khẩn cấp ", "Liên hệ hỗ trợ"]
     }
 
 
@@ -323,20 +225,7 @@ def handle_warranty_and_doa(q_lower):
     if not any(k in q_lower for k in warranty_keywords):
         return None
 
-    reply = (
-        "🛡️ **Chính Sách Bảo Hành Chính Hãng & Đổi Mới DOA 72H Tại AlphaTech:**\n\n"
-        "1. **Chính sách 1 Đổi 1 Trong 72 Giờ (DOA - Dead on Arrival):**\n"
-        "   • Nếu thiết bị phát sinh lỗi phần cứng do nhà sản xuất trong vòng **72 giờ đầu tiên**, "
-        "AlphaTech cam kết **đổi ngay máy mới 100% nguyên seal**, Quý khách không phải chờ đợi gửi hãng thẩm định lâu ngày.\n\n"
-        "2. **Bảo Hành Tiêu Chuẩn Chính Hãng (12 – 36 Tháng):**\n"
-        "   • 100% máy tính, laptop và linh kiện đều được bảo hành chính hãng theo đúng tiêu chuẩn nhà sản xuất "
-        "(Dell ProSupport, HP Onsite, ASUS VIP Service, Lenovo Premier...).\n"
-        "   • Quý khách có thể mang trực tiếp đến bất kỳ Showroom AlphaTech nào hoặc các Trung tâm bảo hành ủy quyền của hãng trên toàn quốc.\n\n"
-        "3. **Chính Sách Cho Mượn Thiết Bị Thay Thế (Loaner Policy):**\n"
-        "   • Đối với khách hàng doanh nghiệp hoặc laptop làm việc cần gửi hãng xử lý trên 48 giờ, "
-        "AlphaTech hỗ trợ **cho mượn máy tính có cấu hình tương đương** để công việc của Quý khách không bị gián đoạn.\n\n"
-        "👉 Quý khách có thể mang máy đến [Trạm kỹ thuật gần nhất](/chi-nhanh/) hoặc gọi Tổng đài Bảo hành: `1900 6868` (nhánh 2) để được hỗ trợ tức thì."
-    )
+    reply = "**Thông tin bảo hành và đổi trả**\n\nĐiều kiện bảo hành cần được kiểm tra theo đúng sản phẩm và chứng từ mua hàng. Tôi chưa có chính sách đã xác minh để cam kết thời hạn, đổi máy ngay hoặc cho mượn máy thay thế.\n\nQuý khách vui lòng gửi mã đơn hàng và mô tả tình trạng tại [Liên hệ](/lien-he/) để được xác nhận điều kiện áp dụng."
     return {
         "reply": reply,
         "suggestions": ["Tìm chi nhánh bảo hành", "Báo sự cố kỹ thuật tận nơi", "Tư vấn Laptop thay thế"]
@@ -352,21 +241,7 @@ def handle_shipping_payment_vat(q_lower):
     if not any(k in q_lower for k in finance_keywords):
         return None
 
-    reply = (
-        "💳 **Chính Sách Thanh Toán, Vận Chuyển & Hóa Đơn VAT Điện Tử:**\n\n"
-        "1. **Phương Thức Thanh Toán Linh Hoạt:**\n"
-        "   • **COD (Thanh toán khi nhận hàng):** Áp dụng tiền mặt tận nơi trên toàn quốc.\n"
-        "   • **Chuyển khoản QR Code (VietQR):** Hệ thống tự động xác nhận thanh toán chỉ sau 30 giây.\n"
-        "   • **Quẹt thẻ POS:** Hỗ trợ mọi loại thẻ Visa, Mastercard, JCB, Napas tại showroom hoặc tận nơi.\n"
-        "   • **Trả góp 0% lãi suất:** Kỳ hạn linh hoạt 3 - 12 tháng qua thẻ tín dụng liên kết hơn 25 ngân hàng.\n\n"
-        "2. **Hóa Đơn Điện Tử VAT Hợp Pháp:**\n"
-        "   • 100% đơn hàng tại AlphaTech đều xuất hóa đơn VAT điện tử đầy đủ theo chuẩn Tổng cục Thuế.\n"
-        "   • Hóa đơn gửi trực tiếp qua email đăng ký của Quý khách trong vòng **24 giờ làm việc**.\n\n"
-        "3. **Chính Sách Giao Nhận & Phí Vận Chuyển:**\n"
-        "   • 🚚 **MIỄN PHÍ VẬN CHUYỂN TOÀN QUỐC** cho mọi đơn hàng từ **5.000.000₫** trở lên.\n"
-        "   • ⚡ **Giao hỏa tốc 2 Giờ:** Áp dụng khu vực nội thành TP.HCM (Quận 1, Tân Bình, Phú Nhuận, Bình Thạnh...).\n"
-        "   • 📦 **Giao hàng tiêu chuẩn:** 1 – 3 ngày trên toàn quốc với bảo hiểm hàng hóa nguyên vẹn 100%."
-    )
+    reply = "**Thanh toán, giao hàng và hóa đơn VAT**\n\nQuý khách hãy xem phương thức thanh toán và phí giao hàng đang hiển thị tại [Giỏ hàng](/gio-hang/) và bước thanh toán. Tôi chưa có bằng chứng về dịch vụ phát hành hóa đơn VAT tự động hoặc thời hạn giao hỏa tốc.\n\nNếu cần hóa đơn hoặc giao hàng theo yêu cầu, vui lòng [liên hệ](/lien-he/) để được xác nhận. Email xác nhận đơn hàng không thay thế hóa đơn VAT; gửi đơn cũng không đồng nghĩa tiền đã được nhận."
     return {
         "reply": reply,
         "suggestions": ["Xem giỏ hàng hiện tại", "Tư vấn Laptop chính hãng", "Chi nhánh mua trực tiếp"]
@@ -382,19 +257,7 @@ def handle_trade_in_upgrade(q_lower):
     if not any(k in q_lower for k in trade_in_keywords):
         return None
 
-    reply = (
-        "🔄 **Chương Trình Thu Cũ Đổi Mới (Trade-In) Trợ Giá Lên Đời Tại AlphaTech:**\n\n"
-        "Chương trình giúp Quý khách nâng cấp thiết bị công nghệ mới với chi phí tiết kiệm nhất:\n\n"
-        "• **Mức Trợ Giá Lên Đời:** Hỗ trợ trợ giá thêm **15% – 20%** trên giá trị định giá máy cũ khi Quý khách lên đời máy mới tại showroom.\n"
-        "• **Quy Trình Thẩm Định 4 Cấp Độ Nhanh Gọn (15 Phút):**\n"
-        "  - *Loại 1 (Like-new):* Thân vỏ đẹp, màn hình hoàn hảo, pin tốt, đầy đủ chức năng.\n"
-        "  - *Loại 2 (Trầy xước nhẹ):* Ngoại hình có vết xước nhỏ, linh kiện nguyên bản 100%.\n"
-        "  - *Loại 3 (Cấn móp):* Có vết cấn góc, các chức năng phần cứng vẫn vận hành bình thường.\n"
-        "  - *Loại 4 (Lỗi linh kiện):* Hỏng pin, phím liệt, màn hình ố nhẹ (vẫn được thu mua theo giá linh kiện).\n"
-        "• 🔒 **Cam Kết Zero Data Leak (Bảo Mật Dữ Liệu Tuyệt Đối):**\n"
-        "  Kỹ thuật viên sẽ hỗ trợ sao lưu toàn bộ tài liệu sang máy mới, sau đó tiến hành **xóa sạch dữ liệu và Factory Reset an toàn** ngay trước sự chứng kiến của Quý khách.\n\n"
-        "👉 Quý khách có thể mang máy đến trực tiếp [Các chi nhánh AlphaTech](/chi-nhanh/) để kỹ thuật viên kiểm tra và báo giá trong 15 phút!"
-    )
+    reply = "**Nhu cầu thu cũ đổi mới (Trade-In)**\n\nTôi chưa có chương trình thu cũ hoặc mức trợ giá đã xác minh. Quý khách có thể gửi model và tình trạng thiết bị qua [Liên hệ](/lien-he/) để hỏi khả năng tiếp nhận và định giá. Không nên gửi thiết bị trước khi điều kiện được xác nhận."
     return {
         "reply": reply,
         "suggestions": ["Xem danh sách Laptop mới", "Chi nhánh gần nhất", "Hotline tư vấn định giá"]
@@ -412,24 +275,18 @@ def handle_branch_locator(q_lower):
         return None
 
     branches = Branch.objects.filter(is_active=True, workspace__workspace_type=WorkspaceType.RETAIL).order_by("name")[:5]
-    lines = [
-        "🏢 **Hệ Thống Showroom & Trạm Kỹ Thuật AlphaTech (ABC Tech & XYZ IT):**\n",
-        "Showroom bán lẻ mở cửa phục vụ Quý khách từ **08:00 – 21:30** hàng ngày (kể cả Thứ Bảy & Chủ Nhật). "
-        "Riêng đội ngũ Kỹ thuật viên On-site trực khẩn cấp **24/7/365**.\n"
-    ]
+    lines = ["**Chi nhánh đang được niêm yết:**\n", "Giờ làm việc cần được chi nhánh xác nhận trước khi đến."]
     if branches:
         for b in branches:
             lines.append(
                 f"📍 **{b.name}**\n"
-                f"   • Địa chỉ: {b.address or 'Trung tâm công nghệ TP.HCM'}\n"
-                f"   • Hotline: `{b.phone or '1900 6868'}` (Hỗ trợ bán hàng & kỹ thuật)"
+                f"   • Địa chỉ: {b.address or 'Chưa cập nhật địa chỉ'}\n"
+                f"   • Hotline: `{b.phone or 'Chưa cập nhật số điện thoại'}` (Hỗ trợ bán hàng & kỹ thuật)"
             )
     else:
-        lines.append("📍 **Flagship Showroom Q.1:** 123 Nguyễn Thị Minh Khai, P. Bến Thành, Quận 1, TP.HCM (`1900 6868`)")
-        lines.append("📍 **Trạm Kỹ thuật Tân Bình:** 45 Hoàng Hoa Thám, P. 13, Q. Tân Bình, TP.HCM")
-        lines.append("📍 **Trạm Kỹ thuật TP. Thủ Đức:** 78 Võ Văn Ngân, P. Linh Chiểu, TP. Thủ Đức")
+        lines.append("Chưa có chi nhánh được niêm yết. Vui lòng xem [Liên hệ](/lien-he/).")
 
-    lines.append("\n👉 Quý khách có thể bật định vị GPS để tìm đường đi ngắn nhất tại [Bản đồ tương tác Chi nhánh](/chi-nhanh/).")
+    lines.append("\n👉 Quý khách có thể bật định vị GPS để xem gợi ý tuyến đường tại [Bản đồ tương tác Chi nhánh](/chi-nhanh/).")
     return {
         "reply": "\n".join(lines),
         "suggestions": ["Xem bản đồ chi nhánh", "Đặt hẹn kỹ thuật viên", "Tư vấn Laptop"]
@@ -449,8 +306,6 @@ def handle_technical_services(user_query, q_lower):
 
     # Determine specific problem focus
     is_emergency = any(k in q_lower for k in ["khẩn cấp", "rớt mạng", "sập", "cứu", "cháy", "treo", "p1", "p0", "ngay"])
-    is_server = any(k in q_lower for k in ["server", "máy chủ", "linux", "windows server", "raid"])
-    is_maintenance = any(k in q_lower for k in ["bảo trì", "định kỳ", "outsourcing", "helpdesk", "hàng tháng"])
 
     services = Service.objects.filter(is_active=True, workspace__workspace_type=WorkspaceType.SERVICE)
     srv_matches = []
@@ -462,44 +317,22 @@ def handle_technical_services(user_query, q_lower):
     lines = ["⚡ **Dịch Vụ Kỹ Thuật & Giải Pháp Hạ Tầng CNTT Doanh Nghiệp (XYZ IT Services):**\n"]
 
     if is_emergency:
-        lines.append(
-            "🚨 **QUY TRÌNH ỨNG CỨU SỰ CỐ KHẨN CẤP (P1) — CAM KẾT SLA:**\n"
-            "• **Phản hồi xác nhận:** Trong vòng **< 15 phút** kể từ khi nhận cuộc gọi/yêu cầu.\n"
-            "• **Điều phối kỹ sư On-site:** Có mặt tại văn phòng doanh nghiệp trong **30 – 45 phút** (khu vực nội thành TP.HCM).\n"
-            "• **Khuyến nghị sơ cứu ban đầu:** Nếu hệ thống mạng bị nghẽn/tấn công, Quý khách vui lòng ngắt kết nối đường WAN chính, "
-            "cô lập switch tầng và không khởi động lại máy chủ để bảo toàn log hệ thống.\n"
-        )
-    elif is_server:
-        lines.append(
-            "🖥️ **GIẢI PHÁP MÁY CHỦ & DỮ LIỆU CHUYÊN DỤNG:**\n"
-            "• Triển khai chuẩn hóa Windows Server / Ubuntu Linux Server kèm thiết lập bảo mật baseline.\n"
-            "• Cấu hình lưu trữ mảng đĩa RAID 1/5/10 chịu lỗi cao, sao lưu dữ liệu tự động chống ransomware.\n"
-        )
-    elif is_maintenance:
-        lines.append(
-            "🛠️ **DỊCH VỤ BẢO TRÌ HỆ THỐNG ĐỊNH KỲ (IT HELPDESK OUTSOURCING):**\n"
-            "• Vệ sinh phần cứng, kiểm tra sức khỏe ổ cứng máy chủ định kỳ hàng tháng.\n"
-            "• Tối ưu hệ thống mạng Wi-Fi Mesh / VLAN văn phòng, vá các lỗ hổng bảo mật mới nhất.\n"
-            "• Cam kết đường truyền ổn định 99.9% và báo cáo hiệu suất chi tiết cho ban giám đốc.\n"
-        )
-    else:
-        lines.append(
-            "🛡️ **Cam kết SLA chất lượng:** Phản hồi xác nhận trong **< 15 phút** cho mọi sự cố. "
-            "Đội ngũ kỹ sư đạt chứng chỉ quốc tế (CCNA, MCSA, LPIC, AWS) trực 24/7.\n"
-        )
+        lines.append("**Yêu cầu KHẨN CẤP:** Hãy liên hệ người phụ trách kỹ thuật và mô tả mức độ ảnh hưởng. "
+                     "Không tự ngắt hệ thống đang vận hành khi chưa có hướng dẫn của người phụ trách.")
+    lines.append("Thời gian phản hồi, xử lý và điều kiện SLA cần được xác nhận cho yêu cầu hoặc hợp đồng cụ thể; "
+                 "tôi chưa có lịch trực hay cam kết thời gian đã xác minh.")
 
     lines.append("📋 **Các gói dịch vụ tiêu biểu:**")
     for s in matched_services[:3]:
         lines.append(
             f"🔹 **{s.name}** ({s.category})\n"
-            f"   • Mô tả: {s.description[:110]}...\n"
             f"   • [Đặt yêu cầu dịch vụ này](/yeu-cau-dich-vu/?service_id={s.id})"
         )
 
-    lines.append("\n👉 Quý khách có thể gửi mô tả sự cố trực tiếp tại [Biểu mẫu Điều phối Dịch vụ 3 bước](/yeu-cau-dich-vu/) để kỹ sư liên hệ ngay.")
+    lines.append("\n👉 Quý khách có thể gửi mô tả sự cố trực tiếp tại [Biểu mẫu Điều phối Dịch vụ 3 bước](/yeu-cau-dich-vu/) để được xem xét và liên hệ xác nhận.")
     return {
         "reply": "\n".join(lines),
-        "suggestions": ["Báo sự cố khẩn cấp (SLA 15m)", "Bảo trì hệ thống định kỳ", "Tư vấn cấu hình máy chủ", "Hỏi mua thiết bị"]
+        "suggestions": ["Báo sự cố khẩn cấp ", "Bảo trì hệ thống định kỳ", "Tư vấn cấu hình máy chủ", "Hỏi mua thiết bị"]
     }
 
 
@@ -569,10 +402,7 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
             "• **Độ bền:** Bàn phím gõ êm, màn hình IPS chống chói (Anti-Glare), độ bền chuẩn quân đội chịu va đập tốt.\n"
         )
     else:
-        advice_lines.append(
-            "✨ AlphaTech tự hào là đại lý phân phối ủy quyền chính hãng của các thương hiệu hàng đầu: "
-            "**Dell, HP, Lenovo, ASUS, ThinkPad, Apple** với đầy đủ chứng chỉ CO/CQ và bảo hành tại hãng.\n"
-        )
+        advice_lines.append("Các thông tin dưới đây lấy từ danh mục sản phẩm đang niêm yết. Chứng từ xuất xứ cần được xác nhận theo mã hàng.")
 
     # Search products from database matching query or categories
     prod_matches = []
@@ -587,27 +417,26 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
         prod_matches = list(products[:4])
 
     if prod_matches:
-        advice_lines.append("🌟 **Các dòng sản phẩm nổi bật có sẵn tại kho:**")
+        advice_lines.append("🌟 **Các sản phẩm đang được niêm yết (tồn kho cần xác nhận):**")
         for p in prod_matches:
             price_str = format_vnd(p.unit_price)
             cat_name = p.category.name if p.category else "Thiết bị"
             advice_lines.append(
                 f"• **{p.name}**\n"
                 f"  - Mã SKU: `{p.sku}` | Phân khúc: {cat_name}\n"
-                f"  - Giá ưu đãi: **{price_str}**\n"
+                f"  - Giá niêm yết: **{price_str}**\n"
                 f"  - [Xem chi tiết & Mua ngay](/san-pham/{p.id}/)"
             )
 
     advice_lines.append(
-        "\n🎁 **Ưu đãi độc quyền tại AlphaTech:**\n"
-        "• Tặng kèm Balo chống sốc cao cấp + Chuột không dây chính hãng.\n"
-        "• Miễn phí cài đặt phần mềm bản quyền & vệ sinh máy trọn đời.\n"
-        "• Hỗ trợ trả góp 0% lãi suất và miễn phí vận chuyển tận nhà."
+        "\n**Thông tin trước khi mua:**\n"
+        "• Quà tặng và dịch vụ đi kèm cần được xác nhận theo sản phẩm.\n"
+        "• Điều kiện thanh toán, giao hàng và tồn kho cần được xác nhận trước khi mua."
     )
 
     return {
         "reply": "\n".join(advice_lines),
-        "suggestions": ["Xem toàn bộ sản phẩm", "Chính sách bảo hành 1 đổi 1", "Dịch vụ IT đi kèm", "Tìm chi nhánh gần nhất"]
+        "suggestions": ["Xem toàn bộ sản phẩm", "Hỏi điều kiện bảo hành", "Dịch vụ IT đi kèm", "Tìm chi nhánh gần nhất"]
     }
 
 
@@ -618,30 +447,17 @@ def process_alphatech_query(request, user_query):
     """
     if not user_query:
         return {
-            "reply": (
-                "Xin chào Quý khách! Tôi là **AI AlphaTech** – Chuyên viên tư vấn & Điều phối dịch vụ công nghệ của hệ sinh thái ABC Tech Store & XYZ IT Services.\n\n"
-                "Tôi luôn sẵn sàng trực tuyến 24/7 để đồng hành cùng Quý khách:\n"
-                "1. 💻 **Tư vấn cấu hình Laptop & PC:** Lựa chọn theo đúng nhu cầu (Văn phòng, Đồ họa 3D, Lập trình, Doanh nhân).\n"
-                "2. ⚡ **Dịch vụ Kỹ thuật Doanh nghiệp:** Tiếp nhận sự cố khẩn cấp với cam kết SLA phản hồi **< 15 phút**.\n"
-                "3. 🛡️ **Bảo hành & 1 Đổi 1 trong 72h (DOA):** 100% hàng chính hãng CO/CQ, chính sách cho mượn máy thay thế.\n"
-                "4. 💳 **Trả góp 0% & Thanh toán linh hoạt:** Trả góp qua thẻ tín dụng hoặc CCCD gắn chip, duyệt hồ sơ 15 phút.\n"
-                "5. 🚚 **Giao hàng hỏa tốc 2h & Hóa đơn VAT:** Miễn phí ship toàn quốc từ 5M, xuất hóa đơn VAT điện tử 24h.\n"
-                "6. 🛠️ **Nâng cấp RAM/SSD & Vệ sinh máy:** Linh kiện chính hãng lấy liền 30 phút, vệ sinh tra keo tản nhiệt MX-4.\n"
-                "7. 🏢 **Báo giá Khách hàng Doanh nghiệp B2B:** Chiết khấu bậc thang 5-12%, cấp bảng chào giá sau 30 phút, công nợ linh hoạt.\n"
-                "8. 🔄 **Thu cũ Đổi mới (Trade-In):** Trợ giá lên đời 15-20%, cam kết bảo mật xóa dữ liệu Zero Data Leak.\n"
-                "9. 📍 **Hệ thống Chi nhánh & Hotline 24/7:** Showroom mở cửa 08:00 - 21:30, hotline hỗ trợ 1900 6868.\n\n"
-                "Quý khách có thể bấm chọn một trong các gợi ý bên dưới hoặc nhập trực tiếp câu hỏi nhé!"
-            ),
+            "reply": "Xin chào Quý khách! Tôi là **AI AlphaTech**, trợ lý tự động hỗ trợ tìm sản phẩm, dịch vụ, chi nhánh và tra cứu đơn hàng. Với bảo hành, trả góp, hóa đơn hoặc lịch hẹn, tôi sẽ nêu rõ khi chưa có thông tin được xác minh. Quý khách đang cần hỗ trợ nội dung nào?",
             "suggestions": [
                 "💻 Tư vấn Laptop theo nhu cầu",
-                "⚡ Báo sự cố mạng / Server (SLA 15m)",
-                "🛡️ Chính sách bảo hành & 1 đổi 1 (DOA)",
-                "💳 Trả góp 0% qua CCCD / Thẻ",
+                "⚡ Báo sự cố mạng / Server ",
+                "🛡️ Hỏi điều kiện bảo hành (DOA)",
+                "💳 Hỏi điều kiện trả góp",
                 "🚚 Giao hàng & Hóa đơn VAT",
                 "🛠️ Nâng cấp RAM/SSD & Vệ sinh máy",
                 "🏢 Báo giá Doanh nghiệp B2B",
                 "🔄 Thu cũ đổi mới (Trade-In)",
-                "📍 Chi nhánh & Hotline 24/7",
+                "📍 Chi nhánh & Liên hệ",
                 "📦 Tra cứu đơn hàng"
             ]
         }
@@ -693,7 +509,7 @@ def process_alphatech_query(request, user_query):
     if res:
         return res
 
-    # 10. Warranty & DOA 72h policy
+    # 10. Warranty & bảo hành policy
     res = handle_warranty_and_doa(q_lower)
     if res:
         return res
@@ -725,21 +541,13 @@ def process_alphatech_query(request, user_query):
 
     # 16. Default courteous guidance
     return {
-        "reply": (
-            "Dạ, tôi là **AI AlphaTech** – Chuyên viên tư vấn & Điều phối dịch vụ công nghệ của ABC Tech Store & XYZ IT Services.\n\n"
-            "Để hỗ trợ Quý khách một cách chu đáo và chính xác nhất, Quý khách vui lòng cho tôi biết thêm chi tiết về nhu cầu của mình:\n\n"
-            "• Quý khách đang tìm kiếm **mẫu máy tính/laptop** với ngân sách hay công việc thế nào (Văn phòng, Đồ họa, Gaming, Lập trình)?\n"
-            "• Quý khách cần **mua trả góp 0%**, xin **báo giá doanh nghiệp B2B**, hay muốn **nâng cấp RAM/SSD/vệ sinh máy**?\n"
-            "• Quý khách cần hỗ trợ **sự cố kỹ thuật khẩn cấp** tại văn phòng hay đặt lịch kỹ thuật viên đến tận nơi (SLA < 15m)?\n"
-            "• Quý khách muốn tìm hiểu về **chính sách bảo hành 1 đổi 1 (DOA 72h)**, đổi trả linh hoạt hay xuất hóa đơn VAT điện tử?\n\n"
-            "Hoặc Quý khách có thể chọn nhanh các chủ đề tư vấn được quan tâm nhiều nhất dưới đây ạ:"
-        ),
+        "reply": "Xin chào Quý khách! Tôi là **AI AlphaTech**, trợ lý tự động hỗ trợ tìm sản phẩm, dịch vụ, chi nhánh và tra cứu đơn hàng. Với bảo hành, trả góp, hóa đơn hoặc lịch hẹn, tôi sẽ nêu rõ khi chưa có thông tin được xác minh. Quý khách đang cần hỗ trợ nội dung nào?",
         "suggestions": [
             "💻 Tư vấn Laptop theo nhu cầu",
-            "💳 Trả góp 0% qua CCCD / Thẻ",
-            "🛡️ Chính sách bảo hành & 1 đổi 1",
+            "💳 Hỏi điều kiện trả góp",
+            "🛡️ Hỏi điều kiện bảo hành",
             "🛠️ Nâng cấp RAM/SSD & Vệ sinh",
-            "⚡ Báo sự cố mạng (SLA 15m)",
+            "⚡ Báo sự cố mạng ",
             "🏢 Báo giá Doanh nghiệp B2B"
         ]
     }

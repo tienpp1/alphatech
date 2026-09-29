@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from django.test import RequestFactory, SimpleTestCase
 from django.template.loader import render_to_string
+from pathlib import Path
 
 from apps.public_web.views import public_branches_view
 
@@ -48,3 +49,50 @@ class PublicBranchFinderTests(SimpleTestCase):
             self.assertIn(f'id="{control}"', html)
         self.assertIn('min="1" max="10"', html)
         self.assertIn('aria-live="polite"', html)
+
+    def test_route_copy_states_provider_scope_without_absolute_claim(self):
+        context = self.context_for([self.branch()])
+        html = render_to_string("public/branches.html", context)
+        self.assertIn("không phải khoảng cách đường chim bay", html)
+        self.assertIn("Bán kính tính theo đường chim bay", html)
+        self.assertIn("tuyến ô tô", html)
+        self.assertIn("OSRM", html)
+        self.assertIn("Dịch vụ công cộng có giới hạn", html)
+        js = Path("static/public/js/branch-finder.js").read_text(encoding="utf-8")
+        self.assertIn("theo tuyến ô tô được cung cấp", js)
+        self.assertIn("chưa so sánh được tất cả", js)
+        self.assertIn("Không bảo đảm ngắn nhất tuyệt đối", html)
+
+    def test_gps_error_codes_and_accuracy_tiers(self):
+        js = Path("static/public/js/branch-finder.js").read_text(encoding="utf-8")
+        # Assert Vietnamese error messages for GPS codes 1 (permission denied), 2 (unavailable), 3 (timeout)
+        self.assertIn("Bạn chưa cho phép truy cập vị trí", js)
+        self.assertIn("Thiết bị chưa xác định được vị trí", js)
+        self.assertIn("Lấy vị trí quá thời gian chờ", js)
+        self.assertIn("Không lấy được vị trí", js)
+
+        # Assert accuracy thresholds in JS logic
+        self.assertIn("Thiết bị chưa cung cấp sai số", js)
+        self.assertIn("Vị trí chỉ gần đúng (sai số khoảng", js)
+        self.assertIn("Sai số thiết bị báo khoảng", js)
+
+        # Test pure JS functions via Node if available
+        import shutil, subprocess, json
+        node_bin = shutil.which("node")
+        if node_bin:
+            script = (
+                "const {accuracyMessage, distanceKm, inRadius, validPoint} = require('./static/public/js/branch-finder.js');\n"
+                "console.log(JSON.stringify({\n"
+                "  normal: accuracyMessage(45),\n"
+                "  degraded: accuracyMessage(250),\n"
+                "  missing: accuracyMessage(-1),\n"
+                "  dist: distanceKm({lat:10.7,lng:106.7},{lat:10.8,lng:106.8})\n"
+                "}));\n"
+            )
+            res = subprocess.run([node_bin, "-e", script], capture_output=True, text=True, encoding="utf-8", check=True)
+            data = json.loads(res.stdout.strip())
+            self.assertIn("Sai số thiết bị báo khoảng 45 m", data["normal"])
+            self.assertIn("Vị trí chỉ gần đúng (sai số khoảng 250 m)", data["degraded"])
+            self.assertIn("Thiết bị chưa cung cấp sai số", data["missing"])
+            self.assertGreater(data["dist"], 15.0)
+            self.assertLess(data["dist"], 16.0)

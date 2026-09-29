@@ -231,6 +231,16 @@
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
     }
 
+    .text-improvement-positive {
+        font-weight: 700;
+        color: #16a34a;
+    }
+
+    .text-improvement-negative {
+        font-weight: 700;
+        color: #dc2626;
+    }
+
     /* Toast Notification */
     .report-toast {
         position: fixed;
@@ -256,17 +266,101 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Print Stylesheet */
+    .report-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Screen Responsive Styles */
+    @media screen and (max-width: 768px) {
+        .a4-paper {
+            padding: 1.5rem 1.25rem !important;
+            margin-bottom: 1.5rem !important;
+            border-radius: 6px !important;
+        }
+        .report-header {
+            flex-direction: column !important;
+            gap: 1rem !important;
+        }
+        .report-meta-box {
+            text-align: left !important;
+        }
+        .kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.75rem !important;
+        }
+        .signature-grid {
+            grid-template-columns: 1fr !important;
+            gap: 2rem !important;
+            margin-top: 2rem !important;
+        }
+        .report-toolbar {
+            padding: 0.85rem 1rem !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .report-toolbar > div {
+            width: 100% !important;
+            justify-content: center !important;
+            flex-wrap: wrap !important;
+        }
+        .report-table-wrapper {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .kpi-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    /* Print Stylesheet (Optimized for A4 Paper & PDF Generation) */
     @media print {
-        body {
+        @page {
+            size: A4 portrait;
+            margin: 12mm 15mm 15mm 15mm;
+        }
+
+        html, body {
             background: #ffffff !important;
-            color: #000000 !important;
+            color: #0f172a !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-size: 10pt !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Hide all screen chrome, navigation, headers, footers, and interactive controls */
+        .app-header,
+        .app-footer,
+        footer,
+        .skip-link,
+        .report-toolbar,
+        .btn,
+        .notif-bell-container,
+        .edit-mode-banner,
+        .report-toast,
+        #report-toast {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
         }
 
-        .app-header, .report-toolbar, .btn, footer, .notif-bell-container, .edit-mode-banner, .report-toast {
-            display: none !important;
+        /* Flatten main wrapper containers to eliminate screen padding */
+        .app-container,
+        .main-content {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            display: block !important;
         }
 
         .a4-paper {
@@ -276,24 +370,158 @@
             margin: 0 !important;
             padding: 0 !important;
             border-radius: 0 !important;
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .report-header {
+            border-bottom: 2px solid #0f172a !important;
+            padding-bottom: 12px !important;
+            margin-bottom: 16px !important;
+            page-break-after: avoid;
+            break-after: avoid;
+        }
+
+        .report-title-section h1 {
+            font-size: 1.45rem !important;
+        }
+
+        .report-title-section h2 {
+            font-size: 0.92rem !important;
         }
 
         .report-editable {
             border: none !important;
             background: transparent !important;
             padding: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
 
         .section-title {
+            font-size: 10.5pt !important;
+            border-left: 4px solid #1d4ed8 !important;
+            padding-left: 8px !important;
+            margin: 18px 0 8px 0 !important;
             page-break-after: avoid;
+            break-after: avoid;
+        }
+
+        .kpi-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 10px !important;
+            margin-bottom: 12px !important;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .kpi-box {
+            background: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 4px !important;
+            padding: 6px 8px !important;
+            text-align: center !important;
+        }
+
+        .kpi-box .val {
+            font-size: 11.5pt !important;
+            color: #0f172a !important;
+        }
+
+        .kpi-box .lbl {
+            font-size: 6.8pt !important;
+            color: #475569 !important;
+        }
+
+        .report-table-wrapper {
+            overflow: visible !important;
+            width: 100% !important;
+            margin-bottom: 12px !important;
+            border: none !important;
         }
 
         .report-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 8.5pt !important;
+            margin-bottom: 10px !important;
+            page-break-inside: auto;
+            break-inside: auto;
+        }
+
+        .report-table thead {
+            display: table-header-group;
+        }
+
+        .report-table tfoot {
+            display: table-footer-group;
+        }
+
+        .report-table tr {
             page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .report-table th {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+            border: 1px solid #94a3b8 !important;
+            padding: 5px 8px !important;
+            font-weight: 700 !important;
+        }
+
+        .report-table td {
+            border: 1px solid #cbd5e1 !important;
+            padding: 5px 8px !important;
+            color: #1e293b !important;
+        }
+
+        .report-table tr:nth-child(even) td {
+            background: #f8fafc !important;
+        }
+
+        .exec-evaluation-card {
+            background: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 10px 14px !important;
+            margin-bottom: 14px !important;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .signature-grid {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 2rem !important;
+            margin-top: 2rem !important;
             page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .signature-block {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .signature-block .hint {
+            margin-bottom: 3.5rem !important;
+        }
+
+        .report-footer {
+            border-top: 1px solid #cbd5e1 !important;
+            padding-top: 8px !important;
+            margin-top: 14px !important;
+            font-size: 7.2pt !important;
+            color: #64748b !important;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        /* Suppress printed URL callouts after hyperlinks */
+        a[href]:after {
+            content: "" !important;
         }
     }
 </style>
@@ -348,7 +576,7 @@
         <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 1.4rem;">✏️</span>
             <div>
-                <strong>Chế độ Chỉnh sửa Báo cáo đang Bật:</strong> Bạn có thể nhấp chuột trực tiếp vào tiêu đề phụ, phần đánh giá của Ban điều hành (Mục 6), hoặc chức danh và người ký để chỉnh sửa nội dung văn bản.
+                <strong>Chế độ Chỉnh sửa Báo cáo đang Bật:</strong> Bạn có thể nhấp chuột trực tiếp vào tiêu đề phụ, phần đánh giá của Ban điều hành (Mục 7), hoặc chức danh và người ký để chỉnh sửa nội dung văn bản.
             </div>
         </div>
         <div style="display: flex; gap: 8px; flex-shrink: 0;">
@@ -378,6 +606,7 @@
 
     <!-- 1. Retail Domain Performance -->
     <div class="section-title">1. Hiệu quả Kinh doanh Bán lẻ (ABC Tech Store)</div>
+    <div style="font-size: 0.8rem; color: #64748b; margin-top: -0.4rem; margin-bottom: 0.85rem;">* Số liệu tổng hợp từ các giao dịch mẫu trong cơ sở dữ liệu thử nghiệm nội bộ, không suy rộng thành báo cáo tài chính thực tế.</div>
     <div class="kpi-grid">
         <div class="kpi-box">
             <div class="val">{{ retail.total_revenue|floatformat:0 }}₫</div>
@@ -420,6 +649,7 @@
 
     <!-- 3. Machine Learning Forecasting Evaluation -->
     <div class="section-title">3. Đánh giá Dự báo Học máy XGBoost vs Baseline</div>
+    <div class="report-table-wrapper">
     <table class="report-table">
         <thead>
             <tr>
@@ -439,7 +669,7 @@
                 <td>{{ run.mae|floatformat:2|default:"Chưa đo" }}</td>
                 <td>{{ run.rmse|floatformat:2|default:"Chưa đo" }}</td>
                 <td>{{ run.baseline_mae|floatformat:2|default:"Chưa đo" }}</td>
-                <td style="font-weight: 700; color: #16a34a;">
+                <td class="{% if run.improvement_pct != None and run.improvement_pct < 0 %}text-improvement-negative{% else %}text-improvement-positive{% endif %}">
                     {% if run.improvement_pct != None %}
                         {{ run.improvement_pct }}%
                     {% else %}
@@ -454,9 +684,11 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
 
     <!-- 4. Spatial GIS Insights -->
     <div class="section-title">4. Phân tích Bản đồ Không gian GIS (WGS84 SRID 4326)</div>
+    <div class="report-table-wrapper">
     <table class="report-table">
         <thead>
             <tr>
@@ -487,9 +719,11 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
 
     <!-- 5. Decision Support & HITL Approvals -->
     <div class="section-title">5. Khuyến nghị AI & Kiểm soát Phê duyệt (Human-in-the-loop)</div>
+    <div class="report-table-wrapper">
     <table class="report-table">
         <thead>
             <tr>
@@ -524,19 +758,78 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
 
-    <!-- 6. Executive Evaluation & Strategic Directives (Interactive Editable Section) -->
-    <div class="section-title">6. Đánh giá & Kết luận của Ban Điều hành</div>
-    <div style="margin-bottom: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem;">
-        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">6.1 Đánh giá Tổng quan & Hiệu quả Vận hành</h4>
+    <!-- 6. Operational Bulletins & Enterprise Collaboration -->
+    <div class="section-title">6. Thông tri Điều hành & Tương tác Nội bộ (Bảng tin & Kênh Trao đổi)</div>
+    <div class="kpi-grid">
+        <div class="kpi-box">
+            <div class="val">{{ operations.total_bulletins }}</div>
+            <div class="lbl">Tổng số Thông tri Ban hành</div>
+        </div>
+        <div class="kpi-box">
+            <div class="val">{{ operations.pinned_bulletins }}</div>
+            <div class="lbl">Thông tri Ghim Khẩn cấp</div>
+        </div>
+        <div class="kpi-box">
+            <div class="val">{{ operations.total_chat_messages }}</div>
+            <div class="lbl">Tin nhắn Trao đổi Tác nghiệp</div>
+        </div>
+        <div class="kpi-box">
+            <div class="val" style="color: #0284c7; font-size: 1.15rem; font-weight: 700;">Multi-Tenant</div>
+            <div class="lbl">Phân lập Logic Không gian</div>
+        </div>
+    </div>
+
+    <div class="report-table-wrapper">
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Tiêu đề Thông tri Điều hành</th>
+                <th>Mức độ Ưu tiên</th>
+                <th>Không gian Áp dụng</th>
+                <th>Người Ban hành</th>
+                <th>Thời gian</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in operations.recent_bulletins %}
+            <tr>
+                <td><strong>{{ b.title }}</strong></td>
+                <td>
+                    {% if b.priority == "PINNED" %}
+                        <span style="color: #d97706; font-weight: 700;">📌 GHIM ĐẦU TRANG</span>
+                    {% elif b.priority == "URGENT" %}
+                        <span style="color: #ef4444; font-weight: 700;">⚠️ KHẨN CẤP</span>
+                    {% else %}
+                        <span style="color: #3b82f6;">ℹ️ THÔNG THƯỜNG</span>
+                    {% endif %}
+                </td>
+                <td><code>{{ b.workspace.code }}</code> ({{ b.workspace.name }})</td>
+                <td>{{ b.author.get_full_name|default:b.author.username }}</td>
+                <td>{{ b.created_at|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: #94a3b8;">Không có thông tri điều hành nào gần đây.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+    <!-- 7. Executive Evaluation & Strategic Directives (Interactive Editable Section) -->
+    <div class="section-title">7. Đánh giá & Kết luận của Ban Điều hành</div>
+    <div class="exec-evaluation-card" style="margin-bottom: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem;">
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">7.1 Đánh giá Tổng quan & Hiệu quả Vận hành</h4>
         <p class="report-editable" data-edit-key="exec_assessment" id="edit-exec-assessment" style="margin: 0 0 14px 0; color: #334155; line-height: 1.6; font-size: 0.88rem;">
             Các chỉ số trên phản ánh dữ liệu trong phạm vi quyền truy cập tại thời điểm mở báo cáo. Chưa đánh giá tuân thủ SLA hoặc tác động của tối ưu GIS. Nhận xét chỉnh sửa thủ công không phải kết luận đã được hệ thống kiểm chứng.
         </p>
-        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">6.2 Nhận định Rủi ro & Tồn đọng Cần lưu ý</h4>
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">7.2 Nhận định Rủi ro & Tồn đọng Cần lưu ý</h4>
         <p class="report-editable" data-edit-key="risk_assessment" id="edit-risk-assessment" style="margin: 0 0 14px 0; color: #334155; line-height: 1.6; font-size: 0.88rem;">
             Cần theo dõi sát các mặt hàng có tốc độ luân chuyển nhanh để chủ động nhập hàng bù đắp tồn kho an toàn, hạn chế rủi ro đứt gãy cung ứng theo cảnh báo của mô hình XGBoost. Duy trì đào tạo chuyên môn cho kỹ thuật viên hiện trường để đáp ứng các ticket bảo trì cao cấp.
         </p>
-        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">6.3 Kế hoạch Hành động & Chỉ đạo Trọng tâm 14 Ngày tới</h4>
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">7.3 Kế hoạch Hành động & Chỉ đạo Trọng tâm 14 Ngày tới</h4>
         <p class="report-editable" data-edit-key="action_directives" id="edit-action-directives" style="margin: 0; color: #334155; line-height: 1.6; font-size: 0.88rem;">
             Ưu tiên giải quyết dứt điểm các yêu cầu phê duyệt chuyển kho và điều phối kỹ sư đang chờ duyệt. Tiếp tục làm giàu kho tri thức RAG với các tài liệu SOP kỹ thuật mới để nâng cao độ chính xác của trợ lý AI hỗ trợ vận hành.
         </p>
@@ -574,7 +867,12 @@
     function showToast(msg, icon) {
         var toast = document.getElementById('report-toast');
         if (!toast) return;
-        toast.innerHTML = '<span style="font-size: 1.2rem;">' + (icon || '✅') + '</span> <span>' + msg + '</span>';
+        var iconSpan = document.createElement('span');
+        iconSpan.style.fontSize = '1.2rem';
+        iconSpan.textContent = icon || '✅';
+        var msgSpan = document.createElement('span');
+        msgSpan.textContent = msg || '';
+        toast.replaceChildren(iconSpan, document.createTextNode(' '), msgSpan);
         toast.style.display = 'flex';
         setTimeout(function() {
             toast.style.display = 'none';

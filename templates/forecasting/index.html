@@ -45,6 +45,9 @@
     padding: 0.35rem;
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
 }
 
 .target-tab {
@@ -55,6 +58,8 @@
     color: #94a3b8;
     text-decoration: none;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .target-tab:hover {
@@ -298,6 +303,22 @@
     border-color: #6366f1;
     outline: none;
 }
+
+@media (max-width: 768px) {
+    .forecasting-container {
+        padding: 0.75rem 0.5rem;
+    }
+    .chart-wrapper {
+        height: 260px;
+    }
+    .studio-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .target-nav {
+        width: 100%;
+    }
+}
 </style>
 {% endblock %}
 
@@ -309,7 +330,8 @@
             <h1>📈 Dự báo &amp; Phân tích Xu hướng (Predictive Analytics)</h1>
             <p>Động cơ dự báo chuỗi thời gian XGBoost với kiểm định thời gian thực và đối sánh đường cơ sở Naive.</p>
         </div>
-        <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; background: rgba(255,255,255,0.08);">← Bảng điều khiển</a>
             <div class="target-nav">
                 {% for target in available_targets %}
                 <a href="?target={{ target.code }}" class="target-tab {% if selected_target == target.code %}active{% endif %}">
@@ -399,7 +421,7 @@
                 <canvas id="forecastChart"></canvas>
             </div>
             <div class="disclaimer-box" style="margin-top: 0.5rem; font-size: 0.75rem;">
-                ℹ️ <strong>Trực quan hóa Độ bất định:</strong> Dải bóng biểu thị dải dự báo xấp xỉ 95% dựa trên độ lệch chuẩn phần dư kiểm thử lịch sử. Dự báo đa bước đệ quy có thể tích lũy sai số về phía trước; các dải này minh họa độ bất định và không phải là khoảng xác suất chuẩn hóa tuyệt đối.
+                ℹ️ <strong>Dải tham khảo về độ bất định:</strong> Dải bóng được ước lượng từ RMSE kiểm thử lịch sử và mở rộng theo bước dự báo. Đây là dải chẩn đoán, chưa được hiệu chỉnh để bảo đảm độ bao phủ 95%. Dự báo đa bước đệ quy có thể tích lũy sai số; không dùng dải này như cam kết kết quả kinh doanh.
             </div>
         </div>
 
@@ -427,7 +449,7 @@
             </div>
             <span style="font-size: 0.8rem; color: #94a3b8;">Mục tiêu: {{ selected_target }}</span>
         </div>
-        <div style="overflow-x: auto;">
+        <div class="table-responsive" style="overflow-x: auto;">
             <table class="custom-table">
                 <thead>
                     <tr>
@@ -527,9 +549,12 @@
     </div>
 </div>
 
+{{ chart_data|json_script:"forecast-chart-payload" }}
+
 <script>
 // Parse data passed from backend
-const chartPayload = {{ chart_data|safe }};
+const chartPayloadEl = document.getElementById("forecast-chart-payload");
+const chartPayload = chartPayloadEl ? JSON.parse(chartPayloadEl.textContent) : {};
 
 document.addEventListener("DOMContentLoaded", function() {
     initForecastChart();
@@ -599,7 +624,7 @@ function initForecastChart() {
                     tension: 0.1,
                 },
                 {
-                    label: 'Dải cận trên (Dải dự báo xấp xỉ 95%)',
+                    label: 'Cận trên — dải tham khảo, chưa hiệu chỉnh',
                     data: upperSeries,
                     borderColor: 'rgba(168, 85, 247, 0.25)',
                     borderWidth: 1,
@@ -608,7 +633,7 @@ function initForecastChart() {
                     backgroundColor: 'rgba(168, 85, 247, 0.12)',
                 },
                 {
-                    label: 'Dải cận dưới (Dải dự báo xấp xỉ 95%)',
+                    label: 'Cận dưới — dải tham khảo, chưa hiệu chỉnh',
                     data: lowerSeries,
                     borderColor: 'rgba(168, 85, 247, 0.25)',
                     borderWidth: 1,

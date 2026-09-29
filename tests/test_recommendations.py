@@ -3,6 +3,7 @@ Test suite for Business Recommendations Engine (Phase 10).
 """
 
 from decimal import Decimal
+from unittest.mock import patch
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -13,8 +14,10 @@ from apps.recommendations.models import Recommendation, RecommendationType, Reco
 from apps.recommendations.scoring import calculate_technician_score
 from apps.recommendations.rules import evaluate_retail_recommendations, evaluate_service_recommendations
 from apps.approvals.models import ApprovalRequest, ApprovalStatus
+from apps.approvals.registry import ToolRegistry
+from apps.audit.models import AuditLog
 from apps.retail.models import Customer
-from apps.service_ops.models import Employee, Service, ServiceCategory, ServiceRequest
+from apps.service_ops.models import Employee, Service, ServiceCategory, ServiceRequest, Task
 
 
 class RecommendationEngineTests(TestCase):
@@ -141,6 +144,8 @@ class RecommendationEngineTests(TestCase):
 
         rec.refresh_from_db()
         self.assertEqual(rec.status, RecommendationStatus.ACCEPTED)
+        self.assertIsNone(rec.approval_request_id)
+        self.assertFalse(ApprovalRequest.objects.exists())
 
     def test_recommendation_reject_api(self):
         """Verify rejecting a recommendation updates status to REJECTED."""
@@ -198,6 +203,70 @@ class RecommendationEngineTests(TestCase):
         )
         self.assertEqual(replay.status_code, status.HTTP_200_OK)
         self.assertEqual(ApprovalRequest.objects.filter(idempotency_key=f"RECOMMENDATION-{rec.id}").count(), 1)
+
+        # Acceptance is not execution; the real ticket stays unchanged.
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status, "OPEN")
+        self.assertIsNone(self.ticket.assigned_employee_id)
+        permission, _ = Permission.objects.get_or_create(
+            codename="approvals.manage_approval", defaults={"name": "Review", "module": "approvals"})
+        self.role_manager.permissions.add(permission)
+        self_review = self.client.post(
+            f"/api/v1/approvals/{approval.pk}/decision/", {"decision": "APPROVED"},
+            format="json", **headers)
+        self.assertEqual(self_review.status_code, 400)
+        approval.refresh_from_db()
+        self.assertEqual(approval.status, ApprovalStatus.PENDING)
+        reviewer = User.objects.create_user(username="independent-reviewer", password=None)
+        WorkspaceMembership.objects.create(user=reviewer, workspace=self.workspace_service, role=self.role_manager)
+        self.client.force_authenticate(user=reviewer)
+        for _ in range(2):
+            reviewed = self.client.post(
+                f"/api/v1/approvals/{approval.pk}/decision/", {"decision": "APPROVED"},
+                format="json", **headers)
+            self.assertEqual(reviewed.status_code, 200)
+        self.ticket.refresh_from_db()
+        approval.refresh_from_db()
+        self.assertEqual(approval.status, ApprovalStatus.EXECUTED)
+        self.assertEqual(self.ticket.status, "IN_PROGRESS")
+        self.assertEqual(self.ticket.assigned_employee_id, self.employee.pk)
+        event = AuditLog.objects.get(action="MUTATION_EXECUTED", entity_id=str(approval.pk))
+        self.assertEqual(event.actor_user_id, reviewer.pk)
+        self.assertEqual(event.workspace_id, self.workspace_service.pk)
+        self.assertIsNotNone(event.timestamp)
+        self.assertEqual(event.changes["result"]["ticket_id"], self.ticket.pk)
+
+    def test_generated_retail_advice_does_not_enable_unimplemented_actions(self):
+        recommendations = evaluate_retail_recommendations(self.workspace_retail)
+        self.assertTrue(recommendations)
+        self.assertTrue(all(not row.proposed_action for row in recommendations))
+        # These unsupported transaction contracts must not silently become tools.
+        for name in ("stock_reorder", "workload_balancing"):
+            self.assertIsNone(ToolRegistry.get(name))
+
+    def test_overload_rule_remains_advisory(self):
+        for number in range(3):
+            Task.objects.create(service_request=self.ticket, assigned_to=self.employee,
+                                title=f"Task {number}", status="IN_PROGRESS")
+        rows = evaluate_service_recommendations(self.workspace_service)
+        overload = [r for r in rows if r.recommendation_type == RecommendationType.SERVICE_TECHNICIAN_OVERLOAD]
+        self.assertEqual(len(overload), 1)
+        self.assertEqual(overload[0].proposed_action, "")
+        self.assertFalse(ApprovalRequest.objects.exists())
+
+    def test_stockout_rule_remains_advisory(self):
+        from apps.recommendations.rules import evaluate_retail_stockout_recommendations
+        # Controlled predictor output tests mapping, not forecasting accuracy.
+        risk = dict(product_id=123, product_sku="TEST", product_name="Test", current_stock=0,
+                    predicted_daily_demand=2, days_to_stockout=0, lead_time_days=3,
+                    suggested_reorder_quantity=6, unit="cái", risk_level="OUT_OF_STOCK",
+                    expected_stockout_date="2026-09-15", safety_buffer_days=0)
+        with patch("apps.retail.stockout_services.get_stockout_risk_dashboard_data",
+                   return_value={"products_at_risk": [risk]}):
+            rows = evaluate_retail_stockout_recommendations(self.workspace_retail)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].proposed_action, "")
+        self.assertFalse(ApprovalRequest.objects.exists())
 
     def test_recommendation_workspace_isolation(self):
         """Verify users cannot see or accept recommendations from another workspace."""

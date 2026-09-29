@@ -78,3 +78,47 @@ class ServiceWorkloadTests(TestCase):
         self.assertEqual(summary["total_requests"], 1)
         self.assertEqual(summary["total_technicians"], 1)
         self.assertEqual(summary["available_technicians"], 1)
+        self.assertEqual(summary["unknown_sla_count"], 1)
+        self.assertEqual(summary["evaluated_sla_count"], 0)
+        self.assertIsNone(summary["sla_compliance_rate"])
+
+    def test_empty_dashboard_has_no_compliance_claim(self):
+        self.req.delete()
+        summary = get_service_dashboard_summary(self.workspace)
+        self.assertIsNone(summary["sla_compliance_rate"])
+        self.assertEqual(summary["unknown_sla_count"], 0)
+        self.assertEqual(summary["evaluated_sla_count"], 0)
+
+    def test_missing_deadline_excluded_but_known_breach_counted(self):
+        now = timezone.now()
+        ServiceRequest.objects.create(workspace=self.workspace, customer=self.customer,
+            service=self.service, request_number="BREACH-PARTIAL", title="Known breach",
+            response_deadline_at=now-timedelta(hours=1))
+        ServiceRequest.objects.create(workspace=self.workspace, customer=self.customer,
+            service=self.service, request_number="KNOWN", title="Within deadlines",
+            response_deadline_at=now+timedelta(hours=2),
+            resolution_deadline_at=now+timedelta(hours=4))
+        summary = get_service_dashboard_summary(self.workspace)
+        self.assertEqual(summary["unknown_sla_count"], 1)
+        self.assertEqual(summary["breached_sla_count"], 1)
+        self.assertEqual(summary["evaluated_sla_count"], 2)
+        self.assertEqual(summary["sla_compliance_rate"], 50.0)
+
+    def test_dashboard_aggregates_all_tickets_not_first_200(self):
+        now = timezone.now()
+        # More than the former silent cap. All have explicit deadlines.
+        self.req.delete()
+        tickets = ServiceRequest.objects.bulk_create([
+            ServiceRequest(workspace=self.workspace, customer=self.customer,
+                service=self.service, request_number=f"BULK-{i}", title="Aggregate fixture",
+                status="RESOLVED", responded_at=now, resolved_at=now,
+                response_deadline_at=now + timedelta(hours=1),
+                resolution_deadline_at=now + timedelta(hours=2))
+            for i in range(201)
+        ])
+        ServiceRequest.objects.filter(workspace=self.workspace).update(created_at=now-timedelta(hours=1))
+        ServiceRequest.objects.filter(pk=tickets[0].pk).update(created_at=now-timedelta(hours=202))
+        summary = get_service_dashboard_summary(self.workspace)
+        self.assertEqual(summary["total_requests"], 201)
+        self.assertEqual(summary["on_time_sla_count"], 201)
+        self.assertEqual(summary["avg_resolution_time_hours"], 2.0)

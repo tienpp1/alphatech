@@ -12,6 +12,8 @@ Covers:
 """
 
 from decimal import Decimal
+import re
+from django.core import mail
 from datetime import timedelta
 from django.test import TestCase, Client
 from django.utils import timezone
@@ -183,6 +185,20 @@ class InternalNotificationsTestCase(TestCase):
         self.assertEqual(resp.status_code, 302)
 
         # Check notification received by retail admin
+        # Registration is pending until mailbox ownership is proved. Do not
+        # bypass activation or notify administrators for unverified signups.
+        pending_user = User.objects.get(email="dangky.moi@testmail.vn")
+        self.assertFalse(pending_user.is_active)
+        self.assertFalse(Notification.objects.filter(
+            event_type=NotificationEventType.NEW_CUSTOMER,
+        ).exists())
+        code_match = re.search(r"Mã đăng ký AlphaTech của bạn: (\d{6})", mail.outbox[-1].body)
+        self.assertIsNotNone(code_match)
+        with self.captureOnCommitCallbacks(execute=True):
+            verified = self.client.post("/dang-ky/xac-minh-ma/", {"code": code_match.group(1)})
+        self.assertEqual(verified.status_code, 302)
+        pending_user.refresh_from_db()
+        self.assertTrue(pending_user.is_active)
         notif = Notification.objects.filter(
             recipient=self.user_retail_admin,
             event_type=NotificationEventType.NEW_CUSTOMER,

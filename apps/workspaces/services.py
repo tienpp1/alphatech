@@ -3,7 +3,7 @@ Business services for Workspace lifecycle, Tenancy resolution, and Switching.
 """
 
 from typing import Optional, Tuple, List
-from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist, ValidationError
 from django.db.models import QuerySet
 from apps.workspaces.models import Workspace, WorkspaceMembership
 
@@ -110,12 +110,12 @@ def validate_workspace_access(
     if not user or not user.is_authenticated or not user.is_active or not workspace_id:
         return False, None, None
 
-    try:
-        workspace = Workspace.objects.get(id=workspace_id, is_active=True)
-    except (Workspace.DoesNotExist, ValueError, TypeError):
-        return False, None, None
-
     if user.is_superuser:
+        try:
+            workspace = Workspace.objects.get(id=workspace_id, is_active=True)
+        except (Workspace.DoesNotExist, ValidationError, ValueError, TypeError):
+            return False, None, None
+
         membership = WorkspaceMembership.objects.filter(
             user=user,
             workspace=workspace,
@@ -124,13 +124,14 @@ def validate_workspace_access(
         return True, membership, workspace
 
     try:
-        membership = WorkspaceMembership.objects.select_related("role").get(
+        membership = WorkspaceMembership.objects.select_related("workspace", "role").get(
             user=user,
-            workspace=workspace,
+            workspace_id=workspace_id,
+            workspace__is_active=True,
             is_active=True,
         )
-        return True, membership, workspace
-    except WorkspaceMembership.DoesNotExist:
+        return True, membership, membership.workspace
+    except (WorkspaceMembership.DoesNotExist, ValidationError, ValueError, TypeError):
         return False, None, None
 
 
@@ -214,6 +215,8 @@ def resolve_active_workspace(
     if user.is_superuser:
         first_workspace = Workspace.objects.filter(is_active=True).first()
         if first_workspace:
+            if request and hasattr(request, "session"):
+                request.session["active_workspace_id"] = str(first_workspace.id)
             return first_workspace, None
 
     return None, None

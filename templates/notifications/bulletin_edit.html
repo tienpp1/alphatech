@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Cập nhật bản tin{% endblock %}
+{% block content %}
+<section style="max-width: 760px; margin: 0 auto;">
+  <h1>Cập nhật bản tin</h1>
+  <p>Không gian: {{ active_workspace.name }}. Người đăng và phạm vi bản tin được giữ nguyên.</p>
+  <form method="post" class="card" style="padding: 24px;">
+    {% csrf_token %}
+    <input type="hidden" name="workspace_id" value="{{ active_workspace.pk }}">
+    {% if form.errors %}
+    <div role="alert" tabindex="-1" autofocus>
+      <h2>Vui lòng kiểm tra thông tin</h2>
+      <ul>{% for field in form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}</ul>
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    {% for field in form %}
+    <div style="margin-bottom: 20px;">
+      {{ field.label_tag }}
+      <div>{{ field }}</div>
+      {{ field.errors }}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+    <a class="btn btn-secondary" href="/noibo/bang-tin/?workspace_id={{ active_workspace.pk }}">Hủy, về bảng tin</a>
+  </form>
+</section>
+{% endblock %}

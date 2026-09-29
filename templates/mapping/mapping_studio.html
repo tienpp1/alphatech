@@ -2,12 +2,46 @@
 
 {% block title %}Xưởng Ánh xạ — {{ profile.name }}{% endblock %}
 
+{% block extra_head %}
+<style>
+.studio-workspace-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 30px;
+}
+.quick-add-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+@media (max-width: 992px) {
+    .studio-workspace-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 768px) {
+    .quick-add-form {
+        grid-template-columns: 1fr;
+    }
+}
+.btn-apply-active { background: #10b981; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.btn-apply-disabled { background: #10b981; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: not-allowed; display: flex; align-items: center; gap: 6px; opacity: .45; }
+.msg-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; }
+.msg-alert.msg-success { background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; }
+.msg-alert.msg-error { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; }
+.msg-alert.msg-info { background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #60a5fa; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid" style="max-width: 1440px; margin: 0 auto; padding: 24px 16px;">
     <!-- Breadcrumb & Header -->
     <div style="margin-bottom: 16px; font-size: 0.85rem; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <a href="/mapping/" style="color: #60a5fa; text-decoration: none;">Bảng điều khiển Ánh xạ</a> &gt;
+            <a href="/noibo/mapping/" style="color: #60a5fa; text-decoration: none;">Bảng điều khiển Ánh xạ</a> &gt;
             <span>{{ profile.name }}</span>
         </div>
         <span style="color: #64748b;">Mã Hồ sơ: {{ profile.id }}</span>
@@ -31,11 +65,11 @@
             </div>
         </div>
 
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button id="btnAiSuggest" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                 <span>✨</span> Gợi ý Ánh xạ Tự động bằng AI
             </button>
-            <button id="btnOpenApplyModal" class="btn" {% if not can_apply %}disabled title="Bạn không có quyền áp dụng ánh xạ"{% endif %} style="background: #10b981; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;{% if not can_apply %} opacity: .45; cursor: not-allowed;{% endif %}">
+            <button id="btnOpenApplyModal" class="btn {% if not can_apply %}btn-apply-disabled{% else %}btn-apply-active{% endif %}" {% if not can_apply %}disabled title="Bạn không có quyền áp dụng ánh xạ"{% endif %}>
                 <span>🚀</span> Áp dụng Nhập Dữ liệu Chuẩn hóa
             </button>
         </div>
@@ -45,7 +79,7 @@
     {% if messages %}
     <div style="margin-bottom: 20px;">
         {% for message in messages %}
-        <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; {% if message.tags == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;{% elif message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171;{% else %}background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #60a5fa;{% endif %}">
+        <div class="msg-alert {% if message.tags == 'success' %}msg-success{% elif message.tags == 'error' %}msg-error{% else %}msg-info{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
@@ -65,7 +99,7 @@
     </div>
 
     <!-- Main Workspace Grid -->
-    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; margin-bottom: 30px;">
+    <div class="studio-workspace-grid">
         <!-- Left: Discovered Source Columns -->
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 8px;">
@@ -106,7 +140,7 @@
                 </div>
 
                 {% if rules %}
-                <div style="overflow-x: auto;">
+                <div class="table-responsive" style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
                         <thead>
                             <tr style="background: #0f172a; color: #94a3b8; border-bottom: 1px solid #334155;">
@@ -178,7 +212,7 @@
             {% if can_manage %}
             <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
                 <h4 style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; margin-bottom: 12px;">Thêm Quy tắc Chuyển đổi Mới</h4>
-                <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end;">
+                <form method="POST" class="quick-add-form">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="ADD_RULE">
 
@@ -229,10 +263,10 @@
                     <span>🔬</span> Xem trước Chuyển đổi Trực tiếp &amp; Bộ Mô phỏng Kiểm duyệt
                 </h3>
                 <p style="color: #94a3b8; font-size: 0.8rem; margin: 4px 0 0 0;">
-                    Kiểm tra các quy tắc ánh xạ trên các dòng trong bộ đệm staging ngay trong bộ nhớ. Tuyệt đối không thay đổi dữ liệu (không ghi vào cơ sở dữ liệu).
+                    Kiểm tra các quy tắc ánh xạ trên các dòng trong bộ đệm staging ngay trong bộ nhớ (chế độ chỉ đọc, không ghi dữ liệu vào cơ sở dữ liệu).
                 </p>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <select id="previewJobSelect" style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; padding: 8px 12px; font-size: 0.85rem;">
                     <option value="">-- Tự động (Lô Nhập Gần nhất) --</option>
                     {% for j in import_jobs %}
@@ -289,6 +323,9 @@
     </div>
 </div>
 
+{{ discovery.columns|json_script:"source-columns-data" }}
+{{ discovery.column_stats|json_script:"column-stats-data" }}
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const profileId = "{{ profile.id }}";
@@ -304,11 +341,14 @@ document.addEventListener("DOMContentLoaded", function() {
         btnAiSuggest.disabled = true;
         btnAiSuggest.innerHTML = "<span>⏳</span> Đang phân tích Cấu trúc...";
 
-        const sourceCols = {{ discovery.columns|safe }};
+        const sourceColsEl = document.getElementById("source-columns-data");
+        const sourceCols = sourceColsEl ? JSON.parse(sourceColsEl.textContent) : [];
+        const statsEl = document.getElementById("column-stats-data");
+        const statsData = statsEl ? JSON.parse(statsEl.textContent) : {};
         const sampleVals = {};
-        {% for col, stats in discovery.column_stats.items %}
-        sampleVals["{{ col }}"] = {{ stats.sample_values|safe }};
-        {% endfor %}
+        Object.keys(statsData).forEach(function(col) {
+            sampleVals[col] = statsData[col].sample_values || [];
+        });
 
         fetch("/api/v1/mapping/ai-suggest/", {
             method: "POST",

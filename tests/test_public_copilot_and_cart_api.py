@@ -90,7 +90,7 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         self.assertIn("warranty_doa", data["capabilities"])
 
     def test_public_copilot_warranty_and_doa_policy(self):
-        """POST /api/v1/public/copilot/ explains 72h DOA 1-to-1 replacement and official warranty."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "chính sách bảo hành và đổi trả 1 đổi 1 như thế nào"}),
@@ -98,13 +98,15 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIn("DOA", data["reply"])
-        self.assertIn("72 giờ", data["reply"])
-        self.assertIn("1 Đổi 1", data["reply"])
-        self.assertIn("1900 6868", data["reply"])
+        self.assertIn("chưa có chính sách", data["reply"])
+        self.assertIn("điều kiện áp dụng", data["reply"])
+        self.assertNotIn("72 giờ", data["reply"])
+        self.assertNotIn("1 Đổi 1", data["reply"])
+        self.assertNotIn("1900 6868", data["reply"])
+
 
     def test_public_copilot_shipping_payment_vat(self):
-        """POST /api/v1/public/copilot/ explains payment methods, express shipping, and e-VAT."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "công ty có xuất hóa đơn VAT và giao hàng hỏa tốc không"}),
@@ -113,12 +115,14 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn("VAT", data["reply"])
-        self.assertIn("hỏa tốc", data["reply"])
-        self.assertIn("5.000.000₫", data["reply"])
-        self.assertIn("Trả góp 0%", data["reply"])
+        self.assertIn("chưa có bằng chứng", data["reply"])
+        self.assertNotIn("5.000.000₫", data["reply"])
+        self.assertNotIn("Trả góp 0%", data["reply"])
+        self.assertNotIn("24 giờ", data["reply"])
+
 
     def test_public_copilot_trade_in_upgrade(self):
-        """POST /api/v1/public/copilot/ explains trade-in program, subsidies, and zero data leak."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "tôi muốn thu cũ đổi mới lên đời laptop"}),
@@ -127,8 +131,10 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn("Trade-In", data["reply"])
-        self.assertIn("15%", data["reply"])
-        self.assertIn("Zero Data Leak", data["reply"])
+        self.assertIn("chưa có chương trình", data["reply"])
+        self.assertNotIn("15%", data["reply"])
+        self.assertNotIn("Zero Data Leak", data["reply"])
+
 
     def test_public_copilot_workflow_specific_laptop_consulting(self):
         """POST /api/v1/public/copilot/ provides tailored advice for design / architecture."""
@@ -144,7 +150,7 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         self.assertIn("RAM", data["reply"])
 
     def test_public_copilot_emergency_network_sla(self):
-        """POST /api/v1/public/copilot/ emphasizes <15m SLA response for emergency network outage."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "công ty bị rớt mạng khẩn cấp cần kỹ thuật viên gấp"}),
@@ -153,8 +159,10 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn("KHẨN CẤP", data["reply"])
-        self.assertIn("15 phút", data["reply"])
-        self.assertIn("30 – 45 phút", data["reply"])
+        self.assertIn("cần được xác nhận", data["reply"])
+        self.assertNotIn("15 phút", data["reply"])
+        self.assertNotIn("30 – 45 phút", data["reply"])
+
 
     def test_order_tracking_requires_exact_code_and_owner(self):
         from apps.accounts.models import User
@@ -240,7 +248,7 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         self.assertEqual(cart_data["shipping_fee"], 0)
 
     def test_public_copilot_authenticity_and_cocq(self):
-        """POST /api/v1/public/copilot/ confirms 100% genuine CO/CQ and Service Tag check."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "hàng ở shop có chính hãng không có giấy tờ co cq không"}),
@@ -248,13 +256,15 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIn("CO (Certificate of Origin)", data["reply"])
-        self.assertIn("CQ (Certificate of Quality)", data["reply"])
-        self.assertIn("200%", data["reply"])
+        self.assertIn("CO/CQ", data["reply"])
         self.assertIn("Service Tag", data["reply"])
+        self.assertIn("chưa có hồ sơ", data["reply"])
+        self.assertNotIn("200%", data["reply"])
+        self.assertNotIn("cam kết tuyệt đối", data["reply"])
+
 
     def test_public_copilot_installment_procedure(self):
-        """POST /api/v1/public/copilot/ explains 0% credit card vs CCCD installment procedures."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "thủ tục mua trả góp qua cccd hoặc thẻ tín dụng như thế nào"}),
@@ -262,13 +272,15 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIn("CCCD gắn chip", data["reply"])
-        self.assertIn("Lãi suất 0%", data["reply"])
-        self.assertIn("15 – 20 phút", data["reply"])
-        self.assertIn("10% – 30%", data["reply"])
+        self.assertIn("chưa có chính sách", data["reply"])
+        self.assertIn("Không gửi ảnh CCCD", data["reply"])
+        self.assertNotIn("Lãi suất 0%", data["reply"])
+        self.assertNotIn("15 – 20 phút", data["reply"])
+        self.assertNotIn("10% – 30%", data["reply"])
+
 
     def test_public_copilot_return_and_refund(self):
-        """POST /api/v1/public/copilot/ explains 7-day exchange and refund conditions."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "nếu mua về dùng không thích hoặc nhầm cấu hình có được đổi trả không"}),
@@ -276,13 +288,15 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIn("07 ngày", data["reply"])
-        self.assertIn("Miễn phí phí đổi", data["reply"])
-        self.assertIn("10% – 15%", data["reply"])
-        self.assertIn("1 – 3 ngày làm việc", data["reply"])
+        self.assertIn("chưa có chính sách", data["reply"])
+        self.assertIn("điều kiện áp dụng", data["reply"])
+        self.assertNotIn("07 ngày", data["reply"])
+        self.assertNotIn("10% – 15%", data["reply"])
+        self.assertNotIn("1 – 3 ngày", data["reply"])
+
 
     def test_public_copilot_hardware_upgrade_maintenance(self):
-        """POST /api/v1/public/copilot/ explains RAM/SSD upgrades, thermal paste, and warranty safety."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "shop có nhận nâng cấp ram ssd và vệ sinh tra keo tản nhiệt lấy liền không"}),
@@ -290,13 +304,15 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIn("15 – 30 Phút", data["reply"])
-        self.assertIn("Arctic MX-4", data["reply"])
-        self.assertIn("không làm mất bảo hành chính hãng", data["reply"])
-        self.assertIn("MIỄN PHÍ vệ sinh máy trọn đời", data["reply"])
+        self.assertIn("tính tương thích", data["reply"])
+        self.assertIn("chưa có chính sách", data["reply"])
+        self.assertNotIn("15 – 30 Phút", data["reply"])
+        self.assertNotIn("Arctic MX-4", data["reply"])
+        self.assertNotIn("MIỄN PHÍ vệ sinh máy trọn đời", data["reply"])
+
 
     def test_public_copilot_software_and_remote_support(self):
-        """POST /api/v1/public/copilot/ explains clean OS install, data migration, and remote support."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "mua máy có được cài sẵn win bản quyền và hỗ trợ chuyển dữ liệu không"}),
@@ -304,12 +320,14 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIn("Windows 11 Pro", data["reply"])
-        self.assertIn("Data Migration", data["reply"])
-        self.assertIn("UltraViewer / AnyDesk", data["reply"])
+        self.assertIn("giấy phép phần mềm", data["reply"])
+        self.assertIn("chưa có căn cứ", data["reply"])
+        self.assertNotIn("Windows 11 Pro", data["reply"])
+        self.assertNotIn("UltraViewer / AnyDesk", data["reply"])
+
 
     def test_public_copilot_b2b_corporate_quotation(self):
-        """POST /api/v1/public/copilot/ explains corporate volume discounts, quotations, and credit terms."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "công ty muốn xin bảng báo giá mua số lượng lớn cho nhân viên"}),
@@ -317,13 +335,15 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIn("5% đến 12%", data["reply"])
-        self.assertIn("30 phút", data["reply"])
-        self.assertIn("15 đến 30 ngày", data["reply"])
-        self.assertIn("b2b@alphatech.vn", data["reply"])
+        self.assertIn("B2B", data["reply"])
+        self.assertIn("chưa có chính sách", data["reply"])
+        self.assertNotIn("5% đến 12%", data["reply"])
+        self.assertNotIn("30 phút", data["reply"])
+        self.assertNotIn("b2b@alphatech.vn", data["reply"])
+
 
     def test_public_copilot_privacy_and_data_security(self):
-        """POST /api/v1/public/copilot/ guarantees ISO 27001 customer privacy and open glass bench."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "khi sửa máy dữ liệu cá nhân có bị lộ hay xem trộm không"}),
@@ -332,12 +352,14 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn("ISO 27001", data["reply"])
-        self.assertIn("nghiêm cấm sao chép", data["reply"])
-        self.assertIn("vách kính trong suốt", data["reply"])
-        self.assertIn("camera", data["reply"])
+        self.assertIn("chưa có bằng chứng", data["reply"])
+        self.assertNotIn("vách kính trong suốt", data["reply"])
+        self.assertNotIn("90 ngày", data["reply"])
+        self.assertNotIn("100%", data["reply"])
+
 
     def test_public_copilot_onsite_booking_guide(self):
-        """POST /api/v1/public/copilot/ explains 3-step on-site technician booking and transparent fees."""
+        """Policy contract: unsupported benefits must not be promised."""
         resp = self.client.post(
             "/api/v1/public/copilot/",
             data=json.dumps({"message": "tôi muốn đặt thợ kỹ thuật đến tận nhà sửa máy tính thì làm thế nào"}),
@@ -345,7 +367,8 @@ class PublicCopilotAndCartApiTestCase(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIn("On-Site IT Service", data["reply"])
-        self.assertIn("150.000₫ – 350.000₫", data["reply"])
-        self.assertIn("21:00", data["reply"])
+        self.assertIn("chưa có bảng phí", data["reply"])
+        self.assertIn("chưa đồng nghĩa lịch hẹn đã được duyệt", data["reply"])
+        self.assertNotIn("150.000₫ – 350.000₫", data["reply"])
+        self.assertNotIn("21:00", data["reply"])
 

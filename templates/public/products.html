@@ -24,7 +24,7 @@
             Danh mục sản phẩm công nghệ &amp; phụ kiện
         </h1>
         <p class="page-subtitle-main">
-            Thiết bị chính hãng, cam kết chất lượng 100% CO/CQ, bảo hành minh bạch và sẵn sàng giao hỏa tốc cho cá nhân &amp; doanh nghiệp.
+            Khám phá thiết bị cho cá nhân &amp; doanh nghiệp. Vui lòng xác nhận chứng từ, điều kiện bảo hành và thời gian giao hàng theo từng sản phẩm.
         </p>
     </div>
 </div>
@@ -131,18 +131,18 @@
                 </p>
             </div>
 
-            <div style="padding-top: 1rem; border-top: 1px solid var(--pub-border); display: flex; justify-content: space-between; align-items: center;">
-                <div>
+            <div style="padding-top: 1rem; border-top: 1px solid var(--pub-border); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div style="min-width: 0; flex: 1;">
                     <div style="font-size: 0.72rem; color: var(--pub-text-muted);">Giá bán niêm yết</div>
-                    <div class="pub-price-lg">
+                    <div class="pub-price-lg" style="white-space: nowrap; font-size: 1.05rem;">
                         {{ p.unit_price|floatformat:0 }} VNĐ
                     </div>
                 </div>
-                <div style="display: flex; gap: 6px;">
+                <div style="display: flex; gap: 6px; flex-shrink: 0;">
                     <button type="button" class="pub-btn-secondary" onclick="quickAddToCart({{ p.id }}, '{{ p.name|escapejs }}')" style="padding: 7px 10px; font-size: 0.85rem;" title="Thêm vào giỏ">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
                     </button>
-                    <a href="/san-pham/{{ p.id }}/" class="pub-btn-primary" style="padding: 7px 14px; font-size: 0.85rem;">
+                    <a href="/san-pham/{{ p.id }}/" class="pub-btn-primary" style="padding: 7px 14px; font-size: 0.85rem; white-space: nowrap;">
                         Chi tiết
                     </a>
                 </div>

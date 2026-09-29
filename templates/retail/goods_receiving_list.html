@@ -129,6 +129,20 @@
 .badge-confirmed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
 .badge-received { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
 .badge-cancelled { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+@media (max-width: 640px) {
+    .filter-card {
+        padding: 1rem;
+    }
+    .filter-form {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .select-input, .text-input {
+        width: 100% !important;
+    }
+}
 </style>
 {% endblock %}
 
@@ -140,12 +154,13 @@
             Quy trình nhập kho chuẩn hóa: Bản nháp &rarr; Đã xác nhận &rarr; Nhập kho thực tế (tăng tồn chi nhánh).
         </p>
     </div>
-    <div style="display: flex; gap: 0.75rem;">
-        <a href="/retail/stockout-risk/" class="btn-secondary">
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary">← Tổng quan Nội bộ</a>
+        <a href="/noibo/retail/stockout-risk/" class="btn btn-secondary">
             <span>⚠️</span>
             <span>Dự báo Nguy cơ Hết hàng</span>
         </a>
-        {% if can_manage %}<a href="/retail/goods-receiving/create/" class="btn-primary" id="btn-create-receipt">
+        {% if can_manage %}<a href="/noibo/retail/goods-receiving/create/" class="btn btn-primary" id="btn-create-receipt">
             <span>➕</span>
             <span>Tạo Phiếu Nhập Mới</span>
         </a>{% endif %}
@@ -199,15 +214,15 @@
             {% endfor %}
         </select>
 
-        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">Lọc</button>
+        <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Lọc</button>
         {% if search_q or status_filter or selected_branch or selected_supplier %}
-        <a href="/retail/goods-receiving/" class="btn-secondary" style="padding: 0.5rem 0.85rem;">Xóa lọc</a>
+        <a href="?" class="btn btn-secondary" style="padding: 0.5rem 0.85rem;">Xóa lọc</a>
         {% endif %}
     </form>
 </div>
 
 <!-- Table Card -->
-<div class="table-card">
+<div class="table-card table-responsive">
     <table class="data-table">
         <thead>
             <tr>
@@ -242,7 +257,7 @@
                 <td style="font-weight: 700; color: #38bdf8;">{{ r.total_amount|floatformat:0 }} VND</td>
                 <td>{{ r.created_by.username|default:"System" }}</td>
                 <td>
-                    <a href="/retail/goods-receiving/{{ r.id }}/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Chi tiết &rarr;</a>
+                    <a href="/noibo/retail/goods-receiving/{{ r.id }}/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Chi tiết &rarr;</a>
                 </td>
             </tr>
             {% empty %}

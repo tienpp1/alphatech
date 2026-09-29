@@ -32,13 +32,9 @@ FORBIDDEN_HOST_SUFFIXES = (
 
 FORBIDDEN_HOSTNAMES = {
     "localhost",
-    "127.0.0.1",
-    "::1",
-    "0.0.0.0",
     "metadata.google.internal",
     "instance-data",
     "metadata.azure.com",
-    "169.254.169.254",
 }
 
 

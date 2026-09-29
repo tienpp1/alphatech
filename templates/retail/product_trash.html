@@ -67,7 +67,7 @@
 {% block content %}
 <div class="trash-header">
     <div>
-        <a href="/retail/products/" style="color: #94a3b8; text-decoration: none; font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">
+        <a href="/noibo/retail/products/" id="btn-back-products" style="color: #94a3b8; text-decoration: none; font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">
             ← Quay lại Danh mục sản phẩm
         </a>
         <h1 style="font-size: 2rem; font-weight: 800; color: #f8fafc; margin: 0;">
@@ -80,7 +80,7 @@
             <input type="text" name="q" value="{{ search_q }}" placeholder="Tìm trong thùng rác..." style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.88rem;">
             <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1rem;">Tìm</button>
             {% if search_q %}
-            <a href="/retail/products/trash/" class="btn btn-secondary">Đặt lại</a>
+            <a href="?" class="btn btn-secondary">Đặt lại</a>
             {% endif %}
         </form>
     </div>
@@ -91,7 +91,7 @@
     <span>Sản phẩm bị xóa sẽ được lưu trữ trong Thùng rác tối đa <strong>7 ngày</strong> trước khi bị xóa vĩnh viễn. Bạn có thể khôi phục lại danh mục bán hàng bất kỳ lúc nào.</span>
 </div>
 
-<div style="overflow-x: auto;">
+<div class="table-responsive" style="overflow-x: auto;">
     <table class="trash-table">
         <thead>
             <tr>
@@ -141,7 +141,7 @@
                     <div style="display: flex; gap: 8px; justify-content: flex-end;">
                         {% if can_manage %}
                         <!-- Restore Form -->
-                        <form method="POST" action="/retail/products/{{ p.id }}/restore/" style="margin: 0;">
+                        <form method="POST" action="../{{ p.id }}/restore/" style="margin: 0;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-primary" style="padding: 5px 12px; font-size: 0.8rem;">
                                 🔄 Khôi phục
@@ -149,7 +149,7 @@
                         </form>
 
                         <!-- Permanent Delete Form -->
-                        <form method="POST" action="/retail/products/{{ p.id }}/permanent-delete/" onsubmit="return confirm('CẢNH BÁO: Thao tác này không thể hoàn tác. Bạn có chắc chắn muốn XÓA VĨNH VIỄN sản phẩm \'{{ p.name }}\'?');" style="margin: 0;">
+                        <form method="POST" action="../{{ p.id }}/permanent-delete/" onsubmit="return confirm('CẢNH BÁO: Thao tác này không thể hoàn tác. Bạn có chắc chắn muốn XÓA VĨNH VIỄN sản phẩm \'{{ p.name }}\'?');" style="margin: 0;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; color: #f87171; border-color: rgba(239,68,68,0.3);">
                                 ✕ Xóa vĩnh viễn

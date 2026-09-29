@@ -90,3 +90,98 @@ class Notification(models.Model):
             NotificationEventType.NEW_CONTACT: "📩",
         }
         return icons.get(self.event_type, "🔔")
+
+
+class BulletinPriority(models.TextChoices):
+    NORMAL = "NORMAL", "Thông thường"
+    URGENT = "URGENT", "Khẩn cấp"
+    PINNED = "PINNED", "Ghim đầu trang"
+
+
+class InternalBulletin(models.Model):
+    """
+    Internal administrative and operational bulletin scoped strictly to a Workspace.
+    Allows managers and admins to publish announcements, guidelines, and directives
+    to all staff members within that workspace.
+    """
+    id = models.BigAutoField(primary_key=True)
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="bulletins",
+        db_index=True,
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="authored_bulletins",
+    )
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    priority = models.CharField(
+        max_length=20,
+        choices=BulletinPriority.choices,
+        default=BulletinPriority.NORMAL,
+        db_index=True,
+    )
+    pinned_until = models.DateTimeField(null=True, blank=True)
+    is_published = models.BooleanField(default=True, db_index=True)
+    views_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "notifications_internal_bulletin"
+        ordering = ["-created_at"]
+        verbose_name = "Internal Bulletin"
+        verbose_name_plural = "Internal Bulletins"
+        indexes = [
+            models.Index(fields=["workspace", "is_published", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.priority}] {self.title} ({self.workspace.code})"
+
+    @property
+    def is_pinned(self) -> bool:
+        if self.priority == BulletinPriority.PINNED:
+            if self.pinned_until:
+                return timezone.now() <= self.pinned_until
+            return True
+        return False
+
+
+class TeamChatMessage(models.Model):
+    """
+    Internal real-time messaging entity between team members strictly scoped to a Workspace.
+    Enforces tenant isolation, chronological delivery, and staff-only communication.
+    """
+    id = models.BigAutoField(primary_key=True)
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="team_chat_messages",
+        db_index=True,
+    )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_team_messages",
+    )
+    message = models.TextField()
+    attachment_name = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "notifications_team_chat_message"
+        ordering = ["created_at"]
+        verbose_name = "Team Chat Message"
+        verbose_name_plural = "Team Chat Messages"
+        indexes = [
+            models.Index(fields=["workspace", "created_at"]),
+            models.Index(fields=["workspace", "-id"]),
+        ]
+
+    def __str__(self):
+        return f"{self.sender.username} in {self.workspace.code}: {self.message[:30]}"
+

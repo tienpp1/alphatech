@@ -1,7 +1,14 @@
+> **ĐÍNH CHÍNH 23/09/2026:** Không sử dụng số 97/97 trong bản này để trình bày nghiệm thu. Dùng CHECKLIST_97_PROGRESS.md đính chính; các cổng production còn thiếu bằng chứng.
+
 # HƯỚNG DẪN TRÌNH DIỄN BẢO VỆ TRƯỚC HỘI ĐỒNG CHẤM TỐT NGHIỆP
 ## (OFFICIAL COMMITTEE DEFENSE LIVE DEMO GUIDE)
 
-**Đề tài**: Xây dựng Nền tảng Quản lý Vận hành Doanh nghiệp Thông minh tích hợp AI và GIS hỗ trợ Phân tích, Dự báo và Ra quyết định  
+> Cập nhật 16/09/2026: đọc `DEMO_IDENTITY_RUNBOOK.md` trước khi thao tác.
+> Các kịch bản dưới đây là hướng dẫn cần đối chiếu dữ liệu hiện có, không phải
+> biên bản nghiệm thu. Không suy ra quyền từ tên tài khoản hoặc coi mọi khuyến nghị
+> là action có thể thực thi. Không chạy seed trên database đã có dữ liệu.
+
+**Đề tài**: Xây dựng nền tảng quản lý vận hành doanh nghiệp tích hợp trợ lí AI
 **Sinh viên thực hiện**: Hà Minh Tiến — **MSSV**: 1250080194 — **Lớp**: 12_ĐH_CNPM3  
 **Khoa**: Công nghệ Thông tin — **Trường**: Đại học Tài nguyên và Môi trường TP.HCM (HCMUNRE)  
 **Giảng viên hướng dẫn**: ThS. Nguyễn Duy Tuấn  
@@ -33,7 +40,10 @@ python manage.py check
 python manage.py migrate
 
 # 3. Nạp bộ dữ liệu thực nghiệm mẫu và mô hình AI
-python manage.py seed_demo
+python manage.py seed_demo --confirm-empty-demo
+
+# 3b. Kiểm toán toàn vẹn tồn kho và chính sách Strict Fulfillment (Cổng 73)
+python manage.py check_fulfillment_stock --workspace abc-retail
 
 # 4. Khởi chạy máy chủ
 python manage.py runserver 127.0.0.1:8000
@@ -43,8 +53,8 @@ python manage.py runserver 127.0.0.1:8000
 | Tài khoản | Tên đăng nhập | Mật khẩu | Phạm vi Phân quyền (RBAC) | Vai trò trong buổi bảo vệ |
 | :--- | :--- | :--- | :--- | :--- |
 | **Quản trị viên Hệ thống** | `admin` | `AdminPass123!` | Toàn quyền (Superuser), xem tất cả Workspace | Thao tác kịch bản Quản trị, Tích hợp, Duyệt cấp cao |
-| **Quản lý Cửa hàng Bán lẻ** | `manager` | `ManagerPass123!` | Quản lý Workspace Retail, duyệt đề xuất AI | Thao tác duyệt kế hoạch bổ sung hàng, xem dự báo |
-| **Kỹ thuật viên / Nhân viên** | `employee` | `EmployeePass123!` | Nhân viên tác nghiệp, cập nhật tiến độ công việc | Minh họa phân công nhiệm vụ, cập nhật trạng thái |
+| **Quản lý Cửa hàng Bán lẻ** | `manager` | `ManagerPass123!` | MANAGER Retail; EMPLOYEE Service | Xem dự báo retail; phê duyệt chỉ với action hợp lệ, không tự duyệt yêu cầu của mình |
+| **Nhân viên / Kỹ thuật viên** | `employee` | `EmployeePass123!` | EMPLOYEE Retail; EMPLOYEE Service (Cổng 70) | Xem/tạo đơn retail; xem request/task/lịch trình service và tự ghi nhận giờ công `log_labor` (Bị cấm `manage_request`, `assign_request`, `manage_task`, `view_analytics`) |
 | **Khách hàng Mua sắm** | `customer1` | Đăng ký trực tiếp | Chỉ truy cập Cổng công khai (`/`) và Cổng tài khoản (`/tai-khoan/`) | Minh chứng cách ly hoàn toàn khách hàng khỏi `/noibo/` |
 
 ---
@@ -83,11 +93,11 @@ python manage.py runserver 127.0.0.1:8000
    - Đăng nhập tài khoản cấp cao hơn `admin` / `AdminPass123!` (hoặc chuyển tài khoản).
    - Truy cập trang Quản lý Phê duyệt: `http://127.0.0.1:8000/noibo/approvals/`.
    - Xem yêu cầu phê duyệt mới: Xem chi tiết tham số thay đổi (*Payload Diff*), người yêu cầu, thời gian.
-   - Nhấp **"Chấp thuận (Approve)"** và nhập ghi chú: *"Đã kiểm tra định mức ngân sách, duyệt giải ngân nhập kho đợt 1"*.
-   - Trạng thái yêu cầu chuyển thành `APPROVED`. Hệ thống tự động kích hoạt hành động nghiệp vụ tương ứng.
+   - Chỉ duyệt action đã có contract và đủ tham số hợp lệ; không dùng khuyến nghị bổ sung hàng làm ví dụ giao dịch nhập kho tự động.
+   - Đọc riêng trạng thái phê duyệt và kết quả thực thi, đối chiếu dữ liệu trước/sau. Không suy ra thực thi thành công chỉ từ nhãn `APPROVED`.
 
 5. **Kiểm chứng Nhật ký Kiểm toán (Audit Log)**:
-   - Truy cập: `http://127.0.0.1:8000/noibo/audit/`.
+   - Với tài khoản staff được phép đọc audit, truy cập `http://127.0.0.1:8000/admin/audit/auditlog/`. Không có trang `/noibo/audit/` trong routes hiện tại.
    - Chỉ ra cho Hội đồng bản ghi kiểm toán vừa phát sinh:
      - `Actor`: `admin`
      - `Action`: `APPROVAL_ACTION`
@@ -97,7 +107,7 @@ python manage.py runserver 127.0.0.1:8000
      - `Changes`: Cấu trúc JSON lưu vết trước và sau thay đổi.
 
 > **Lời thoại sinh viên thuyết minh**:  
-> *"Kính thưa Hội đồng, hệ thống của em giải quyết triệt để rủi ro AI tự ý thay đổi dữ liệu doanh nghiệp thông qua cơ chế Human-in-the-loop. Như Thầy/Cô vừa thấy, thuật toán XGBoost phân tích dữ liệu lịch sử và sinh đề xuất bổ sung hàng, nhưng đề xuất này ở trạng thái chờ. Chỉ khi Quản lý duyệt qua cổng `/noibo/approvals/`, hành động mới được thực thi và mọi biến động đều được lưu vết bất biến vào Audit Log."*
+> *"Hệ thống tách khuyến nghị, phê duyệt và thực thi. Chỉ action đã có contract được đưa vào quy trình thực thi có kiểm soát. Khuyến nghị nhập hàng chưa chứng minh giao dịch nhập kho tự động; kết quả phải được đối chiếu bằng trạng thái, dữ liệu trước/sau và bản ghi audit của ca trình diễn."*
 
 ---
 
@@ -111,31 +121,23 @@ python manage.py runserver 127.0.0.1:8000
 
 ### 2.2. Các bước thao tác trên màn hình
 1. **Truy cập Cổng Vận hành Dịch vụ**:
-   - Trên thanh chuyển đổi Workspace (góc phải trên cùng), chọn **XYZ IT Technical Services** (hoặc truy cập `http://127.0.0.1:8000/noibo/service-ops/`).
+   - Chọn workspace dịch vụ có quyền phù hợp rồi mở `http://127.0.0.1:8000/noibo/services/`. Dashboard cần `service.view_analytics`; người chỉ có quyền xem request mở `/noibo/services/requests/`.
    - Quan sát Dashboard Dịch vụ: Tổng số sự cố mở, tỷ lệ tuân thủ SLA, số kỹ thuật viên đang trực chiến ngoài hiện trường.
 
 2. **Tạo Sự cố Kỹ thuật Mới (Incident Ticket)**:
-   - Nhấp nút **"Tạo yêu cầu mới"** (`/noibo/service-ops/requests/create/`).
-   - Nhập thông tin sự cố thực tế:
-     - *Khách hàng*: Chọn Công ty Cổ phần Alpha hoặc nhập trực tiếp.
-     - *Dịch vụ*: "Bảo trì và Cứu hộ Máy chủ Cơ sở Dữ liệu".
-     - *Mô tả lỗi*: *"Máy chủ PostgreSQL đột ngột dừng hoạt động, dịch vụ nội bộ bị tê liệt hoàn toàn, cần cứu hộ gấp trong vòng 2 giờ."*
-   - Nhấn **"Lưu yêu cầu"**.
+   - UI nội bộ hiện chưa có route form tạo request riêng. Chuẩn bị ticket demo trước hoặc dùng API `POST /api/v1/service-ops/requests/` với tài khoản có `service.create_request` và workspace đã được cấp quyền.
+   - Customer/Service được chọn phải thuộc đúng workspace. Đọc request mẫu trong `tests/test_service_requests.py`; không nhập ID từ workspace khác hoặc dùng dữ liệu thật cho buổi demo.
 
 3. **Kiểm tra AI Phân loại & Chấm điểm Mức độ Ưu tiên**:
-   - Hệ thống tự động phân tích ngữ cảnh văn bản và gán độ ưu tiên: **URGENT (Khẩn cấp)**.
-   - Kiểm tra hạn chót xử lý SLA: Hệ thống tự động kích hoạt đồng hồ cam kết phản hồi trong 30 phút và khắc phục trong 2 giờ theo chính sách SLA đã cấu hình.
-   - Quan sát nhãn cảnh báo đỏ **"SLA Target: 120 phút còn lại"**.
+   - Đối chiếu priority và SLA thực tế trên ticket. Enum hiện có LOW/MEDIUM/HIGH/CRITICAL, không có URGENT.
+   - Hạn phản hồi/giải quyết phụ thuộc SLA được cấu hình và thời điểm tạo; không gán trước kết quả 30 phút/2 giờ hoặc khẳng định phân loại văn bản bằng AI khi chưa kiểm chứng.
 
 4. **Phân công Kỹ thuật viên & Cập nhật Tiến độ**:
    - Nhấp vào nút **"Điều phối kỹ thuật viên"**.
    - Chọn Kỹ thuật viên Nguyễn Văn An (chuyên môn Database, trạng thái sẵn sàng).
-   - Đăng nhập với tài khoản Kỹ thuật viên `employee` / `EmployeePass123!`.
-   - Vào danh sách nhiệm vụ của tôi (`/noibo/service-ops/tasks/`):
-     - Kỹ thuật viên xác nhận nhận việc -> Trạng thái chuyển `IN_PROGRESS`.
-     - Nhập nhật ký sửa chữa: *"Đã khởi động lại dịch vụ PostgreSQL, giải phóng ổ đĩa đầy log, hệ thống hoạt động ổn định"*.
-     - Bấm **"Hoàn tất sự cố (Mark Resolved)"**.
-   - Hệ thống chốt thời gian xử lý: Ghi nhận tuân thủ SLA 100%, không bị vi phạm.
+   - Với tài khoản `employee` (vai trò EMPLOYEE tại `xyz-service` theo Cổng 70): Kỹ thuật viên có quyền xem task được phân công (`service.view_task`), xem lịch trình (`service.view_schedule`), và tự ghi nhận giờ công lao động thực tế (`POST /api/v1/service-ops/tasks/{id}/labor/` với quyền `log_labor`).
+   - Nếu muốn chuyển trạng thái task (`PENDING` -> `IN_PROGRESS` -> `COMPLETED`) cần quyền `service.manage_task`; chuyển trạng thái request cần `service.manage_request` (được cấp cho `manager` hoặc `admin`).
+   - Kiểm tra dữ liệu/trạng thái và timestamp trước/sau. Tỷ lệ SLA phải tính từ sự kiện thực tế của bộ dữ liệu; không gán sẵn kết luận tuân thủ 100%.
 
 ---
 
@@ -144,12 +146,12 @@ python manage.py runserver 127.0.0.1:8000
 ### 3.1. Mục tiêu chứng minh với Hội đồng
 - Ứng dụng công nghệ Hệ thông tin địa lý (GIS) trên nền CSDL không gian PostGIS kết hợp thư viện Leaflet.js.
 - Trực quan hóa đa lớp dữ liệu không gian: Chi nhánh bán lẻ, khách hàng, vị trí kỹ thuật viên, địa điểm phát sinh sự cố.
-- Tính toán khoảng cách trắc địa mặt cầu (Haversine Distance) và lọc bán kính phục vụ (Radius Buffer Search).
+- Tính khoảng cách spheroid WGS84 bằng PostGIS và lọc bán kính theo cùng thước đo (xem `GIS_REFERENCE_EVIDENCE.md`); không phải khoảng cách đường bộ.
 - Đề xuất điều phối nhân sự tối ưu dựa trên khoảng cách địa lý.
 
 ### 3.2. Các bước thao tác trên màn hình
 1. **Truy cập Bản đồ Không gian Số GIS**:
-   - Truy cập: `http://127.0.0.1:8000/noibo/gis/map/`.
+   - Bản đồ retail: `http://127.0.0.1:8000/noibo/retail/gis/`; bản đồ service: `http://127.0.0.1:8000/noibo/services/gis/`. Hai trang tách theo workspace, không có trang bản đồ tổng hợp chung trong route hiện tại.
    - Bản đồ trung tâm TP.HCM hiển thị với nền OpenStreetMap trực quan.
 
 2. **Thao tác Bật/Tắt Lớp Dữ liệu (Spatial Layers Control)**:
@@ -174,7 +176,7 @@ python manage.py runserver 127.0.0.1:8000
      - Nhấp nút **"Xác nhận Điều phối"** để gửi nhiệm vụ cho kỹ thuật viên.
 
 > **Lời thoại sinh viên thuyết minh**:  
-> *"Thưa Hội đồng, điểm độc đáo của đề tài chuyên ngành CNTT tại HCMUNRE là sự kết hợp giữa Quản trị Doanh nghiệp và Công nghệ Không gian GIS. Hệ thống sử dụng PostGIS lưu trữ dữ liệu WGS84 SRID 4326. Thuật toán Haversine và Spatial Index GiST cho phép truy vấn bán kính và tìm điểm gần nhất theo thời gian thực với sai số dưới 1% so với thực địa."*
+> *"Hệ thống dùng PostGIS và WGS84 SRID 4326 để hỗ trợ truy vấn địa lý trong nghiệp vụ. Đợt 27 đối chiếu một số phép đo với GeographicLib và cung xích đạo giải tích; đây không phải đo đạc thực địa hoặc chứng nhận sai số dưới 1% trên mọi vị trí. Khoảng cách địa lý khác quãng đường giao thông; xem GIS_REFERENCE_EVIDENCE.md để biết ca đo và giới hạn."*
 
 ---
 
@@ -196,7 +198,7 @@ python manage.py runserver 127.0.0.1:8000
    - Bấm vào tài liệu để xem các đoạn trích (Chunks) đã được vector hóa lưu trữ trong `pgvector`.
 
 2. **Thực hiện Hỏi đáp Tương tác với Trợ lý AI**:
-   - Truy cập giao diện Trợ lý AI: `http://127.0.0.1:8000/noibo/chat/` (hoặc mở cửa sổ Copilot góc phải dưới).
+   - Truy cập trợ lý nội bộ: `http://127.0.0.1:8000/noibo/ai/`. Copilot trên website công khai là luồng khác, không thay thế trợ lý nội bộ và không có cùng quyền dữ liệu.
    - **Thử nghiệm 1 (Tra cứu nghiệp vụ có trích dẫn nguồn)**:
      - *Nhập câu hỏi*: `"Khách hàng mua laptop tại cửa hàng có được đổi trả trong 7 ngày đầu không và điều kiện là gì?"`
      - *Kết quả mong đợi*: Trợ lý AI trích xuất đúng Điều 3 của Quy chế Bán hàng, trả lời rõ ràng: Khách hàng được đổi trả 1-đổi-1 trong 7 ngày nếu lỗi phần cứng từ nhà sản xuất, giữ nguyên hộp và phụ kiện. Cuối câu trả lời có **Thẻ trích dẫn (Citation)**: `[Quy_che_Bao_hanh_2026.pdf - Mục 3.1]`.
@@ -213,7 +215,7 @@ python manage.py runserver 127.0.0.1:8000
    - Xem danh sách các Nguồn Dữ liệu (Data Sources) và Lịch sử nạp tệp (Import Jobs).
 
 2. **Nạp tệp Dữ liệu Thô (CSV/Excel)**:
-   - Bấm **"Tải lên tệp mới"** (`/noibo/integration/upload/`).
+   - Mở trình nhập tệp: `/noibo/integration/import/`.
    - Chọn tệp dữ liệu mẫu từ đối tác hoặc chi nhánh cũ (ví dụ: file CSV có tiêu đề cột không chuẩn như `ma_sp`, `ten_hang`, `gia_tien`, `so_luong_kho`).
    - Chọn đối tượng đích: `Product (Sản phẩm)`.
 
@@ -234,7 +236,7 @@ python manage.py runserver 127.0.0.1:8000
 
 ### 1. Ý nghĩa Nghiệp vụ
 - Minh chứng vai trò của Cổng Website Công khai (`/`) là **Cổng Tiếp nhận Đa kênh (Omnichannel Ingestion Gateway)**, phát sinh đơn hàng và sự cố tự nhiên từ khách hàng.
-- Chứng minh tính bất khả xâm phạm của mô hình phân quyền: Khách hàng công khai tuyệt đối không có quyền truy cập vào Cổng Quản trị Doanh nghiệp `/noibo/`.
+- Trình diễn ca tài khoản khách hàng bị từ chối truy cập `/noibo/`; đây là bằng chứng cho ca đã chạy, không chứng minh hệ thống bất khả xâm phạm.
 
 ### 2. Các bước chứng minh
 1. **Trải nghiệm Mua hàng & Gửi Sự cố từ Cổng Công khai**:
@@ -250,16 +252,23 @@ python manage.py runserver 127.0.0.1:8000
 ---
 
 ## TỔNG KẾT BẢNG ĐỐI CHIẾU TIÊU CHÍ NGHIỆM THU CỦA HỘI ĐỒNG
+*(Trạng thái nghiệm thu: xem CHECKLIST_97_PROGRESS.md. Kết luận 97/97 trước đây đã bị thu hồi; bản hướng dẫn demo không thay bằng chứng nghiệm thu.)*
 
-| STT | Nội dung Đồ án | Trạng thái Nghiệm thu | Vị trí Mã nguồn & Chức năng |
+| STT | Nhóm Tiêu chí Nghiệm thu | Trạng thái Đóng | Vị trí Mã nguồn & Hồ sơ Minh chứng |
 | :---: | :--- | :---: | :--- |
-| **1** | Bảng điều khiển quản trị 2 Workspace Retail & Service | **Hoàn thành 100%** | `apps/retail`, `apps/service_ops`, `templates/dashboard/` |
-| **2** | Dự báo chuỗi thời gian XGBoost đối chiếu Baseline | **Hoàn thành 100%** | `apps/forecasting`, `docs/ACADEMIC_EVALUATION_REPORT.md` |
-| **3** | Khuyến nghị AI có người quản lý duyệt (HITL) | **Hoàn thành 100%** | `apps/recommendations`, `apps/approvals`, `apps/audit` |
-| **4** | Bản đồ số GIS Leaflet & PostGIS, tính khoảng cách | **Hoàn thành 100%** | `apps/gis`, phép tính Haversine, lọc bán kính phục vụ |
-| **5** | Trợ lý RAG hỏi đáp có trích dẫn và chống ảo giác | **Hoàn thành 100%** | `apps/knowledge`, `pgvector`, router chống ảo giác |
-| **6** | Studio Ánh xạ Dữ liệu Chuẩn (ETL phi cấu trúc) | **Hoàn thành 100%** | `apps/integration`, `apps/mapping`, thẻ Core Engine thứ 5 |
-| **7** | Bảo mật RBAC & Cách ly Cổng Khách hàng / Cổng Nội bộ | **Hoàn thành 100%** | `apps/accounts`, `middleware.py`, Test suites tự động |
+| **1** | Bảng điều khiển quản trị 2 Workspace Retail & Service | **Theo bằng chứng từng mục** | `apps/retail`, `apps/service_ops`, `templates/dashboard/` |
+| **2** | Dự báo chuỗi thời gian XGBoost đối chiếu Baseline | **Theo bằng chứng từng mục** | `apps/forecasting`, `docs/HO_SO_THUC_NGHIEM_DU_BAO_VA_DATA_CATALOG.md` |
+| **3** | Khuyến nghị AI có người quản lý duyệt (HITL) | **Theo bằng chứng từng mục** | `apps/recommendations`, `apps/approvals`, `apps/audit` |
+| **4** | Bản đồ số GIS Leaflet & PostGIS, tính khoảng cách | **Theo bằng chứng từng mục** | `apps/gis`, phép tính trắc địa geodesic WGS84, khóa Nominatim cache |
+| **5** | Trợ lý RAG hỏi đáp có trích dẫn và đối chiếu tài liệu | **Theo bằng chứng từng mục** | `apps/knowledge`, `pgvector`, Gold Chunks, bộ chấm số liệu ngoại tuyến (không phải runtime guard) |
+| **6** | Studio Ánh xạ Dữ liệu Chuẩn (ETL phi cấu trúc) | **Theo bằng chứng từng mục** | `apps/integration`, `apps/mapping`, xác thực dữ liệu nguồn SDM |
+| **7** | Bảo mật RBAC & Phân lập Cổng Khách hàng / Cổng Nội bộ | **Theo bằng chứng từng mục** | `apps/accounts`, `middleware.py`, Kết quả thực chạy: TEST_EXECUTION_EVIDENCE.md |
+| **8** | Phân quyền Kỹ thuật viên & Tác vụ `log_labor` (Cổng 70) | **Theo bằng chứng từng mục** | `docs/HO_SO_DOI_CHIEU_TAC_VU_EMPLOYEE_VA_RBAC.md`, `test_role_acceptance_matrix.py` |
+| **9** | Kiểm soát Tồn kho Đa kênh & Strict Fulfillment (Cổng 73) | **Theo bằng chứng từng mục** | `docs/HO_SO_DOI_CHIEU_TON_KHO_VA_FULFILLMENT.md`, `check_fulfillment_stock` |
+| **10**| Rà soát Danh mục SOP & Ranh giới Nghiệp vụ (Cổng 47) | **Theo bằng chứng từng mục** | `docs/HO_SO_RA_SOAT_TAI_LIEU_SOP_VA_TRONG_TAM_NGHIEP_VU.md`, 7 Primary vs 17 Benchmark |
+| **11**| Lịch trình Hành chính & Lộ trình Hậu Tốt nghiệp (Cổng 3, 6)| **Theo bằng chứng từng mục** | `docs/HO_SO_LICH_TRINH_HANH_CHINH_VA_LO_TRINH_PHAT_TRIEN.md`, Tuần 15-19, 5 Roadmap items |
+| **12**| Hồ sơ Vận hành Hạ tầng Production Runbook (Cổng 90–97) | **Theo bằng chứng từng mục** | `docs/HO_SO_VAN_HANH_HA_TANG_PRODUCTION_VA_DEPLOYMENT_RUNBOOK.md` |
 
 ---
-*Tài liệu được chuẩn bị phục vụ kỳ bảo vệ Đồ án Tốt nghiệp Đại học — Khóa 12 CNTT — HCMUNRE.*
+*Tài liệu được chuẩn bị phục vụ kỳ bảo vệ Đồ án Tốt nghiệp Đại học — Khóa 12 CNTT — Trường Đại học Tài nguyên và Môi trường TP.HCM (HCMUNRE).*
+

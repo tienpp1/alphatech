@@ -106,7 +106,7 @@ class Command(BaseCommand):
                                     img.image.delete(save=False)
                                     images_cleaned_count += 1
                             except Exception:
-                                pass
+                                self.stderr.write(self.style.WARNING("PRODUCT_IMAGE_FILE_CLEANUP_FAILED"))
 
                         # 2. Delete database record
                         product.delete()

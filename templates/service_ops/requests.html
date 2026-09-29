@@ -3,12 +3,17 @@
 {% block title %}Phiếu Yêu cầu Sự cố — {{ active_workspace.name }}{% endblock %}
 
 {% block content %}
+<style>
+.sla-breached-text { color: #ef4444; font-weight: 700; font-size: 0.8rem; }
+.sla-normal-text { font-size: 0.8rem; }
+</style>
 <div class="dashboard-header">
     <div>
         <h1 class="page-title">Danh sách Phiếu Yêu cầu Sự cố</h1>
         <p class="text-secondary">Theo dõi yêu cầu khách hàng, thời hạn cam kết SLA, chi phí nhân công và phân công kỹ thuật</p>
     </div>
     <div class="header-actions">
+        <a href="/noibo/services/" id="btn-back-dashboard" class="btn btn-secondary">← Bảng điều khiển Dịch vụ</a>
         <a href="/api/v1/service-ops/requests/" target="_blank" class="btn btn-secondary">API JSON ↗</a>
     </div>
 </div>
@@ -55,7 +60,7 @@
         </div>
         {% if current_status or current_priority or current_category %}
         <div style="margin-top: 1.25rem;">
-            <a href="/services/requests/" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;">Đặt lại bộ lọc</a>
+            <a href="/noibo/services/requests/" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;">Đặt lại bộ lọc</a>
         </div>
         {% endif %}
     </form>
@@ -123,19 +128,19 @@
                         {% endif %}
                     </td>
                     <td>
-                        <span class="badge {% if item.sla.overall_status == 'ON_TIME' %}bg-success{% elif item.sla.overall_status == 'AT_RISK' %}bg-warning{% else %}bg-danger{% endif %}">
+                        <span class="badge {% if item.sla.overall_status == 'ON_TIME' %}bg-success{% elif item.sla.overall_status == 'AT_RISK' %}bg-warning{% elif item.sla.overall_status == 'BREACHED' %}bg-danger{% else %}bg-secondary{% endif %}">
                             {% if item.sla.overall_status == 'ON_TIME' %}Đúng hạn
                             {% elif item.sla.overall_status == 'AT_RISK' %}Nguy cơ
-                            {% else %}Vi phạm{% endif %}
+                            {% elif item.sla.overall_status == 'BREACHED' %}Vi phạm{% else %}Chưa đủ dữ liệu{% endif %}
                         </span>
                     </td>
                     <td>
-                        <span style="font-size: 0.8rem; {% if item.sla.is_resolution_breached %}color: #ef4444; font-weight: 700;{% endif %}">
+                        <span class="{% if item.sla.is_resolution_breached %}sla-breached-text{% else %}sla-normal-text{% endif %}">
                             {{ item.req.resolution_deadline_at|date:"d/m, H:i" }}
                         </span>
                     </td>
                     <td>
-                        <a href="/services/requests/{{ item.req.id }}/" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Xử lý</a>
+                        <a href="/noibo/services/requests/{{ item.req.id }}/" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Xử lý</a>
                     </td>
                 </tr>
                 {% empty %}

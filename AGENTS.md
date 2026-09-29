@@ -11,3 +11,4 @@
 9. Update `docs/CURRENT_STATUS.md` when implementation status materially changes.
 10. Add significant architectural or behavioral changes to `docs/CHANGELOG_AI.md`; do not log cosmetic edits.
 11. Update `docs/PROJECT_CONTEXT.md` only when architecture, security invariants, or business behavior changes.
+12. Do not affect the progress and structure of the 97 items that the user and Codex are working on.

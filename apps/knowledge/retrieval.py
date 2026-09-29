@@ -57,6 +57,7 @@ def search_relevant_chunks(
     query: str,
     top_k: Optional[int] = None,
     threshold: Optional[float] = None,
+    metadata: Optional[dict] = None,
 ) -> List[Dict[str, Any]]:
     """
     Performs hybrid semantic vector + lexical keyword search across document chunks
@@ -76,7 +77,11 @@ def search_relevant_chunks(
             threshold = float(os.getenv("RAG_SIMILARITY_THRESHOLD", "0.10"))
 
     # 1. Compute query vector
-    query_vec = get_embedding(query)
+    query_provenance = {}
+    query_vec = get_embedding(query, metadata=query_provenance)
+    if metadata is not None:
+        metadata.update(query_embedding=query_provenance, threshold=threshold,
+                        incompatible_embeddings_skipped=0, legacy_embeddings_considered=0)
     q_norm = np.linalg.norm(query_vec)
     if q_norm == 0.0:
         return []
@@ -94,6 +99,24 @@ def search_relevant_chunks(
         chunk_vec = chunk.embedding
         if not chunk_vec:
             continue
+
+        # Equal dimensions do not imply a shared embedding space. A provider
+        # outage can produce a hash vector with exactly the provider dimension.
+        stored_provenance = chunk.metadata.get("embedding_provenance") or {}
+        known = stored_provenance.get("mode") in ("PROVIDER", "DETERMINISTIC")
+        incompatible = len(query_vec) != len(chunk_vec)
+        if known:
+            incompatible = incompatible or any(
+                stored_provenance.get(key) != query_provenance.get(key)
+                for key in ("mode", "provider", "model", "dimension")
+            )
+        if incompatible:
+            if metadata is not None:
+                metadata["incompatible_embeddings_skipped"] += 1
+            continue
+        if not known and metadata is not None:
+            # Preserve legacy retrieval, but never claim its model is verified.
+            metadata["legacy_embeddings_considered"] += 1
 
         dense_sim = calculate_cosine_similarity(query_vec, chunk_vec)
         # Check dense vector against threshold to eliminate out-of-domain queries
@@ -117,6 +140,7 @@ def search_relevant_chunks(
                 "similarity": final_sim,
                 "dense_similarity": round(float(dense_sim), 4),
                 "lexical_score": round(float(lex_score), 4),
+                "embedding_provenance": chunk.metadata.get("embedding_provenance", {"mode": "UNKNOWN"}),
             })
 
     # 3. Sort descending by similarity score

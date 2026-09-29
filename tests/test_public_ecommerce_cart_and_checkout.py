@@ -14,6 +14,7 @@ Validates:
 
 from decimal import Decimal
 import io
+from unittest.mock import patch
 from django.test import TestCase, Client
 from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -536,6 +537,39 @@ class PublicEcommerceCartAndCheckoutTestCase(TestCase):
 
         # Verify no order was created
         self.assertFalse(Order.objects.filter(customer__email="levanc@testmail.vn").exists())
+
+    def test_missing_pickup_stock_rejects_without_order(self):
+        self.client.post(f"/gio-hang/them/{self.prod_mouse.pk}/", {"quantity": "1"})
+        response = self.client.post("/thanh-toan/dat-hang/", {
+            "name": "Test", "phone": "0900000000", "email": "test@example.com",
+            "delivery_method": "STORE_PICKUP", "branch_id": str(self.branch_q1.pk),
+        })
+        self.assertEqual(response.url, "/gio-hang/")
+        self.assertFalse(Order.objects.exists())
+        self.assertIn("Chưa xác nhận tồn kho", self.client.session["checkout_error"])
+
+    def test_order_commits_when_email_fails_and_retry_is_not_duplicated(self):
+        from apps.public_web.models import CustomerEmailDelivery
+        from apps.public_web.email_service import deliver_outbox_record
+        self.client.post(f"/gio-hang/them/{self.prod_mouse.pk}/", {"quantity": "1"})
+        with patch("apps.public_web.email_service.send_mail", return_value=0):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.post("/thanh-toan/dat-hang/", {
+                    "name": "Test", "phone": "0900000000", "email": "test@example.com",
+                    "delivery_method": "HOME_DELIVERY", "address": "Test address",
+                })
+        order = Order.objects.get()
+        self.assertEqual(response.url, f"/dat-hang-thanh-cong/{order.order_number}/")
+        delivery = CustomerEmailDelivery.objects.get(event_type="ORDER")
+        self.assertEqual(delivery.status, "FAILED")
+        self.assertContains(self.client.get(response.url), "Đơn hàng đã được ghi nhận, nhưng email xác nhận chưa gửi được.")
+        with patch("apps.public_web.email_service.send_mail", return_value=1) as send:
+            deliver_outbox_record(delivery)
+            deliver_outbox_record(delivery)
+            self.assertEqual(send.call_count, 1)
+        delivery.refresh_from_db()
+        self.assertEqual(delivery.status, "SENT")
+        self.assertEqual(Order.objects.count(), 1)
 
     def test_later_insufficient_line_does_not_deduct_earlier_stock(self):
         first = StockBalance.objects.create(workspace=self.ws_retail,

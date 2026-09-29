@@ -8,7 +8,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from apps.accounts.models import User, Role
+from apps.accounts.models import User, Role, Permission
 from apps.workspaces.models import Workspace, WorkspaceType, WorkspaceMembership
 from apps.mapping.models import MappingProfile, MappingRule, RuleType, AIConfirmationStatus
 from apps.mapping.services import create_mapping_profile, add_mapping_rule
@@ -21,6 +21,11 @@ class MappingAITestCase(TestCase):
         self.workspace = Workspace.objects.create(name="Retail AI", code="retail-ai", workspace_type=WorkspaceType.RETAIL)
         self.user = User.objects.create_user(username="ai_tester", email="aitest@example.com")
         self.role_admin = Role.objects.create(name="ADMIN")
+        permission, _ = Permission.objects.get_or_create(
+            codename="mapping.view_mapping",
+            defaults={"name": "View mapping", "module": "mapping"},
+        )
+        self.role_admin.permissions.add(permission)
         WorkspaceMembership.objects.create(workspace=self.workspace, user=self.user, role=self.role_admin, is_default=True)
 
         self.client = APIClient()

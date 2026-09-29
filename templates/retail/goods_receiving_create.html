@@ -42,9 +42,9 @@
 }
 .items-table {
     width: 100%;
+    min-width: 650px;
     border-collapse: collapse;
-    margin-top: 1rem;
-    margin-bottom: 1.5rem;
+    margin-top: 0.5rem;
 }
 .items-table th, .items-table td {
     padding: 0.75rem 0.85rem;
@@ -98,7 +98,7 @@
 
 {% block content %}
 <div style="margin-bottom: 1.75rem;">
-    <a href="/retail/goods-receiving/" style="color: #94a3b8; text-decoration: none; font-size: 0.875rem;">&larr; Quay lại danh sách phiếu nhập</a>
+    <a href="/noibo/retail/goods-receiving/" id="btn-back-receiving" style="color: #94a3b8; text-decoration: none; font-size: 0.875rem;">&larr; Quay lại danh sách phiếu nhập</a>
     <h1 style="font-size: 2rem; font-weight: 800; margin-top: 0.5rem; margin-bottom: 0.5rem;">Tạo Phiếu Nhập Hàng Mới</h1>
     <p style="color: #94a3b8;">
         Khởi tạo phiếu nhập hàng ở trạng thái <strong>Bản nháp (DRAFT)</strong>. Tồn kho chi nhánh sẽ chỉ được cập nhật sau khi xác nhận nhập kho thực tế.
@@ -157,52 +157,54 @@
         <button type="button" class="btn-secondary" id="btn-add-row" onclick="addRow()">➕ Thêm dòng sản phẩm</button>
     </div>
 
-    <table class="items-table" id="table-items">
-        <thead>
-            <tr>
-                <th style="width: 45%;">Sản phẩm *</th>
-                <th style="width: 15%;">Số lượng</th>
-                <th style="width: 20%;">Đơn giá nhập (VND)</th>
-                <th style="width: 15%;">Thành tiền (VND)</th>
-                <th style="width: 5%;">Xóa</th>
-            </tr>
-        </thead>
-        <tbody id="items-body">
-            <!-- Row 1 -->
-            <tr class="item-row">
-                <td>
-                    <select name="item_product_id[]" class="form-control prod-select" onchange="onProductChange(this)" required>
-                        <option value="">-- Chọn sản phẩm --</option>
-                        {% for p in products %}
-                        <option value="{{ p.id }}" data-cost="{{ p.cost_price|default:p.unit_price }}">{{ p.name }} ({{ p.sku }}) - {{ p.unit }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-                <td>
-                    <input type="number" name="item_quantity[]" class="form-control qty-input" value="1" min="1" oninput="calcTotals()" required>
-                </td>
-                <td>
-                    <input type="number" name="item_unit_cost[]" class="form-control cost-input" value="0" min="0" step="1000" oninput="calcTotals()" required>
-                </td>
-                <td>
-                    <span class="row-subtotal" style="font-weight: 700; color: #38bdf8;">0 VND</span>
-                </td>
-                <td>
-                    <button type="button" class="btn-danger" onclick="removeRow(this)">✕</button>
-                </td>
-            </tr>
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="3" style="text-align: right; font-weight: 700; color: #f8fafc; font-size: 1rem;">Tổng giá trị phiếu nhập:</td>
-                <td colspan="2" style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;" id="grand-total">0 VND</td>
-            </tr>
-        </tfoot>
-    </table>
+    <div class="table-responsive" style="margin-bottom: 1.5rem;">
+        <table class="items-table" id="table-items">
+            <thead>
+                <tr>
+                    <th style="width: 45%;">Sản phẩm *</th>
+                    <th style="width: 15%;">Số lượng</th>
+                    <th style="width: 20%;">Đơn giá nhập (VND)</th>
+                    <th style="width: 15%;">Thành tiền (VND)</th>
+                    <th style="width: 5%;">Xóa</th>
+                </tr>
+            </thead>
+            <tbody id="items-body">
+                <!-- Row 1 -->
+                <tr class="item-row">
+                    <td>
+                        <select name="item_product_id[]" class="form-control prod-select" onchange="onProductChange(this)" required>
+                            <option value="">-- Chọn sản phẩm --</option>
+                            {% for p in products %}
+                            <option value="{{ p.id }}" data-cost="{{ p.cost_price|default:p.unit_price }}">{{ p.name }} ({{ p.sku }}) - {{ p.unit }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" name="item_quantity[]" class="form-control qty-input" value="1" min="1" oninput="calcTotals()" required>
+                    </td>
+                    <td>
+                        <input type="number" name="item_unit_cost[]" class="form-control cost-input" value="0" min="0" step="1000" oninput="calcTotals()" required>
+                    </td>
+                    <td>
+                        <span class="row-subtotal" style="font-weight: 700; color: #38bdf8;">0 VND</span>
+                    </td>
+                    <td>
+                        <button type="button" class="btn-danger" onclick="removeRow(this)">✕</button>
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" style="text-align: right; font-weight: 700; color: #f8fafc; font-size: 1rem;">Tổng giá trị phiếu nhập:</td>
+                    <td colspan="2" style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;" id="grand-total">0 VND</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 
-    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-        <a href="/retail/goods-receiving/" class="btn-secondary">Hủy bỏ</a>
-        <button type="submit" class="btn-primary">Lưu Phiếu Nháp (DRAFT)</button>
+    <div style="display: flex; gap: 1rem; justify-content: flex-end; flex-wrap: wrap;">
+        <a href="/noibo/retail/goods-receiving/" class="btn btn-secondary">Hủy bỏ</a>
+        <button type="submit" class="btn btn-primary">Lưu Phiếu Nháp (DRAFT)</button>
     </div>
 </form>
 

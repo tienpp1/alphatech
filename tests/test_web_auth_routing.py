@@ -4,7 +4,7 @@ Verifies login page accessibility, unauthenticated redirects, authenticated sess
 logout invalidation, and next-url preservation.
 """
 
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
@@ -89,6 +89,22 @@ class WebAuthRoutingTestCase(TestCase):
         self.assertContains(response, "username")
         self.assertContains(response, "password")
         self.assertContains(response, "btn-login-submit")
+
+    @override_settings(DEBUG=False, SHOW_DEMO_CREDENTIALS=True)
+    def test_production_login_never_renders_demo_credentials(self):
+        response = self.client.get("/accounts/login/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "AdminPass123!")
+        self.assertNotContains(response, "fillCreds")
+
+    @override_settings(DEBUG=True, SHOW_DEMO_CREDENTIALS=True)
+    def test_explicit_local_opt_in_renders_demo_credentials(self):
+        response = self.client.get("/accounts/login/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tài khoản thử nghiệm nội bộ")
+        self.assertContains(response, "AdminPass123!")
 
     def test_unauthenticated_protected_page_redirects_to_login(self):
         """Unauthenticated GET /retail/gis/ redirects to /accounts/login/?next=/retail/gis/."""

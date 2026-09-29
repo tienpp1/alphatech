@@ -13,7 +13,7 @@
         <button class="btn btn-secondary" onclick="document.getElementById('modal-create-kb').style.display='block'">➕ Tạo Kho Tri thức</button>
         <button class="btn btn-primary" onclick="document.getElementById('modal-upload-doc').style.display='block'">📤 Tải lên Tài liệu</button>
         {% endif %}
-        <a href="/ai/" class="btn btn-success">🤖 Trợ lý AI</a>
+        <a href="/noibo/ai/" class="btn btn-success">🤖 Trợ lý AI</a>
     </div>
 </div>
 
@@ -118,7 +118,7 @@
                         </td>
                         <td>{{ doc.created_at|date:"d/m/Y H:i" }}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-info" onclick="inspectChunks({{ doc.id }}, '{{ doc.title|escapejs }}')">🔍 Chunks</button>
+                            <button class="btn btn-sm btn-outline-info" data-doc-id="{{ doc.id }}" data-doc-title="{{ doc.title }}" onclick="inspectChunks(this.dataset.docId, this.dataset.docTitle)">🔍 Chunks</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -222,7 +222,7 @@
 <style>
 .grid-cards-3 {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
     gap: 1rem;
 }
 .kb-card {
@@ -253,6 +253,12 @@
 }
 .modal-lg {
     max-width: 800px;
+}
+@media (max-width: 600px) {
+    .modal-content {
+        margin: 15% auto;
+        width: 95%;
+    }
 }
 .modal-header {
     display: flex;

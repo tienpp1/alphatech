@@ -3,14 +3,27 @@
 {% block title %}Vận hành - Chưa chọn Không gian làm việc{% endblock %}
 
 {% block content %}
-<div class="status-card text-center" style="max-width: 600px; margin: 4rem auto;">
-    <h2>⚠️ Chưa chọn Không gian làm việc</h2>
-    <p class="text-muted" style="margin: 1.5rem 0;">
-        Bạn cần được phân quyền vào một Không gian làm việc đang hoạt động (ví dụ: <strong>Chuỗi Bán lẻ Thiết bị Công nghệ ABC</strong> hoặc <strong>Công ty Dịch vụ Kỹ thuật CNTT XYZ</strong>) để truy cập nghiệp vụ.
+<div class="status-card text-center" style="max-width: 650px; margin: 4rem auto; background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 2.5rem 2rem;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
+    <h2 style="font-size: 1.6rem; font-weight: 800; color: #f8fafc; margin-bottom: 0.75rem;">Chưa kích hoạt Không gian làm việc</h2>
+    <p class="text-muted" style="margin: 1rem auto 2rem; color: #94a3b8; font-size: 0.95rem; line-height: 1.6; max-width: 520px;">
+        Tài khoản của bạn hiện chưa được phân quyền vào Không gian làm việc nội bộ khả dụng, hoặc phiên làm việc chưa chọn không gian mặc định. Vui lòng liên hệ quản trị viên hoặc chọn thao tác an toàn bên dưới:
     </p>
-    <div style="display: flex; gap: 1rem; justify-content: center;">
-        <a href="/admin/" class="btn btn-primary">Quản trị Hệ thống (Admin)</a>
-        <a href="/" class="btn btn-secondary">Trạng thái Hệ thống</a>
+    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-primary" style="padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+            ← Tổng quan Nội bộ
+        </a>
+        <a href="/tai-khoan/" class="btn btn-secondary" style="padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+            👤 Hồ sơ Tài khoản
+        </a>
+        {% if request.user.is_staff or request.user.is_superuser %}
+        <a href="/admin/" class="btn btn-secondary" style="padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+            ⚙️ Quản trị Admin
+        </a>
+        {% endif %}
+        <a href="/accounts/logout/" class="btn btn-secondary" style="padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+            🚪 Đăng xuất
+        </a>
     </div>
 </div>
 {% endblock %}

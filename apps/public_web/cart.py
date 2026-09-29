@@ -62,6 +62,7 @@ class ShoppingCart:
             raw_cart = {}
             self.session[SESSION_CART_KEY] = raw_cart
         self.cart_data: Dict[str, int] = raw_cart
+        self._cached_items: Optional[List[CartItem]] = None
 
     def add(self, product_id: int, quantity: int = 1) -> bool:
         """
@@ -123,6 +124,7 @@ class ShoppingCart:
         Clears the entire shopping cart from session.
         """
         self.cart_data = {}
+        self._cached_items = []
         self.session[SESSION_CART_KEY] = {}
         self.session.modified = True
 
@@ -141,8 +143,13 @@ class ShoppingCart:
         """
         Fetches live Product records from database and returns a list of CartItems.
         Automatically cleans up items referencing inactive or deleted products.
+        Memoizes results within the same request/instance unless cart is mutated.
         """
+        if self._cached_items is not None:
+            return self._cached_items
+
         if not self.cart_data:
+            self._cached_items = []
             return []
 
         product_ids = []
@@ -154,6 +161,7 @@ class ShoppingCart:
                 self._save()
 
         if not product_ids:
+            self._cached_items = []
             return []
 
         products = Product.objects.filter(
@@ -181,6 +189,7 @@ class ShoppingCart:
                 del self.cart_data[k]
             self._save()
 
+        self._cached_items = items
         return items
 
     def get_subtotal(self) -> Decimal:
@@ -190,7 +199,7 @@ class ShoppingCart:
         items = self.get_items()
         return sum((item.line_total for item in items), Decimal("0.00"))
 
-    def calculate_shipping_fee(self, delivery_method: str = "HOME_DELIVERY") -> Decimal:
+    def calculate_shipping_fee(self, delivery_method: str = "HOME_DELIVERY", subtotal: Optional[Decimal] = None) -> Decimal:
         """
         Calculates deterministic shipping fee:
         - STORE_PICKUP: 0 VND
@@ -198,7 +207,8 @@ class ShoppingCart:
         """
         if delivery_method == "STORE_PICKUP":
             return Decimal("0.00")
-        subtotal = self.get_subtotal()
+        if subtotal is None:
+            subtotal = self.get_subtotal()
         if subtotal >= FREE_SHIPPING_THRESHOLD:
             return Decimal("0.00")
         return STANDARD_SHIPPING_FEE
@@ -209,7 +219,7 @@ class ShoppingCart:
         """
         items = self.get_items()
         subtotal = sum((item.line_total for item in items), Decimal("0.00"))
-        shipping_fee = self.calculate_shipping_fee(delivery_method)
+        shipping_fee = self.calculate_shipping_fee(delivery_method, subtotal=subtotal)
         total_amount = subtotal + shipping_fee
 
         return {
@@ -225,6 +235,7 @@ class ShoppingCart:
         }
 
     def _save(self):
+        self._cached_items = None
         self.session[SESSION_CART_KEY] = self.cart_data
         self.session.modified = True
 

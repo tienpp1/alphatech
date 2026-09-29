@@ -1,4 +1,10 @@
-# Nền tảng Vận hành Doanh nghiệp Thông minh với Phân tích Dữ liệu AI, Dự báo & Hỗ trợ Ra Quyết định
+# Xây dựng nền tảng quản lý vận hành doanh nghiệp tích hợp trợ lí AI
+
+Phạm vi nghiệm thu hiện hành: [ACADEMIC_ACCEPTANCE_SCOPE](docs/ACADEMIC_ACCEPTANCE_SCOPE.md).
+Đối chiếu chức năng–code–test: [ACADEMIC_REQUIREMENTS_MATRIX](docs/ACADEMIC_REQUIREMENTS_MATRIX.md).
+Chat realtime nhân viên và bản tin nội bộ do thầy bổ sung vẫn chưa có bằng chứng
+triển khai; không lấy chat AI hoặc thông báo nghiệp vụ thay thế. Hệ thống không
+được mô tả là ERP/WMS hoàn chỉnh. Xem CURRENT_STATUS để biết giới hạn local/production.
 
 > **Hệ thống Nền tảng Hợp nhất xây dựng trên Django với Không gian làm việc Kép (Bán lẻ & Dịch vụ Kỹ thuật), Phân tích Không gian GIS, Truy xuất Tri thức RAG, Dự báo Chuỗi Thời gian XGBoost, và Hỗ trợ Ra Quyết định Có Con người Kiểm duyệt (Human-in-the-Loop).**
 
@@ -108,9 +114,9 @@ ai_business_platform/
 
 5. **Khởi tạo Dữ liệu Mẫu (Demo Workspaces & Users)**:
    ```bash
-   python manage.py seed_demo
+   python manage.py seed_demo --confirm-empty-demo
    ```
-   *Lệnh này khởi tạo 2 không gian làm việc (`Cửa hàng Bán lẻ ABC`, `Công ty Dịch vụ Kỹ thuật XYZ`), 4 vai trò chuẩn (`Quản trị viên`, `Quản lý`, `Nhân viên`, `Người xem`), cùng các tài khoản mẫu (`admin`, `manager`, `employee`, `viewer`).*
+   *Chỉ chạy trên CSDL demo cục bộ mới, `DEBUG=True`, chưa có User/Workspace/Role; không chạy trên production, staging hoặc CSDL đang sử dụng. Lệnh từ chối chạy lại để không đặt lại mật khẩu/xóa dữ liệu. Thêm `--identity-only` nếu chỉ cần kiểm tra quyền, không cần dữ liệu nghiệp vụ. Không khởi chạy hai tiến trình seed đồng thời. Xem [hướng dẫn an toàn và ma trận quyền](docs/DEMO_IDENTITY_RUNBOOK.md).*
 
 6. **Chạy Bộ Kiểm thử Tự động**:
    ```bash

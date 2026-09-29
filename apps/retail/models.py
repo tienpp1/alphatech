@@ -321,6 +321,10 @@ class Order(WorkspaceScopedModel):
         related_name="created_retail_orders",
     )
     notes = models.TextField(blank=True)
+    # Explicit lifecycle markers for stock-backed fulfillment reservations.
+    # Orders with no stock movement remain false so cancellation never guesses.
+    fulfillment_stock_reserved = models.BooleanField(default=False, db_index=True)
+    fulfillment_stock_released_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

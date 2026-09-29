@@ -4,6 +4,11 @@
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.workload-high { color: #ef4444; }
+.workload-mid { color: #f59e0b; }
+.workload-low { color: #10b981; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -13,13 +18,14 @@
         <p class="text-secondary">Điều phối sự cố, theo dõi thời gian & chi phí nhân công, tải công việc kỹ thuật viên và tuân thủ SLA</p>
     </div>
     <div class="header-actions">
-        <a href="/services/requests/" class="btn btn-primary">+ Tạo Phiếu Yêu cầu</a>
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary">← Tổng quan Nội bộ</a>
+        <a href="/noibo/services/requests/" class="btn btn-primary">+ Danh sách & Tạo Phiếu</a>
         <a href="/api/v1/service-ops/analytics/overview/" target="_blank" class="btn btn-secondary">Phân tích JSON ↗</a>
     </div>
 </div>
 
 <!-- KPI Cards Grid -->
-<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+<div class="kpi-grid">
     <div class="card kpi-card">
         <div class="kpi-label">Phiếu Yêu cầu Đang mở</div>
         <div class="kpi-value text-primary">{{ summary.open_requests }}</div>
@@ -31,9 +37,14 @@
         <div class="kpi-subtitle">{{ summary.total_labor_hours }} giờ kỹ thuật tính phí được ghi nhận</div>
     </div>
     <div class="card kpi-card">
-        <div class="kpi-label">Tỷ lệ Tuân thủ SLA</div>
+        <div class="kpi-label">Tỷ lệ SLA đúng hạn tại thời điểm xem</div>
+        {% if summary.evaluated_sla_count %}
         <div class="kpi-value {% if summary.sla_compliance_rate >= 90 %}text-success{% else %}text-danger{% endif %}">{{ summary.sla_compliance_rate }}%</div>
+        {% else %}
+        <div class="kpi-value text-secondary">Chưa đủ dữ liệu</div>
+        {% endif %}
         <div class="kpi-subtitle">{{ summary.on_time_sla_count }} đúng hạn, {{ summary.at_risk_sla_count }} nguy cơ, {{ summary.breached_sla_count }} vi phạm</div>
+        <p class="text-secondary" style="font-size: 0.72rem; color: #64748b; margin-top: 0.4rem; line-height: 1.35;">{{ summary.evaluated_sla_count }} phiếu có kết luận; {{ summary.unknown_sla_count }} phiếu chưa đủ dữ liệu, không tính vào tỷ lệ. Đây là trạng thái hiện tại, không phải chứng nhận tuân thủ sau hoàn tất.</p>
     </div>
     <div class="card kpi-card">
         <div class="kpi-label">Thời gian Xử lý Trung bình</div>
@@ -48,7 +59,7 @@
 </div>
 
 <!-- Service Category Distribution Cards -->
-<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1.5rem;">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; margin-top: 1.5rem;">
     <div class="card" style="border-left: 4px solid #3b82f6; padding: 1rem;">
         <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Cài đặt hệ thống</div>
         <div style="font-size: 1.5rem; font-weight: 700; color: #60a5fa; margin-top: 0.25rem;">{{ summary.tickets_by_category.INSTALLATION|default:0 }}</div>
@@ -72,7 +83,7 @@
 </div>
 
 <!-- Analytics Charts & Roster Section -->
-<div class="grid-2-cols" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+<div class="grid-2-cols" style="margin-top: 1.5rem;">
     <!-- Workload & Labor Roster -->
     <div class="card">
         <h3 class="card-title">Tải Công việc & Chi phí Nhân công Kỹ thuật</h3>
@@ -108,7 +119,7 @@
                             <span style="font-size: 0.85rem; color: #34d399;">{{ tech.total_labor_minutes }} phút ({{ tech.total_labor_cost|floatformat:0 }} VND)</span>
                         </td>
                         <td>
-                            <strong style="color: {% if tech.workload_score > 4 %}#ef4444{% elif tech.workload_score > 2 %}#f59e0b{% else %}#10b981{% endif %};">
+                            <strong class="{% if tech.workload_score > 4 %}workload-high{% elif tech.workload_score > 2 %}workload-mid{% else %}workload-low{% endif %}">
                                 {{ tech.workload_score }}
                             </strong>
                         </td>
@@ -127,13 +138,14 @@
     <div class="card">
         <h3 class="card-title">Tình trạng Tuân thủ Cam kết SLA</h3>
         <div style="position: relative; height: 260px; display: flex; align-items: center; justify-content: center;">
-            <canvas id="slaChart"></canvas>
+            {% if summary.total_requests %}<canvas id="slaChart" role="img" aria-label="Phân bố trạng thái SLA; số liệu chi tiết ở phần chú giải bên dưới" data-ontime="{{ summary.on_time_sla_count|default:0 }}" data-atrisk="{{ summary.at_risk_sla_count|default:0 }}" data-breached="{{ summary.breached_sla_count|default:0 }}" data-unknown="{{ summary.unknown_sla_count|default:0 }}"></canvas>{% else %}<p>Chưa có phiếu để đánh giá SLA.</p>{% endif %}
         </div>
         <div style="display: flex; justify-content: space-around; margin-top: 1rem; font-size: 0.85rem;">
             <div><span style="display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 50%; margin-right: 4px;"></span> Đúng hạn ({{ summary.on_time_sla_count }})</div>
             <div><span style="display: inline-block; width: 10px; height: 10px; background: #f59e0b; border-radius: 50%; margin-right: 4px;"></span> Nguy cơ trễ ({{ summary.at_risk_sla_count }})</div>
             <div><span style="display: inline-block; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; margin-right: 4px;"></span> Vi phạm ({{ summary.breached_sla_count }})</div>
         </div>
+        <p class="text-secondary">Chưa đủ dữ liệu ({{ summary.unknown_sla_count }})</p>
     </div>
 </div>
 
@@ -141,7 +153,7 @@
 <div class="card" style="margin-top: 1.5rem;">
     <div class="dashboard-header" style="margin-bottom: 1rem;">
         <h3 class="card-title" style="margin-bottom: 0;">Luồng Phiếu Yêu cầu Gần đây</h3>
-        <a href="/services/requests/" class="btn btn-secondary" style="font-size: 0.875rem;">Xem tất cả phiếu &rarr;</a>
+        <a href="/noibo/services/requests/" class="btn btn-secondary" style="font-size: 0.875rem;">Xem tất cả phiếu &rarr;</a>
     </div>
     <div class="table-responsive">
         <table class="data-table">
@@ -200,14 +212,14 @@
                         </span>
                     </td>
                     <td>
-                        <span class="badge {% if item.sla.overall_status == 'ON_TIME' %}bg-success{% elif item.sla.overall_status == 'AT_RISK' %}bg-warning{% else %}bg-danger{% endif %}">
+                        <span class="badge {% if item.sla.overall_status == 'ON_TIME' %}bg-success{% elif item.sla.overall_status == 'AT_RISK' %}bg-warning{% elif item.sla.overall_status == 'BREACHED' %}bg-danger{% else %}bg-secondary{% endif %}">
                             {% if item.sla.overall_status == 'ON_TIME' %}Đúng hạn
                             {% elif item.sla.overall_status == 'AT_RISK' %}Nguy cơ
-                            {% else %}Vi phạm{% endif %}
+                            {% elif item.sla.overall_status == 'BREACHED' %}Vi phạm{% else %}Chưa đủ dữ liệu{% endif %}
                         </span>
                     </td>
                     <td>
-                        <a href="/services/requests/{{ item.req.id }}/" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Xử lý</a>
+                        <a href="/noibo/services/requests/{{ item.req.id }}/" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Xử lý</a>
                     </td>
                 </tr>
                 {% empty %}
@@ -224,14 +236,21 @@
 {% block extra_js %}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const ctx = document.getElementById("slaChart").getContext("2d");
+        const canvas = document.getElementById("slaChart");
+        if (!canvas || typeof Chart === "undefined") return;
+        const ctx = canvas.getContext("2d");
+        const onTime = Number(canvas.dataset.ontime) || 0;
+        const atRisk = Number(canvas.dataset.atrisk) || 0;
+        const breached = Number(canvas.dataset.breached) || 0;
+        const unknown = Number(canvas.dataset.unknown) || 0;
+
         new Chart(ctx, {
             type: "doughnut",
             data: {
-                labels: ["Đúng hạn", "Nguy cơ trễ", "Vi phạm SLA"],
+                labels: ["Đúng hạn", "Nguy cơ trễ", "Vi phạm SLA", "Chưa đủ dữ liệu"],
                 datasets: [{
-                    data: [{{ summary.on_time_sla_count }}, {{ summary.at_risk_sla_count }}, {{ summary.breached_sla_count }}],
-                    backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
+                    data: [onTime, atRisk, breached, unknown],
+                    backgroundColor: ["#10b981", "#f59e0b", "#ef4444", "#94a3b8"],
                     borderColor: "#1e293b",
                     borderWidth: 2,
                     hoverOffset: 4

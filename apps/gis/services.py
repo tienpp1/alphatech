@@ -30,7 +30,7 @@ def find_objects_within_radius(
         raise ValueError("Radius must be greater than zero.")
 
     return queryset.annotate(
-        _spatial_dist=Distance(location_field, point)
+        _spatial_dist=Distance(location_field, point, spheroid=True)
     ).filter(_spatial_dist__lte=D(km=radius_km))
 
 
@@ -48,7 +48,7 @@ def calculate_distances(
         raise ValueError("Origin point must be a valid GeoDjango Point instance.")
 
     annotated_qs = queryset.annotate(
-        distance=Distance(location_field, origin_point)
+        distance=Distance(location_field, origin_point, spheroid=True)
     )
 
     if order_by_distance:

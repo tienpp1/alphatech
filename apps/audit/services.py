@@ -47,7 +47,7 @@ def log_audit_event(
     return log_action(
         workspace=workspace,
         actor_user=user,
-        actor_type=ActorType.USER if user else ActorType.SYSTEM,
+        actor_type=ActorType.USER if user else ActorType.SYSTEM_JOB,
         action=action,
         entity_type=entity_type,
         entity_id=entity_id,

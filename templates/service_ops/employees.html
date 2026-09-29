@@ -3,12 +3,19 @@
 {% block title %}Kỹ thuật viên & Kỹ sư — {{ active_workspace.name }}{% endblock %}
 
 {% block content %}
+<style>
+.workload-high { color: #ef4444; }
+.workload-mid { color: #f59e0b; }
+.workload-low { color: #10b981; }
+</style>
 <div class="dashboard-header">
     <div>
         <h1 class="page-title">Danh bạ Nhân sự Kỹ thuật</h1>
         <p class="text-secondary">Kỹ sư hiện trường, chuyên gia CNTT, chuyên môn kỹ năng, định mức giờ công và tải công việc thời gian thực</p>
     </div>
     <div class="header-actions">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary">← Tổng quan Nội bộ</a>
+        <a href="/noibo/services/labor-cost/" class="btn btn-secondary">⏱️ Chi phí nhân công</a>
         <a href="/api/v1/service-ops/employees/" target="_blank" class="btn btn-secondary">API JSON ↗</a>
     </div>
 </div>
@@ -53,7 +60,7 @@
                         <span style="font-size: 0.85rem; color: #34d399;">{{ tech.total_labor_minutes }} phút ({{ tech.total_labor_cost|floatformat:0 }} VND)</span>
                     </td>
                     <td>
-                        <strong style="color: {% if tech.workload_score > 4 %}#ef4444{% elif tech.workload_score > 2 %}#f59e0b{% else %}#10b981{% endif %}; font-size: 1.05rem;">
+                        <strong class="{% if tech.workload_score > 4 %}workload-high{% elif tech.workload_score > 2 %}workload-mid{% else %}workload-low{% endif %}" style="font-size: 1.05rem;">
                             {{ tech.workload_score }}
                         </strong>
                     </td>

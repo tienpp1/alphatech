@@ -23,13 +23,24 @@
     color: #94a3b8;
     text-transform: uppercase;
 }
+@media (max-width: 640px) {
+    .filter-input {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 2rem;">
-    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">Quản lý Đơn hàng Bán lẻ</h1>
-    <p style="color: #94a3b8;">Giao dịch thương mại được ghi nhận của <strong>{{ active_workspace.name }}</strong></p>
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">Quản lý Đơn hàng Bán lẻ</h1>
+        <p style="color: #94a3b8;">Giao dịch thương mại được ghi nhận của <strong>{{ active_workspace.name }}</strong></p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="/noibo/retail/" id="btn-back-dashboard" class="btn btn-secondary" style="text-decoration: none;">← Bảng điều khiển Bán lẻ</a>
+    </div>
 </div>
 
 <form method="GET" action="" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
@@ -48,11 +59,11 @@
     </select>
     <button type="submit" class="btn btn-primary">Lọc dữ liệu</button>
     {% if search_q or status_filter %}
-    <a href="/retail/orders/" class="btn btn-secondary">Đặt lại</a>
+    <a href="/noibo/retail/orders/" class="btn btn-secondary">Đặt lại</a>
     {% endif %}
 </form>
 
-<div class="table-card" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.5rem; overflow-x: auto;">
+<div class="table-card table-responsive" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.5rem; overflow-x: auto;">
     <table class="data-table">
         <thead>
             <tr>
@@ -85,7 +96,7 @@
                 <td style="color: #94a3b8; font-size: 0.85rem;">{{ o.payment_method }}</td>
                 <td style="font-weight: 700; color: #38bdf8;">{{ o.total_amount|floatformat:0 }} VND</td>
                 <td>
-                    <a href="/retail/orders/{{ o.id }}/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Chi tiết →</a>
+                    <a href="/noibo/retail/orders/{{ o.id }}/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Chi tiết →</a>
                 </td>
             </tr>
             {% empty %}

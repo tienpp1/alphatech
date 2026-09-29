@@ -8,6 +8,10 @@
         <h1 class="page-title">Lịch Làm việc & Điều phối Kỹ thuật viên</h1>
         <p class="text-secondary">Khung thời gian vận hành và lịch công tác hiện trường được phân công</p>
     </div>
+    <div class="header-actions">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary">← Tổng quan Nội bộ</a>
+        <a href="/noibo/services/requests/" class="btn btn-secondary">📋 Phiếu yêu cầu</a>
+    </div>
 </div>
 
 <div class="card">
@@ -29,7 +33,7 @@
                     <td><strong>👨‍🔧 {{ s.employee.full_name }}</strong></td>
                     <td>
                         <div><strong>{{ s.task.title }}</strong></div>
-                        <a href="/services/requests/{{ s.task.service_request.id }}/"><code>{{ s.task.service_request.request_number }}</code></a>
+                        <a href="/noibo/services/requests/{{ s.task.service_request.id }}/"><code>{{ s.task.service_request.request_number }}</code></a>
                     </td>
                     <td><code>{{ s.start_time|date:"Y-m-d H:i" }}</code></td>
                     <td><code>{{ s.end_time|date:"Y-m-d H:i" }}</code></td>

@@ -3,6 +3,7 @@ Product Image Services for Secure File Validation, Storage, and Management.
 """
 
 import os
+import logging
 import uuid
 from typing import List, Optional
 from django.core.exceptions import ValidationError
@@ -11,6 +12,8 @@ from django.db import transaction
 from PIL import Image
 
 from apps.retail.models import Product, ProductImage
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -134,7 +137,7 @@ def delete_product_image(product_image: ProductImage) -> None:
         if product_image.image and hasattr(product_image.image, "path") and os.path.isfile(product_image.image.path):
             product_image.image.delete(save=False)
     except Exception:
-        pass
+        logger.warning("PRODUCT_IMAGE_FILE_CLEANUP_FAILED")
 
     product_image.delete()
 

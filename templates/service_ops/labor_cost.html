@@ -10,8 +10,9 @@
             phiếu yêu cầu dịch vụ.</p>
     </div>
     <div class="header-actions">
-        <a href="/services/requests/" class="btn btn-secondary">📋 Phiếu yêu cầu (Ticket)</a>
-        <a href="/services/employees/" class="btn btn-primary">👨‍💻 Đội ngũ Kỹ thuật viên</a>
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary">← Tổng quan Nội bộ</a>
+        <a href="/noibo/services/requests/" class="btn btn-secondary">📋 Phiếu yêu cầu (Ticket)</a>
+        <a href="/noibo/services/employees/" class="btn btn-primary">👨‍💻 Đội ngũ Kỹ thuật viên</a>
     </div>
 </div>
 
@@ -59,7 +60,7 @@
 </div>
 
 <!-- Labor Entries Table -->
-<div class="card" style="padding: 1.5rem; overflow-x: auto;">
+<div class="card table-responsive" style="padding: 1.5rem; overflow-x: auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3 style="font-size: 1.1rem; font-weight: 600; margin: 0;">Lịch sử ghi nhận giờ công kỹ sư</h3>
         <span class="badge"
@@ -86,7 +87,7 @@
             {% for entry in labor_entries %}
             <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
                 <td style="padding: 0.75rem; font-weight: 600; color: #60a5fa;">
-                    <a href="/services/requests/{{ entry.task.service_request.id }}/"
+                    <a href="/noibo/services/requests/{{ entry.task.service_request.id }}/"
                         style="color: inherit; text-decoration: none;">
                         {{ entry.task.service_request.request_number }}
                     </a>
@@ -116,7 +117,7 @@
                     {{ entry.started_at|date:"d/m/Y H:i"|default:"-" }}
                 </td>
                 <td style="padding: 0.75rem;">
-                    <a href="/services/requests/{{ entry.task.service_request.id }}/" class="btn btn-sm btn-outline"
+                    <a href="/noibo/services/requests/{{ entry.task.service_request.id }}/" class="btn btn-secondary"
                         style="font-size: 0.75rem; padding: 3px 8px;">
                         Chi tiết ticket ↗
                     </a>

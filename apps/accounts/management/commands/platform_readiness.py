@@ -62,6 +62,13 @@ class Command(BaseCommand):
             },
             "security": {
                 "debug": settings.DEBUG,
+                "secret_key_is_insecure_default": str(settings.SECRET_KEY).startswith(
+                    "django-insecure-"
+                ),
+                "demo_credentials_visible": bool(
+                    settings.DEBUG
+                    and getattr(settings, "SHOW_DEMO_CREDENTIALS", False)
+                ),
                 "ssl_redirect": settings.SECURE_SSL_REDIRECT,
                 "session_cookie_secure": settings.SESSION_COOKIE_SECURE,
                 "csrf_cookie_secure": settings.CSRF_COOKIE_SECURE,
@@ -82,6 +89,10 @@ class Command(BaseCommand):
             blockers.append("database")
         if production and settings.DEBUG:
             blockers.append("debug_enabled")
+        if production and checks["security"]["secret_key_is_insecure_default"]:
+            blockers.append("insecure_secret_key")
+        if production and checks["security"]["demo_credentials_visible"]:
+            blockers.append("demo_credentials_visible")
         smtp = settings.EMAIL_BACKEND == "django.core.mail.backends.smtp.EmailBackend"
         brevo = settings.EMAIL_BACKEND == "apps.public_web.email_backends.BrevoEmailBackend"
         if production and not (smtp or brevo):
@@ -98,6 +109,10 @@ class Command(BaseCommand):
             blockers.append("https_oauth_redirect")
         if production and not (settings.SECURE_SSL_REDIRECT and settings.SESSION_COOKIE_SECURE and settings.CSRF_COOKIE_SECURE):
             blockers.append("secure_transport_cookies")
+        if production and settings.SECURE_HSTS_SECONDS <= 0:
+            blockers.append("hsts_disabled")
+        if production and not getattr(settings, "CSP_ENFORCE", False):
+            blockers.append("csp_not_enforced")
         if production and not (_configured(getattr(settings, "SENTRY_DSN", "")) or _configured(getattr(settings, "OTEL_EXPORTER_OTLP_ENDPOINT", ""))):
             blockers.append("observability")
 

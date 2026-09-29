@@ -7,7 +7,7 @@ or falls back to 'jsonb' float array storage on non-elevated developer environme
 
 import json
 from typing import Any, List, Optional
-from django.db import models
+from django.db import DatabaseError, models
 from django.core.exceptions import ValidationError
 
 
@@ -39,8 +39,9 @@ class DynamicVectorField(models.Field):
                         if self.dimensions:
                             return f"vector({self.dimensions})"
                         return "vector"
-            except Exception:
-                pass
+            except DatabaseError:
+                # pgvector is optional; lack of extension/query permission uses jsonb.
+                return "jsonb"
             return "jsonb"
         return "text"
 
@@ -61,8 +62,8 @@ class DynamicVectorField(models.Field):
                 parsed = json.loads(value)
                 if isinstance(parsed, list):
                     return [float(x) for x in parsed]
-            except Exception:
-                pass
+            except (json.JSONDecodeError, TypeError, ValueError):
+                return None
         return None
 
     def to_python(self, value: Any) -> Optional[List[float]]:

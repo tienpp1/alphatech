@@ -464,7 +464,9 @@
                 display: none;
             }
             .pub-mobile-toggle {
-                display: block;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
             }
             .pub-footer-container {
                 grid-template-columns: 1fr 1fr;
@@ -473,34 +475,76 @@
 
         @media (max-width: 640px) {
             .pub-nav-container {
-                flex-wrap: wrap;
-                gap: 0.6rem;
-                padding: 0.75rem 1rem;
+                flex-wrap: nowrap;
+                justify-content: space-between;
+                align-items: center;
+                gap: 0.75rem;
+                padding: 0.65rem 1rem;
             }
             .pub-brand {
-                flex: 1 1 100%;
+                flex: 1;
                 min-width: 0;
             }
-            .pub-brand-text {
-                min-width: 0;
-                overflow-wrap: anywhere;
+            .pub-brand-logo {
+                width: 34px;
+                height: 34px;
+                border-radius: 8px;
+            }
+            .pub-brand-title {
+                font-size: 0.95rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .pub-brand-sub {
+                display: none;
             }
             .pub-nav-container > nav {
                 display: none;
             }
             .pub-header-auth {
-                width: 100%;
-                flex-wrap: wrap;
+                width: auto;
+                flex-wrap: nowrap;
                 justify-content: flex-end;
-                gap: 0.5rem;
+                align-items: center;
+                gap: 0.45rem;
+            }
+            .pub-btn-cart {
+                padding: 7px 10px;
+                border-radius: 8px;
+            }
+            .pub-btn-cart span:not(.pub-cart-badge) {
+                display: none;
+            }
+            .pub-btn-login {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+                border-radius: 8px;
             }
             .pub-btn-account {
-                max-width: 100%;
-                min-width: 0;
-                overflow-wrap: anywhere;
+                padding: 6px 10px;
+                font-size: 0.8rem;
+                border-radius: 8px;
+                max-width: 140px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .pub-btn-logout {
+                display: none;
+            }
+            .pub-mobile-toggle {
+                width: 36px;
+                height: 36px;
+                padding: 0;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 8px;
             }
             .pub-footer-container {
                 grid-template-columns: 1fr;
+                gap: 2rem;
             }
             .pub-topbar {
                 display: none;
@@ -625,31 +669,60 @@
         </div>
 
         <!-- Mobile Drawer Navigation -->
-        <div id="pub-mobile-menu" style="display: none; background: #FFFFFF; border-bottom: 1px solid var(--pub-border); padding: 1rem 1.5rem;">
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <a href="/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Trang chủ</a>
-                <a href="/san-pham/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Sản phẩm</a>
-                <a href="/gio-hang/" style="color: var(--pub-primary); text-decoration: none; padding: 8px 0; font-weight: 700; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="display: inline-flex; align-items: center; gap: 6px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                        Giỏ hàng
-                    </span>
-                    {% if cart_items_count and cart_items_count > 0 %}
-                    <span class="pub-cart-badge">{{ cart_items_count }}</span>
+        <div id="pub-mobile-menu" class="pub-mobile-drawer" style="display: none;">
+            <div class="pub-mobile-menu-inner">
+                <div class="pub-mobile-menu-grid">
+                    <a href="/" class="pub-mobile-link {% if active_nav == 'home' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        <span>Trang chủ</span>
+                    </a>
+                    <a href="/san-pham/" class="pub-mobile-link {% if active_nav == 'products' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        <span>Sản phẩm công nghệ</span>
+                    </a>
+                    <a href="/dich-vu/" class="pub-mobile-link {% if active_nav == 'services' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                        <span>Dịch vụ IT &amp; Sửa chữa</span>
+                    </a>
+                    <a href="/chi-nhanh/" class="pub-mobile-link {% if active_nav == 'branches' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span>Hệ thống chi nhánh</span>
+                    </a>
+                    <a href="/gio-hang/" class="pub-mobile-link {% if active_nav == 'cart' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                        <span>Giỏ hàng</span>
+                        {% if cart_items_count and cart_items_count > 0 %}
+                        <span class="pub-cart-badge" style="margin-left: auto;">{{ cart_items_count }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="/tai-khoan/don-hang/" class="pub-mobile-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                        <span>Tra cứu đơn hàng</span>
+                    </a>
+                    <a href="/gioi-thieu/" class="pub-mobile-link {% if active_nav == 'about' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span>Về chúng tôi</span>
+                    </a>
+                    <a href="/lien-he/" class="pub-mobile-link {% if active_nav == 'contact' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        <span>Liên hệ hỗ trợ</span>
+                    </a>
+                </div>
+
+                <div class="pub-mobile-auth-section" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--pub-border); display: flex; flex-direction: column; gap: 8px;">
+                    {% if request.user.is_authenticated %}
+                    <a href="/tai-khoan/" class="pub-btn-account" style="justify-content: center; width: 100%;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span>Tài khoản: {{ request.user.first_name|default:request.user.username }}</span>
+                    </a>
+                    <a href="/dang-xuat/" class="pub-btn-logout" style="text-align: center; width: 100%; display: block;">Đăng xuất</a>
+                    {% else %}
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <a href="/dang-nhap/" class="pub-btn-login" style="justify-content: center;">Đăng nhập</a>
+                        <a href="/dang-ky/" class="pub-btn-secondary" style="justify-content: center; font-size: 0.88rem; padding: 8px;">Đăng ký</a>
+                    </div>
                     {% endif %}
-                </a>
-                <a href="/dich-vu/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Dịch vụ</a>
-                <a href="/chi-nhanh/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Chi nhánh</a>
-                <a href="/gioi-thieu/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Giới thiệu</a>
-                <a href="/lien-he/" style="color: var(--pub-text-heading); text-decoration: none; padding: 8px 0; font-weight: 600;">Liên hệ</a>
-                {% if request.user.is_authenticated %}
-                <hr style="border: none; border-top: 1px solid var(--pub-border); margin: 6px 0;">
-                <a href="/tai-khoan/" style="color: var(--pub-primary); text-decoration: none; padding: 8px 0; font-weight: 700;">Tài khoản của tôi</a>
-                <a href="/dang-xuat/" style="color: var(--pub-danger); text-decoration: none; padding: 8px 0; font-weight: 600;">Đăng xuất</a>
-                {% else %}
-                <hr style="border: none; border-top: 1px solid var(--pub-border); margin: 6px 0;">
-                <a href="/dang-nhap/" style="color: var(--pub-primary); text-decoration: none; padding: 8px 0; font-weight: 700;">Đăng nhập / Đăng ký</a>
-                {% endif %}
+                </div>
             </div>
         </div>
     </header>
@@ -714,6 +787,7 @@
                 <h4>Khách hàng & Hỗ trợ</h4>
                 <ul class="pub-footer-links">
                     <li><a href="/tai-khoan/">Tài khoản khách hàng</a></li>
+                    <li><a href="/tai-khoan/don-hang/">Tra cứu đơn hàng</a></li>
                     <li><a href="/chi-nhanh/">Danh sách 3 chi nhánh</a></li>
                     <li><a href="/gioi-thieu/">Về chúng tôi</a></li>
                     <li><a href="/lien-he/">Liên hệ & Phản hồi</a></li>
@@ -817,7 +891,7 @@
                     <div class="copilot-chat-name">AI AlphaTech</div>
                     <div class="copilot-chat-status">
                         <span style="width: 6px; height: 6px; background: #10B981; border-radius: 50%; display: inline-block;"></span>
-                        Chuyên viên trực tuyến • SLA &lt; 15m
+                        Trợ lý tự động • Thông tin tham khảo
                     </div>
                 </div>
             </div>
@@ -828,17 +902,17 @@
 
         <div class="copilot-chat-body" id="copilot-chat-body">
             <div class="copilot-msg bot">
-                Xin chào Quý khách! Tôi là <strong>AI AlphaTech</strong> – Chuyên viên tư vấn &amp; Điều phối dịch vụ công nghệ của hệ sinh thái ABC Tech Store &amp; XYZ IT Services. Tôi luôn sẵn sàng trực tuyến 24/7 để đồng hành cùng Quý khách: tư vấn cấu hình máy tính theo nhu cầu, hỗ trợ sự cố IT khẩn cấp (SLA &lt; 15m), tra cứu bảo hành, chính sách mua hàng và tìm kiếm chi nhánh gần nhất.
+                Xin chào Quý khách! Tôi là <strong>AI AlphaTech</strong>, trợ lý tự động hỗ trợ tìm sản phẩm, dịch vụ, chi nhánh và tra cứu đơn hàng. Điều kiện bảo hành, thanh toán và lịch hẹn cần được xác nhận theo từng yêu cầu.
                 <div class="copilot-chips-wrap" style="margin-top: 10px;">
                     <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tư vấn cấu hình Laptop theo nhu cầu công việc')">💻 Tư vấn Laptop theo nhu cầu</button>
-                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Sự cố mạng khẩn cấp cam kết SLA')">⚡ Báo sự cố mạng / Server (SLA 15m)</button>
-                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Chính sách bảo hành và 1 đổi 1 DOA 72h')">🛡️ Bảo hành &amp; 1 đổi 1 (DOA 72h)</button>
-                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Thủ tục mua hàng trả góp 0% qua CCCD hoặc thẻ tín dụng')">💳 Trả góp 0% qua CCCD / Thẻ</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Sự cố mạng khẩn cấp')">⚡ Báo sự cố mạng / Server</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Điều kiện bảo hành và đổi trả')">🛡️ Hỏi điều kiện bảo hành</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Hỏi điều kiện trả góp')">💳 Hỏi điều kiện trả góp</button>
                     <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Chính sách giao hàng, thanh toán và hóa đơn VAT')">🚚 Giao hàng &amp; Hóa đơn VAT</button>
                     <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Nâng cấp RAM SSD và vệ sinh máy tính')">🛠️ Nâng cấp RAM/SSD &amp; Vệ sinh máy</button>
                     <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Chính sách khách hàng doanh nghiệp và báo giá B2B')">🏢 Báo giá Doanh nghiệp B2B</button>
                     <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Chương trình thu cũ đổi mới Trade-In')">🔄 Thu cũ đổi mới (Trade-In)</button>
-                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tìm chi nhánh showroom gần nhất và Hotline')">📍 Chi nhánh &amp; Hotline 24/7</button>
+                    <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tìm chi nhánh showroom gần nhất và Hotline')">📍 Chi nhánh &amp; Liên hệ</button>
                     <button type="button" class="copilot-chip" onclick="sendCopilotMsg('Tra cứu đơn hàng')">📦 Tra cứu đơn hàng</button>
                 </div>
             </div>

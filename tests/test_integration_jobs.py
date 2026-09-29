@@ -4,7 +4,7 @@ Unit & Integration Tests for Ingestion Job Lifecycle, Execution, and Staging Rec
 
 from django.test import TestCase, Client
 from django.core.files.uploadedfile import SimpleUploadedFile
-from apps.accounts.models import User, Role
+from apps.accounts.models import User, Role, Permission
 from apps.workspaces.models import Workspace, WorkspaceMembership, WorkspaceType
 from apps.integration.models import (
     DataSource,
@@ -22,6 +22,11 @@ class ImportJobExecutionTests(TestCase):
         self.client = Client()
         self.user = User.objects.create_user(username="test_admin_job", email="test_admin_job@example.com", password="AdminPass123!")
         self.role = Role.objects.create(name="ADMIN", description="Admin")
+        for codename in ("integration.view_datasource", "integration.execute_import"):
+            permission, _ = Permission.objects.get_or_create(
+                codename=codename, defaults={"name": codename, "module": "integration"},
+            )
+            self.role.permissions.add(permission)
         self.ws = Workspace.objects.create(name="Retail WS", code="retail-ws", workspace_type=WorkspaceType.RETAIL)
         WorkspaceMembership.objects.create(workspace=self.ws, user=self.user, role=self.role, is_default=True)
         self.client.force_login(self.user)

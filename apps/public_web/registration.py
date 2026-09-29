@@ -92,9 +92,14 @@ def consume_registration_code(user, code):
 
 
 @transaction.atomic
-def consume_registration_link(user):
+def consume_registration_link(user, token):
     """Consume the latest signed email link under the User lock."""
     user = User.objects.select_for_update().get(pk=user.pk)
+    # A resend may replace the challenge after the view's initial lookup.
+    # Revalidate the signed link while holding the same lock as resend.
+    linked_user = registration_link_user(token)
+    if not linked_user or linked_user.pk != user.pk:
+        return False
     challenge = RegistrationCode.objects.select_for_update().filter(user=user).first()
     if not challenge or challenge.consumed_at or challenge.expires_at <= timezone.now():
         return False

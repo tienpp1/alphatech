@@ -58,7 +58,7 @@ def forecasting_dashboard_view(request: HttpRequest) -> HttpResponse:
 
     # Fetch configs and recent runs
     configs = ForecastModelConfig.objects.for_workspace(workspace).filter(target_type=selected_target)
-    runs = ForecastRun.objects.for_workspace(workspace).filter(target_type=selected_target).order_by("-created_at")[:10]
+    runs = ForecastRun.objects.for_workspace(workspace).select_related("model_config").filter(target_type=selected_target).order_by("-created_at")[:10]
 
     # Chart data
     try:

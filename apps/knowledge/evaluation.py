@@ -7,7 +7,10 @@ Contains 16 curated test cases across 4 categories:
 4. Out-of-domain / Unsupported questions (Fallback validation)
 """
 
+from datetime import datetime, timezone
+from time import perf_counter
 from typing import Any, Dict, List
+from django.core.exceptions import PermissionDenied
 from apps.workspaces.models import Workspace
 from apps.accounts.models import User
 from apps.knowledge.services import answer_grounded_query, FALLBACK_NO_CONTEXT_MESSAGE
@@ -167,102 +170,60 @@ BENCHMARK_QUESTIONS: List[Dict[str, Any]] = [
 ]
 
 
-def run_benchmark_evaluation(workspace: Workspace, user: User) -> Dict[str, Any]:
+def _benchmark_error_code(error):
+    """Return a stable, non-sensitive error code for an evaluation case."""
+    if isinstance(error, PermissionDenied):
+        return "PERMISSION_DENIED"
+    if isinstance(error, TimeoutError):
+        return "PROVIDER_TIMEOUT"
+    if isinstance(error, (ConnectionError, OSError)):
+        return "PROVIDER_CONNECTION"
+    return "BENCHMARK_EXECUTION_ERROR"
+
+
+def run_benchmark_evaluation(
+    workspace: Workspace,
+    user: User,
+    *,
+    capture_errors: bool = False,
+    cases=None,
+) -> Dict[str, Any]:
+    """Run the existing assistant and report a lexical/evidence proxy, not accuracy.
+
+    This calls real application services and may persist conversations or invoke
+    providers. Use an isolated benchmark database; this is not a read-only export.
+    Exceptions propagate; failed execution must not be reported as a passing case.
     """
-    Executes the benchmark evaluation against the active workspace.
-    Computes Retrieval Relevance, Grounded Correctness, Citation Attribution,
-    and Fallback Precision rates.
-    """
+    from apps.knowledge.evaluation_scoring import score_case, summarize
+
+    benchmark_cases = BENCHMARK_QUESTIONS if cases is None else cases
     relevant_test_cases = [
-        tc for tc in BENCHMARK_QUESTIONS
+        tc for tc in benchmark_cases
         if tc.get("workspace_type") == workspace.workspace_type or tc.get("category") == "OUT_OF_DOMAIN"
     ]
-
-    total = len(relevant_test_cases)
-    retrieval_successes = 0
-    correctness_successes = 0
-    citation_successes = 0
-    fallback_successes = 0
-    fallback_total = 0
-
-    results_detail: List[Dict[str, Any]] = []
-
-    for tc in relevant_test_cases:
-        res = answer_grounded_query(
-            workspace=workspace,
-            user=user,
-            message=tc["question"],
-        )
-        answer = res.get("answer", "")
-        sources = res.get("sources", [])
-        tools_used = [t["tool"] for t in res.get("tools_used", []) if t.get("status") == "SUCCESS"]
-
-        # 1. Fallback validation
-        if tc["should_fallback"]:
-            fallback_total += 1
-            is_fallback_correct = FALLBACK_NO_CONTEXT_MESSAGE in answer
-            if is_fallback_correct:
-                fallback_successes += 1
-                correctness_successes += 1
-            results_detail.append({
-                "id": tc["id"],
-                "passed": is_fallback_correct,
-                "answer": answer[:80],
-                "expected": FALLBACK_NO_CONTEXT_MESSAGE,
+    details = []
+    for case in relevant_test_cases:
+        started_at = datetime.now(timezone.utc)
+        started = perf_counter()
+        metadata = {
+            "status": "SCORED",
+            "evaluated_at": started_at.isoformat(),
+        }
+        try:
+            response = answer_grounded_query(workspace=workspace, user=user, message=case["question"])
+        except Exception as error:
+            # The default remains fail-fast for callers that use the benchmark
+            # as a guard. Evidence exports can opt in to a complete per-case
+            # ledger without treating provider failures as passes.
+            if not capture_errors:
+                raise
+            metadata.update({
+                "status": "ERROR",
+                "error_code": _benchmark_error_code(error),
+                "duration_ms": round((perf_counter() - started) * 1000, 3),
             })
+            details.append(score_case(case, {}, FALLBACK_NO_CONTEXT_MESSAGE, metadata))
             continue
-
-        # 2. Retrieval Relevance
-        has_retrieved_source = bool(sources) if "expected_document" in tc else False
-        has_invoked_tool = (tc.get("expected_tool") in tools_used) if "expected_tool" in tc else False
-
-        retrieval_ok = False
-        if tc["category"] == "DOCUMENT_ONLY":
-            retrieval_ok = has_retrieved_source
-        elif tc["category"] == "STRUCTURED_ONLY":
-            retrieval_ok = has_invoked_tool
-        elif tc["category"] == "HYBRID":
-            retrieval_ok = has_retrieved_source or has_invoked_tool
-
-        if retrieval_ok:
-            retrieval_successes += 1
-
-        # 3. Grounded Correctness
-        answer_lower = answer.lower()
-        matched_keywords = [kw for kw in tc["expected_keywords"] if kw.lower() in answer_lower]
-        correct_ok = len(matched_keywords) >= 1
-
-        if correct_ok:
-            correctness_successes += 1
-
-        # 4. Citation Accuracy
-        citation_ok = True
-        if "expected_document" in tc:
-            doc_titles = [s["document_title"] for s in sources]
-            citation_ok = any(tc["expected_document"].lower() in dt.lower() for dt in doc_titles)
-            if citation_ok:
-                citation_successes += 1
-
-        results_detail.append({
-            "id": tc["id"],
-            "category": tc["category"],
-            "retrieval_ok": retrieval_ok,
-            "correct_ok": correct_ok,
-            "citation_ok": citation_ok,
-            "matched_keywords": matched_keywords,
-            "answer_preview": answer[:100],
-        })
-
-    non_fallback_count = total - fallback_total
-
-    metrics = {
-        "total_evaluated": total,
-        "document_and_data_cases": non_fallback_count,
-        "out_of_domain_cases": fallback_total,
-        "retrieval_relevance_rate": round(retrieval_successes / max(1, non_fallback_count) * 100, 1),
-        "grounded_correctness_rate": round(correctness_successes / max(1, total) * 100, 1),
-        "fallback_precision": round(fallback_successes / max(1, fallback_total) * 100, 1),
-        "details": results_detail,
-    }
-
-    return metrics
+        metadata["duration_ms"] = round((perf_counter() - started) * 1000, 3)
+        details.append(score_case(case, response, FALLBACK_NO_CONTEXT_MESSAGE, metadata))
+    return summarize(details)

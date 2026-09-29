@@ -2,18 +2,52 @@
 
 {% block title %}Chi tiết Lô Nhập {{ job.id|stringformat:"s"|slice:":8" }} — {{ workspace.name }}{% endblock %}
 
+{% block extra_head %}
+<style>
+.status-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.status-pill.status-completed {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid #10b981;
+}
+.status-pill.status-partial {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid #f59e0b;
+}
+.status-pill.status-running {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid #3b82f6;
+}
+.status-pill.status-failed {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid #ef4444;
+}
+.stat-val-danger { color: #f87171; }
+.stat-val-muted { color: #64748b; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
     <!-- Header -->
     <div style="margin-bottom: 24px;">
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-            <a href="/integration/jobs/" style="color: #60a5fa; text-decoration: none; font-size: 0.9rem;">&larr; Quay lại Lịch sử Lô</a>
+            <a href="/noibo/integration/jobs/" style="color: #60a5fa; text-decoration: none; font-size: 0.9rem;">&larr; Quay lại Lịch sử Lô</a>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
-                <h1 style="font-size: 1.75rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 12px;">
+                <h1 style="font-size: 1.75rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                     <span>Lô #{{ job.id|stringformat:"s"|slice:":8" }}</span>
-                    <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; {% if job.status == 'COMPLETED' %}background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981;{% elif job.status == 'PARTIAL' %}background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b;{% elif job.status == 'RUNNING' %}background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid #3b82f6;{% else %}background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444;{% endif %}">
+                    <span class="status-pill {% if job.status == 'COMPLETED' %}status-completed{% elif job.status == 'PARTIAL' %}status-partial{% elif job.status == 'RUNNING' %}status-running{% else %}status-failed{% endif %}">
                         {% if job.status == 'COMPLETED' %}HOÀN THÀNH
                         {% elif job.status == 'PARTIAL' %}MỘT PHẦN
                         {% elif job.status == 'RUNNING' %}ĐANG CHẠY
@@ -33,7 +67,7 @@
     </div>
 
     <!-- KPI Statistics Strip -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; margin-bottom: 24px;">
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
             <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Tổng Dòng Dữ liệu Vào</div>
             <div style="font-size: 1.6rem; font-weight: 800; color: #f8fafc; margin-top: 4px;">{{ job.total_rows }}</div>
@@ -44,7 +78,7 @@
         </div>
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
             <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Lỗi Kiểm duyệt Cấu trúc</div>
-            <div style="font-size: 1.6rem; font-weight: 800; color: {% if job.failed_rows > 0 %}#f87171{% else %}#64748b{% endif %}; margin-top: 4px;">{{ job.failed_rows }}</div>
+            <div class="{% if job.failed_rows > 0 %}stat-val-danger{% else %}stat-val-muted{% endif %}" style="font-size: 1.6rem; font-weight: 800; margin-top: 4px;">{{ job.failed_rows }}</div>
         </div>
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
             <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Tỷ lệ Thành công</div>
@@ -53,7 +87,7 @@
     </div>
 
     <!-- Navigation Tabs -->
-    <div style="display: flex; gap: 12px; border-bottom: 1px solid #334155; margin-bottom: 20px;">
+    <div style="display: flex; gap: 12px; border-bottom: 1px solid #334155; margin-bottom: 20px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;">
         <button onclick="switchTab('staged-records')" id="tab-btn-records" style="background: none; border: none; border-bottom: 2px solid #3b82f6; color: #3b82f6; padding: 10px 16px; font-weight: 700; font-size: 0.95rem; cursor: pointer;">
             📋 Bản ghi Thô Staging ({{ raw_records|length }})
         </button>
@@ -67,12 +101,12 @@
 
     <!-- Tab 1: Staged Raw Records -->
     <div id="tab-staged-records" style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
             <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Bảng Vùng đệm Staging Thô (50 bản ghi đầu tiên)</h3>
             <span style="font-size: 0.8rem; color: #94a3b8;">Các cặp khóa-giá trị thô nguyên bản được lưu trữ trong <code>RawImportRecord</code></span>
         </div>
         {% if raw_records %}
-        <div style="overflow-x: auto; background: #0f172a; border: 1px solid #334155; border-radius: 8px;">
+        <div class="table-responsive" style="overflow-x: auto; background: #0f172a; border: 1px solid #334155; border-radius: 8px;">
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
                 <thead style="background: rgba(255,255,255,0.03); color: #cbd5e1; border-bottom: 1px solid #334155;">
                     <tr>

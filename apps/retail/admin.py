@@ -18,6 +18,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "code", "workspace", "parent", "is_active", "created_at")
     list_filter = ("workspace", "is_active")
     search_fields = ("name", "code")
+    list_select_related = ("workspace", "parent")
 
 
 @admin.register(Product)
@@ -25,6 +26,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = ("name", "sku", "workspace", "category", "unit_price", "cost_price", "is_active")
     list_filter = ("workspace", "category", "is_active")
     search_fields = ("name", "sku")
+    list_select_related = ("workspace", "category")
 
 
 @admin.register(Branch)
@@ -32,6 +34,7 @@ class BranchAdmin(admin.ModelAdmin):
     list_display = ("name", "code", "workspace", "region", "phone", "is_active")
     list_filter = ("workspace", "region", "is_active")
     search_fields = ("name", "code", "address")
+    list_select_related = ("workspace",)
 
 
 @admin.register(Customer)
@@ -39,6 +42,7 @@ class CustomerAdmin(admin.ModelAdmin):
     list_display = ("name", "code", "workspace", "customer_segment", "phone", "email", "is_active")
     list_filter = ("workspace", "customer_segment", "is_active")
     search_fields = ("name", "code", "phone", "email")
+    list_select_related = ("workspace",)
 
 
 class OrderItemInline(admin.TabularInline):
@@ -54,6 +58,7 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ("order_number", "customer__name", "customer__code")
     inlines = [OrderItemInline]
     date_hierarchy = "order_date"
+    list_select_related = ("workspace", "customer", "branch")
 
 
 @admin.register(Supplier)
@@ -61,6 +66,7 @@ class SupplierAdmin(admin.ModelAdmin):
     list_display = ("name", "code", "workspace", "contact_name", "phone", "email", "is_active")
     list_filter = ("workspace", "is_active")
     search_fields = ("name", "code", "contact_name", "phone")
+    list_select_related = ("workspace",)
 
 
 class GoodsReceiptItemInline(admin.TabularInline):
@@ -76,6 +82,7 @@ class GoodsReceiptAdmin(admin.ModelAdmin):
     search_fields = ("receipt_number", "supplier__name", "supplier__code")
     inlines = [GoodsReceiptItemInline]
     date_hierarchy = "receipt_date"
+    list_select_related = ("workspace", "supplier", "branch")
 
 
 @admin.register(StockBalance)
@@ -83,4 +90,5 @@ class StockBalanceAdmin(admin.ModelAdmin):
     list_display = ("product", "branch", "workspace", "quantity_on_hand", "updated_at")
     list_filter = ("workspace", "branch", "product__category")
     search_fields = ("product__name", "product__sku", "branch__name", "branch__code")
+    list_select_related = ("product", "branch", "workspace")
 

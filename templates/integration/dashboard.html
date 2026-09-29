@@ -3,9 +3,23 @@
 {% block title %}Tích hợp & Tiếp nhận Dữ liệu — {{ workspace.name }}{% endblock %}
 
 {% block content %}
+<style>
+.msg-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; }
+.msg-alert.msg-success { background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; }
+.msg-alert.msg-error { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; }
+.msg-alert.msg-info { background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #60a5fa; }
+.rate-val-high { color: #34d399; }
+.rate-val-mid { color: #fbbf24; }
+.rate-val-low { color: #f87171; }
+.job-badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+.job-badge.status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.job-badge.status-partial { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.job-badge.status-running { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.job-badge.status-failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+</style>
 <div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
     <!-- Header -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
         <div>
             <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 10px;">
                 <span>📥</span> Tích hợp & Tiếp nhận Dữ liệu (Data Integration)
@@ -14,11 +28,14 @@
                 Nạp dữ liệu kinh doanh từ tệp CSV, Excel và Mock REST API vào vùng đệm staging đã kiểm duyệt cấu trúc.
             </p>
         </div>
-        <div style="display: flex; gap: 12px;">
-            <a href="/integration/sources/" class="btn" style="background: rgba(255,255,255,0.08); color: #f8fafc; border: 1px solid rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+            <a href="/noibo/" id="btn-back-dashboard" class="btn" style="background: rgba(255,255,255,0.08); color: #f8fafc; border: 1px solid rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+                ← Bảng điều khiển
+            </a>
+            <a href="/noibo/integration/sources/" class="btn" style="background: rgba(255,255,255,0.08); color: #f8fafc; border: 1px solid rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none;">
                 ⚙️ Nguồn Dữ liệu ({{ total_sources }})
             </a>
-            <a href="/integration/import/" class="btn btn-primary" style="background: #3b82f6; color: #fff; padding: 8px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+            <a href="/noibo/integration/import/" class="btn btn-primary" style="background: #3b82f6; color: #fff; padding: 8px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 6px;">
                 <span>⬆️</span> Nhập Dữ liệu Mới
             </a>
         </div>
@@ -28,7 +45,7 @@
     {% if messages %}
     <div style="margin-bottom: 20px;">
         {% for message in messages %}
-        <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; {% if message.tags == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;{% elif message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171;{% else %}background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #60a5fa;{% endif %}">
+        <div class="msg-alert {% if message.tags == 'success' %}msg-success{% elif message.tags == 'error' %}msg-error{% else %}msg-info{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
@@ -54,18 +71,18 @@
         </div>
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px;">
             <div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Tỷ lệ Nhập thành công</div>
-            <div style="font-size: 1.85rem; font-weight: 800; color: {% if success_rate >= 90 %}#34d399{% elif success_rate >= 70 %}#fbbf24{% else %}#f87171{% endif %}; margin-top: 6px;">{{ success_rate }}%</div>
+            <div class="{% if success_rate >= 90 %}rate-val-high{% elif success_rate >= 70 %}rate-val-mid{% else %}rate-val-low{% endif %}" style="font-size: 1.85rem; font-weight: 800; margin-top: 6px;">{{ success_rate }}%</div>
             <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">Chỉ số toàn vẹn cấu trúc</div>
         </div>
     </div>
 
     <!-- Dual Layout: Recent Sources & Jobs -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 24px;">
         <!-- Registered Data Sources -->
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Nguồn Dữ liệu Đã Cấu hình</h3>
-                <a href="/integration/sources/" style="color: #60a5fa; font-size: 0.85rem; text-decoration: none;">Xem tất cả &rarr;</a>
+                <a href="/noibo/integration/sources/" style="color: #60a5fa; font-size: 0.85rem; text-decoration: none;">Xem tất cả &rarr;</a>
             </div>
             {% if recent_sources %}
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -79,7 +96,7 @@
                         </div>
                     </div>
                     <div>
-                        <a href="/integration/import/?data_source_id={{ ds.id }}" class="btn btn-sm" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; text-decoration: none;">
+                        <a href="/noibo/integration/import/?data_source_id={{ ds.id }}" class="btn btn-sm" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; text-decoration: none;">
                             Nhập ngay
                         </a>
                     </div>
@@ -89,7 +106,7 @@
             {% else %}
             <div style="text-align: center; padding: 32px 0; color: #64748b;">
                 <p>Chưa có nguồn dữ liệu nào được cấu hình.</p>
-                <a href="/integration/sources/" class="btn btn-primary" style="font-size: 0.85rem; padding: 6px 14px; text-decoration: none; border-radius: 6px; background: #3b82f6; color: #fff;">+ Thêm Nguồn Dữ liệu</a>
+                <a href="/noibo/integration/sources/" class="btn btn-primary" style="font-size: 0.85rem; padding: 6px 14px; text-decoration: none; border-radius: 6px; background: #3b82f6; color: #fff;">+ Thêm Nguồn Dữ liệu</a>
             </div>
             {% endif %}
         </div>
@@ -98,12 +115,12 @@
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Các Lô Nhập Dữ liệu Gần đây</h3>
-                <a href="/integration/jobs/" style="color: #60a5fa; font-size: 0.85rem; text-decoration: none;">Xem lịch sử &rarr;</a>
+                <a href="/noibo/integration/jobs/" style="color: #60a5fa; font-size: 0.85rem; text-decoration: none;">Xem lịch sử &rarr;</a>
             </div>
             {% if recent_jobs %}
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 {% for job in recent_jobs %}
-                <a href="/integration/jobs/{{ job.id }}/" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px; text-decoration: none; color: inherit;">
+                <a href="/noibo/integration/jobs/{{ job.id }}/" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px; text-decoration: none; color: inherit;">
                     <div>
                         <div style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">{{ job.data_source.name }}</div>
                         <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 2px;">
@@ -111,7 +128,7 @@
                         </div>
                     </div>
                     <div style="text-align: right;">
-                        <span style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; {% if job.status == 'COMPLETED' %}background: rgba(16, 185, 129, 0.2); color: #34d399;{% elif job.status == 'PARTIAL' %}background: rgba(245, 158, 11, 0.2); color: #fbbf24;{% elif job.status == 'RUNNING' %}background: rgba(59, 130, 246, 0.2); color: #60a5fa;{% else %}background: rgba(239, 68, 68, 0.2); color: #f87171;{% endif %}">
+                        <span class="job-badge {% if job.status == 'COMPLETED' %}status-completed{% elif job.status == 'PARTIAL' %}status-partial{% elif job.status == 'RUNNING' %}status-running{% else %}status-failed{% endif %}">
                             {% if job.status == 'COMPLETED' %}HOÀN THÀNH
                             {% elif job.status == 'PARTIAL' %}MỘT PHẦN
                             {% elif job.status == 'RUNNING' %}ĐANG CHẠY
@@ -126,7 +143,7 @@
             {% else %}
             <div style="text-align: center; padding: 32px 0; color: #64748b;">
                 <p>Chưa có lượt nhập dữ liệu nào được thực hiện.</p>
-                <a href="/integration/import/" class="btn btn-primary" style="font-size: 0.85rem; padding: 6px 14px; text-decoration: none; border-radius: 6px; background: #3b82f6; color: #fff;">Chạy Lượt Nhập Đầu tiên</a>
+                <a href="/noibo/integration/import/" class="btn btn-primary" style="font-size: 0.85rem; padding: 6px 14px; text-decoration: none; border-radius: 6px; background: #3b82f6; color: #fff;">Chạy Lượt Nhập Đầu tiên</a>
             </div>
             {% endif %}
         </div>

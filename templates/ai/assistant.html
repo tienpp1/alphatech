@@ -6,11 +6,11 @@
 <div class="content-header">
     <div>
         <h1 class="page-title">🤖 Trợ lý Tri thức Doanh nghiệp (AI Knowledge Assistant)</h1>
-        <p class="page-subtitle">Hỏi đáp chính xác được kiểm chứng trên tài liệu nội bộ và số liệu vận hành thời gian thực.</p>
+        <p class="page-subtitle">Tra cứu tài liệu nội bộ và số liệu vận hành. Đối chiếu nguồn dẫn trước khi ra quyết định.</p>
     </div>
     <div class="header-actions">
         <span class="badge badge-success">● Grounded RAG & Telemetry Thời gian thực</span>
-        <a href="/knowledge/" class="btn btn-secondary">📚 Quản lý Tài liệu</a>
+        <a href="/noibo/knowledge/" class="btn btn-secondary">📚 Quản lý Tài liệu</a>
     </div>
 </div>
 
@@ -72,6 +72,7 @@
                 <input 
                     type="text" 
                     id="chat-input" 
+                    aria-label="Câu hỏi cho trợ lý"
                     class="form-control chat-input" 
                     placeholder="Bạn muốn hỏi điều gì?" 
                     autocomplete="off"
@@ -83,7 +84,7 @@
                 </button>
             </form>
             <div class="input-note">
-                <small class="text-muted">🔒 Câu trả lời được đối chiếu và trích dẫn trực tiếp từ tài liệu đã duyệt. Tuyệt đối không suy diễn không căn cứ.</small>
+                <small class="text-muted">Câu trả lời có thể chưa đầy đủ. Kiểm tra nguồn dẫn và chế độ trả lời hiển thị bên dưới mỗi kết quả.</small>
             </div>
         </div>
     </section>
@@ -102,7 +103,7 @@
 <style>
 .chat-container-layout {
     display: grid;
-    grid-template-columns: 260px 1fr 320px;
+    grid-template-columns: 260px minmax(0, 1fr) 320px;
     gap: 1.5rem;
     height: calc(100vh - 170px);
     min-height: 560px;
@@ -142,6 +143,7 @@
     font-weight: 500;
 }
 .chat-main {
+    min-width: 0;
     background: var(--card-bg, #1a1f2c);
     border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
     border-radius: 12px;
@@ -224,6 +226,7 @@
     gap: 0.8rem;
 }
 .chat-input {
+    min-width: 0;
     flex: 1;
     border-radius: 8px;
     padding: 0.75rem 1rem;
@@ -267,6 +270,21 @@
     padding: 0.8rem;
     margin-bottom: 0.8rem;
     font-size: 0.88rem;
+}
+.message-content, .generation-note { min-width: 0; overflow-wrap: anywhere; }
+.generation-note { font-size: 0.9rem; line-height: 1.5; margin: 0; }
+@media (max-width: 1100px) {
+    .chat-container-layout { grid-template-columns: minmax(0, 1fr); height: auto; }
+    .chat-main { order: 1; min-height: 540px; }
+    .chat-sidebar { order: 2; min-width: 0; max-height: 350px; }
+    .chat-citations-panel { order: 3; min-width: 0; max-height: 350px; }
+    .chat-messages { max-height: 65vh; }
+    .message-row { max-width: 100%; }
+}
+@media (max-width: 480px) {
+    .chat-form { flex-wrap: wrap; }
+    .chat-input { flex-basis: 100%; }
+    .chat-messages, .chat-input-area { padding: 0.75rem; }
 }
 </style>
 
@@ -343,6 +361,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 // Append Assistant Message
                 appendMessage("assistant", "🤖", data.answer);
+                const generationLabels = {
+                    DETERMINISTIC: "Chế độ trả lời theo quy tắc từ dữ liệu hiện có; không sử dụng mô hình ngôn ngữ cho câu trả lời này.",
+                    LLM_RESPONSE: "Câu trả lời được tạo qua dịch vụ AI. Vui lòng đối chiếu các nguồn dẫn.",
+                    NO_CONTEXT: "Chưa có đủ dữ liệu để trả lời."
+                };
+                const generationNote = document.createElement("p");
+                generationNote.className = "generation-note";
+                generationNote.setAttribute("role", "status");
+                generationNote.textContent = generationLabels[data.generation_metadata?.mode] || "Chưa ghi nhận chế độ tạo câu trả lời này.";
+                chatMessages.appendChild(generationNote);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
 
                 // Update Citations Side Panel
                 renderCitations(data.sources, data.tools_used);

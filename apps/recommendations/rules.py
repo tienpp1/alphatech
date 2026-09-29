@@ -46,8 +46,9 @@ def evaluate_retail_recommendations(workspace: Workspace) -> List[Recommendation
         created_at__gte=recent_7d
     ).exclude(status=OrderStatus.CANCELLED)
 
-    recent_rev = float(recent_orders.aggregate(s=Sum("total_amount"))["s"] or 0.0)
-    order_count = recent_orders.count()
+    agg = recent_orders.aggregate(s=Sum("total_amount"), c=Count("id"))
+    recent_rev = float(agg["s"] or 0.0)
+    order_count = int(agg["c"] or 0)
 
     # If forecast indicates MAE improvement over baseline or low revenue
     if recent_rev < 100000000.0 or (forecast_run and forecast_run.model_metrics.get("mae_improvement_pct", 0) > 10.0):
@@ -238,18 +239,18 @@ def evaluate_service_recommendations(workspace: Workspace) -> List[Recommendatio
 
     # Rule 1: SLA At-Risk Ticket Check
     now = timezone.now()
-    at_risk_requests = ServiceRequest.objects.for_workspace(workspace).filter(
-        status__in=[ServiceRequestStatus.OPEN, ServiceRequestStatus.ASSIGNED, ServiceRequestStatus.IN_PROGRESS]
+    cutoff_12h = now - datetime.timedelta(hours=12)
+    target_ticket = (
+        ServiceRequest.objects.for_workspace(workspace)
+        .filter(
+            status__in=[ServiceRequestStatus.OPEN, ServiceRequestStatus.ASSIGNED, ServiceRequestStatus.IN_PROGRESS]
+        )
+        .filter(Q(created_at__lte=cutoff_12h) | Q(priority="HIGH"))
+        .select_related("customer")
+        .first()
     )
 
-    high_risk_tickets = []
-    for req in at_risk_requests:
-        hours_open = (now - req.created_at).total_seconds() / 3600.0
-        if hours_open > 12.0 or req.priority == "HIGH":
-            high_risk_tickets.append(req)
-
-    if high_risk_tickets:
-        target_ticket = high_risk_tickets[0]
+    if target_ticket:
         existing = Recommendation.objects.for_workspace(workspace).filter(
             recommendation_type=RecommendationType.SERVICE_SLA_AT_RISK,
             status=RecommendationStatus.PENDING,
@@ -338,12 +339,11 @@ def evaluate_service_recommendations(workspace: Workspace) -> List[Recommendatio
                 created_recs.append(rec_gis)
 
     # Rule 2: Technician Overload Check
-    overloaded_techs = Employee.objects.for_workspace(workspace).annotate(
+    overloaded = Employee.objects.for_workspace(workspace).annotate(
         task_cnt=Count("assigned_tasks", filter=Q(assigned_tasks__status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]))
-    ).filter(task_cnt__gte=3)
+    ).filter(task_cnt__gte=3).first()
 
-    if overloaded_techs.exists():
-        overloaded = overloaded_techs.first()
+    if overloaded:
         existing = Recommendation.objects.for_workspace(workspace).filter(
             recommendation_type=RecommendationType.SERVICE_TECHNICIAN_OVERLOAD,
             status=RecommendationStatus.PENDING,

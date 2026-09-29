@@ -40,6 +40,8 @@ staticfiles/
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
 *.key
 *.pem
 
@@ -48,6 +50,11 @@ ml_models/*.pkl
 ml_models/*.json
 ml_models/*.bin
 !ml_models/.gitkeep
+
+# Local evidence, reports and test-generated model artifacts are not releases.
+output/
+tmp/
+ml_models/forecasting/*.json
 
 # IDE & OS
 .vscode/

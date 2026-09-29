@@ -19,14 +19,33 @@ class ProductionReadinessTests(SimpleTestCase):
             self.assertNotIn("private details", output.getvalue())
 
     def test_production_check_rejects_debug_and_does_not_certify_delivery(self):
-        with self.settings(DEBUG=True), patch("apps.accounts.management.commands.platform_readiness.connection"), patch("apps.accounts.management.commands.platform_readiness.MigrationExecutor") as executor:
+        with self.settings(DEBUG=True, SHOW_DEMO_CREDENTIALS=True), patch("apps.accounts.management.commands.platform_readiness.connection"), patch("apps.accounts.management.commands.platform_readiness.MigrationExecutor") as executor:
             executor.return_value.migration_plan.return_value = []
             output = StringIO()
             with self.assertRaises(SystemExit):
                 call_command("platform_readiness", "--production", "--strict", "--json", stdout=output)
             payload = json.loads(output.getvalue())
             self.assertIn("debug_enabled", payload["blockers"])
+            self.assertIn("demo_credentials_visible", payload["blockers"])
+            self.assertIn("hsts_disabled", payload["blockers"])
+            self.assertIn("csp_not_enforced", payload["blockers"])
             self.assertEqual(payload["live_verification"], "NOT_VERIFIED_BY_THIS_COMMAND")
+
+    def test_production_check_rejects_insecure_default_secret_key(self):
+        with self.settings(DEBUG=False, SECRET_KEY="django-insecure-test-default"), patch(
+            "apps.accounts.management.commands.platform_readiness.connection"
+        ), patch(
+            "apps.accounts.management.commands.platform_readiness.MigrationExecutor"
+        ) as executor:
+            executor.return_value.migration_plan.return_value = []
+            output = StringIO()
+
+            call_command("platform_readiness", "--production", "--json", stdout=output)
+
+            payload = json.loads(output.getvalue())
+            self.assertIn("insecure_secret_key", payload["blockers"])
+            self.assertTrue(payload["checks"]["security"]["secret_key_is_insecure_default"])
+            self.assertNotIn("django-insecure-test-default", output.getvalue())
 
     def test_correlation_id_is_reused_or_generated_and_returned(self):
         factory = RequestFactory()

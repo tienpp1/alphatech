@@ -27,17 +27,51 @@ def authenticate_user(username_or_email: str, password: str) -> Optional[User]:
 
 
 
+from django.db.models.signals import m2m_changed, post_save
+from django.dispatch import receiver
+
+_PERMS_CACHE_VERSION = 0
+
+
+@receiver(m2m_changed, sender=Role.permissions.through)
+def _invalidate_perms_cache_on_m2m(sender, **kwargs):
+    global _PERMS_CACHE_VERSION
+    _PERMS_CACHE_VERSION += 1
+
+
+@receiver(post_save, sender=Role)
+def _invalidate_perms_cache_on_role_save(sender, **kwargs):
+    global _PERMS_CACHE_VERSION
+    _PERMS_CACHE_VERSION += 1
+
+
 def get_user_permissions(user: User, workspace) -> Set[str]:
     """
     Return all permission codenames granted to the user in the specified workspace.
     - Superusers inherit all existing permissions across all workspaces.
     - Regular users inherit permissions associated with their active WorkspaceMembership Role.
+    Uses in-memory per-instance memoization with global cache versioning to support dynamic permission mutations.
     """
     if not user or not user.is_authenticated:
         return set()
 
+    ws_key = str(getattr(workspace, "id", workspace)) if workspace else ""
+
+    cache_data = getattr(user, "_cached_workspace_perms", None)
+    if (
+        isinstance(cache_data, dict)
+        and cache_data.get("version") == _PERMS_CACHE_VERSION
+        and ws_key in cache_data.get("perms", {})
+    ):
+        return cache_data["perms"][ws_key]
+
+    if not isinstance(cache_data, dict) or cache_data.get("version") != _PERMS_CACHE_VERSION:
+        user._cached_workspace_perms = {"version": _PERMS_CACHE_VERSION, "perms": {}}
+
     if user.is_superuser:
-        return set(Permission.objects.values_list("codename", flat=True))
+        perms = set(Permission.objects.values_list("codename", flat=True))
+        user._cached_workspace_perms["perms"][ws_key] = perms
+        return perms
 
     if not workspace:
         return set()
@@ -52,10 +86,14 @@ def get_user_permissions(user: User, workspace) -> Set[str]:
             is_active=True,
         )
         if membership.role:
-            return set(membership.role.permissions.values_list("codename", flat=True))
+            perms = set(membership.role.permissions.values_list("codename", flat=True))
+            user._cached_workspace_perms["perms"][ws_key] = perms
+            return perms
     except WorkspaceMembership.DoesNotExist:
+        user._cached_workspace_perms["perms"][ws_key] = set()
         return set()
 
+    user._cached_workspace_perms["perms"][ws_key] = set()
     return set()
 
 
@@ -79,9 +117,18 @@ def has_workspace_permission(user: User, workspace, permission_codename: str) ->
 def get_user_role_in_workspace(user: User, workspace) -> Optional[Role]:
     """
     Return the assigned Role of a user in a given workspace.
+    Uses in-memory per-instance memoization on `user` to avoid redundant database queries during request processing.
     """
     if not user or not user.is_authenticated or not workspace:
         return None
+
+    ws_key = str(getattr(workspace, "id", workspace)) if workspace else ""
+
+    if not hasattr(user, "_cached_workspace_roles"):
+        user._cached_workspace_roles = {}
+
+    if ws_key in user._cached_workspace_roles:
+        return user._cached_workspace_roles[ws_key]
 
     from apps.workspaces.models import WorkspaceMembership
 
@@ -91,8 +138,11 @@ def get_user_role_in_workspace(user: User, workspace) -> Optional[Role]:
             workspace=workspace,
             is_active=True,
         )
-        return membership.role
+        role = membership.role
+        user._cached_workspace_roles[ws_key] = role
+        return role
     except WorkspaceMembership.DoesNotExist:
+        user._cached_workspace_roles[ws_key] = None
         return None
 
 
@@ -101,6 +151,12 @@ def assign_role_to_user_in_workspace(user: User, workspace, role: Role, is_defau
     Assign or update a role for a user in a specific workspace via WorkspaceMembership.
     """
     from apps.workspaces.models import WorkspaceMembership
+
+    ws_key = str(getattr(workspace, "id", workspace)) if workspace else ""
+    if hasattr(user, "_cached_workspace_perms") and isinstance(user._cached_workspace_perms, dict):
+        user._cached_workspace_perms.get("perms", {}).pop(ws_key, None)
+    if hasattr(user, "_cached_workspace_roles") and isinstance(user._cached_workspace_roles, dict):
+        user._cached_workspace_roles.pop(ws_key, None)
 
     membership, created = WorkspaceMembership.objects.update_or_create(
         user=user,

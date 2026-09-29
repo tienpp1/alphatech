@@ -50,6 +50,13 @@ SECRET_KEY = os.getenv(
 
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "t")
 
+# Demo credentials are sensitive even on a development build. Rendering them
+# requires both DEBUG and an explicit local opt-in; production can never enable
+# the panel merely by setting the opt-in flag.
+SHOW_DEMO_CREDENTIALS = DEBUG and os.getenv(
+    "SHOW_DEMO_CREDENTIALS", "False"
+).lower() in ("true", "1", "t")
+
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,testserver").split(",")
@@ -115,9 +122,7 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = "accounts.User"
 
-LOGIN_URL = "/dang-nhap/"
-LOGIN_REDIRECT_URL = "/tai-khoan/"
-LOGOUT_REDIRECT_URL = "/"
+
 
 # Email Configuration (SMTP / Console)
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "").strip()
@@ -143,6 +148,17 @@ PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000" if DEBUG 
 # All instances of this website MUST share the same DB for the geocoder rate gate.
 OSM_GEOCODER_SEARCH_URL = os.getenv("OSM_GEOCODER_SEARCH_URL", "https://nominatim.openstreetmap.org/search").strip()
 
+# Strict home-delivery allocation is opt-in until every production branch has
+# canonical StockBalance rows. Set HOME_DELIVERY_FULFILLMENT_POLICY=strict only
+# after seeding BR-D1 and the configured fallback branches.
+HOME_DELIVERY_FULFILLMENT_POLICY = os.getenv("HOME_DELIVERY_FULFILLMENT_POLICY", "legacy").strip().lower()
+if HOME_DELIVERY_FULFILLMENT_POLICY not in {"legacy", "strict"}:
+    raise ImproperlyConfigured("HOME_DELIVERY_FULFILLMENT_POLICY must be legacy or strict.")
+HOME_DELIVERY_DEFAULT_BRANCH_CODE = os.getenv("HOME_DELIVERY_DEFAULT_BRANCH_CODE", "BR-D1").strip()
+HOME_DELIVERY_FALLBACK_BRANCH_CODES = tuple(
+    code.strip() for code in os.getenv("HOME_DELIVERY_FALLBACK_BRANCH_CODES", "BR-BT,BR-D7").split(",") if code.strip()
+)
+
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise ImproperlyConfigured("EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be enabled.")
 
@@ -151,6 +167,13 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "").strip()
 GOOGLE_OAUTH_USE_ENV_PROXY = os.getenv("GOOGLE_OAUTH_USE_ENV_PROXY", "False").lower() in ("true", "1", "t")
+
+# Optional local-demo credentials. When omitted, seed_demo generates strong,
+# unprinted one-time values; production execution of that command is forbidden.
+DEMO_ADMIN_PASSWORD = os.getenv("DEMO_ADMIN_PASSWORD", "").strip()
+DEMO_MANAGER_PASSWORD = os.getenv("DEMO_MANAGER_PASSWORD", "").strip()
+DEMO_EMPLOYEE_PASSWORD = os.getenv("DEMO_EMPLOYEE_PASSWORD", "").strip()
+DEMO_VIEWER_PASSWORD = os.getenv("DEMO_VIEWER_PASSWORD", "").strip()
 
 
 

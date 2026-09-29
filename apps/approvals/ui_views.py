@@ -16,7 +16,7 @@ def approvals_dashboard_view(request):
     status_filter = request.GET.get("status", "")
     risk_filter = request.GET.get("risk", "")
 
-    qs = ApprovalRequest.objects.for_workspace(workspace)
+    qs = ApprovalRequest.objects.for_workspace(workspace).select_related("requester", "reviewer")
     if status_filter:
         qs = qs.filter(status=status_filter)
     if risk_filter:

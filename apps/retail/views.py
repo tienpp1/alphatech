@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404
+from django.db.models import Count
 
 from apps.accounts.services import has_workspace_permission
 from apps.workspaces.permissions import IsWorkspaceMember
@@ -559,7 +560,11 @@ class OrderListCreateAPIView(APIView):
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
-        qs = Order.objects.for_workspace(request.active_workspace).select_related("customer", "branch")
+        qs = (
+            Order.objects.for_workspace(request.active_workspace)
+            .select_related("customer", "branch")
+            .annotate(annotated_items_count=Count("items"))
+        )
         qs = filter_orders(qs, request.query_params)
         serializer = OrderListSerializer(qs, many=True)
         return Response({"success": True, "count": qs.count(), "data": serializer.data})
@@ -845,7 +850,11 @@ class GoodsReceiptListCreateAPIView(APIView):
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
-        receipts = GoodsReceipt.objects.for_workspace(request.active_workspace).select_related("supplier", "branch", "created_by")
+        receipts = (
+            GoodsReceipt.objects.for_workspace(request.active_workspace)
+            .select_related("supplier", "branch", "created_by")
+            .annotate(annotated_items_count=Count("items"))
+        )
         
         status_filter = request.query_params.get("status")
         if status_filter:

@@ -2,6 +2,38 @@
 
 {% block title %}Trung tâm thông báo | Quản trị Nội bộ{% endblock %}
 
+{% block extra_head %}
+<style>
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 1.65rem !important;
+    }
+    .notif-card-row {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    .notif-actions {
+        width: 100%;
+        justify-content: flex-end;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+}
+.ws-scope-btn { padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; }
+.ws-scope-btn.active-all { background: rgba(255,255,255,0.15); color: #ffffff; }
+.ws-scope-btn.active-ws { background: var(--color-primary); color: #ffffff; }
+.ws-scope-btn.inactive { background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06); }
+.filter-tab-btn { padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
+.filter-tab-btn.active { background: var(--color-primary); color: #ffffff; box-shadow: 0 2px 8px rgba(99,102,241,0.4); }
+.filter-tab-btn.inactive { background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06); }
+.filter-tab-btn.tab-unread { display: inline-flex; align-items: center; gap: 6px; }
+.notif-card-unread { border-left: 4px solid #6366f1 !important; background: rgba(99,102,241,0.06) !important; }
+.badge-ws-type { font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+.badge-ws-type.service { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-ws-type.retail { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-hero" style="margin-bottom: 2rem;">
     <div class="hero-badge badge-primary">
@@ -17,16 +49,21 @@
             </p>
         </div>
 
-        {% if unread_count > 0 %}
-        <form method="POST" action="/noibo/thong-bao/">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="mark_all_read">
-            <button type="submit" class="btn btn-secondary" style="padding: 9px 18px; border-radius: 8px; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc;">
-                <span>✓</span>
-                <span>Đánh dấu tất cả đã đọc ({{ unread_count }})</span>
-            </button>
-        </form>
-        {% endif %}
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="padding: 9px 16px; border-radius: 8px; font-weight: 600; font-size: 0.88rem; text-decoration: none;">
+                ← Tổng quan Nội bộ
+            </a>
+            {% if unread_count > 0 %}
+            <form method="POST" action="/noibo/thong-bao/">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="mark_all_read">
+                <button type="submit" class="btn btn-secondary" style="padding: 9px 18px; border-radius: 8px; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc;">
+                    <span>✓</span>
+                    <span>Đánh dấu tất cả đã đọc ({{ unread_count }})</span>
+                </button>
+            </form>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -45,12 +82,12 @@
 <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
     <span style="font-size: 0.8rem; color: #94a3b8; font-weight: 600;">Miền nghiệp vụ:</span>
     <a href="/noibo/thong-bao/?type={{ filter_type }}"
-       style="padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; {% if not selected_workspace %}background: rgba(255,255,255,0.15); color: #ffffff;{% else %}background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06);{% endif %}">
+       class="ws-scope-btn {% if not selected_workspace %}active-all{% else %}inactive{% endif %}">
        Tất cả các miền
     </a>
     {% for ws in authorized_workspaces %}
     <a href="/noibo/thong-bao/?type={{ filter_type }}&workspace_id={{ ws.id }}"
-       style="padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; {% if selected_workspace == ws.id|stringformat:'s' %}background: var(--color-primary); color: #ffffff;{% else %}background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06);{% endif %}">
+       class="ws-scope-btn {% if selected_workspace == ws.id|stringformat:'s' %}active-ws{% else %}inactive{% endif %}">
        {% if ws.workspace_type == 'SERVICE' %}⚙️{% else %}🛒{% endif %} {{ ws.name }}
     </a>
     {% endfor %}
@@ -60,12 +97,12 @@
 <!-- Filter Tabs -->
 <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 1.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
     <a href="/noibo/thong-bao/?type=all{% if selected_workspace %}&workspace_id={{ selected_workspace }}{% endif %}"
-       style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; white-space: nowrap; {% if filter_type == 'all' %}background: var(--color-primary); color: #ffffff; box-shadow: 0 2px 8px rgba(99,102,241,0.4);{% else %}background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06);{% endif %}">
+       class="filter-tab-btn {% if filter_type == 'all' %}active{% else %}inactive{% endif %}">
         Tất cả ({{ total_count }})
     </a>
 
     <a href="/noibo/thong-bao/?type=unread{% if selected_workspace %}&workspace_id={{ selected_workspace }}{% endif %}"
-       style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; {% if filter_type == 'unread' %}background: var(--color-primary); color: #ffffff; box-shadow: 0 2px 8px rgba(99,102,241,0.4);{% else %}background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06);{% endif %}">
+       class="filter-tab-btn tab-unread {% if filter_type == 'unread' %}active{% else %}inactive{% endif %}">
         <span>Chưa đọc</span>
         {% if unread_count > 0 %}
         <span style="background: #ef4444; color: #ffffff; font-size: 0.72rem; padding: 1px 6px; border-radius: 9999px; font-weight: 800;">
@@ -75,22 +112,22 @@
     </a>
 
     <a href="/noibo/thong-bao/?type=NEW_CUSTOMER{% if selected_workspace %}&workspace_id={{ selected_workspace }}{% endif %}"
-       style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; white-space: nowrap; {% if filter_type == 'NEW_CUSTOMER' %}background: var(--color-primary); color: #ffffff; box-shadow: 0 2px 8px rgba(99,102,241,0.4);{% else %}background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06);{% endif %}">
+       class="filter-tab-btn {% if filter_type == 'NEW_CUSTOMER' %}active{% else %}inactive{% endif %}">
         👤 Khách hàng mới
     </a>
 
     <a href="/noibo/thong-bao/?type=NEW_ORDER{% if selected_workspace %}&workspace_id={{ selected_workspace }}{% endif %}"
-       style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; white-space: nowrap; {% if filter_type == 'NEW_ORDER' %}background: var(--color-primary); color: #ffffff; box-shadow: 0 2px 8px rgba(99,102,241,0.4);{% else %}background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06);{% endif %}">
+       class="filter-tab-btn {% if filter_type == 'NEW_ORDER' %}active{% else %}inactive{% endif %}">
         🛒 Đơn hàng mới
     </a>
 
     <a href="/noibo/thong-bao/?type=NEW_SERVICE_REQUEST{% if selected_workspace %}&workspace_id={{ selected_workspace }}{% endif %}"
-       style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; white-space: nowrap; {% if filter_type == 'NEW_SERVICE_REQUEST' %}background: var(--color-primary); color: #ffffff; box-shadow: 0 2px 8px rgba(99,102,241,0.4);{% else %}background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06);{% endif %}">
+       class="filter-tab-btn {% if filter_type == 'NEW_SERVICE_REQUEST' %}active{% else %}inactive{% endif %}">
         🛠️ Yêu cầu dịch vụ
     </a>
 
     <a href="/noibo/thong-bao/?type=NEW_CONTACT{% if selected_workspace %}&workspace_id={{ selected_workspace }}{% endif %}"
-       style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; white-space: nowrap; {% if filter_type == 'NEW_CONTACT' %}background: var(--color-primary); color: #ffffff; box-shadow: 0 2px 8px rgba(99,102,241,0.4);{% else %}background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.06);{% endif %}">
+       class="filter-tab-btn {% if filter_type == 'NEW_CONTACT' %}active{% else %}inactive{% endif %}">
         📩 Liên hệ mới
     </a>
 </div>
@@ -99,7 +136,7 @@
 {% if notifications %}
 <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 2rem;">
     {% for notif in notifications %}
-    <div class="card glass-card" style="padding: 1.25rem 1.5rem; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; {% if not notif.is_read %}border-left: 4px solid #6366f1; background: rgba(99,102,241,0.06);{% endif %}">
+    <div class="card glass-card notif-card-row {% if not notif.is_read %}notif-card-unread{% endif %}" style="padding: 1.25rem 1.5rem; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
         <div style="display: flex; gap: 16px; align-items: flex-start; flex: 1; min-width: 260px;">
             <div style="font-size: 1.8rem; line-height: 1; margin-top: 2px; flex-shrink: 0;">
                 {{ notif.event_icon }}
@@ -109,7 +146,7 @@
                     <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.08); color: #cbd5e1;">
                         {{ notif.get_event_type_display }}
                     </span>
-                    <span style="font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: {% if notif.workspace.workspace_type == 'SERVICE' %}rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);{% else %}rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);{% endif %}">
+                    <span class="badge-ws-type {% if notif.workspace.workspace_type == 'SERVICE' %}service{% else %}retail{% endif %}">
                         {% if notif.workspace.workspace_type == 'SERVICE' %}⚙️{% else %}🛒{% endif %} {{ notif.workspace.name }}
                     </span>
                     <h3 style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin: 0;">
@@ -135,7 +172,7 @@
             </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+        <div class="notif-actions" style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
             {% if not notif.is_read %}
             <form method="POST" action="/noibo/thong-bao/" style="display: inline;">
                 {% csrf_token %}

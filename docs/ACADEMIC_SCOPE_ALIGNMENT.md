@@ -1,7 +1,10 @@
 # BẢN ĐỊNH VỊ PHẠM VI HỌC THUẬT & SỔ TAY PHẢN BIỆN HỘI ĐỒNG
 ## (ACADEMIC SCOPE ALIGNMENT & COMMITTEE REBUTTAL HANDBOOK)
 
-**Đề tài**: Xây dựng Nền tảng Quản lý Vận hành Doanh nghiệp Thông minh tích hợp AI và GIS hỗ trợ Phân tích, Dự báo và Ra quyết định  
+Đọc cùng `ACADEMIC_ACCEPTANCE_SCOPE.md` và `ACADEMIC_REQUIREMENTS_MATRIX.md`.
+Các phần dưới là hướng dẫn trình bày, không phải chứng nhận đã hoàn thành bản nộp.
+
+**Đề tài**: Xây dựng nền tảng quản lý vận hành doanh nghiệp tích hợp trợ lí AI
 **Sinh viên thực hiện**: Hà Minh Tiến — **MSSV**: 1250080194 — **Lớp**: 12_ĐH_CNPM3  
 **Khoa**: Công nghệ Thông tin — **Trường**: Đại học Tài nguyên và Môi trường TP.HCM (HCMUNRE)  
 **Giảng viên hướng dẫn**: ThS. Nguyễn Duy Tuấn  
@@ -11,10 +14,10 @@
 ## PHẦN 1: ĐỊNH VỊ HỌC THUẬT & TÍNH MỚI CỦA ĐỀ TÀI
 
 ### 1.1. Bản chất cốt lõi của Hệ thống
-Đề tài tập trung nghiên cứu và xây dựng một **Hệ thống Hỗ trợ Ra Quyết định Vận hành Doanh nghiệp (Operational Decision Support System - DSS)** trên nền tảng kiến trúc web đa nhiệm hiện đại. Điểm giao thoa và tính mới học thuật của đề tài tại Trường Đại học Tài nguyên và Môi trường TP.HCM là sự tích hợp đồng bộ giữa **3 trụ cột công nghệ**:
+Đề tài xây dựng nền tảng quản lý vận hành bán lẻ và dịch vụ kỹ thuật, có hỗ trợ ra quyết định. Việc kết hợp ba nhóm kỹ thuật dưới đây là phạm vi triển khai, không tự chứng minh tính mới học thuật; khoảng trống ứng dụng cần được đối chiếu với nghiên cứu và nhu cầu cụ thể:
 1. **Học máy & Dự báo Chuỗi thời gian (Machine Learning & Time-Series Forecasting)**: Ứng dụng XGBoost Regressor với kỹ thuật trích xuất đặc trưng trễ và chu kỳ để dự báo nhu cầu kinh doanh.
-2. **Hệ thống Thông tin Địa lý (Spatial GIS Intelligence)**: Ứng dụng PostgreSQL/PostGIS, SRID 4326 WGS84, thuật toán khoảng cách trắc địa Haversine và Spatial Buffer để giải quyết bài toán không gian phục vụ và điều phối hiện trường.
-3. **Trí tuệ Nhân tạo Tạo sinh có Kiểm soát (Grounded RAG & Human-in-the-loop Governance)**: Truy xuất tri thức quy chế nội bộ qua vector database (`pgvector`), kết hợp cơ chế kiểm soát con người tuyệt đối trong việc phê duyệt hành động hệ thống.
+2. **Hệ thống Thông tin Địa lý (Spatial GIS Intelligence)**: Ứng dụng PostgreSQL/PostGIS, SRID 4326 WGS84; shared distance/radius dùng khoảng cách spheroid. Đây là khoảng cách địa lý, không phải tuyến đường hay dữ liệu giao thông.
+3. **Trợ lý truy xuất và công cụ có kiểm soát**: Truy xuất quy chế qua kho tri thức, kết hợp handler nghiệp vụ và phê duyệt các action được hỗ trợ. Loại embedding và nhánh sinh câu trả lời phải đối chiếu cấu hình/bằng chứng từng lần chạy; không mặc định mọi câu trả lời đến từ LLM.
 
 ---
 
@@ -26,6 +29,11 @@
 
 ### RANH GIỚI 1: KHÔNG PHẢI HỆ THỐNG QUẢN LÝ KHO BÃI (WMS) CHUYÊN SÂU
 
+Hệ thống cũng không được trình bày là ERP hoàn chỉnh. Không tuyên bố đã triển
+khai kế toán tổng hợp, quản trị sản xuất hay toàn bộ chuỗi cung ứng chỉ vì có
+đơn hàng, nhập hàng và tồn kho. Ví dụ LST/LSTM/GRU/Transformer thầy gửi minh họa
+cách lập luận bối cảnh → khoảng trống → giải pháp, không phải yêu cầu thêm model.
+
 > [!IMPORTANT]
 > **Rủi ro Hội đồng có thể đặt câu hỏi**:  
 > *"Tại sao hệ thống có chức năng nhập hàng, tồn kho nhưng không thấy quản lý sơ đồ kệ (bin/rack/aisle), quét mã vạch picking/packing, hay định tuyến xe chở hàng trong kho?"*
@@ -35,7 +43,7 @@
 2. **Vai trò của dữ liệu tồn kho**: Các bảng `StockBalance` và phiếu nhập `GoodsReceipt` trong `apps/retail` chỉ đóng vai trò là **dữ liệu trạng thái bổ trợ (Auxiliary Operational State)** nhằm phục vụ bài toán bán hàng và dự báo nhu cầu bổ sung hàng hóa.
 3. **Mối liên kết với AI**: 
    - Hệ thống không quản lý thao tác bốc xếp tại kho bãi vật lý.
-   - Hệ thống giải quyết bài toán cấp chiến thuật: Khi mô hình XGBoost dự báo doanh số tăng đột biến vào cuối tuần, AI phát hiện lượng tồn hiện tại của sản phẩm thấp hơn ngưỡng an toàn, từ đó **sinh khuyến nghị Quản lý duyệt kế hoạch nhập hàng**.
+   - Khuyến nghị bổ sung hàng hỗ trợ người quản lý xem xét. Không diễn giải thành action nhập kho tự động: stock reorder chưa có domain contract/rollback đủ để ánh xạ thực thi qua approval.
 
 ---
 
@@ -46,13 +54,13 @@
 > *"Đề tài này có phải chỉ là làm một website bán hàng thương mại điện tử (e-commerce) hay không?"*
 
 #### Lập luận phản biện chuẩn xác của Sinh viên:
-1. **Tỷ trọng đóng góp**: Cổng Website công khai (`apps/public_web`) chỉ chiếm khoảng **15% khối lượng giao diện**, trong khi **85% trọng tâm và hàm lượng công nghệ cao** của đồ án nằm tại **Cổng Quản trị Vận hành Doanh nghiệp Nội bộ (`/noibo/`)**.
+1. **Trọng tâm đề tài**: Cổng nội bộ (`/noibo/`) phục vụ quản lý vận hành; cổng công khai (`apps/public_web`) tiếp nhận nhu cầu khách hàng. Không quy đổi hai phần thành tỷ lệ phần trăm khối lượng hoặc hàm lượng công nghệ vì chưa có phương pháp đo.
 2. **Định vị kỹ thuật**: Cổng công khai (`/`) được thiết kế đóng vai trò là **Cổng Tiếp nhận Đa kênh (Omnichannel Ingestion Gateway)**:
    - Khách hàng xem danh mục, gửi yêu cầu sự cố IT (`/yeu-cau-dich-vu/`) hoặc đặt hàng.
-   - Mục đích là tạo ra **dòng dữ liệu nghiệp vụ sống và liên tục** (Real-world transaction stream) để nuôi dưỡng các mô hình AI, GIS và quy trình điều phối nội bộ.
-3. **Bảo mật cách ly tuyệt đối (Strict Air-gap Separation)**: 
-   - Khách hàng công khai chỉ có tài khoản cấp độ Portal, không bao giờ được cấp quyền vào hệ thống quản lý nội bộ.
-   - Các thông tin nhạy cảm như giá vốn (`cost_price`), nhà cung cấp, biên lợi nhuận hay số lượng tồn kho đều được lọc bỏ hoàn toàn tại tầng Serializer/View, đảm bảo an toàn tuyệt đối.
+   - Các sự kiện đặt hàng và yêu cầu dịch vụ cung cấp dữ liệu cho quy trình nội bộ. Dữ liệu seed là dữ liệu mô phỏng, không chứng minh lưu lượng giao dịch thực tế.
+3. **Cách ly logic bằng workspace và RBAC**:
+   - Đăng ký khách hàng công khai không tự cấp WorkspaceMembership hay quyền quản lý nội bộ. Đây không phải cách ly vật lý hoặc mạng (air-gap).
+   - Kiểm soát trường dữ liệu và quyền truy cập phụ thuộc từng serializer/view/service. Chỉ kết luận trên các đường thực thi đã kiểm thử; không tuyên bố an toàn tuyệt đối.
 
 ---
 
@@ -63,12 +71,12 @@
 > *"Tại sao không thấy áp dụng Isolation Forest để phát hiện gian lận đơn hàng, thuật toán Hungary để gán lịch, hay cổng kết nối ERP trực tiếp với SAP/Odoo?"*
 
 #### Lập luận phản biện chuẩn xác của Sinh viên:
-1. **Căn cứ Đề cương phê duyệt (Mục 1.4 & Mục 3.3)**: 
-   - Đề tài phân kỳ rõ ràng giữa **Phiên bản Nghiệm thu V1** và **Lộ trình Phát triển Mở rộng V2–V5**.
-2. **Cam kết Phiên bản V1 đã hoàn thành trọn vẹn**:
+1. **Phạm vi làm việc**:
+   - Danh sách bắt buộc/mở rộng nằm trong ACADEMIC_ACCEPTANCE_SCOPE.md. Không khẳng định thầy đã duyệt phụ lục V2–V5 khi chưa đối chiếu comment trong Word mới nhất.
+2. **Các nhóm đã có mã nguồn, cần đọc kèm bằng chứng và giới hạn**:
    - Dự báo chuỗi thời gian bằng **XGBoost Regressor** (đã đánh giá định lượng so sánh với Naive Baseline qua MAE, RMSE, MAPE).
    - Bản đồ số GIS tích hợp **PostgreSQL/PostGIS**, công thức trắc địa **Haversine** và truy vấn bán kính phục vụ.
-   - Trợ lý AI hỏi đáp **RAG với pgvector**, trích dẫn nguồn tài liệu và chống ảo giác.
+   - Trợ lý AI hỏi đáp **RAG với pgvector**, có nguồn và kiểm tra fallback; chưa chứng minh mọi câu trả lời đúng, ca tài liệu mâu thuẫn còn chưa đạt.
    - Studio Tích hợp Dữ liệu Đa nguồn với cơ chế **AI Field Auto-mapping** cho tệp CSV/Excel.
    - Quy trình Phê duyệt kiểm soát con người (**Human-in-the-loop**) và Nhật ký kiểm toán bất biến.
 3. **Định hướng phát triển V2**:
@@ -85,14 +93,13 @@ Dưới đây là 8 câu hỏi chuyên sâu mà các Thầy/Cô trong Hội đ�
 ### Câu hỏi 1: *"Trong bài toán dự báo chuỗi thời gian XGBoost, em phân chia tập Train/Test như thế nào? Có bị rò rỉ dữ liệu (Data Leakage) không?"*
 - **Trả lời của Sinh viên**:  
   *"Dạ thưa Thầy/Cô, trong bài toán chuỗi thời gian, việc sử dụng `train_test_split` ngẫu nhiên (random shuffle) là một sai lầm nghiêm trọng dẫn đến rò rỉ dữ liệu từ tương lai vào quá khứ (Data Leakage).  
-  Trong hệ thống của em, dữ liệu được sắp xếp tuần tự theo trục thời gian và phân chia theo tỷ lệ **80% quá khứ để huấn luyện và 20% tương lai gần nhất để kiểm thử (Time-based Linear Split)**. Các biến trích xuất đặc trưng như Lag (độ trễ 1 ngày, 7 ngày, 14 ngày) và Rolling Mean (trung bình trượt 7 ngày) đều được tính toán nghiêm ngặt chỉ dựa trên các mốc thời gian xảy ra trước thời điểm dự báo, do đó triệt tiêu 100% rủi ro Data Leakage."*
+  Dữ liệu được chia theo thời gian; tỷ lệ và mốc train/holdout phải đọc từ cấu hình, provenance của run đang báo cáo. Lag/rolling và baseline cần cùng điều kiện thông tin quá khứ. Kiểm thử hiện có kiểm tra các ca cụ thể, không chứng minh triệt tiêu mọi khả năng rò rỉ; backtest một bước không thay thế đánh giá dự báo đệ quy nhiều ngày."*
 
 ---
 
 ### Câu hỏi 2: *"Hệ số $R^2$ của mô hình dự báo doanh thu mang giá trị âm hoặc chưa cao, em giải thích điều này dưới góc độ học máy như thế nào?"*
 - **Trả lời của Sinh viên**:  
-  *"Dạ thưa Thầy/Cô, hệ số $R^2$ có thể nhận giá trị âm khi phương sai của chuỗi dữ liệu thực tế biến động rất mạnh (variance cao do có những ngày bán được số lượng lớn và những ngày phát sinh ít đơn).  
-  Tuy nhiên, trong đánh giá thực nghiệm định lượng tại báo cáo `ACADEMIC_EVALUATION_REPORT.md`, em đã sử dụng chỉ số **Sai số Tuyệt đối Trung bình (MAE)** và đối chiếu trực tiếp với mô hình cơ sở **Naive Seasonal Persistence Baseline ($y_{t-7}$)**. Kết quả cho thấy XGBoost giúp giảm sai số MAE lên tới **39.1%** trên bài toán dự báo số lượng đơn hàng bán lẻ. Trong thực tế quản trị, người quản lý chỉ cần biết khoảng dao động của khối lượng đơn hàng để chuẩn bị nhân sự và nguồn hàng, nên chỉ số MAE này hoàn toàn đáp ứng tốt nhu cầu hỗ trợ ra quyết định."*
+  *"R² âm cho biết tổng sai số bình phương lớn hơn cách dự đoán bằng trung bình của tập đánh giá, khi phương sai khác 0. Không thể chỉ từ chỉ số này kết luận nguyên nhân là chuỗi biến động mạnh. Cần đối chiếu MAE/RMSE với baseline trên cùng tập, cùng horizon và đúng run. Phải giữ các target kém baseline; cải thiện trên một target của dữ liệu seed chưa chứng minh hiệu quả vận hành thực tế."*
 
 ---
 
@@ -107,9 +114,7 @@ Dưới đây là 8 câu hỏi chuyên sâu mà các Thầy/Cô trong Hội đ�
 ### Câu hỏi 4: *"Về mặt GIS, hệ thống sử dụng hệ tọa độ nào? Khi tính khoảng cách giữa hai điểm thì dùng công thức gì và độ chính xác ra sao?"*
 - **Trả lời của Sinh viên**:  
   *"Dạ thưa Thầy/Cô, hệ thống sử dụng hệ quy chiếu tọa độ chuẩn quốc tế **WGS84 (SRID 4326)**, được lưu trữ trong trường `PointField` của tiện ích mở rộng PostGIS trên PostgreSQL.  
-  Để tính khoảng cách đường chim bay giữa hai vị trí tọa độ địa lý, hệ thống triển khai công thức lượng giác mặt cầu **Haversine Geodesic Distance** với bán kính Trái đất trung bình $R = 6,371$ km:  
-  $$d = 2R \arcsin\left(\sqrt{\sin^2(\Delta\text{lat}/2) + \cos(\text{lat}_1)\cos(\text{lat}_2)\sin^2(\Delta\text{lon}/2)}\right)$$  
-  Trong báo cáo thực nghiệm với các địa danh thực tế tại TP.HCM (từ Chợ Bến Thành đến Landmark 81 và Sân bay Tân Sơn Nhất), sai số tính toán của hệ thống so với khoảng cách trắc địa chuẩn **dưới 1%**, hoàn toàn đủ độ tin cậy để phục vụ bài toán lọc bán kính phục vụ và tìm kỹ thuật viên gần nhất."*
+  Shared service dùng `Distance(..., spheroid=True)` của PostGIS; lọc bán kính dùng cùng thước đo. Đây là khoảng cách trắc địa ellipsoid, không phải tuyến đường giao thông. `GIS_REFERENCE_EVIDENCE.md` ghi nguồn tham chiếu, tọa độ và dung sai của các ca đã kiểm tra; không suy rộng sai số dưới 1% cho mọi vị trí hoặc mọi chức năng GIS."*
 
 ---
 
@@ -117,18 +122,18 @@ Dưới đây là 8 câu hỏi chuyên sâu mà các Thầy/Cô trong Hội đ�
 - **Trả lời của Sinh viên**:  
   *"Dạ thưa Thầy/Cô, khung RAG trong đề tài được thiết kế theo cơ chế **Grounded Factuality** với 3 tầng bảo vệ chống ảo giác:  
   1. **Tầng Phân đoạn & Vector hóa**: Tài liệu quy chế nội bộ được phân đoạn nhỏ (Chunk size 500 ký tự, overlap 50 ký tự) và lập chỉ mục không gian vector với `pgvector`.  
-  2. **Tầng Đánh giá Độ tương đồng (Similarity Threshold)**: Khi người dùng đặt câu hỏi, hệ thống tính khoảng cách Cosine. Nếu điểm tương đồng của các đoạn văn bản trích xuất thấp hơn ngưỡng tin cậy ($< 0.65$), hệ thống tự động kích hoạt cơ chế **Fallback**.  
+  2. **Tầng Đánh giá Độ tương đồng (Similarity Threshold)**: Retrieval dùng ngưỡng có thể cấu hình và ghi ngưỡng thực dùng trong metadata. Không có tài liệu và không có dữ liệu tool thì trả fallback; không coi một ngưỡng cố định là bảo đảm đúng ngữ nghĩa.
   3. **Tầng Prompt Engineering nghiêm ngặt**: Chỉ thị hệ thống (System Prompt) ràng buộc AI: 'Chỉ được trả lời dựa trên ngữ cảnh được cung cấp. Nếu không tìm thấy thông tin, phải từ chối lịch sự và tuyệt đối không tự suy diễn'.  
-  Kết quả thực nghiệm cho thấy tỷ lệ từ chối thành công câu hỏi ngoài phạm vi (Fallback Precision) đạt **100.0%**."*
+  Precision/recall phải lấy từ run có TP/FP/FN và mẫu số rõ; kết quả lịch sử không chứng minh khả năng từ chối mọi câu hỏi ngoài phạm vi. Đợt 35 chỉ là pipeline offline với fixture, không phải đánh giá model live."*
 
 ---
 
 ### Câu hỏi 6: *"Hệ thống hỗ trợ 2 mô hình kinh doanh Retail và Service. Làm thế nào để đảm bảo dữ liệu giữa hai bên không bị lẫn lộn (Data Isolation)?"*
 - **Trả lời của Sinh viên**:  
   *"Dạ thưa Thầy/Cô, hệ thống áp dụng kiến trúc **Workspace Tenancy cô lập logic nghiêm ngặt**:  
-  1. Mọi bảng dữ liệu nghiệp vụ (`Order`, `Product`, `ServiceRequest`, `Task`, `Recommendation`,...) đều có khóa ngoại `workspace_id`.  
-  2. Tại tầng ORM và Middleware của Django, mọi truy vấn đều được tự động giới hạn phạm vi theo Workspace đang kích hoạt (`workspace-scoped filtering`).  
-  3. Người dùng thuộc Workspace Bán lẻ khi đăng nhập tuyệt đối không thể xem hay sửa dữ liệu của Workspace Dịch vụ, trừ tài khoản Superadmin toàn hệ thống. Tính cô lập này đã được kiểm thử tự động và chứng minh qua bộ test suite `test_isolation.py`."*
+  1. Các thực thể gốc như `Order`, `Product`, `ServiceRequest` có workspace. `OrderItem` lấy phạm vi qua `order`, `Task` qua `service_request`; `User` và `Role` không phải bảng dữ liệu riêng của một workspace.
+  2. Resolver/middleware xác minh workspace được chọn; truy vấn chỉ được giới hạn khi view/service áp dụng `.for_workspace(ws)` hoặc điều kiện tương đương qua đối tượng cha. ORM không tự lọc mọi truy vấn.
+  3. Một người có thể có membership ở nhiều workspace với vai trò khác nhau. Truy cập cần membership đang hoạt động và quyền tương ứng, ngoại trừ bypass superuser được quy định. Các test isolation là bằng chứng cho ca đã chạy, không phải chứng minh mọi đường thực thi không có lỗi."*
 
 ---
 
@@ -153,7 +158,11 @@ Dưới đây là 8 câu hỏi chuyên sâu mà các Thầy/Cô trong Hội đ�
 
 ## PHẦN 4: KẾT LUẬN & ĐỀ XUẤT CHO HỘI ĐỒNG
 
-Hệ thống **AI Business Platform** đã được xây dựng hoàn chỉnh, chạy thực tế trên máy tính, sở hữu đầy đủ bộ số liệu thực nghiệm khoa học và tài liệu minh chứng, sẵn sàng cho buổi bảo vệ đồ án tốt nghiệp với chất lượng cao nhất.
+Hệ thống có các luồng nghiệp vụ và kiểm thử local được ghi theo từng batch.
+Chưa thể kết luận hoàn thành toàn bộ: chat realtime/bản tin nội bộ chưa có bằng
+chứng triển khai, RAG conflict và thực nghiệm sâu còn thiếu, Word/IEEE và các
+cổng production chưa nghiệm thu đầy đủ. Dùng ma trận yêu cầu để trình bày đúng
+phần đã làm và phần còn hạn chế.
 
 ---
 *Tài liệu chuẩn bị cho kỳ bảo vệ Đồ án Tốt nghiệp — Khoa CNTT — Trường ĐH Tài nguyên và Môi trường TP.HCM.*

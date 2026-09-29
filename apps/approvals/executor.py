@@ -7,6 +7,7 @@ import uuid
 from typing import Dict, Any, Tuple
 from django.utils import timezone
 from django.db import transaction
+from django.core.exceptions import PermissionDenied
 
 from apps.workspaces.models import Workspace
 from apps.accounts.models import User
@@ -53,8 +54,31 @@ def _check_user_tool_permission(user: User, workspace: Workspace, perm_codename:
 
 
 
-@transaction.atomic
 def execute_tool(
+    name: str,
+    workspace: Workspace,
+    user: User,
+    parameters: Dict[str, Any],
+    idempotency_key: str = "",
+    reason: str = "Tự động kích hoạt từ hệ thống Hỗ trợ Ra quyết định",
+) -> Dict[str, Any]:
+    """Record authenticated denials after the tool transaction unwinds.
+
+    As with decisions, audit remains subject to caller-owned outer transactions.
+    """
+    try:
+        return _execute_tool_atomic(name, workspace, user, parameters, idempotency_key, reason)
+    except ToolPermissionDenied:
+        if user and user.is_authenticated:
+            log_audit_event(
+                user=user, workspace=workspace, action="TOOL_PERMISSION_DENIED",
+                entity_type="Tool", metadata={"error_code": "PERMISSION_DENIED"},
+            )
+        raise
+
+
+@transaction.atomic
+def _execute_tool_atomic(
     name: str,
     workspace: Workspace,
     user: User,
@@ -73,13 +97,6 @@ def execute_tool(
 
     # 1. Permission check
     if not _check_user_tool_permission(user, workspace, tool_def.required_permission):
-        log_audit_event(
-            user=user,
-            workspace=workspace,
-            action="TOOL_PERMISSION_DENIED",
-            target=f"Tool:{name}",
-            metadata={"tool_name": name, "required_permission": tool_def.required_permission}
-        )
         raise ToolPermissionDenied(f"User lacks required permission '{tool_def.required_permission}' for tool '{name}'.")
 
     # 2. Input Parameter Validation against Schema
@@ -176,8 +193,48 @@ def execute_tool(
     }
 
 
+class _MutationExecutionFailed(Exception):
+    """Internal signal: unwind the business transaction before writing audit."""
+
+
+def process_approval_decision(approval_request, reviewer, decision, decision_reason=""):
+    """Own the decision transaction at the API boundary.
+
+    Failure audit survives the failed decision transaction. If a caller wraps
+    this service in another atomic block, audit remains subject to that outer
+    transaction; callers must not assume an independent durable commit.
+    """
+    try:
+        return _process_approval_decision_atomic(
+            approval_request, reviewer, decision, decision_reason,
+        )
+    except ToolPermissionDenied:
+        if reviewer and reviewer.is_authenticated:
+            log_audit_event(
+                user=reviewer, workspace=approval_request.workspace,
+                action="APPROVAL_PERMISSION_DENIED", entity_type="ApprovalRequest",
+                entity_id=str(approval_request.pk),
+                metadata={"approval_id": approval_request.pk, "error_code": "PERMISSION_DENIED"},
+            )
+        raise
+    except _MutationExecutionFailed:
+        log_audit_event(
+            user=reviewer,
+            workspace=approval_request.workspace,
+            action="MUTATION_FAILED",
+            entity_type="ApprovalRequest",
+            entity_id=str(approval_request.pk),
+            metadata={"approval_id": approval_request.pk,
+                      "error_code": "HANDLER_EXECUTION_FAILED",
+                      "business_transaction": "ROLLED_BACK"},
+        )
+        raise ToolValidationError(
+            "Không thể thực thi yêu cầu. Thay đổi chưa được lưu; vui lòng thử lại hoặc liên hệ quản trị viên."
+        ) from None
+
+
 @transaction.atomic
-def process_approval_decision(
+def _process_approval_decision_atomic(
     approval_request: ApprovalRequest,
     reviewer: User,
     decision: str,  # "APPROVED" or "REJECTED"
@@ -213,21 +270,6 @@ def process_approval_decision(
 
     if approval_request.status != ApprovalStatus.PENDING:
         raise ToolValidationError(f"Approval request #{approval_request.id} is in status '{approval_request.status}' and cannot be reviewed.")
-
-    # Permission check for reviewer
-    if not _check_user_tool_permission(reviewer, workspace, "approvals.manage_approval"):
-        log_audit_event(
-            user=reviewer,
-            workspace=workspace,
-            action="APPROVAL_PERMISSION_DENIED",
-            target=f"ApprovalRequest #{approval_request.id}",
-            metadata={"approval_id": approval_request.id}
-        )
-        raise ToolPermissionDenied("Reviewer lacks 'approvals.manage_approval' permission.")
-
-    # Separation of duties check (requester cannot approve own request unless superuser)
-    if approval_request.requester == reviewer and not reviewer.is_superuser:
-        raise ToolPermissionDenied("Quản lý không thể tự phê duyệt yêu cầu thay đổi do chính mình tạo ra.")
 
     now = timezone.now()
 
@@ -273,15 +315,12 @@ def process_approval_decision(
                 handler_parameters = dict(req.parameters or {})
                 handler_parameters.setdefault("idempotency_key", f"APPROVAL-{req.id}")
                 exec_result = tool_def.handler(workspace, reviewer, handler_parameters)
-            except Exception as e:
-                log_audit_event(
-                    user=reviewer,
-                    workspace=workspace,
-                    action="MUTATION_FAILED",
-                    target=f"ApprovalRequest #{req.id}",
-                    metadata={"approval_id": req.id, "error": str(e)}
-                )
-                raise ToolValidationError(f"Tool execution failed: {str(e)}")
+            except (PermissionDenied, ToolPermissionDenied):
+                raise
+            except Exception:
+                # Never query a possibly broken transaction or expose raw
+                # handler/database errors (which can contain sensitive input).
+                raise _MutationExecutionFailed() from None
 
             # Update approval state
             req.status = ApprovalStatus.EXECUTED

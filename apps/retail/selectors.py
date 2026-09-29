@@ -32,32 +32,32 @@ def get_revenue_summary(
     if branch_id:
         qs = qs.filter(branch_id=branch_id)
 
-    # Active / Valid revenue orders (excluding CANCELLED)
-    valid_qs = qs.exclude(status=OrderStatus.CANCELLED)
-
-    agg = valid_qs.aggregate(
+    # Single consolidated aggregate query for both valid revenue and cancelled orders
+    agg = qs.aggregate(
         total_revenue=Coalesce(
-            Sum("total_amount"),
+            Sum("total_amount", filter=~Q(status=OrderStatus.CANCELLED)),
             Value(Decimal("0.00")),
             output_field=DecimalField(max_digits=14, decimal_places=2),
         ),
-        order_count=Count("id"),
+        order_count=Count("id", filter=~Q(status=OrderStatus.CANCELLED)),
         avg_order_value=Coalesce(
-            Avg("total_amount"),
+            Avg("total_amount", filter=~Q(status=OrderStatus.CANCELLED)),
             Value(Decimal("0.00")),
             output_field=DecimalField(max_digits=14, decimal_places=2),
         ),
-        total_items_sold=Coalesce(Sum("items__quantity"), Value(0)),
+        total_items_sold=Coalesce(
+            Sum("items__quantity", filter=~Q(status=OrderStatus.CANCELLED)),
+            Value(0),
+        ),
+        cancelled_order_count=Count("id", filter=Q(status=OrderStatus.CANCELLED)),
     )
-
-    cancelled_count = qs.filter(status=OrderStatus.CANCELLED).count()
 
     return {
         "total_revenue": agg["total_revenue"],
         "order_count": agg["order_count"],
         "average_order_value": agg["avg_order_value"],
         "total_items_sold": agg["total_items_sold"],
-        "cancelled_order_count": cancelled_count,
+        "cancelled_order_count": agg["cancelled_order_count"],
     }
 
 
@@ -130,11 +130,10 @@ def get_branch_revenue_breakdown(
         qs = qs.filter(order_date__lte=end_date)
 
     branches = Branch.objects.for_workspace(workspace).filter(is_active=True)
-    results = []
 
-    for branch in branches:
-        branch_orders = qs.filter(branch=branch)
-        agg = branch_orders.aggregate(
+    branch_stats = (
+        qs.values("branch_id")
+        .annotate(
             revenue=Coalesce(
                 Sum("total_amount"),
                 Value(Decimal("0.00")),
@@ -142,14 +141,20 @@ def get_branch_revenue_breakdown(
             ),
             orders=Count("id"),
         )
+    )
+    stats_by_branch = {entry["branch_id"]: entry for entry in branch_stats}
+
+    results = []
+    for branch in branches:
+        stat = stats_by_branch.get(branch.id, {})
         results.append(
             {
                 "branch_id": branch.id,
                 "branch_code": branch.code,
                 "branch_name": branch.name,
                 "region": branch.region,
-                "revenue": float(agg["revenue"]),
-                "order_count": agg["orders"],
+                "revenue": float(stat.get("revenue", Decimal("0.00"))),
+                "order_count": stat.get("orders", 0),
             }
         )
 

@@ -1,9 +1,10 @@
 """
-Evaluation metrics and Naive Baseline benchmarking for time-series forecasting.
-Computes MAE, RMSE, MAPE, R2, and relative performance gain over naive persistence.
+Evaluation metrics and baseline benchmarking for time-series forecasting.
+Computes MAE, RMSE, MAPE, R2, and relative performance against transparent
+lag and moving-average baselines.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 import numpy as np
 
 
@@ -82,6 +83,28 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     }
 
 
+def compute_interval_coverage(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    scale: float,
+    z_value: float = 1.96,
+) -> Optional[float]:
+    """Measure empirical one-step coverage for a diagnostic symmetric band.
+
+    This deliberately reports coverage only; it does not certify calibration.
+    Callers must label the source of ``scale`` and the evaluated horizon. The
+    forecasting trainer uses the holdout RMSE, so the resulting value is an
+    in-sample diagnostic for the one-step holdout, not recursive 14-day
+    interval coverage.
+    """
+    if len(y_true) == 0 or scale is None or not np.isfinite(scale) or scale < 0:
+        return None
+    lower = np.asarray(y_pred) - z_value * float(scale)
+    upper = np.asarray(y_pred) + z_value * float(scale)
+    covered = (np.asarray(y_true) >= lower) & (np.asarray(y_true) <= upper)
+    return float(np.mean(covered))
+
+
 def generate_naive_baseline_predictions(
     y_full: np.ndarray,
     test_start_idx: int,
@@ -107,6 +130,33 @@ def generate_naive_baseline_predictions(
             preds.append(y_full[0])
 
     return np.array(preds)
+
+
+def generate_moving_average_baseline_predictions(
+    y_full: np.ndarray,
+    test_start_idx: int,
+    window: int = 7,
+) -> np.ndarray:
+    """Generate a trailing moving-average baseline without future leakage.
+
+    Each test prediction is computed only from observations strictly before
+    that prediction's timestamp.  The window is clipped at the beginning of
+    the series so the function remains deterministic for short histories.
+    """
+    values = np.asarray(y_full, dtype=float)
+    if window <= 0:
+        raise ValueError("window must be a positive integer")
+    if test_start_idx < 0 or test_start_idx > len(values):
+        raise ValueError("test_start_idx must be within the series")
+
+    predictions = []
+    for idx in range(test_start_idx, len(values)):
+        history = values[max(0, idx - window):idx]
+        if len(history) == 0:
+            predictions.append(values[0] if len(values) else 0.0)
+        else:
+            predictions.append(float(np.mean(history)))
+    return np.asarray(predictions, dtype=float)
 
 
 def compare_model_against_baseline(

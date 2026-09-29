@@ -2,7 +2,11 @@
 
 from datetime import timedelta
 from decimal import Decimal
+from pathlib import Path
+import shutil
+from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.test import Client, TestCase
 from django.utils import timezone
@@ -10,11 +14,186 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Permission, Role, User
 from apps.retail.models import Customer
-from apps.service_ops.models import Employee, Service, ServiceRequest, ServiceRequestStatus, Task
+from apps.service_ops.models import Employee, Service, ServiceRequest, ServiceRequestStatus, Task, LaborEntry
 from apps.workspaces.models import Workspace, WorkspaceMembership, WorkspaceType
 
 
 class InternalAuthorizationRegressionTests(TestCase):
+    def test_service_read_endpoints_require_their_permission(self):
+        from apps.service_ops.models import Schedule
+        schedule = Schedule.objects.create(task=self.authorized_task,
+            employee=self.authorized_employee, start_time=timezone.now(),
+            end_time=timezone.now()+timedelta(hours=1))
+        role = Role.objects.create(name="READ_MATRIX")
+        user = self._create_member("read_matrix", role, self.authorized_workspace)
+        client = APIClient()
+        client.force_authenticate(user)
+        endpoints = {
+            "service.view_service": ["services/", f"services/{self.authorized_ticket.service_id}/"],
+            "service.view_employee": ["employees/", f"employees/{self.authorized_employee.pk}/"],
+            "service.view_sla": ["slas/"],
+            "service.view_request": ["requests/", f"requests/{self.authorized_ticket.pk}/"],
+            "service.view_task": ["tasks/", f"tasks/{self.authorized_task.pk}/", f"tasks/{self.authorized_task.pk}/labor/"],
+            "service.view_schedule": ["schedules/", f"schedules/{schedule.pk}/"],
+            "service.view_analytics": ["labor-entries/", f"requests/{self.authorized_ticket.pk}/cost/"],
+        }
+        for permission, paths in endpoints.items():
+            for path in paths:
+                url = "/api/v1/service-ops/" + path
+                with self.subTest(permission=permission, path=path):
+                    role.permissions.clear()
+                    for method in (client.get, client.head):
+                        self.assertEqual(method(url, HTTP_X_WORKSPACE_ID=str(self.authorized_workspace.pk)).status_code, 403)
+                    role.permissions.add(self.permissions[permission])
+                    self.assertEqual(client.get(url, HTTP_X_WORKSPACE_ID=str(self.authorized_workspace.pk)).status_code, 200)
+                    self.assertEqual(client.get(url, HTTP_X_WORKSPACE_ID=str(self.first_service_workspace.pk)).status_code, 403)
+
+    def test_service_read_permissions_do_not_grant_mutation(self):
+        client = APIClient()
+        client.force_authenticate(self.employee_user)
+        response = client.post("/api/v1/service-ops/services/", {"name": "Forbidden"},
+            HTTP_X_WORKSPACE_ID=str(self.authorized_workspace.pk))
+        self.assertEqual(response.status_code, 403)
+
+    def test_analytics_denial_happens_before_sensitive_selectors(self):
+        client = APIClient()
+        for user in (self.employee_user, self.public_customer, self.cross_workspace_user):
+            client.force_authenticate(user)
+            for endpoint in ("overview", "workload", "sla"):
+                with self.subTest(user=user.username, endpoint=endpoint), patch(
+                    "apps.service_ops.views.get_service_dashboard_summary"
+                ) as summary, patch(
+                    "apps.service_ops.views.get_technicians_workload_breakdown"
+                ) as workload:
+                    response = client.get(f"/api/v1/service-ops/analytics/{endpoint}/",
+                        HTTP_X_WORKSPACE_ID=str(self.authorized_workspace.pk))
+                    self.assertEqual(response.status_code, 403)
+                    summary.assert_not_called()
+                    workload.assert_not_called()
+
+    def test_analytics_authorized_roles_remain_workspace_scoped(self):
+        client = APIClient()
+        for user in (self.admin, self.manager):
+            client.force_authenticate(user)
+            for endpoint in ("overview", "workload", "sla"):
+                with self.subTest(user=user.username, endpoint=endpoint):
+                    response = client.get(f"/api/v1/service-ops/analytics/{endpoint}/",
+                        HTTP_X_WORKSPACE_ID=str(self.authorized_workspace.pk))
+                    self.assertEqual(response.status_code, 200)
+                    data = response.json()["data"]
+                    if endpoint == "overview":
+                        self.assertEqual(data["total_requests"], 1)
+                        self.assertEqual(data["total_technicians"], 1)
+                    elif endpoint == "workload":
+                        self.assertEqual([row["code"] for row in data], ["TECH-AUTH"])
+                    else:
+                        self.assertEqual(set(data), {"on_time_count", "at_risk_count",
+                                                   "breached_count", "compliance_rate",
+                                                   "unknown_count", "evaluated_count"})
+                        self.assertIsNone(data["compliance_rate"])
+                        self.assertEqual(data["unknown_count"], 1)
+                        self.assertEqual(data["evaluated_count"], 0)
+
+    def test_missing_sla_dashboard_and_list_labels(self):
+        client = self._browser(self.manager, self.authorized_workspace)
+        for path in ("/noibo/services/", "/noibo/services/requests/"):
+            page = client.get(path)
+            self.assertEqual(page.status_code, 200)
+            self.assertContains(page, "Chưa đủ dữ liệu")
+            self.assertNotContains(page, "100.0%")
+            if path == "/noibo/services/" and getattr(settings, "EVIDENCE_REPORT_DIR", None):
+                directory = Path(settings.EVIDENCE_REPORT_DIR) / "service_ui"
+                directory.mkdir(parents=True, exist_ok=True)
+                (directory / "sla_dashboard.html").write_text(page.content.decode(), encoding="utf-8")
+
+
+    def test_missing_sla_deadlines_are_not_presented_as_compliant(self):
+        client = self._browser(self.manager, self.authorized_workspace)
+        url = f"/noibo/services/requests/{self.authorized_ticket.pk}/"
+        page = client.get(url)
+        self.assertContains(page, "CHƯA ĐỦ DỮ LIỆU ĐÁNH GIÁ SLA")
+        self.assertContains(page, "Chưa gắn chính sách SLA")
+        self.assertNotContains(page, "ĐÚNG HẠN")
+        self.authorized_ticket.response_deadline_at = timezone.now() - timedelta(hours=1)
+        self.authorized_ticket.save(update_fields=["response_deadline_at"])
+        page = client.get(url)
+        self.assertContains(page, "CHƯA ĐỦ DỮ LIỆU ĐÁNH GIÁ SLA")
+        self.assertContains(page, "Vi phạm")
+        self.assertContains(page, "Chưa cấu hình hạn giải quyết")
+        self.authorized_ticket.resolution_deadline_at = timezone.now() + timedelta(hours=1)
+        self.authorized_ticket.save(update_fields=["resolution_deadline_at"])
+        page = client.get(url)
+        self.assertContains(page, "VI PHẠM SLA")
+        self.assertNotContains(page, "CHƯA ĐỦ DỮ LIỆU ĐÁNH GIÁ SLA")
+
+    def test_detail_post_foreign_employee_preserves_404(self):
+        client = self._browser(self.manager, self.authorized_workspace)
+        for prefix in ("/services/", "/noibo/services/"):
+            for action in ("assign", "log_labor"):
+                with self.subTest(prefix=prefix, action=action):
+                    response = client.post(f"{prefix}requests/{self.authorized_ticket.pk}/", {
+                        "action": action, "employee_id": self.unrelated_employee.pk,
+                        "task_id": self.authorized_task.pk, "duration_minutes": 30,
+                    })
+                    self.assertEqual(response.status_code, 404)
+                    self.assertNotContains(response, "TECH-SECRET", status_code=404)
+        self.assertFalse(LaborEntry.objects.exists())
+        self.authorized_ticket.refresh_from_db()
+        self.assertIsNone(self.authorized_ticket.assigned_employee_id)
+
+    def test_detail_post_foreign_task_preserves_404(self):
+        task = Task.objects.create(service_request=self.unrelated_ticket, title="Foreign task")
+        client = self._browser(self.manager, self.authorized_workspace)
+        response = client.post(f"/noibo/services/requests/{self.authorized_ticket.pk}/", {
+            "action": "log_labor", "employee_id": self.authorized_employee.pk,
+            "task_id": task.pk, "duration_minutes": 30,
+        })
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(LaborEntry.objects.exists())
+
+    def test_own_labor_options_and_forged_other_employee(self):
+        other = Employee.objects.create(workspace=self.authorized_workspace,
+            code="SECOND", full_name="Other technician", hourly_labor_rate=100)
+        client = self._browser(self.employee_user, self.authorized_workspace)
+        url = f"/noibo/services/requests/{self.authorized_ticket.pk}/"
+        page = client.get(url)
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual(list(page.context["labor_technicians"]), [self.authorized_employee])
+        self.assertContains(page, 'for="labor-employee"')
+        self.assertNotContains(page, 'value="assign"')
+        denied = client.post(url, {"action": "log_labor", "employee_id": other.pk,
+                                 "task_id": self.authorized_task.pk, "duration_minutes": 30})
+        self.assertEqual(denied.status_code, 403)
+        self.assertFalse(LaborEntry.objects.exists())
+        allowed = client.post(url, {"action": "log_labor", "employee_id": self.authorized_employee.pk,
+                                  "task_id": self.authorized_task.pk, "duration_minutes": 30})
+        self.assertEqual(allowed.status_code, 302)
+        entry = LaborEntry.objects.get()
+        self.assertEqual(entry.employee_id, self.authorized_employee.pk)
+        self.assertEqual(entry.duration_minutes, 30)
+        self.assertEqual(entry.labor_cost, Decimal("75000"))
+
+    def test_role_template_snapshots_and_manager_choices(self):
+        other = Employee.objects.create(workspace=self.authorized_workspace,
+            code="SECOND", full_name="Other technician", hourly_labor_rate=100)
+        url = f"/noibo/services/requests/{self.authorized_ticket.pk}/"
+        for name, user in (("manager", self.manager), ("technician", self.employee_user)):
+            page = self._browser(user, self.authorized_workspace).get(url)
+            self.assertEqual(page.status_code, 200)
+            if name == "manager":
+                self.assertSetEqual(set(page.context["labor_technicians"]), {other, self.authorized_employee})
+                self.assertContains(page, 'value="assign"')
+            evidence = getattr(settings, "EVIDENCE_REPORT_DIR", None)
+            if evidence:
+                directory = Path(evidence) / "service_ui"
+                directory.mkdir(parents=True, exist_ok=True)
+                # Synthetic test fixtures only; no sessions or business DB content.
+                html = page.content.decode().replace("<body", '<body data-evidence="synthetic-test-snapshot"', 1)
+                (directory / f"{name}.html").write_text(html, encoding="utf-8")
+                css = directory / "static" / "css"
+                css.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(settings.BASE_DIR / "static/css/style.css", css / "style.css")
+
     @classmethod
     def setUpTestData(cls):
         cls.first_service_workspace = Workspace.objects.create(

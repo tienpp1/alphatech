@@ -3,6 +3,23 @@
 {% block title %}{{ product.name }} | ABC Tech Store{% endblock %}
 
 {% block content %}
+<style>
+.gallery-thumb-btn {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    border: 2px solid var(--pub-border);
+    background: #FFFFFF;
+    cursor: pointer;
+    overflow: hidden;
+    flex-shrink: 0;
+    padding: 3px;
+    transition: border-color 0.15s;
+}
+.gallery-thumb-btn.active {
+    border-color: var(--pub-primary);
+}
+</style>
 <!-- Page Hero / Breadcrumb Bar -->
 <div class="page-hero-banner" style="padding: 1.75rem 1.5rem;">
     <div class="page-hero-grid" aria-hidden="true"></div>
@@ -26,7 +43,7 @@
 </div>
 
 <div class="pub-section" style="padding-top: 2.5rem;">
-    <div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 3rem; margin-bottom: 3.5rem;">
+    <div class="product-detail-layout">
         <!-- Left: Product Image Gallery -->
         <div>
             <!-- Main Large Image Container -->
@@ -54,8 +71,7 @@
             <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px;">
                 {% for img in product.images.all %}
                 <div onclick="switchProductImage('{{ img.image.url }}', this)" 
-                     class="gallery-thumb-btn {% if img.is_primary %}active{% endif %}"
-                     style="width: 72px; height: 72px; border-radius: 10px; border: 2px solid {% if img.is_primary %}var(--pub-primary){% else %}var(--pub-border){% endif %}; background: #FFFFFF; cursor: pointer; overflow: hidden; flex-shrink: 0; padding: 3px; transition: border-color 0.15s;">
+                     class="gallery-thumb-btn {% if img.is_primary %}active{% endif %}">
                     <img src="{{ img.image.url }}" alt="{{ img.alt_text|default:product.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
                 </div>
                 {% endfor %}
@@ -90,7 +106,7 @@
 
             <!-- Price Container Card -->
             <div style="background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1.75rem; border: 1px solid var(--pub-border);">
-                <div style="font-size: 0.82rem; color: var(--pub-text-muted); margin-bottom: 4px;">Giá bán niêm yết (Đã bao gồm VAT &amp; bảo hành)</div>
+                <div style="font-size: 0.82rem; color: var(--pub-text-muted); margin-bottom: 4px;">Giá bán niêm yết — vui lòng xác nhận điều kiện hóa đơn và bảo hành</div>
                 <div style="font-family: var(--pub-mono-font); font-size: 2.3rem; font-weight: 800; color: var(--pub-primary); line-height: 1.1;">
                     {{ product.unit_price|floatformat:0 }} VNĐ
                 </div>
@@ -104,7 +120,7 @@
                     Mô tả sản phẩm &amp; thông số kỹ thuật
                 </h3>
                 <p style="color: var(--pub-text-body); font-size: 0.95rem; line-height: 1.65; margin: 0;">
-                    {{ product.description|default:"Sản phẩm thiết bị công nghệ chính hãng chất lượng cao, phân phối bởi ABC Tech Store. Đảm bảo đầy đủ hóa đơn chứng từ CO/CQ, chế độ bảo hành 12-24 tháng và hỗ trợ kỹ thuật cài đặt tận nơi." }}
+                    {{ product.description|default:"Thiết bị công nghệ tại ABC Tech Store. Vui lòng liên hệ để xác nhận thông số, chứng từ, điều kiện bảo hành và dịch vụ hỗ trợ phù hợp với sản phẩm." }}
                 </p>
             </div>
 
@@ -122,7 +138,7 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+                <div class="product-detail-actions">
                     <!-- Primary CTA: Mua ngay -->
                     <button type="submit" name="action" value="buy_now" class="pub-btn-primary" id="btn-buy-now" style="flex: 1.2; min-width: 180px; padding: 13px 24px; font-size: 1rem; justify-content: center;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -167,7 +183,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.85rem; color: var(--pub-text-muted); border-top: 1px solid var(--pub-border); padding-top: 1.25rem;">
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                    Bảo hành chính hãng 12-24 tháng
+                    Xác nhận bảo hành theo sản phẩm
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>

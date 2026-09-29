@@ -3,7 +3,10 @@ Automated tests for AI RAG Benchmark Evaluation dataset and metrics.
 """
 
 from decimal import Decimal
-from django.test import TestCase
+import json
+from pathlib import Path
+from django.conf import settings
+from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from apps.accounts.models import User, Permission
 from apps.workspaces.models import Workspace, WorkspaceType
@@ -16,6 +19,7 @@ from apps.knowledge.services import (
 from apps.knowledge.evaluation import run_benchmark_evaluation, BENCHMARK_QUESTIONS
 
 
+@override_settings(LLM_API_KEY='')
 class RAGEvaluationBenchmarkTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(username="eval_admin", email="eval@example.com", password="password")
@@ -73,11 +77,26 @@ class RAGEvaluationBenchmarkTests(TestCase):
         )
 
     def test_benchmark_evaluation_metrics_pass_threshold(self):
-        """Run benchmark evaluation and assert minimum quality thresholds."""
+        """Offline integration gate; lexical proxy is not semantic accuracy."""
         metrics = run_benchmark_evaluation(self.retail_ws, self.admin)
 
+        # Optional evidence artifact from synthetic fixtures only. Never rerun
+        # benchmark services against production to obtain this report.
+        report_dir = getattr(settings, 'EVIDENCE_REPORT_DIR', None)
+        if report_dir:
+            report_dir = Path(report_dir)
+            report_dir.mkdir(parents=True, exist_ok=True)
+            report = {
+                'environment': 'LOCAL_POSTGRESQL_SYNTHETIC_FIXTURES',
+                'execution': 'OFFLINE_LLM_API_KEY_EMPTY',
+                'metrics': metrics,
+            }
+            with (report_dir / 'rag_benchmark.json').open('x', encoding='utf-8') as stream:
+                json.dump(report, stream, ensure_ascii=False, indent=2)
+
         self.assertGreaterEqual(metrics["total_evaluated"], 5)
-        # Fallback precision must be 100% on out-of-domain questions
+        # Precision includes false refusals of answerable questions.
         self.assertEqual(metrics["fallback_precision"], 100.0)
-        # Grounded correctness rate must be >= 80%
-        self.assertGreaterEqual(metrics["grounded_correctness_rate"], 80.0)
+        # Preserve the 80% gate with the stricter, explicitly named proxy.
+        self.assertGreaterEqual(metrics["lexical_evidence_pass_rate"], 80.0)
+        self.assertIsNone(metrics['semantic_correctness_rate'])

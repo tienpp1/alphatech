@@ -3,10 +3,12 @@ Management command to seed development demo data:
 Roles, Permissions, Workspaces, Users, Memberships, Tokens, and Retail Domain Dataset.
 """
 
-import random
+import hashlib
+import secrets
 from decimal import Decimal
 from datetime import date, datetime, timedelta
-from django.core.management.base import BaseCommand
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.authtoken.models import Token
@@ -56,11 +58,378 @@ from apps.integration.models import (
 from apps.integration.services import execute_import_job
 
 
+class _DeterministicSyntheticData:
+    """Small reproducible generator for non-security demo fixtures.
+
+    Hash-based draws keep the dataset stable without using the standard
+    pseudo-random API that must never be copied into credential code.
+    """
+
+    def __init__(self, seed):
+        self.seed = str(seed).encode("utf-8")
+        self.counter = 0
+
+    def _draw(self):
+        self.counter += 1
+        digest = hashlib.sha256(self.seed + b":" + str(self.counter).encode("ascii")).digest()
+        return int.from_bytes(digest, "big") / (1 << (len(digest) * 8))
+
+    def random(self):
+        return self._draw()
+
+    def randint(self, start, end):
+        return start + min(int(self._draw() * (end - start + 1)), end - start)
+
+    def choice(self, values):
+        return values[self.randint(0, len(values) - 1)]
+
+    def choices(self, values, weights, k=1):
+        total = sum(weights)
+        selected = []
+        for _ in range(k):
+            draw = self._draw() * total
+            cumulative = 0
+            for value, weight in zip(values, weights):
+                cumulative += weight
+                if draw < cumulative:
+                    selected.append(value)
+                    break
+            else:
+                selected.append(values[-1])
+        return selected
+
+    def sample(self, values, count):
+        ranked = sorted(values, key=lambda _value: self._draw())
+        return ranked[:count]
+
+
+def _demo_password(setting_name):
+    """Use an explicit local-only credential or an unprinted strong value."""
+    configured = str(getattr(settings, setting_name, "")).strip()
+    return configured or secrets.token_urlsafe(24)
+
+
+def seed_demo_identities(stdout=None, style=None):
+    """
+    Seeds core permissions, roles, workspaces, demo users and memberships.
+    Can be used by management commands or automated test suites without triggering CLI database host guards.
+    """
+    def _write(msg, style_fn=None):
+        if stdout:
+            stdout.write(style_fn(msg) if (style_fn and style) else msg)
+
+    _write("==> 1. Seeding Core Permissions...", getattr(style, "NOTICE", None) if style else None)
+
+    permissions_data = [
+        # Retail Domain
+        ("retail.view_product", "View product catalog", "retail"),
+        ("retail.manage_product", "Create, update, or delete products and categories", "retail"),
+        ("retail.view_order", "View retail orders and sales metrics", "retail"),
+        ("retail.create_order", "Create retail orders", "retail"),
+        ("retail.manage_order", "Update order status and cancel orders", "retail"),
+        ("retail.view_customer", "View customer directory", "retail"),
+        ("retail.manage_customer", "Create and manage customer profiles", "retail"),
+        ("retail.view_branch", "View branch store network", "retail"),
+        ("retail.manage_branch", "Create and manage branch store locations", "retail"),
+        ("retail.view_analytics", "View sales and revenue analytics dashboards", "retail"),
+        # Service Operations Domain
+        ("service.view_service", "View service catalog", "service_ops"),
+        ("service.manage_service", "Create and configure services", "service_ops"),
+        ("service.view_employee", "View technician roster", "service_ops"),
+        ("service.manage_employee", "Manage technicians and availability", "service_ops"),
+        ("service.view_request", "View service incident requests and tasks", "service_ops"),
+        ("service.create_request", "Log service incident requests", "service_ops"),
+        ("service.manage_request", "Update request status, resolve or close tickets", "service_ops"),
+        ("service.assign_request", "Assign tasks to field technicians", "service_ops"),
+        ("service.view_task", "View discrete tasks", "service_ops"),
+        ("service.manage_task", "Create and update tasks", "service_ops"),
+        ("service.view_schedule", "View technician schedules", "service_ops"),
+        ("service.manage_schedule", "Create and manage dispatch schedules", "service_ops"),
+        ("service.view_sla", "View SLA policies", "service_ops"),
+        ("service.manage_sla", "Configure SLA response and resolution targets", "service_ops"),
+        ("service.view_analytics", "View service operations analytics", "service_ops"),
+        # Spatial GIS Domain (Phase 5)
+        ("gis.view_spatial_layers", "View spatial map layers and business GIS", "gis"),
+        ("gis.view_customer_locations", "View customer geographic coordinates and details", "gis"),
+        # Data Integration & Ingestion (Phase 6)
+        ("integration.view_datasource", "View data sources and import history", "integration"),
+        ("integration.manage_datasource", "Create and configure data sources", "integration"),
+        ("integration.execute_import", "Upload files and trigger data ingestion jobs", "integration"),
+        # Data Mapping Engine & Standard Data Model (Phase 7)
+        ("mapping.view_mapping", "View mapping profiles and rules", "mapping"),
+        ("mapping.manage_mapping", "Create, edit, and configure mapping profiles and rules", "mapping"),
+        ("mapping.apply_mapping", "Apply mappings and load canonical domain records", "mapping"),
+        # RAG + Knowledge Base + Grounded AI Assistant (Phase 8)
+        ("knowledge.view_knowledge", "View knowledge bases, documents and chunks", "knowledge"),
+        ("knowledge.manage_knowledge", "Upload, re-index and manage knowledge documents", "knowledge"),
+        # Workspaces & Tenancy
+        ("workspaces.view_workspace", "View workspace settings and members", "workspaces"),
+        ("workspaces.manage_workspace", "Manage workspace configuration and memberships", "workspaces"),
+        # Accounts & RBAC
+        ("accounts.view_user", "View user accounts and roles", "accounts"),
+        ("accounts.manage_user", "Manage user credentials and role assignments", "accounts"),
+        # AI & Analytics
+        ("ai.chat", "Interact with grounded AI assistant", "ai"),
+        ("ai.view_forecast", "View time-series ML forecasts and metrics", "ai"),
+        ("ai.view_insights", "View automated recommendations and insights", "ai"),
+        # Predictive Analytics & XGBoost Forecasting (Phase 9)
+        ("forecasting.view_forecast", "View time-series ML forecasts and accuracy metrics", "forecasting"),
+        ("forecasting.manage_forecast", "Configure forecast targets and trigger model training", "forecasting"),
+        # Decision Support & Recommendations (Phase 10)
+        ("recommendations.view_recommendation", "View operational recommendations", "recommendations"),
+        ("recommendations.manage_recommendation", "Accept, reject, or trigger recommendations", "recommendations"),
+        # Controlled Tool Calling & Approvals (Phase 10)
+        ("approvals.view_approval", "View pending approval requests", "approvals"),
+        ("approvals.manage_approval", "Approve or reject mutation requests", "approvals"),
+    ]
+
+    permission_objs = {}
+    for codename, name, module in permissions_data:
+        perm, _ = Permission.objects.update_or_create(
+            codename=codename,
+            defaults={"name": name, "module": module},
+        )
+        permission_objs[codename] = perm
+
+    _write(f"    Created/Updated {len(permission_objs)} permissions.")
+
+    # =========================================================================
+    # 2. Roles & Permissions Binding
+    # =========================================================================
+    _write("==> 2. Seeding Roles and binding Permissions...", getattr(style, "NOTICE", None) if style else None)
+
+    roles_spec = {
+        "ADMIN": {
+            "desc": "System and Workspace Administrator with full privileges.",
+            "perms": list(permission_objs.values()),
+        },
+        "MANAGER": {
+            "desc": "Store/Operations Manager with management and analytics privileges.",
+            "perms": [
+                p
+                for code, p in permission_objs.items()
+                if not code.startswith("accounts.manage_user")
+                and not code.startswith("workspaces.manage_workspace")
+            ],
+        },
+        "EMPLOYEE": {
+            "desc": "Front-line operational staff (Order creation, customer lookup, task/schedule viewing, self-labor logging).",
+            "perms": [
+                permission_objs["retail.view_product"],
+                permission_objs["retail.view_order"],
+                permission_objs["retail.create_order"],
+                permission_objs["retail.view_customer"],
+                permission_objs["retail.manage_customer"],
+                permission_objs["retail.view_branch"],
+                permission_objs["service.view_service"],
+                permission_objs["service.view_request"],
+                permission_objs["service.create_request"],
+                permission_objs["service.view_task"],
+                permission_objs["service.view_schedule"],
+                permission_objs["gis.view_spatial_layers"],
+                permission_objs["integration.view_datasource"],
+                permission_objs["integration.execute_import"],
+                permission_objs["mapping.view_mapping"],
+                permission_objs["mapping.apply_mapping"],
+                permission_objs["knowledge.view_knowledge"],
+                permission_objs["ai.chat"],
+                permission_objs["forecasting.view_forecast"],
+            ],
+        },
+        "VIEWER": {
+            "desc": "Read-only auditor with dashboard viewing permissions.",
+            "perms": [
+                permission_objs["retail.view_product"],
+                permission_objs["retail.view_order"],
+                permission_objs["retail.view_customer"],
+                permission_objs["retail.view_branch"],
+                permission_objs["retail.view_analytics"],
+                permission_objs["service.view_service"],
+                permission_objs["service.view_request"],
+                permission_objs["gis.view_spatial_layers"],
+                permission_objs["integration.view_datasource"],
+                permission_objs["mapping.view_mapping"],
+                permission_objs["knowledge.view_knowledge"],
+                permission_objs["workspaces.view_workspace"],
+                permission_objs["forecasting.view_forecast"],
+            ],
+        },
+    }
+
+    roles = {}
+    for r_name, r_spec in roles_spec.items():
+        role, _ = Role.objects.update_or_create(
+            name=r_name,
+            defaults={"description": r_spec["desc"]},
+        )
+        role.permissions.set(r_spec["perms"])
+        roles[r_name] = role
+
+    _write(f"    Created/Updated {len(roles)} roles.")
+
+    # =========================================================================
+    # 3. Workspaces
+    # =========================================================================
+    _write("==> 3. Seeding Dual Workspaces (Retail & Service)...", getattr(style, "NOTICE", None) if style else None)
+
+    retail_ws, _ = Workspace.objects.update_or_create(
+        code="abc-retail",
+        defaults={
+            "name": "ABC Tech Store",
+            "workspace_type": WorkspaceType.RETAIL,
+            "description": "Cửa hàng bán thiết bị công nghệ và phụ kiện tại TP.HCM.",
+            "is_active": True,
+        },
+    )
+
+    service_ws, _ = Workspace.objects.update_or_create(
+        code="xyz-service",
+        defaults={
+            "name": "XYZ IT Technical Services",
+            "workspace_type": WorkspaceType.SERVICE,
+            "description": "Công ty dịch vụ cài đặt, bảo trì hệ thống, tư vấn quản trị cơ sở dữ liệu và sửa chữa thiết bị.",
+            "is_active": True,
+        },
+    )
+
+    _write(f"    Workspaces: '{retail_ws.name}' ({retail_ws.code}), '{service_ws.name}' ({service_ws.code}).")
+
+    # =========================================================================
+    # 4. Users & Memberships
+    # =========================================================================
+    _write("==> 4. Seeding Demo Users & Memberships...", getattr(style, "NOTICE", None) if style else None)
+
+    demo_users_spec = [
+        {
+            "username": "admin",
+            "email": "admin@example.com",
+            "password": _demo_password("DEMO_ADMIN_PASSWORD"),
+            "first_name": "System",
+            "last_name": "Admin",
+            "is_staff": True,
+            "is_superuser": True,
+            "memberships": [
+                {"workspace": retail_ws, "role": roles["ADMIN"], "is_default": True},
+                {"workspace": service_ws, "role": roles["ADMIN"], "is_default": False},
+            ],
+        },
+        {
+            "username": "manager",
+            "email": "manager@example.com",
+            "password": _demo_password("DEMO_MANAGER_PASSWORD"),
+            "first_name": "Store",
+            "last_name": "Manager",
+            "is_staff": False,
+            "is_superuser": False,
+            "memberships": [
+                {"workspace": retail_ws, "role": roles["MANAGER"], "is_default": True},
+                {"workspace": service_ws, "role": roles["EMPLOYEE"], "is_default": False},
+            ],
+        },
+        {
+            "username": "employee",
+            "email": "employee@example.com",
+            "password": _demo_password("DEMO_EMPLOYEE_PASSWORD"),
+            "first_name": "Frontline",
+            "last_name": "Staff",
+            "is_staff": False,
+            "is_superuser": False,
+            "memberships": [
+                {"workspace": retail_ws, "role": roles["EMPLOYEE"], "is_default": True},
+                {"workspace": service_ws, "role": roles["EMPLOYEE"], "is_default": False},
+            ],
+        },
+        {
+            "username": "viewer",
+            "email": "viewer@example.com",
+            "password": _demo_password("DEMO_VIEWER_PASSWORD"),
+            "first_name": "Audit",
+            "last_name": "Viewer",
+            "is_staff": False,
+            "is_superuser": False,
+            "memberships": [
+                {"workspace": retail_ws, "role": roles["VIEWER"], "is_default": True},
+                {"workspace": service_ws, "role": roles["VIEWER"], "is_default": False},
+            ],
+        },
+    ]
+
+    for u_spec in demo_users_spec:
+        user, _ = User.objects.update_or_create(
+            username=u_spec["username"],
+            defaults={
+                "email": u_spec["email"],
+                "first_name": u_spec["first_name"],
+                "last_name": u_spec["last_name"],
+                "is_staff": u_spec["is_staff"],
+                "is_superuser": u_spec["is_superuser"],
+                "is_active": True,
+            },
+        )
+        user.set_password(u_spec["password"])
+        user.save()
+
+        # Create DRF Token
+        token, _ = Token.objects.get_or_create(user=user)
+
+        # Create Workspace Memberships
+        for m_spec in u_spec["memberships"]:
+            WorkspaceMembership.objects.update_or_create(
+                user=user,
+                workspace=m_spec["workspace"],
+                defaults={
+                    "role": m_spec["role"],
+                    "is_default": m_spec["is_default"],
+                    "is_active": True,
+                },
+            )
+
+        _write(
+            f"    Demo user created: {user.username} (credentials and token omitted)",
+            getattr(style, "SUCCESS", None) if style else None,
+        )
+
+    return {
+        "retail_ws": retail_ws,
+        "service_ws": service_ws,
+        "roles": roles,
+    }
+
+
 class Command(BaseCommand):
     help = "Seeds initial development demo data (Roles, Workspaces, Users, Retail & Service Domains)."
 
+    def _report_completion(self, issues):
+        if issues:
+            self.stdout.write(self.style.WARNING(
+                "DEMO PARTIAL: core data seeded; incomplete stages: " + ", ".join(issues)
+            ))
+        else:
+            self.stdout.write(self.style.SUCCESS(
+                "DEMO COMPLETE: configured seed stages finished; synthetic data only, not production acceptance."
+            ))
+
+    def add_arguments(self, parser):
+        parser.add_argument("--confirm-empty-demo", action="store_true",
+                            help="Confirm this is a new, disposable local demo database.")
+        parser.add_argument("--identity-only", action="store_true",
+                            help="Seed only permissions, roles, workspaces and demo users.")
+
     @transaction.atomic
     def handle(self, *args, **options):
+        # Never turn an existing installation into a demo or reset its credentials.
+        if not settings.DEBUG:
+            raise CommandError("seed_demo requires DEBUG=True; production seeding is forbidden.")
+        database_config = settings.DATABASES["default"]
+        host = str(database_config.get("HOST", "")).strip().lower()
+        database_name = str(database_config.get("NAME", "")).rsplit("/", 1)[-1]
+        is_django_test_database = database_name.startswith("test_")
+        if host not in {"", "localhost", "127.0.0.1", "::1"} and not is_django_test_database:
+            raise CommandError("seed_demo requires a local database; remote hosts are forbidden.")
+        if not options.get("confirm_empty_demo"):
+            raise CommandError("Use --confirm-empty-demo only for a new disposable local database.")
+        if User.objects.exists() or Workspace.objects.exists() or Role.objects.exists():
+            raise CommandError("Database already contains users, workspaces or roles; no data was changed.")
         self.stdout.write(
             self.style.WARNING(
                 "\n=======================================================\n"
@@ -70,282 +439,21 @@ class Command(BaseCommand):
                 "=======================================================\n"
             )
         )
-        self.stdout.write(self.style.NOTICE("==> 1. Seeding Core Permissions..."))
 
-        permissions_data = [
-            # Retail Domain
-            ("retail.view_product", "View product catalog", "retail"),
-            ("retail.manage_product", "Create, update, or delete products and categories", "retail"),
-            ("retail.view_order", "View retail orders and sales metrics", "retail"),
-            ("retail.create_order", "Create retail orders", "retail"),
-            ("retail.manage_order", "Update order status and cancel orders", "retail"),
-            ("retail.view_customer", "View customer directory", "retail"),
-            ("retail.manage_customer", "Create and manage customer profiles", "retail"),
-            ("retail.view_branch", "View branch store network", "retail"),
-            ("retail.manage_branch", "Create and manage branch store locations", "retail"),
-            ("retail.view_analytics", "View sales and revenue analytics dashboards", "retail"),
-            # Service Operations Domain
-            ("service.view_service", "View service catalog", "service_ops"),
-            ("service.manage_service", "Create and configure services", "service_ops"),
-            ("service.view_employee", "View technician roster", "service_ops"),
-            ("service.manage_employee", "Manage technicians and availability", "service_ops"),
-            ("service.view_request", "View service incident requests and tasks", "service_ops"),
-            ("service.create_request", "Log service incident requests", "service_ops"),
-            ("service.manage_request", "Update request status, resolve or close tickets", "service_ops"),
-            ("service.assign_request", "Assign tasks to field technicians", "service_ops"),
-            ("service.view_task", "View discrete tasks", "service_ops"),
-            ("service.manage_task", "Create and update tasks", "service_ops"),
-            ("service.view_schedule", "View technician schedules", "service_ops"),
-            ("service.manage_schedule", "Create and manage dispatch schedules", "service_ops"),
-            ("service.view_sla", "View SLA policies", "service_ops"),
-            ("service.manage_sla", "Configure SLA response and resolution targets", "service_ops"),
-            ("service.view_analytics", "View service operations analytics", "service_ops"),
-            # Spatial GIS Domain (Phase 5)
-            ("gis.view_spatial_layers", "View spatial map layers and business GIS", "gis"),
-            ("gis.view_customer_locations", "View customer geographic coordinates and details", "gis"),
-            # Data Integration & Ingestion (Phase 6)
-            ("integration.view_datasource", "View data sources and import history", "integration"),
-            ("integration.manage_datasource", "Create and configure data sources", "integration"),
-            ("integration.execute_import", "Upload files and trigger data ingestion jobs", "integration"),
-            # Data Mapping Engine & Standard Data Model (Phase 7)
-            ("mapping.view_mapping", "View mapping profiles and rules", "mapping"),
-            ("mapping.manage_mapping", "Create, edit, and configure mapping profiles and rules", "mapping"),
-            ("mapping.apply_mapping", "Apply mappings and load canonical domain records", "mapping"),
-            # RAG + Knowledge Base + Grounded AI Assistant (Phase 8)
-            ("knowledge.view_knowledge", "View knowledge bases, documents and chunks", "knowledge"),
-            ("knowledge.manage_knowledge", "Upload, re-index and manage knowledge documents", "knowledge"),
-            # Workspaces & Tenancy
-            ("workspaces.view_workspace", "View workspace settings and members", "workspaces"),
-            ("workspaces.manage_workspace", "Manage workspace configuration and memberships", "workspaces"),
-            # Accounts & RBAC
-            ("accounts.view_user", "View user accounts and roles", "accounts"),
-            ("accounts.manage_user", "Manage user credentials and role assignments", "accounts"),
-            # AI & Analytics
-            ("ai.chat", "Interact with grounded AI assistant", "ai"),
-            ("ai.view_forecast", "View time-series ML forecasts and metrics", "ai"),
-            ("ai.view_insights", "View automated recommendations and insights", "ai"),
-            # Predictive Analytics & XGBoost Forecasting (Phase 9)
-            ("forecasting.view_forecast", "View time-series ML forecasts and accuracy metrics", "forecasting"),
-            ("forecasting.manage_forecast", "Configure forecast targets and trigger model training", "forecasting"),
-            # Decision Support & Recommendations (Phase 10)
-            ("recommendations.view_recommendation", "View operational recommendations", "recommendations"),
-            ("recommendations.manage_recommendation", "Accept, reject, or trigger recommendations", "recommendations"),
-            # Controlled Tool Calling & Approvals (Phase 10)
-            ("approvals.view_approval", "View pending approval requests", "approvals"),
-            ("approvals.manage_approval", "Approve or reject mutation requests", "approvals"),
-        ]
+        identities = seed_demo_identities(stdout=self.stdout, style=self.style)
+        retail_ws = identities["retail_ws"]
+        service_ws = identities["service_ws"]
+        roles = identities["roles"]
 
-        permission_objs = {}
-        for codename, name, module in permissions_data:
-            perm, _ = Permission.objects.update_or_create(
-                codename=codename,
-                defaults={"name": name, "module": module},
-            )
-            permission_objs[codename] = perm
+        if options.get("identity_only"):
+            self.stdout.write(self.style.SUCCESS("Demo identities created; domain data not seeded."))
+            return
 
-        self.stdout.write(f"    Created/Updated {len(permission_objs)} permissions.")
-
-        # =========================================================================
-        # 2. Roles & Permissions Binding
-        # =========================================================================
-        self.stdout.write(self.style.NOTICE("==> 2. Seeding Roles and binding Permissions..."))
-
-        roles_spec = {
-            "ADMIN": {
-                "desc": "System and Workspace Administrator with full privileges.",
-                "perms": list(permission_objs.values()),
-            },
-            "MANAGER": {
-                "desc": "Store/Operations Manager with management and analytics privileges.",
-                "perms": [
-                    p
-                    for code, p in permission_objs.items()
-                    if not code.startswith("accounts.manage_user")
-                    and not code.startswith("workspaces.manage_workspace")
-                ],
-            },
-            "EMPLOYEE": {
-                "desc": "Front-line operational staff (Order creation, customer lookup, task viewing).",
-                "perms": [
-                    permission_objs["retail.view_product"],
-                    permission_objs["retail.view_order"],
-                    permission_objs["retail.create_order"],
-                    permission_objs["retail.view_customer"],
-                    permission_objs["retail.manage_customer"],
-                    permission_objs["retail.view_branch"],
-                    permission_objs["service.view_service"],
-                    permission_objs["service.view_request"],
-                    permission_objs["service.create_request"],
-                    permission_objs["gis.view_spatial_layers"],
-                    permission_objs["integration.view_datasource"],
-                    permission_objs["integration.execute_import"],
-                    permission_objs["mapping.view_mapping"],
-                    permission_objs["mapping.apply_mapping"],
-                    permission_objs["knowledge.view_knowledge"],
-                    permission_objs["ai.chat"],
-                    permission_objs["forecasting.view_forecast"],
-                ],
-            },
-            "VIEWER": {
-                "desc": "Read-only auditor with dashboard viewing permissions.",
-                "perms": [
-                    permission_objs["retail.view_product"],
-                    permission_objs["retail.view_order"],
-                    permission_objs["retail.view_customer"],
-                    permission_objs["retail.view_branch"],
-                    permission_objs["retail.view_analytics"],
-                    permission_objs["service.view_service"],
-                    permission_objs["service.view_request"],
-                    permission_objs["gis.view_spatial_layers"],
-                    permission_objs["integration.view_datasource"],
-                    permission_objs["mapping.view_mapping"],
-                    permission_objs["knowledge.view_knowledge"],
-                    permission_objs["workspaces.view_workspace"],
-                    permission_objs["forecasting.view_forecast"],
-                ],
-            },
-        }
-
-        roles = {}
-        for r_name, r_spec in roles_spec.items():
-            role, _ = Role.objects.update_or_create(
-                name=r_name,
-                defaults={"description": r_spec["desc"]},
-            )
-            role.permissions.set(r_spec["perms"])
-            roles[r_name] = role
-
-        self.stdout.write(f"    Created/Updated {len(roles)} roles.")
-
-        # =========================================================================
-        # 3. Workspaces
-        # =========================================================================
-        self.stdout.write(self.style.NOTICE("==> 3. Seeding Dual Workspaces (Retail & Service)..."))
-
-        retail_ws, _ = Workspace.objects.update_or_create(
-            code="abc-retail",
-            defaults={
-                "name": "ABC Tech Store",
-                "workspace_type": WorkspaceType.RETAIL,
-                "description": "Cửa hàng bán thiết bị công nghệ và phụ kiện tại TP.HCM.",
-                "is_active": True,
-            },
-        )
-
-        service_ws, _ = Workspace.objects.update_or_create(
-            code="xyz-service",
-            defaults={
-                "name": "XYZ IT Technical Services",
-                "workspace_type": WorkspaceType.SERVICE,
-                "description": "Công ty dịch vụ cài đặt, bảo trì hệ thống, tư vấn quản trị cơ sở dữ liệu và sửa chữa thiết bị.",
-                "is_active": True,
-            },
-        )
-
-        self.stdout.write(f"    Workspaces: '{retail_ws.name}' ({retail_ws.code}), '{service_ws.name}' ({service_ws.code}).")
-
-        # =========================================================================
-        # 4. Users & Memberships
-        # =========================================================================
-        self.stdout.write(self.style.NOTICE("==> 4. Seeding Demo Users & Memberships..."))
-
-        demo_users_spec = [
-            {
-                "username": "admin",
-                "email": "admin@example.com",
-                "password": "AdminPass123!",
-                "first_name": "System",
-                "last_name": "Admin",
-                "is_staff": True,
-                "is_superuser": True,
-                "memberships": [
-                    {"workspace": retail_ws, "role": roles["ADMIN"], "is_default": True},
-                    {"workspace": service_ws, "role": roles["ADMIN"], "is_default": False},
-                ],
-            },
-            {
-                "username": "manager",
-                "email": "manager@example.com",
-                "password": "ManagerPass123!",
-                "first_name": "Store",
-                "last_name": "Manager",
-                "is_staff": False,
-                "is_superuser": False,
-                "memberships": [
-                    {"workspace": retail_ws, "role": roles["MANAGER"], "is_default": True},
-                    {"workspace": service_ws, "role": roles["EMPLOYEE"], "is_default": False},
-                ],
-            },
-            {
-                "username": "employee",
-                "email": "employee@example.com",
-                "password": "EmployeePass123!",
-                "first_name": "Frontline",
-                "last_name": "Staff",
-                "is_staff": False,
-                "is_superuser": False,
-                "memberships": [
-                    {"workspace": retail_ws, "role": roles["EMPLOYEE"], "is_default": True},
-                    {"workspace": service_ws, "role": roles["VIEWER"], "is_default": False},
-                ],
-            },
-            {
-                "username": "viewer",
-                "email": "viewer@example.com",
-                "password": "ViewerPass123!",
-                "first_name": "Audit",
-                "last_name": "Viewer",
-                "is_staff": False,
-                "is_superuser": False,
-                "memberships": [
-                    {"workspace": retail_ws, "role": roles["VIEWER"], "is_default": True},
-                    {"workspace": service_ws, "role": roles["VIEWER"], "is_default": False},
-                ],
-            },
-        ]
-
-        for u_spec in demo_users_spec:
-            user, _ = User.objects.update_or_create(
-                username=u_spec["username"],
-                defaults={
-                    "email": u_spec["email"],
-                    "first_name": u_spec["first_name"],
-                    "last_name": u_spec["last_name"],
-                    "is_staff": u_spec["is_staff"],
-                    "is_superuser": u_spec["is_superuser"],
-                    "is_active": True,
-                },
-            )
-            user.set_password(u_spec["password"])
-            user.save()
-
-            # Create DRF Token
-            token, _ = Token.objects.get_or_create(user=user)
-
-            # Create Workspace Memberships
-            for m_spec in u_spec["memberships"]:
-                WorkspaceMembership.objects.update_or_create(
-                    user=user,
-                    workspace=m_spec["workspace"],
-                    defaults={
-                        "role": m_spec["role"],
-                        "is_default": m_spec["is_default"],
-                        "is_active": True,
-                    },
-                )
-
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"    User: {user.username:<10} | Password: {u_spec['password']:<16} | Token: {token.key}"
-                )
-            )
-
-        # =========================================================================
         # =========================================================================
         # 5. Retail Domain Dataset (ABC Tech Store - Technology Store & Accessories)
         # =========================================================================
         self.stdout.write(self.style.NOTICE("\n==> 5. Seeding Retail Domain (ABC Tech Store)..."))
-        random.seed(42)  # Reproducible synthetic dataset
+        synthetic = _DeterministicSyntheticData(42)
 
         # Safe Development Clean: Remove obsolete demo orders, products, and categories for ABC Tech Store
         Order.objects.for_workspace(retail_ws).delete()
@@ -488,15 +596,15 @@ class Command(BaseCommand):
         customer_list = []
         for i in range(1, 61):
             code = f"CUST-{i:04d}"
-            name = f"{random.choice(first_names)} {random.choice(middle_names)} {random.choice(last_names)}"
-            phone = f"09{random.randint(10000000, 99999999)}"
+            name = f"{synthetic.choice(first_names)} {synthetic.choice(middle_names)} {synthetic.choice(last_names)}"
+            phone = f"09{synthetic.randint(10000000, 99999999)}"
             email = f"customer_{i}@example.com"
-            segment = random.choices(
+            segment = synthetic.choices(
                 [CustomerSegment.STANDARD, CustomerSegment.VIP, CustomerSegment.ENTERPRISE],
                 weights=[70, 20, 10],
             )[0]
-            lat = round(10.72 + random.random() * 0.12, 6)
-            lon = round(106.65 + random.random() * 0.10, 6)
+            lat = round(10.72 + synthetic.random() * 0.12, 6)
+            lon = round(106.65 + synthetic.random() * 0.10, 6)
 
             cust, _ = Customer.objects.update_or_create(
                 workspace=retail_ws,
@@ -505,7 +613,7 @@ class Command(BaseCommand):
                     "name": name,
                     "phone": phone,
                     "email": email,
-                    "address": f"{random.randint(1, 500)} Đường số {random.randint(1, 30)}, TP.HCM",
+                    "address": f"{synthetic.randint(1, 500)} Đường số {synthetic.randint(1, 30)}, TP.HCM",
                     "latitude": Decimal(str(lat)),
                     "longitude": Decimal(str(lon)),
                     "location": Point(lon, lat, srid=4326),
@@ -530,11 +638,11 @@ class Command(BaseCommand):
 
         for i in range(1, 161):
             # Spread orders across past 90 days with daily volume variation
-            days_ago = random.randint(0, 89)
+            days_ago = synthetic.randint(0, 89)
             order_date_val = (now - timedelta(days=days_ago)).date()
-            hour = random.randint(8, 21)
-            minute = random.randint(0, 59)
-            second = random.randint(0, 59)
+            hour = synthetic.randint(8, 21)
+            minute = synthetic.randint(0, 59)
+            second = synthetic.randint(0, 59)
             order_dt = datetime(
                 order_date_val.year,
                 order_date_val.month,
@@ -546,28 +654,28 @@ class Command(BaseCommand):
             )
 
             order_num = f"ORD-{order_date_val.strftime('%Y%m%d')}-{i:04d}"
-            customer = random.choice(customer_list)
-            branch = random.choice(branch_list)
-            payment = random.choices(payment_choices, weights=payment_weights)[0]
+            customer = synthetic.choice(customer_list)
+            branch = synthetic.choice(branch_list)
+            payment = synthetic.choices(payment_choices, weights=payment_weights)[0]
 
             # 90% completed, 5% confirmed, 3% pending, 2% cancelled
-            status_val = random.choices(
+            status_val = synthetic.choices(
                 [OrderStatus.COMPLETED, OrderStatus.CONFIRMED, OrderStatus.PENDING, OrderStatus.CANCELLED],
                 weights=[90, 5, 3, 2],
             )[0]
 
             # 1 to 4 distinct items per order
-            num_items = random.randint(1, 4)
-            selected_products = random.sample(product_list, num_items)
+            num_items = synthetic.randint(1, 4)
+            selected_products = synthetic.sample(product_list, num_items)
 
             items_to_create = []
             subtotal_sum = Decimal("0.00")
 
             for prod in selected_products:
-                qty = random.randint(1, 2)
+                qty = synthetic.randint(1, 2)
                 item_discount = Decimal("0.00")
-                if random.random() < 0.12:  # 12% promotional item discount
-                    item_discount = Decimal(str(random.randint(5, 20) * 10000))
+                if synthetic.random() < 0.12:  # 12% promotional item discount
+                    item_discount = Decimal(str(synthetic.randint(5, 20) * 10000))
 
                 line_subtotal = max(Decimal("0.00"), (Decimal(qty) * prod.unit_price) - item_discount)
                 subtotal_sum += line_subtotal
@@ -677,15 +785,15 @@ class Command(BaseCommand):
                     if br == branch_list[0]:
                         stock_qty = 0  # Out of stock!
                     else:
-                        stock_qty = random.randint(15, 45)
+                        stock_qty = synthetic.randint(15, 45)
                 elif "laptop" in p_name_lower:
-                    stock_qty = random.randint(5, 30)
+                    stock_qty = synthetic.randint(5, 30)
                 elif "mouse" in p_name_lower or "chuột" in p_name_lower or "bàn phím" in p_name_lower or "keyboard" in p_name_lower:
-                    stock_qty = random.randint(25, 80)
+                    stock_qty = synthetic.randint(25, 80)
                 elif "ssd" in p_name_lower or "ram" in p_name_lower:
-                    stock_qty = random.randint(15, 60)
+                    stock_qty = synthetic.randint(15, 60)
                 else:
-                    stock_qty = random.randint(8, 50)
+                    stock_qty = synthetic.randint(8, 50)
 
                 StockBalance.objects.create(
                     workspace=retail_ws,
@@ -728,10 +836,10 @@ class Command(BaseCommand):
             )
 
             # Assign 2 to 4 products to each receipt
-            rec_prods = random.sample(product_list, random.randint(2, 4))
+            rec_prods = synthetic.sample(product_list, synthetic.randint(2, 4))
             tot_amt = Decimal("0.00")
             for p in rec_prods:
-                qty = random.randint(5, 20)
+                qty = synthetic.randint(5, 20)
                 cost = p.cost_price or (p.unit_price * Decimal("0.75"))
                 l_tot = Decimal(qty) * cost
                 tot_amt += l_tot
@@ -950,7 +1058,7 @@ class Command(BaseCommand):
         ServiceRequest.objects.filter(workspace=service_ws).delete()
 
         # Deterministic pseudo-random seed for repeatable generation
-        rand_gen = random.Random(42)
+        rand_gen = _DeterministicSyntheticData(42)
 
         for i in range(1, 121):
             title_template, svc_code = rand_gen.choice(incident_templates)
@@ -1448,6 +1556,10 @@ class Command(BaseCommand):
         from apps.forecasting.models import TargetType
         from apps.forecasting.services import get_or_create_default_config
 
+        seed_issues = []
+        if kb_retail.documents.exclude(status="READY").exists() or kb_service.documents.exclude(status="READY").exists():
+            seed_issues.append("knowledge_ingestion")
+
         # 10.1 Retail Revenue Forecaster
         retail_rev_cfg = get_or_create_default_config(retail_ws, TargetType.RETAIL_REVENUE)
         try:
@@ -1460,7 +1572,8 @@ class Command(BaseCommand):
             )
             self.stdout.write(f"    Retail Revenue Forecaster: Run #{rev_run.id} trained (MAE: {rev_run.model_metrics.get('mae')}, MAPE: {rev_run.model_metrics.get('mape')}%)")
         except Exception as e:
-            self.stdout.write(self.style.WARNING(f"    Retail Revenue training note: {e}"))
+            seed_issues.append("retail_revenue_forecast")
+            self.stdout.write(self.style.WARNING(f"    Retail Revenue training failed ({type(e).__name__})."))
 
         # 10.2 Retail Order Volume Forecaster
         retail_vol_cfg = get_or_create_default_config(retail_ws, TargetType.RETAIL_ORDER_VOLUME)
@@ -1474,7 +1587,8 @@ class Command(BaseCommand):
             )
             self.stdout.write(f"    Retail Order Volume Forecaster: Run #{vol_run.id} trained (MAE: {vol_run.model_metrics.get('mae')}, MAPE: {vol_run.model_metrics.get('mape')}%)")
         except Exception as e:
-            self.stdout.write(self.style.WARNING(f"    Retail Order Volume training note: {e}"))
+            seed_issues.append("retail_order_forecast")
+            self.stdout.write(self.style.WARNING(f"    Retail Order Volume training failed ({type(e).__name__})."))
 
         # 10.3 Service Ticket Volume Forecaster
         service_vol_cfg = get_or_create_default_config(service_ws, TargetType.SERVICE_TICKET_VOLUME)
@@ -1488,7 +1602,8 @@ class Command(BaseCommand):
             )
             self.stdout.write(f"    Service Ticket Volume Forecaster: Run #{svc_run.id} trained (MAE: {svc_run.model_metrics.get('mae')}, MAPE: {svc_run.model_metrics.get('mape')}%)")
         except Exception as e:
-            self.stdout.write(self.style.WARNING(f"    Service Ticket Volume training note: {e}"))
+            seed_issues.append("service_ticket_forecast")
+            self.stdout.write(self.style.WARNING(f"    Service Ticket Volume training failed ({type(e).__name__})."))
 
         # =========================================================================
         # 11. Initial Recommendations (Retail Stockout Alerts & Service Recommendations)
@@ -1500,10 +1615,7 @@ class Command(BaseCommand):
             s_recs = evaluate_service_recommendations(service_ws)
             self.stdout.write(f"    Recommendations generated: {len(r_recs)} Retail (including Stockout Alerts), {len(s_recs)} Service.")
         except Exception as e:
-            self.stdout.write(self.style.WARNING(f"    Recommendations note: {e}"))
+            seed_issues.append("recommendations")
+            self.stdout.write(self.style.WARNING(f"    Recommendations failed ({type(e).__name__})."))
 
-        self.stdout.write(self.style.SUCCESS("\n==> SEED COMPLETED SUCCESSFULLY! All demo users, roles, workspaces, retail, service, GIS, integration, mapping, knowledge & forecasting models ready."))
-
-
-
-
+        self._report_completion(seed_issues)

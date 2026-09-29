@@ -8,6 +8,10 @@
         <h1 class="page-title">Bảng Quản lý Công việc Kỹ thuật</h1>
         <p class="text-secondary">Các hạng mục kỹ thuật chi tiết được thực hiện bởi đội ngũ kỹ sư</p>
     </div>
+    <div class="header-actions">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary">← Tổng quan Nội bộ</a>
+        <a href="/noibo/services/requests/" class="btn btn-secondary">📋 Phiếu yêu cầu</a>
+    </div>
 </div>
 
 <div class="card">
@@ -30,7 +34,7 @@
                 <tr>
                     <td><code>#{{ t.id }}</code></td>
                     <td><strong>{{ t.title }}</strong></td>
-                    <td><a href="/services/requests/{{ t.service_request.id }}/"><code>{{ t.service_request.request_number }}</code></a></td>
+                    <td><a href="/noibo/services/requests/{{ t.service_request.id }}/"><code>{{ t.service_request.request_number }}</code></a></td>
                     <td>
                         {% if t.assigned_to %}
                         <span>👨‍🔧 {{ t.assigned_to.full_name }}</span>

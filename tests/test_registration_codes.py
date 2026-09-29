@@ -69,6 +69,20 @@ class RegistrationCodeTests(TestCase):
             self.client.post("/dang-ky/gui-lai-xac-minh/")
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_resend_between_link_lookup_and_consume_rejects_stale_link(self):
+        self.start()
+        token = re.search(r"https?://[^\s]+/xac-minh-dang-ky/([^/\s]+)/", mail.outbox[-1].body).group(1)
+        def resolve_then_replace(_token):
+            user = registration_link_user(_token)
+            RegistrationCode.objects.filter(user=user).update(sent_at=timezone.now()+timedelta(seconds=2))
+            return user
+        with patch("apps.public_web.views.registration_link_user", side_effect=resolve_then_replace):
+            self.client.get(f"/xac-minh-dang-ky/{token}/")
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+        self.assertIsNone(RegistrationCode.objects.get(user=self.user).consumed_at)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
     def test_expired_code_and_signed_link_cannot_bypass(self):
         self.start()
         RegistrationCode.objects.filter(user=self.user).update(expires_at=timezone.now()-timedelta(seconds=1))

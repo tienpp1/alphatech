@@ -17,6 +17,7 @@ class AuditLogAdmin(admin.ModelAdmin):
     search_fields = ("action", "entity_type", "entity_id", "actor_user__username")
     readonly_fields = [f.name for f in AuditLog._meta.fields]
     date_hierarchy = "timestamp"
+    list_select_related = ("workspace", "actor_user")
 
     def has_add_permission(self, request):
         return False

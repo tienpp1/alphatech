@@ -260,6 +260,8 @@ def handle_dispatch_technician(workspace: Workspace, user: User, params: Dict[st
 
     with transaction.atomic():
         # Update ServiceRequest
+        req = ServiceRequest.objects.select_for_update().get(pk=req.pk, workspace=workspace)
+        before = {"status": req.status, "assigned_employee_id": req.assigned_employee_id}
         req.assigned_employee = emp
         req.status = ServiceRequestStatus.IN_PROGRESS
         req.save()
@@ -280,6 +282,14 @@ def handle_dispatch_technician(workspace: Workspace, user: User, params: Dict[st
                 status=TaskStatus.IN_PROGRESS,
                 description=f"Công việc phân công trực tiếp cho kỹ thuật viên {emp.full_name}.",
             )
+        from apps.audit.services import log_action
+        log_action(
+            workspace=workspace, actor_user=user, action="TECHNICIAN_DISPATCHED",
+            entity_type="ServiceRequest", entity_id=req.pk,
+            changes={"before": before,
+                     "after": {"status": req.status, "assigned_employee_id": emp.pk},
+                     "task_id": task.pk},
+        )
 
     return {
         "status": "SUCCESS",

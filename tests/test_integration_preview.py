@@ -5,7 +5,7 @@ Unit & Integration Tests for Ingestion Preview Engine & Preview API.
 import io
 from django.test import TestCase, Client
 from django.core.files.uploadedfile import SimpleUploadedFile
-from apps.accounts.models import User, Role
+from apps.accounts.models import User, Role, Permission
 from apps.workspaces.models import Workspace, WorkspaceMembership, WorkspaceType
 from apps.integration.models import DataSource, SourceType
 from apps.integration.parsers.preview_engine import generate_preview_metadata, infer_column_types
@@ -50,6 +50,11 @@ class ImportPreviewApiTests(TestCase):
         self.client = Client()
         self.user = User.objects.create_user(username="test_admin", email="test_admin@example.com", password="AdminPass123!")
         self.role = Role.objects.create(name="ADMIN", description="Admin")
+        permission, _ = Permission.objects.get_or_create(
+            codename="integration.execute_import",
+            defaults={"name": "Execute import", "module": "integration"},
+        )
+        self.role.permissions.add(permission)
         self.ws = Workspace.objects.create(name="Retail WS", code="retail-ws", workspace_type=WorkspaceType.RETAIL)
         WorkspaceMembership.objects.create(workspace=self.ws, user=self.user, role=self.role, is_default=True)
         self.client.force_login(self.user)

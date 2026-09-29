@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 
 from apps.notifications.models import Notification, NotificationEventType
 from apps.notifications.services import (
@@ -13,6 +14,7 @@ from apps.notifications.services import (
     mark_notification_as_read,
     mark_all_notifications_as_read,
     get_user_authorized_workspaces,
+    resolve_collaboration_workspace,
 )
 from apps.workspaces.models import WorkspaceMembership
 
@@ -139,3 +141,137 @@ def notification_redirect_detail_view(request, pk):
         return redirect(notif.target_url)
 
     return redirect("/noibo/thong-bao/")
+
+
+from apps.notifications.bulletin_service import (
+    get_workspace_bulletins,
+    create_bulletin,
+    can_manage_bulletins,
+)
+from apps.notifications.chat_service import (
+    get_recent_team_messages,
+    send_team_message,
+    get_workspace_colleagues,
+    verify_chat_access,
+)
+from apps.notifications.models import BulletinPriority
+from apps.workspaces.models import Workspace
+
+
+@login_required(login_url="/accounts/login/")
+def bulletin_board_ui_view(request):
+    """
+    Internal Bulletin Board Page (GET /noibo/bang-tin/).
+    Displays executive directives, policies, and pinned announcements per Workspace.
+    """
+    if not _ensure_internal_access(request):
+        return redirect("/tai-khoan/?notice=customer_only")
+
+    authorized_workspaces = get_user_authorized_workspaces(request.user)
+    if not authorized_workspaces.exists():
+        return render(request, "retail/no_workspace.html", {"message": "Bạn chưa được cấp quyền truy cập không gian làm việc nào."})
+
+    target_workspace = resolve_collaboration_workspace(request, request.GET, use_session=True)
+    if target_workspace is None:
+        raise PermissionDenied("Không gian làm việc không hợp lệ hoặc không được cấp quyền.")
+
+    priority_filter = request.GET.get("priority", "")
+    bulletins = get_workspace_bulletins(target_workspace, priority=priority_filter or None)
+    can_manage = can_manage_bulletins(request.user, target_workspace)
+
+    context = {
+        "active_workspace": target_workspace,
+        "authorized_workspaces": authorized_workspaces,
+        "bulletins": bulletins,
+        "can_manage": can_manage,
+        "priority_filter": priority_filter,
+        "priority_choices": BulletinPriority.choices,
+        "total_bulletins_count": len(bulletins),
+    }
+    return render(request, "notifications/bulletin_board.html", context)
+
+
+@login_required(login_url="/accounts/login/")
+def bulletin_create_ui_view(request):
+    """
+    POST /noibo/bang-tin/create/
+    Creates a new internal bulletin within the target workspace.
+    """
+    if not _ensure_internal_access(request):
+        return redirect("/tai-khoan/?notice=customer_only")
+
+    if request.method != "POST":
+        return redirect("/noibo/bang-tin/")
+
+    target_workspace = resolve_collaboration_workspace(request, request.POST)
+
+    if not target_workspace:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Không gian làm việc không hợp lệ.")
+
+    if not can_manage_bulletins(request.user, target_workspace):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Bạn không có quyền ban hành bản tin trong không gian làm việc này.")
+
+    title = request.POST.get("title", "").strip()
+    content = request.POST.get("content", "").strip()
+    priority = request.POST.get("priority", BulletinPriority.NORMAL)
+
+    if not title or not content:
+        messages.error(request, "Vui lòng nhập đầy đủ tiêu đề và nội dung bản tin.")
+        return redirect(f"/noibo/bang-tin/?workspace_id={target_workspace.id}")
+
+    create_bulletin(
+        workspace=target_workspace,
+        author=request.user,
+        title=title,
+        content=content,
+        priority=priority,
+    )
+    messages.success(request, f"Đã đăng bản tin '{title}' thành công tới toàn thể nhân sự.")
+    return redirect(f"/noibo/bang-tin/?workspace_id={target_workspace.id}")
+
+
+@login_required(login_url="/accounts/login/")
+def team_chat_ui_view(request):
+    """
+    Internal Team Chat Page (GET & POST /noibo/trao-doi/).
+    Enables workspace-scoped real-time messaging between colleagues.
+    """
+    if not _ensure_internal_access(request):
+        return redirect("/tai-khoan/?notice=customer_only")
+
+    authorized_workspaces = get_user_authorized_workspaces(request.user)
+    if not authorized_workspaces.exists():
+        return render(request, "retail/no_workspace.html", {"message": "Bạn chưa được cấp quyền truy cập không gian làm việc nào."})
+
+    target_workspace = resolve_collaboration_workspace(request, request.GET, use_session=True)
+    if target_workspace is None:
+        raise PermissionDenied("Không gian làm việc không hợp lệ hoặc không được cấp quyền.")
+
+    # Verify access to this specific workspace
+    if not verify_chat_access(request.user, target_workspace):
+        messages.error(request, "Bạn không có quyền tham gia kênh trao đổi của không gian làm việc này.")
+        return redirect("/noibo/")
+
+    # Handle standard form POST message submission (fallback when JS disabled)
+    if request.method == "POST":
+        msg_text = request.POST.get("message", "").strip()
+        if msg_text:
+            try:
+                send_team_message(target_workspace, request.user, msg_text)
+                return redirect(f"/noibo/trao-doi/?workspace_id={target_workspace.id}")
+            except ValueError:
+                messages.error(request, "Nội dung tin nhắn không hợp lệ.")
+
+    messages_list = get_recent_team_messages(target_workspace, request.user, limit=50)
+    colleagues = get_workspace_colleagues(target_workspace)
+
+    context = {
+        "active_workspace": target_workspace,
+        "authorized_workspaces": authorized_workspaces,
+        "messages_list": messages_list,
+        "colleagues": colleagues,
+        "latest_message_id": messages_list[-1].id if messages_list else 0,
+    }
+    return render(request, "notifications/team_chat.html", context)

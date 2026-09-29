@@ -10,6 +10,8 @@
     gap: 1.75rem;
     margin-bottom: 2rem;
 }
+.product-status-active { color: #4ade80; font-size: 0.85rem; font-weight: 600; }
+.product-status-inactive { color: #f87171; font-size: 0.85rem; font-weight: 600; }
 .detail-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -97,9 +99,38 @@
     background: #1e293b;
     color: #f8fafc;
 }
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.form-row-unit {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
 @media (max-width: 900px) {
     .detail-layout {
         grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 640px) {
+    .form-row-2,
+    .form-row-3,
+    .form-row-unit {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+    .detail-card {
+        padding: 1.25rem 1rem !important;
     }
 }
 </style>
@@ -110,7 +141,7 @@
 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
     <div>
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.35rem;">
-            <a href="/retail/products/" style="color: #94a3b8; text-decoration: none; font-size: 0.88rem;">← Danh mục sản phẩm</a>
+            <a href="/noibo/retail/products/" id="btn-back-products" style="color: #94a3b8; text-decoration: none; font-size: 0.88rem;">← Danh mục sản phẩm</a>
             <span style="color: #64748b;">/</span>
             <span style="color: #818cf8; font-size: 0.85rem; font-weight: 700;">{{ product.category.name }}</span>
         </div>
@@ -121,7 +152,7 @@
             <span style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; color: #38bdf8;">
                 SKU: {{ product.sku }}
             </span>
-            <span style="font-size: 0.85rem; color: {% if product.is_active %}#4ade80{% else %}#f87171{% endif %}; font-weight: 600;">
+            <span class="{% if product.is_active %}product-status-active{% else %}product-status-inactive{% endif %}">
                 {% if product.is_active %}● Đang kinh doanh{% else %}○ Ngừng kinh doanh{% endif %}
             </span>
             <a href="/san-pham/{{ product.id }}/" target="_blank" style="color: #38bdf8; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
@@ -132,14 +163,14 @@
 
     <div style="display: flex; gap: 10px; align-items: center;">
         {% if can_manage %}
-        <form method="POST" action="/retail/products/{{ product.id }}/delete/" onsubmit="return confirm('Bạn có chắc chắn muốn chuyển sản phẩm này vào Thùng rác? (Có thể khôi phục trong 7 ngày)');">
+        <form method="POST" action="delete/" onsubmit="return confirm('Bạn có chắc chắn muốn chuyển sản phẩm này vào Thùng rác? (Có thể khôi phục trong 7 ngày)');">
             {% csrf_token %}
             <button type="submit" class="btn btn-secondary" style="color: #f87171; border-color: rgba(239,68,68,0.3);">
                 🗑️ Chuyển vào Thùng rác
             </button>
         </form>
         {% endif %}
-        <a href="/retail/products/" class="btn btn-secondary">Quay lại</a>
+        <a href="/noibo/retail/products/" class="btn btn-secondary">Quay lại</a>
     </div>
 </div>
 
@@ -155,10 +186,10 @@
                 {% endif %}
             </div>
 
-            <form method="POST" action="/retail/products/{{ product.id }}/edit/">
+            <form method="POST" action="edit/">
                 {% csrf_token %}
 
-                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-row-2">
                     <div>
                         <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Tên sản phẩm</label>
                         <input type="text" name="name" value="{{ product.name }}" required class="form-input" {% if not can_manage %}disabled{% endif %}>
@@ -169,7 +200,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-row-3">
                     <div>
                         <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Danh mục</label>
                         <select name="category_id" required class="form-input" {% if not can_manage %}disabled{% endif %}>
@@ -188,7 +219,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-row-unit">
                     <div>
                         <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.35rem;">Đơn vị tính</label>
                         <input type="text" name="unit" value="{{ product.unit }}" class="form-input" {% if not can_manage %}disabled{% endif %}>
@@ -222,7 +253,7 @@
 
             <!-- Upload new images -->
             {% if can_manage %}
-            <form method="POST" action="/retail/products/{{ product.id }}/images/upload/" enctype="multipart/form-data" style="margin-bottom: 1.5rem; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px dashed rgba(255,255,255,0.12);">
+            <form method="POST" action="images/upload/" enctype="multipart/form-data" style="margin-bottom: 1.5rem; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px dashed rgba(255,255,255,0.12);">
                 {% csrf_token %}
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <input type="file" name="images" multiple accept=".jpg,.jpeg,.png,.webp" required class="form-input" style="flex: 1; min-width: 200px;">
@@ -251,7 +282,7 @@
                     <div style="display: flex; gap: 4px; margin-top: auto; justify-content: space-between;">
                         {% if can_manage %}
                             {% if not img.is_primary %}
-                            <form method="POST" action="/retail/products/{{ product.id }}/images/{{ img.id }}/primary/" style="margin: 0; flex: 1;">
+                            <form method="POST" action="images/{{ img.id }}/primary/" style="margin: 0; flex: 1;">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-secondary" style="width: 100%; padding: 3px; font-size: 0.7rem;" title="Đặt làm ảnh chính">
                                     ★ Chính
@@ -259,7 +290,7 @@
                             </form>
                             {% endif %}
                             
-                            <form method="POST" action="/retail/products/{{ product.id }}/images/{{ img.id }}/delete/" onsubmit="return confirm('Xóa ảnh này?');" style="margin: 0;">
+                            <form method="POST" action="images/{{ img.id }}/delete/" onsubmit="return confirm('Xóa ảnh này?');" style="margin: 0;">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-secondary" style="padding: 3px 6px; font-size: 0.7rem; color: #f87171;" title="Xóa ảnh">
                                     ✕

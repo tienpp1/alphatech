@@ -15,6 +15,8 @@ from config.views import (
     system_telemetry_ui_view,
 )
 from apps.workspaces.ui_views import switch_workspace_ui_view
+from apps.notifications.ui_views import bulletin_board_ui_view, bulletin_create_ui_view, team_chat_ui_view
+from apps.notifications.bulletin_edit_views import bulletin_edit_ui
 
 urlpatterns = [
     # 1. Public Business Website Layer (Root / & Customer-facing pages)
@@ -27,6 +29,11 @@ urlpatterns = [
     path("noibo/telemetry/", system_telemetry_ui_view, name="noibo_telemetry"),
     path("noibo/status/", health_check_ui_view, name="noibo_health_check_ui"),
     path("noibo/thong-bao/", include("apps.notifications.ui_urls")),
+    path("noibo/bang-tin/", bulletin_board_ui_view, name="noibo_bulletin_board"),
+    path("noibo/bang-tin/<int:pk>/sua/", bulletin_edit_ui, name="noibo_bulletin_edit"),
+    path("noibo/bang-tin/create/", bulletin_create_ui_view, name="noibo_bulletin_create"),
+    path("noibo/bang-tin/tao/", bulletin_create_ui_view, name="noibo_bulletin_create_alt"),
+    path("noibo/trao-doi/", team_chat_ui_view, name="noibo_team_chat"),
     path("noibo/retail/", include("apps.retail.ui_urls")),
     path("noibo/services/", include("apps.service_ops.ui_urls")),
     path("noibo/", include("apps.gis.ui_urls")),
@@ -71,5 +78,4 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
 

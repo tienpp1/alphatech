@@ -423,7 +423,7 @@ class GoogleOAuthAndEmailNotificationsTestCase(TestCase):
     # =========================================================================
 
     def test_contact_form_submission_dispatches_confirmation_email(self):
-        """Submitting contact form sends inquiry receipt email to sender with 24-hour turnaround notice."""
+        """Contact receipt preserves the message without inventing a response deadline."""
         payload = {
             "name": "Phạm Doanh Nghiệp",
             "email": "phamdoanhnghiep@gmail.com",
@@ -441,7 +441,8 @@ class GoogleOAuthAndEmailNotificationsTestCase(TestCase):
         self.assertIn("Xác nhận tiếp nhận tin nhắn liên hệ", contact_email.subject)
         self.assertEqual(contact_email.to, ["phamdoanhnghiep@gmail.com"])
         self.assertIn("Doanh nghiệp chúng tôi muốn tìm hiểu giải pháp AI và hạ tầng mạng.", contact_email.body)
-        self.assertIn("24 giờ", contact_email.body)
+        self.assertIn("Thời gian xử lý cần được xác nhận", contact_email.body)
+        self.assertNotIn("24 giờ làm việc", contact_email.body)
 
     def test_authenticated_contact_sends_separate_account_and_form_messages(self):
         self.client.force_login(self.existing_user)

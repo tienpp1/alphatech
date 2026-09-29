@@ -3,9 +3,47 @@
 {% block title %}Phiếu Yêu cầu {{ req.request_number }} — {{ active_workspace.name }}{% endblock %}
 
 {% block content %}
+<style>
+.step-connector {
+    flex: 1;
+    height: 2px;
+    margin-top: -1.25rem;
+}
+.step-connector.line-active {
+    background: #10b981;
+}
+.step-connector.line-inactive {
+    background: rgba(255,255,255,0.15);
+}
+.step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.5rem;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+.step-circle.circle-done {
+    background: #10b981;
+}
+.step-circle.circle-active {
+    background: #3b82f6;
+}
+.step-circle.circle-pending {
+    background: #334155;
+}
+.sla-card-border-default { border-left: 4px solid #94a3b8; }
+.sla-card-border-ontime { border-left: 4px solid #10b981; }
+.sla-card-border-atrisk { border-left: 4px solid #f59e0b; }
+.sla-card-border-breached { border-left: 4px solid #ef4444; }
+</style>
 <div class="dashboard-header">
     <div>
-        <a href="/services/requests/" class="text-secondary" style="font-size: 0.875rem;">&larr; Quay lại Danh sách Phiếu Yêu cầu</a>
+        <a href="/noibo/services/requests/" id="btn-back-requests" class="text-secondary" style="font-size: 0.875rem;">&larr; Quay lại Danh sách Phiếu Yêu cầu</a>
         <h1 class="page-title" style="margin-top: 0.5rem;">Phiếu Yêu cầu Sự cố: <code>{{ req.request_number }}</code></h1>
         <p class="text-secondary">{{ req.title }}</p>
     </div>
@@ -44,11 +82,11 @@
         </div>
 
         <!-- Connector Line 1 -->
-        <div style="flex: 1; height: 2px; background: {% if req.status != 'OPEN' %}#10b981{% else %}rgba(255,255,255,0.15){% endif %}; margin-top: -1.25rem;"></div>
+        <div class="step-connector {% if req.status != 'OPEN' %}line-active{% else %}line-inactive{% endif %}"></div>
 
         <!-- Step 2: Assigned -->
         <div style="text-align: center; flex: 1; position: relative; z-index: 2;">
-            <div style="width: 32px; height: 32px; border-radius: 50%; background: {% if req.status != 'OPEN' %}#10b981{% else %}#334155{% endif %}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; font-size: 0.875rem;">
+            <div class="step-circle {% if req.status != 'OPEN' %}circle-done{% else %}circle-pending{% endif %}">
                 {% if req.status != 'OPEN' %}✔{% else %}2{% endif %}
             </div>
             <div style="font-size: 0.85rem; font-weight: 600;">2. Phân công</div>
@@ -56,11 +94,11 @@
         </div>
 
         <!-- Connector Line 2 -->
-        <div style="flex: 1; height: 2px; background: {% if req.status == 'IN_PROGRESS' or req.status == 'RESOLVED' or req.status == 'CLOSED' %}#10b981{% else %}rgba(255,255,255,0.15){% endif %}; margin-top: -1.25rem;"></div>
+        <div class="step-connector {% if req.status == 'IN_PROGRESS' or req.status == 'RESOLVED' or req.status == 'CLOSED' %}line-active{% else %}line-inactive{% endif %}"></div>
 
         <!-- Step 3: In Progress -->
         <div style="text-align: center; flex: 1; position: relative; z-index: 2;">
-            <div style="width: 32px; height: 32px; border-radius: 50%; background: {% if req.status == 'IN_PROGRESS' %}#3b82f6{% elif req.status == 'RESOLVED' or req.status == 'CLOSED' %}#10b981{% else %}#334155{% endif %}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; font-size: 0.875rem;">
+            <div class="step-circle {% if req.status == 'IN_PROGRESS' %}circle-active{% elif req.status == 'RESOLVED' or req.status == 'CLOSED' %}circle-done{% else %}circle-pending{% endif %}">
                 {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}✔{% else %}3{% endif %}
             </div>
             <div style="font-size: 0.85rem; font-weight: 600;">3. Đang xử lý</div>
@@ -68,11 +106,11 @@
         </div>
 
         <!-- Connector Line 3 -->
-        <div style="flex: 1; height: 2px; background: {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}#10b981{% else %}rgba(255,255,255,0.15){% endif %}; margin-top: -1.25rem;"></div>
+        <div class="step-connector {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}line-active{% else %}line-inactive{% endif %}"></div>
 
         <!-- Step 4: Resolved -->
         <div style="text-align: center; flex: 1; position: relative; z-index: 2;">
-            <div style="width: 32px; height: 32px; border-radius: 50%; background: {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}#10b981{% else %}#334155{% endif %}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; font-size: 0.875rem;">
+            <div class="step-circle {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}circle-done{% else %}circle-pending{% endif %}">
                 {% if req.status == 'RESOLVED' or req.status == 'CLOSED' %}✔{% else %}4{% endif %}
             </div>
             <div style="font-size: 0.85rem; font-weight: 600;">4. Đã giải quyết</div>
@@ -80,11 +118,11 @@
         </div>
 
         <!-- Connector Line 4 -->
-        <div style="flex: 1; height: 2px; background: {% if req.status == 'CLOSED' %}#10b981{% else %}rgba(255,255,255,0.15){% endif %}; margin-top: -1.25rem;"></div>
+        <div class="step-connector {% if req.status == 'CLOSED' %}line-active{% else %}line-inactive{% endif %}"></div>
 
         <!-- Step 5: Closed -->
         <div style="text-align: center; flex: 1; position: relative; z-index: 2;">
-            <div style="width: 32px; height: 32px; border-radius: 50%; background: {% if req.status == 'CLOSED' %}#10b981{% else %}#334155{% endif %}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; font-size: 0.875rem;">
+            <div class="step-circle {% if req.status == 'CLOSED' %}circle-done{% else %}circle-pending{% endif %}">
                 {% if req.status == 'CLOSED' %}✔{% else %}5{% endif %}
             </div>
             <div style="font-size: 0.85rem; font-weight: 600;">5. Đã đóng</div>
@@ -94,7 +132,7 @@
 </div>
 
 <!-- Main Details Layout -->
-<div class="grid-2-cols" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+<div class="grid-2-cols">
     <!-- Left Column: Details, Tasks, Labor Tracking, Lifecycle Actions -->
     <div>
         <!-- Ticket Information Card -->
@@ -102,7 +140,7 @@
             <h3 class="card-title">Chi tiết Sự cố</h3>
             <p style="white-space: pre-wrap; margin-bottom: 1.5rem; line-height: 1.6;">{{ req.description }}</p>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.875rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 1rem; font-size: 0.875rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
                 <div>
                     <span class="text-secondary">Dịch vụ:</span>
                     <strong>{{ req.service.name }} ({{ req.service.code }})</strong>
@@ -242,21 +280,21 @@
             {% if can_log_labor and req.status != 'CLOSED' and req.status != 'CANCELLED' and tasks %}
             <div style="border-top: 1px solid rgba(255,255,255,0.08); margin-top: 1.5rem; padding-top: 1rem;">
                 <h4 style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.75rem;">+ Ghi nhận Giờ công Kỹ thuật viên</h4>
-                <form method="POST" style="display: grid; grid-template-columns: 1fr 1fr 1fr 2fr auto; gap: 0.75rem; align-items: end;">
+                <form method="POST" class="labor-log-form">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="log_labor">
                     <div>
-                        <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Công việc:</label>
-                        <select name="task_id" class="form-control" required style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+                        <label for="labor-task" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Công việc:</label>
+                        <select id="labor-task" name="task_id" class="form-control" required style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
                             {% for t in tasks %}
                             <option value="{{ t.id }}">#{{ t.id }} - {{ t.title }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div>
-                        <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Kỹ thuật viên:</label>
-                        <select name="employee_id" class="form-control" required style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
-                            {% for tech in technicians %}
+                        <label for="labor-employee" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Kỹ thuật viên:</label>
+                        <select id="labor-employee" name="employee_id" class="form-control" required style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+                            {% for tech in labor_technicians %}
                             <option value="{{ tech.id }}" {% if req.assigned_employee and req.assigned_employee.id == tech.id %}selected{% endif %}>
                                 {{ tech.full_name }} ({{ tech.hourly_labor_rate|floatformat:0 }} VND/h)
                             </option>
@@ -264,12 +302,12 @@
                         </select>
                     </div>
                     <div>
-                        <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Thời lượng (phút):</label>
-                        <input type="number" name="duration_minutes" value="60" min="1" required class="form-control" style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+                        <label for="labor-duration" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Thời lượng (phút):</label>
+                        <input id="labor-duration" type="number" name="duration_minutes" value="60" min="1" required class="form-control" style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
                     </div>
                     <div>
-                        <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Ghi chú chi tiết:</label>
-                        <input type="text" name="notes" placeholder="Mô tả công việc thực hiện..." class="form-control" style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+                        <label for="labor-notes" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">Ghi chú chi tiết:</label>
+                        <input id="labor-notes" type="text" name="notes" placeholder="Mô tả công việc thực hiện..." class="form-control" style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
                     </div>
                     <div>
                         <button type="submit" class="btn btn-primary" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;">Ghi nhận</button>
@@ -325,34 +363,42 @@
     <!-- Right Column: SLA Health, Customer Info & Dispatch Assignment -->
     <div>
         <!-- SLA Compliance Card -->
-        <div class="card" style="border-left: 4px solid {% if sla.overall_status == 'ON_TIME' %}#10b981{% elif sla.overall_status == 'AT_RISK' %}#f59e0b{% else %}#ef4444{% endif %};">
+        <div class="card {% if not req.response_deadline_at or not req.resolution_deadline_at %}sla-card-border-default{% elif sla.overall_status == 'ON_TIME' %}sla-card-border-ontime{% elif sla.overall_status == 'AT_RISK' %}sla-card-border-atrisk{% else %}sla-card-border-breached{% endif %}">
             <h3 class="card-title">Tình trạng Tuân thủ Cam kết SLA</h3>
             <div style="margin-bottom: 1rem;">
+                {% if not req.response_deadline_at or not req.resolution_deadline_at %}
+                <span class="badge bg-secondary">CHƯA ĐỦ DỮ LIỆU ĐÁNH GIÁ SLA</span>
+                {% else %}
                 <span class="badge {% if sla.overall_status == 'ON_TIME' %}bg-success{% elif sla.overall_status == 'AT_RISK' %}bg-warning{% else %}bg-danger{% endif %}" style="font-size: 1.1rem; padding: 0.4rem 0.8rem;">
                     {% if sla.overall_status == 'ON_TIME' %}ĐÚNG HẠN
                     {% elif sla.overall_status == 'AT_RISK' %}NGUY CƠ TRỄ
                     {% else %}VI PHẠM SLA{% endif %}
                 </span>
+                {% endif %}
             </div>
 
             <div style="font-size: 0.875rem; line-height: 1.8;">
                 <div>
                     <span class="text-secondary">Chính sách:</span>
-                    <strong>{{ req.sla.name|default:"Chính sách Tiêu chuẩn" }}</strong>
+                    <strong>{{ req.sla.name|default:"Chưa gắn chính sách SLA" }}</strong>
                 </div>
                 <div>
                     <span class="text-secondary">Hạn phản hồi:</span><br>
+                    {% if req.response_deadline_at %}
                     <code>{{ req.response_deadline_at|date:"Y-m-d H:i" }}</code>
                     <span class="badge {% if sla.is_response_breached %}bg-danger{% else %}bg-success{% endif %}">
                         {% if sla.is_response_breached %}Vi phạm{% else %}Đúng hạn{% endif %}
                     </span>
+                    {% else %}<span>Chưa cấu hình hạn phản hồi</span>{% endif %}
                 </div>
                 <div style="margin-top: 0.5rem;">
                     <span class="text-secondary">Hạn giải quyết:</span><br>
+                    {% if req.resolution_deadline_at %}
                     <code>{{ req.resolution_deadline_at|date:"Y-m-d H:i" }}</code>
                     <span class="badge {% if sla.is_resolution_breached %}bg-danger{% else %}bg-success{% endif %}">
                         {% if sla.is_resolution_breached %}Vi phạm{% else %}Đúng hạn{% endif %}
                     </span>
+                    {% else %}<span>Chưa cấu hình hạn giải quyết</span>{% endif %}
                 </div>
             </div>
         </div>

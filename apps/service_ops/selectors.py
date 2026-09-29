@@ -36,26 +36,71 @@ def get_service_dashboard_summary(workspace: Workspace) -> dict:
     """
     now = timezone.now()
     requests_qs = ServiceRequest.objects.filter(workspace=workspace)
-    total_requests = requests_qs.count()
-
-    open_requests = requests_qs.filter(status__in=[ServiceRequestStatus.OPEN, ServiceRequestStatus.ASSIGNED, ServiceRequestStatus.IN_PROGRESS]).count()
-    in_progress_requests = requests_qs.filter(status=ServiceRequestStatus.IN_PROGRESS).count()
-    resolved_requests = requests_qs.filter(status__in=[ServiceRequestStatus.RESOLVED, ServiceRequestStatus.CLOSED]).count()
-    cancelled_requests = requests_qs.filter(status=ServiceRequestStatus.CANCELLED).count()
+    req_agg = requests_qs.aggregate(
+        total=Count("id"),
+        open=Count(
+            "id",
+            filter=Q(
+                status__in=[
+                    ServiceRequestStatus.OPEN,
+                    ServiceRequestStatus.ASSIGNED,
+                    ServiceRequestStatus.IN_PROGRESS,
+                ]
+            ),
+        ),
+        in_progress=Count("id", filter=Q(status=ServiceRequestStatus.IN_PROGRESS)),
+        resolved=Count(
+            "id",
+            filter=Q(
+                status__in=[
+                    ServiceRequestStatus.RESOLVED,
+                    ServiceRequestStatus.CLOSED,
+                ]
+            ),
+        ),
+        cancelled=Count("id", filter=Q(status=ServiceRequestStatus.CANCELLED)),
+    )
+    total_requests = req_agg["total"] or 0
+    open_requests = req_agg["open"] or 0
+    in_progress_requests = req_agg["in_progress"] or 0
+    resolved_requests = req_agg["resolved"] or 0
+    cancelled_requests = req_agg["cancelled"] or 0
 
     tasks_qs = Task.objects.filter(service_request__workspace=workspace)
-    active_tasks = tasks_qs.filter(status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]).count()
-    completed_tasks = tasks_qs.filter(status=TaskStatus.COMPLETED).count()
-    overdue_tasks = tasks_qs.filter(status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS], due_at__lt=now).count()
+    task_agg = tasks_qs.aggregate(
+        active=Count(
+            "id",
+            filter=Q(status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]),
+        ),
+        completed=Count("id", filter=Q(status=TaskStatus.COMPLETED)),
+        overdue=Count(
+            "id",
+            filter=Q(
+                status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS],
+                due_at__lt=now,
+            ),
+        ),
+    )
+    active_tasks = task_agg["active"] or 0
+    completed_tasks = task_agg["completed"] or 0
+    overdue_tasks = task_agg["overdue"] or 0
 
     employees_qs = Employee.objects.filter(workspace=workspace, is_active=True)
-    total_technicians = employees_qs.count()
-    available_technicians = employees_qs.filter(is_available=True).count()
+    emp_agg = employees_qs.aggregate(
+        total=Count("id"),
+        available=Count("id", filter=Q(is_available=True)),
+    )
+    total_technicians = emp_agg["total"] or 0
+    available_technicians = emp_agg["available"] or 0
 
     # Labor Cost & Labor Time Aggregation
     labor_entries_qs = LaborEntry.objects.filter(task__service_request__workspace=workspace)
-    total_labor_cost = labor_entries_qs.aggregate(total=Sum("labor_cost"))["total"] or Decimal("0.00")
-    total_labor_minutes = labor_entries_qs.aggregate(total=Sum("duration_minutes"))["total"] or 0
+    labor_agg = labor_entries_qs.aggregate(
+        total_cost=Sum("labor_cost"),
+        total_minutes=Sum("duration_minutes"),
+    )
+    total_labor_cost = labor_agg["total_cost"] or Decimal("0.00")
+    total_labor_minutes = labor_agg["total_minutes"] or 0
     total_labor_hours = round(total_labor_minutes / 60.0, 1)
 
     # Average Resolution Time Calculation (hours)
@@ -65,7 +110,7 @@ def get_service_dashboard_summary(workspace: Workspace) -> dict:
     )
     total_res_hours = 0.0
     res_count = 0
-    for r in resolved_tickets[:200]:
+    for r in resolved_tickets.only("created_at", "resolved_at").iterator(chunk_size=500):
         if r.resolved_at and r.created_at:
             total_res_hours += (r.resolved_at - r.created_at).total_seconds() / 3600.0
             res_count += 1
@@ -75,18 +120,27 @@ def get_service_dashboard_summary(workspace: Workspace) -> dict:
     breached_count = 0
     at_risk_count = 0
     on_time_count = 0
+    unknown_count = 0
 
-    for req in requests_qs.select_related("sla")[:200]:
+    for req in requests_qs.only(
+        "created_at",
+        "response_deadline_at",
+        "resolution_deadline_at",
+        "responded_at",
+        "resolved_at",
+    ).iterator(chunk_size=500):
         sla_info = calculate_sla_status(req, reference_time=now)
         if sla_info["overall_status"] == SLAComplianceStatus.BREACHED:
             breached_count += 1
         elif sla_info["overall_status"] == SLAComplianceStatus.AT_RISK:
             at_risk_count += 1
-        else:
+        elif sla_info["overall_status"] == SLAComplianceStatus.ON_TIME:
             on_time_count += 1
+        else:
+            unknown_count += 1
 
     evaluated_total = breached_count + at_risk_count + on_time_count
-    compliance_rate = round((on_time_count / evaluated_total * 100), 1) if evaluated_total > 0 else 100.0
+    compliance_rate = round((on_time_count / evaluated_total * 100), 1) if evaluated_total > 0 else None
 
     # Tickets by Service Category Breakdown
     category_counts = {cat: 0 for cat in ServiceCategory.values}
@@ -117,6 +171,8 @@ def get_service_dashboard_summary(workspace: Workspace) -> dict:
         "at_risk_sla_count": at_risk_count,
         "breached_sla_count": breached_count,
         "sla_compliance_rate": compliance_rate,
+        "unknown_sla_count": unknown_count,
+        "evaluated_sla_count": evaluated_total,
         "tickets_by_category": category_counts,
     }
 
@@ -129,16 +185,37 @@ def get_technicians_workload_breakdown(workspace: Workspace) -> list[dict]:
     employees = Employee.objects.filter(workspace=workspace, is_active=True).order_by("-current_workload_score", "full_name")
     breakdown = []
 
-    for emp in employees:
-        active_tasks = Task.objects.filter(assigned_to=emp, status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
-        active_count = active_tasks.count()
-        overdue_count = active_tasks.filter(due_at__lt=now).count()
-        estimated_minutes = active_tasks.aggregate(total=Sum("estimated_duration_minutes"))["total"] or 0
+    # Fetch task metrics in one query
+    task_metrics = Task.objects.filter(
+        service_request__workspace=workspace,
+        assigned_to__isnull=False,
+        status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
+    ).values("assigned_to_id").annotate(
+        active_count=Count("id"),
+        overdue_count=Count("id", filter=Q(due_at__lt=now)),
+        estimated_minutes=Sum("estimated_duration_minutes")
+    )
+    task_map = {tm["assigned_to_id"]: tm for tm in task_metrics if tm["assigned_to_id"]}
 
-        # Labor logged by this technician
-        labor_logged = LaborEntry.objects.filter(employee=emp)
-        logged_minutes = labor_logged.aggregate(total=Sum("duration_minutes"))["total"] or 0
-        logged_cost = labor_logged.aggregate(total=Sum("labor_cost"))["total"] or Decimal("0.00")
+    # Fetch labor metrics in one query
+    labor_metrics = LaborEntry.objects.filter(
+        employee__workspace=workspace
+    ).values("employee_id").annotate(
+        total_minutes=Sum("duration_minutes"),
+        total_cost=Sum("labor_cost")
+    )
+    labor_map = {lm["employee_id"]: lm for lm in labor_metrics if lm["employee_id"]}
+
+    for emp in employees:
+        t_data = task_map.get(emp.id, {})
+        l_data = labor_map.get(emp.id, {})
+
+        active_count = t_data.get("active_count", 0) or 0
+        overdue_count = t_data.get("overdue_count", 0) or 0
+        estimated_minutes = t_data.get("estimated_minutes", 0) or 0
+
+        logged_minutes = l_data.get("total_minutes", 0) or 0
+        logged_cost = l_data.get("total_cost", Decimal("0.00")) or Decimal("0.00")
 
         breakdown.append({
             "id": emp.id,

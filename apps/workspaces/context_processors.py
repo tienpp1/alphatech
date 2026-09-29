@@ -14,7 +14,12 @@ def workspace_context(request):
 
     user_workspaces = []
     if hasattr(request, "user") and request.user.is_authenticated:
-        user_workspaces = get_user_workspaces(request.user)
+        cached = getattr(request, "_cached_user_workspaces", None)
+        if cached is not None:
+            user_workspaces = cached
+        else:
+            user_workspaces = list(get_user_workspaces(request.user))
+            request._cached_user_workspaces = user_workspaces
 
     return {
         "active_workspace": active_workspace,

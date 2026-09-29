@@ -3,9 +3,20 @@
 {% block title %}Nguồn Dữ liệu — {{ workspace.name }}{% endblock %}
 
 {% block content %}
+<style>
+.msg-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; }
+.msg-alert.msg-success { background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; }
+.msg-alert.msg-error { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; }
+.source-type-badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+.source-type-badge.type-csv { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.source-type-badge.type-excel { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.source-type-badge.type-mock { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+.status-text-active { color: #34d399; }
+.status-text-inactive { color: #ef4444; }
+</style>
 <div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
     <!-- Header -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
         <div>
             <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 4px;">Danh mục Nguồn Dữ liệu (Data Sources)</h1>
             <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">Cấu hình kết nối tới các tệp ngoài, nguồn dữ liệu cũ và Mock REST API của đối tác.</p>
@@ -19,7 +30,7 @@
     {% if messages %}
     <div style="margin-bottom: 20px;">
         {% for message in messages %}
-        <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; {% if message.tags == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;{% else %}background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171;{% endif %}">
+        <div class="msg-alert {% if message.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
@@ -28,15 +39,15 @@
 
     <!-- Sources Grid -->
     {% if sources %}
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px;">
         {% for ds in sources %}
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <span style="display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; {% if ds.source_type == 'CSV' %}background: rgba(16, 185, 129, 0.2); color: #34d399;{% elif ds.source_type == 'EXCEL' %}background: rgba(59, 130, 246, 0.2); color: #60a5fa;{% else %}background: rgba(168, 85, 247, 0.2); color: #c084fc;{% endif %}">
+                    <span class="source-type-badge {% if ds.source_type == 'CSV' %}type-csv{% elif ds.source_type == 'EXCEL' %}type-excel{% else %}type-mock{% endif %}">
                         {{ ds.source_type }}
                     </span>
-                    <span style="font-size: 0.75rem; color: {% if ds.is_active %}#34d399{% else %}#ef4444{% endif %};">
+                    <span class="{% if ds.is_active %}status-text-active{% else %}status-text-inactive{% endif %}" style="font-size: 0.75rem;">
                         ● {% if ds.is_active %}Hoạt động{% else %}Ngừng hoạt động{% endif %}
                     </span>
                 </div>
@@ -55,7 +66,7 @@
                 <span style="color: #64748b; font-size: 0.8rem;">
                     Tạo bởi {{ ds.created_by.username|default:"Hệ thống" }}
                 </span>
-                {% if can_import %}<a href="/integration/import/?data_source_id={{ ds.id }}" class="btn btn-sm" style="background: #3b82f6; color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none;">
+                {% if can_import %}<a href="/noibo/integration/import/?data_source_id={{ ds.id }}" class="btn btn-sm" style="background: #3b82f6; color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none;">
                     Nhập liệu &rarr;
                 </a>{% endif %}
             </div>

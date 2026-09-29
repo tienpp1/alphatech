@@ -7,9 +7,48 @@ from typing import List, Optional, Any
 from django.utils import timezone
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.core.exceptions import ValidationError
 
 from apps.notifications.models import Notification, NotificationEventType
 from apps.workspaces.models import Workspace, WorkspaceMembership, WorkspaceType
+
+
+def resolve_collaboration_workspace(request, parameters, *, use_session=False):
+    """Resolve a collaboration selector; explicit invalid input never falls back.
+
+    Reuse active-membership scoping and the middleware's canonical header result.
+    Absence retains the existing authorized default behavior, not a global lookup.
+    """
+    from apps.workspaces.services import get_explicit_workspace_selector
+
+    allowed = get_user_authorized_workspaces(request.user)
+
+    def lookup(value):
+        if not value:
+            return None
+        try:
+            return allowed.filter(pk=value).first()
+        except (ValidationError, ValueError, TypeError):
+            return None
+
+    if getattr(request, 'workspace_access_denied', False):
+        return None
+    header, _ = get_explicit_workspace_selector(request)
+    if header:
+        active = getattr(request, 'active_workspace', None)
+        workspace = lookup(active.pk) if active else None
+        if 'workspace_id' in parameters:
+            selected = lookup(parameters.get('workspace_id'))
+            if not selected or not workspace or selected.pk != workspace.pk:
+                return None
+        return workspace
+    if 'workspace_id' in parameters:
+        return lookup(parameters.get('workspace_id'))
+    if use_session:
+        workspace = lookup(request.session.get('active_workspace_id'))
+        if workspace:
+            return workspace
+    return allowed.first()
 
 
 def create_notification(
@@ -42,7 +81,7 @@ def create_notification(
         if existing:
             return existing
 
-    return Notification.objects.create(
+    notif = Notification.objects.create(
         workspace=workspace,
         recipient=recipient,
         event_type=event_type,
@@ -52,6 +91,9 @@ def create_notification(
         entity_id=str(entity_id),
         target_url=target_url,
     )
+    if hasattr(recipient, "_cached_unread_counts"):
+        recipient._cached_unread_counts.clear()
+    return notif
 
 
 def get_user_authorized_workspaces(user: Any):
@@ -247,24 +289,35 @@ def get_unread_count(user: Any, workspace: Optional[Workspace] = None) -> int:
     Returns unread notifications count for CURRENT user.
     If workspace is provided, filters by that workspace.
     Otherwise, aggregates across ALL authorized workspaces for the user.
-    Uses efficient SQL COUNT.
+    Uses in-memory per-instance memoization on `user` to avoid redundant COUNT queries during request rendering.
     """
     if not user or not user.is_authenticated:
         return 0
 
+    ws_key = str(getattr(workspace, "id", workspace)) if workspace else "all"
+
+    if not hasattr(user, "_cached_unread_counts"):
+        user._cached_unread_counts = {}
+
+    if ws_key in user._cached_unread_counts:
+        return user._cached_unread_counts[ws_key]
+
     if workspace:
-        return Notification.objects.filter(
+        count = Notification.objects.filter(
             recipient=user,
             workspace=workspace,
             is_read=False,
         ).count()
+    else:
+        authorized_workspaces = get_user_authorized_workspaces(user)
+        count = Notification.objects.filter(
+            recipient=user,
+            workspace__in=authorized_workspaces,
+            is_read=False,
+        ).count()
 
-    authorized_workspaces = get_user_authorized_workspaces(user)
-    return Notification.objects.filter(
-        recipient=user,
-        workspace__in=authorized_workspaces,
-        is_read=False,
-    ).count()
+    user._cached_unread_counts[ws_key] = count
+    return count
 
 
 def mark_notification_as_read(
@@ -293,6 +346,8 @@ def mark_notification_as_read(
         )
 
     notif.mark_as_read()
+    if hasattr(user, "_cached_unread_counts"):
+        user._cached_unread_counts.clear()
     return notif
 
 
@@ -303,6 +358,9 @@ def mark_all_notifications_as_read(user: Any, workspace: Optional[Workspace] = N
     """
     if not user or not user.is_authenticated:
         return 0
+
+    if hasattr(user, "_cached_unread_counts"):
+        user._cached_unread_counts.clear()
 
     if workspace:
         return Notification.objects.filter(

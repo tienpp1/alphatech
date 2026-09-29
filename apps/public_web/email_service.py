@@ -4,7 +4,7 @@ Handles formatted transactional and notification emails sent directly to custome
 - Registration & Welcome notifications
 - Login security alert notifications (Google OAuth & standard credentials)
 - E-Commerce order confirmation with itemized breakdown
-- Technical service inquiry acknowledgment & SLA commitment
+- Technical service inquiry acknowledgment (no unapproved SLA commitments)
 - Contact message confirmation
 """
 
@@ -550,8 +550,8 @@ def send_order_confirmation_email(order: Any, recipient_email: Optional[str] = N
             <span style="font-family: monospace; color: #10B981; font-weight: 700;">{shipping_str}</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #64748B;">
-            <span>Thuế VAT:</span>
-            <span style="color: #10B981; font-size: 12px;">Đã bao gồm trong giá</span>
+            <span>Thông tin hóa đơn:</span>
+            <span style="color: #10B981; font-size: 12px;">Vui lòng liên hệ để xác nhận</span>
         </div>
         <div style="display: flex; justify-content: space-between; border-top: 1px solid #E2E8F0; padding-top: 10px; margin-top: 6px; font-size: 16px; font-weight: 800; color: #2563EB;">
             <span>TỔNG THANH TOÁN:</span>
@@ -560,27 +560,10 @@ def send_order_confirmation_email(order: Any, recipient_email: Optional[str] = N
     </div>
     """
 
-    # Grounded Policy Snippet (RAG-Enriched Customer Communication)
-    policy_html = ""
-    policy_plain = ""
-    try:
-        from apps.workspaces.models import Workspace
-        from apps.knowledge.services import get_grounded_policy_snippet
-        retail_ws = Workspace.objects.filter(workspace_type="RETAIL").first()
-        if retail_ws:
-            snippet = get_grounded_policy_snippet(retail_ws, "quy định đổi trả hàng 7 ngày")
-            if snippet:
-                doc_title = snippet["document_title"]
-                text = snippet["content_snippet"]
-                policy_html = f"""
-    <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; font-size: 12.5px; color: #475569;">
-        <strong style="color: #0F172A;">Chính sách bảo hành & Đổi trả ({doc_title}):</strong>
-        <p style="margin: 4px 0 0; line-height: 1.5;">{text}</p>
-    </div>
-                """
-                policy_plain = f"\nChính sách bảo hành & Đổi trả ({doc_title}):\n{text}\n"
-    except Exception:
-        pass
+    # Internal knowledge has no public-publication approval contract. Never
+    # retrieve it for outbound customer email, even from the order workspace.
+    policy_plain = "Vui lòng liên hệ cửa hàng để xác nhận điều kiện bảo hành, đổi trả và hóa đơn áp dụng cho đơn hàng."
+    policy_html = f"<p>{policy_plain}</p>"
 
     order_url = public_url(f"tai-khoan/don-hang/{order_number}/")
     plain_text = f"""Kính gửi {customer_name},
@@ -595,7 +578,7 @@ Danh sách sản phẩm:
 {rows_plain}
 Tạm tính: {subtotal_str} VNĐ
 Phí vận chuyển: {shipping_str}
-Tổng thanh toán: {total_str} VNĐ (Đã bao gồm VAT)
+Tổng thanh toán: {total_str} VNĐ
 {policy_plain}
 Xem chi tiết đơn hàng tại: {order_url}
 Tổng đài tư vấn: {SUPPORT_HOTLINE}
@@ -626,7 +609,7 @@ def send_service_request_confirmation_email(service_request: Any, recipient_emai
                                             defer_delivery: bool = False) -> DeliveryResult:
     """
     Sends an SLA & technical acknowledgment email when a customer submits a service request.
-    Enriched with RAG policy commitments from enterprise SOP documents.
+    Contains transaction facts, never unapproved internal SOP excerpts.
     """
     email = recipient_email or (service_request.customer.email if service_request.customer else None)
     if not email:
@@ -636,25 +619,12 @@ def send_service_request_confirmation_email(service_request: Any, recipient_emai
     req_number = service_request.request_number
     service_name = service_request.service.name if service_request.service else "Dịch vụ kỹ thuật CNTT"
     time_str = timezone.localtime(service_request.created_at).strftime("%H:%M, %d/%m/%Y")
-    priority_label = "Khẩn cấp (SLA tiếp ứng < 30 phút)" if service_request.priority == "URGENT" else "Tiêu chuẩn (Phản hồi trong ngày)"
+    priority_label = dict(LOW="Thấp", MEDIUM="Trung bình", HIGH="Cao", CRITICAL="Khẩn cấp").get(service_request.priority, "Chưa xác nhận")
 
-    # Grounded SLA Snippet from Knowledge Base (RAG-Enriched)
-    sla_desc = "Kỹ sư chuyên trách sẽ liên hệ trực tiếp qua số điện thoại để trao đổi chi tiết về phương án xử lý (online hoặc khảo sát tại chỗ). Mọi dữ liệu kỹ thuật và thiết bị của quý khách được bảo mật tuyệt đối theo tiêu chuẩn ISO 27001 và điều khoản NDA."
-    sla_source = "Quy chuẩn SLA kỹ thuật 2026"
-    try:
-        from apps.workspaces.models import Workspace
-        from apps.knowledge.services import get_grounded_policy_snippet
-        svc_ws = Workspace.objects.filter(workspace_type="SERVICE").first()
-        if svc_ws:
-            snippet = get_grounded_policy_snippet(svc_ws, f"SLA cam kết xử lý sự cố {service_request.priority}")
-            if snippet:
-                sla_desc = snippet["content_snippet"]
-                sla_source = snippet["document_title"]
-    except Exception:
-        pass
+    sla_desc = "Yêu cầu đã được ghi nhận. Phương án xử lý, thời gian phản hồi và điều kiện dịch vụ cần được bộ phận phụ trách xác nhận với quý khách. Email này không xác lập cam kết SLA mới."
 
     subject = f"[XYZ IT Services] Tiếp nhận yêu cầu kỹ thuật #{req_number}"
-    preheader = f"Yêu cầu dịch vụ '{service_name}' đã được chuyển đến bộ phận kỹ sư trực ban."
+    preheader = f"Yêu cầu dịch vụ '{service_name}' đã được ghi nhận trong hệ thống."
 
     body_html = f"""
     <p>Kính gửi <strong>{customer_name}</strong>,</p>
@@ -667,12 +637,12 @@ def send_service_request_confirmation_email(service_request: Any, recipient_emai
             <li><strong>Gói dịch vụ:</strong> {service_name}</li>
             <li><strong>Thời gian ghi nhận:</strong> {time_str}</li>
             <li><strong>Mức độ ưu tiên:</strong> <span style="color: #2563EB; font-weight: 700;">{priority_label}</span></li>
-            <li><strong>Trạng thái ban đầu:</strong> <span style="background: #FEF3C7; color: #92400E; padding: 2px 8px; border-radius: 9999px; font-weight: 700; font-size: 12px;">Đang phân bổ kỹ sư</span></li>
+            <li><strong>Trạng thái tiếp nhận:</strong> <span style="background: #FEF3C7; color: #92400E; padding: 2px 8px; border-radius: 9999px; font-weight: 700; font-size: 12px;">Đã ghi nhận yêu cầu</span></li>
         </ul>
     </div>
 
     <div style="background: #F0FDFA; border: 1px solid #99F6E4; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;">
-        <h5 style="margin: 0 0 6px; color: #0F766E; font-size: 14px;">Cam kết chất lượng SLA (Theo {sla_source}):</h5>
+        <h5 style="margin: 0 0 6px; color: #0F766E; font-size: 14px;">Thông tin xử lý yêu cầu:</h5>
         <p style="margin: 0; font-size: 13px; color: #115E59; line-height: 1.55;">
             {sla_desc}
         </p>
@@ -688,12 +658,12 @@ XYZ IT Technical Services đã tiếp nhận thành công yêu cầu hỗ trợ 
 - Mức độ ưu tiên: {priority_label}
 - Thời gian ghi nhận: {time_str}
 
-Cam kết chất lượng SLA ({sla_source}):
+Thông tin xử lý yêu cầu:
 {sla_desc}
 
-Kỹ sư trưởng sẽ liên hệ với quý khách trong thời gian sớm nhất.
+Vui lòng theo dõi thông tin cập nhật từ bộ phận phụ trách.
 Theo dõi tiến độ tại: {account_url}
-Hotline khẩn cấp 24/7: {SUPPORT_HOTLINE}
+Liên hệ hỗ trợ: {SUPPORT_HOTLINE}
 
 Trân trọng,
 XYZ IT Technical Services
@@ -728,7 +698,7 @@ def send_contact_confirmation_email(name: str, email: str, phone: str = "", mess
     now_str = timezone.localtime(timezone.now()).strftime("%H:%M, %d/%m/%Y")
     
     subject = "[Nền tảng Doanh nghiệp AI] Xác nhận tiếp nhận tin nhắn liên hệ"
-    preheader = f"Cảm ơn bạn đã liên hệ. Bộ phận hỗ trợ sẽ phản hồi trong 24 giờ làm việc."
+    preheader = "Cảm ơn bạn đã liên hệ. Nội dung của bạn đã được ghi nhận."
 
     body_html = f"""
     <p>Kính gửi <strong>{display_name}</strong>,</p>
@@ -745,7 +715,7 @@ def send_contact_confirmation_email(name: str, email: str, phone: str = "", mess
     </div>
 
     <p style="font-size: 13.5px; color: #334155;">
-        Chuyên viên phụ trách sẽ kiểm tra thông tin và chủ động liên hệ lại qua số điện thoại hoặc email của quý khách trong vòng <strong>24 giờ làm việc</strong>.
+        Bộ phận hỗ trợ sẽ kiểm tra thông tin và liên hệ lại qua số điện thoại hoặc email của quý khách. Thời gian xử lý cần được xác nhận theo nội dung yêu cầu.
     </p>
     """
 
@@ -755,7 +725,7 @@ Cảm ơn bạn đã liên hệ với Nền tảng Doanh nghiệp AI!
 Chúng tôi đã nhận được nội dung tin nhắn của bạn gửi lúc {now_str}:
 "{message_body}"
 
-Chuyên viên chăm sóc khách hàng sẽ liên hệ lại qua số {phone or 'email'} trong vòng 24 giờ làm việc.
+Bộ phận hỗ trợ sẽ liên hệ lại qua số {phone or 'email'}. Thời gian xử lý cần được xác nhận theo nội dung yêu cầu.
 Tổng đài tư vấn trực tiếp: {SUPPORT_HOTLINE}
 
 Trân trọng,

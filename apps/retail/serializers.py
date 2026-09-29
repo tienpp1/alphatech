@@ -214,7 +214,7 @@ class OrderListSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     customer_code = serializers.CharField(source="customer.code", read_only=True)
     branch_name = serializers.CharField(source="branch.name", read_only=True, default="Direct")
-    items_count = serializers.IntegerField(source="items.count", read_only=True)
+    items_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -235,6 +235,11 @@ class OrderListSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def get_items_count(self, obj):
+        if hasattr(obj, "annotated_items_count"):
+            return obj.annotated_items_count
+        return obj.items.count()
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
@@ -328,7 +333,7 @@ class GoodsReceiptListSerializer(serializers.ModelSerializer):
     supplier_name = serializers.CharField(source="supplier.name", read_only=True)
     supplier_code = serializers.CharField(source="supplier.code", read_only=True)
     branch_name = serializers.CharField(source="branch.name", read_only=True)
-    items_count = serializers.IntegerField(source="items.count", read_only=True)
+    items_count = serializers.SerializerMethodField()
     created_by_username = serializers.CharField(source="created_by.username", read_only=True, default="System")
 
     class Meta:
@@ -350,6 +355,11 @@ class GoodsReceiptListSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def get_items_count(self, obj):
+        if hasattr(obj, "annotated_items_count"):
+            return obj.annotated_items_count
+        return obj.items.count()
 
 
 class GoodsReceiptDetailSerializer(serializers.ModelSerializer):

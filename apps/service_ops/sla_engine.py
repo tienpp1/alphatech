@@ -12,6 +12,7 @@ from django.utils import timezone as django_timezone
 
 
 class SLAComplianceStatus:
+    UNKNOWN = "UNKNOWN"
     ON_TIME = "ON_TIME"
     AT_RISK = "AT_RISK"
     BREACHED = "BREACHED"
@@ -31,8 +32,8 @@ def calculate_sla_status(service_request, reference_time=None) -> dict:
 
     # 1. Response SLA calculation
     if not response_deadline:
-        response_status = SLAComplianceStatus.ON_TIME
-        response_remaining_minutes = 0
+        response_status = SLAComplianceStatus.UNKNOWN
+        response_remaining_minutes = None
         is_response_breached = False
     elif responded_at:
         if responded_at <= response_deadline:
@@ -60,8 +61,8 @@ def calculate_sla_status(service_request, reference_time=None) -> dict:
 
     # 2. Resolution SLA calculation
     if not resolution_deadline:
-        resolution_status = SLAComplianceStatus.ON_TIME
-        resolution_remaining_minutes = 0
+        resolution_status = SLAComplianceStatus.UNKNOWN
+        resolution_remaining_minutes = None
         is_resolution_breached = False
     elif resolved_at:
         if resolved_at <= resolution_deadline:
@@ -99,6 +100,9 @@ def calculate_sla_status(service_request, reference_time=None) -> dict:
     # 3. Overall composite SLA status
     if response_status == SLAComplianceStatus.BREACHED or resolution_status == SLAComplianceStatus.BREACHED:
         overall_status = SLAComplianceStatus.BREACHED
+    elif SLAComplianceStatus.UNKNOWN in (response_status, resolution_status):
+        # A known breach remains actionable, but partial data cannot prove compliance.
+        overall_status = SLAComplianceStatus.UNKNOWN
     elif response_status == SLAComplianceStatus.AT_RISK or resolution_status == SLAComplianceStatus.AT_RISK:
         overall_status = SLAComplianceStatus.AT_RISK
     else:

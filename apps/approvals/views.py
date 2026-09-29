@@ -38,7 +38,7 @@ class ApprovalRequestListAPIView(APIView):
             return api_response(error="No active workspace bound to user.", status_code=status.HTTP_400_BAD_REQUEST)
 
         status_filter = request.query_params.get("status")
-        qs = ApprovalRequest.objects.for_workspace(workspace)
+        qs = ApprovalRequest.objects.for_workspace(workspace).select_related("requester", "reviewer")
         if status_filter:
             qs = qs.filter(status=status_filter)
 
@@ -54,7 +54,7 @@ class ApprovalRequestDetailAPIView(APIView):
         if not workspace:
             return api_response(error="No active workspace bound to user.", status_code=status.HTTP_400_BAD_REQUEST)
 
-        app_req = ApprovalRequest.objects.for_workspace(workspace).filter(pk=pk).first()
+        app_req = ApprovalRequest.objects.for_workspace(workspace).select_related("requester", "reviewer").filter(pk=pk).first()
         if not app_req:
             return api_response(error="Approval request not found.", status_code=status.HTTP_404_NOT_FOUND)
 

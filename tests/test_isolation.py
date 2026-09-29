@@ -242,3 +242,46 @@ class WorkspaceIsolationSecurityTestCase(TestCase):
         self.assertEqual(beta_qs.count(), 1)
         self.assertEqual(beta_qs.first(), entity_b1)
         self.assertNotIn(entity_a1, beta_qs)
+
+    def test_cross_workspace_resource_anti_tampering(self):
+        """
+        Verify cross-workspace resource boundary defenses:
+        A user in Workspace A cannot access, retrieve, or mutate records of Workspace B.
+        """
+        from apps.retail.models import Product, Category, Customer, Order, OrderStatus
+        from django.utils import timezone
+
+        cat_b = Category.objects.create(workspace=self.ws_b, name="Category Beta")
+        prod_b = Product.objects.create(
+            workspace=self.ws_b,
+            category=cat_b,
+            sku="SKU-BETA-001",
+            name="Beta Exclusive Device",
+            unit_price=1000000,
+        )
+
+        # 1. Tenancy-scoped query for Tenant Alpha MUST NEVER return Beta's product
+        alpha_products = Product.objects.for_workspace(self.ws_a)
+        self.assertNotIn(prod_b, alpha_products)
+        self.assertEqual(alpha_products.filter(sku="SKU-BETA-001").count(), 0)
+
+        # 2. Tenancy-scoped query for Tenant Beta DOES return Beta's product
+        beta_products = Product.objects.for_workspace(self.ws_b)
+        self.assertIn(prod_b, beta_products)
+        self.assertEqual(beta_products.filter(sku="SKU-BETA-001").first(), prod_b)
+
+        # 3. Verify Order isolation
+        cust_b = Customer.objects.create(workspace=self.ws_b, code="CUST-BETA", name="Customer Beta")
+        order_b = Order.objects.create(
+            workspace=self.ws_b,
+            customer=cust_b,
+            order_number="ORD-BETA-SEC",
+            order_date=timezone.now().date(),
+            order_timestamp=timezone.now(),
+            total_amount=500000,
+            status=OrderStatus.COMPLETED,
+        )
+        alpha_orders = Order.objects.for_workspace(self.ws_a)
+        self.assertNotIn(order_b, alpha_orders)
+        self.assertFalse(alpha_orders.filter(order_number="ORD-BETA-SEC").exists())
+

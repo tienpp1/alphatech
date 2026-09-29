@@ -28,17 +28,17 @@
         </div>
     </div>
     <div style="display: flex; gap: 10px;">
-        <a href="/noibo/bao-cao-dieu-hanh/" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; text-decoration: none; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
+        <a href="/noibo/bao-cao-dieu-hanh/" id="btn-telemetry-report" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; text-decoration: none; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
             📄 Xuất Báo cáo Vận hành
         </a>
-        <a href="/noibo/" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; text-decoration: none; border-radius: 8px;">
+        <a href="/noibo/" id="btn-telemetry-dashboard" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; text-decoration: none; border-radius: 8px;">
             ← Bảng điều khiển chính
         </a>
     </div>
 </div>
 
 <!-- 4 Core Telemetry Pillars Grid -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
 
     <!-- Pillar 1: PostGIS Spatial Infrastructure -->
     <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; border-top: 4px solid #38bdf8;">
@@ -69,7 +69,7 @@
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 95px), 1fr)); gap: 0.75rem;">
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
                 <div style="font-size: 1.35rem; font-weight: 800; color: #38bdf8;">{{ spatial.branches_geocoded }}</div>
                 <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Chi nhánh (Point)</div>
@@ -157,7 +157,7 @@
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 95px), 1fr)); gap: 0.75rem;">
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
                 <div style="font-size: 1.35rem; font-weight: 800; color: #10b981;">{{ rag.knowledge_bases }}</div>
                 <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Kho Tri thức</div>
@@ -231,13 +231,13 @@
     </p>
 
     <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1.25rem;">
-        <button type="button" onclick="runPingTest('spatial')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+        <button type="button" id="btn-ping-spatial" onclick="runPingTest('spatial')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
             🌐 Ping PostGIS Spatial Query
         </button>
-        <button type="button" onclick="runPingTest('rag')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+        <button type="button" id="btn-ping-rag" onclick="runPingTest('rag')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
             📚 Kiểm tra HTTP health (RAG)
         </button>
-        <button type="button" onclick="runPingTest('xgb')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+        <button type="button" id="btn-ping-xgb" onclick="runPingTest('xgb')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
             📈 Kiểm tra HTTP health (XGBoost)
         </button>
     </div>
@@ -250,23 +250,50 @@
 <script>
 function runPingTest(type) {
     const term = document.getElementById('telemetry-terminal');
+    if (!term) return;
     const t0 = performance.now();
-    term.innerHTML = `<span style="color: #f59e0b;">[*] Đang gửi truy vấn benchmark đo lường [${type.toUpperCase()}]...</span>`;
+
+    const loadingSpan = document.createElement('span');
+    loadingSpan.style.color = '#f59e0b';
+    loadingSpan.textContent = `[*] Đang gửi truy vấn benchmark đo lường [${String(type || '').toUpperCase()}]...`;
+    term.replaceChildren(loadingSpan);
 
     fetch('/api/health/')
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+        })
         .then(data => {
             const elapsed = Math.round(performance.now() - t0);
             const detail = 'Chỉ đo HTTP /api/health/. Chưa thực hiện suy luận XGBoost hoặc tìm kiếm vector.';
-            term.innerHTML = `
-                <div style="color: #10b981;">[✓] HTTP HEALTH PHẢN HỒI TRONG ${elapsed} ms:</div>
-                <div style="color: #cbd5e1; margin-top: 4px;">    + Trạng thái: ${data.status.toUpperCase()}</div>
-                <div style="color: #cbd5e1;">    + Chi tiết kiến trúc: ${detail}</div>
-                <div style="color: #64748b; margin-top: 4px;">    + Timestamp: ${new Date().toISOString()}</div>
-            `;
+
+            const line1 = document.createElement('div');
+            line1.style.color = '#10b981';
+            line1.textContent = `[✓] HTTP HEALTH PHẢN HỒI TRONG ${elapsed} ms:`;
+
+            const line2 = document.createElement('div');
+            line2.style.color = '#cbd5e1';
+            line2.style.marginTop = '4px';
+            line2.textContent = `    + Trạng thái: ${String(data.status || 'UNKNOWN').toUpperCase()}`;
+
+            const line3 = document.createElement('div');
+            line3.style.color = '#cbd5e1';
+            line3.textContent = `    + Chi tiết kiến trúc: ${detail}`;
+
+            const line4 = document.createElement('div');
+            line4.style.color = '#64748b';
+            line4.style.marginTop = '4px';
+            line4.textContent = `    + Timestamp: ${new Date().toISOString()}`;
+
+            term.replaceChildren(line1, line2, line3, line4);
         })
         .catch(err => {
-            term.innerHTML = `<span style="color: #ef4444;">[X] Lỗi đo lường: ${err}</span>`;
+            const errSpan = document.createElement('span');
+            errSpan.style.color = '#ef4444';
+            errSpan.textContent = `[X] Lỗi đo lường: ${err.message || err}`;
+            term.replaceChildren(errSpan);
         });
 }
 </script>

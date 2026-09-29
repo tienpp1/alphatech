@@ -2,12 +2,44 @@
 
 {% block title %}Trình hướng dẫn Nhập Dữ liệu — {{ workspace.name }}{% endblock %}
 
+{% block extra_head %}
+<style>
+.import-grid-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 380px) 1fr;
+    gap: 24px;
+    align-items: start;
+}
+@media (max-width: 900px) {
+    .import-grid-layout {
+        grid-template-columns: 1fr;
+    }
+}
+.msg-alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+.msg-alert.msg-success {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10b981;
+    color: #34d399;
+}
+.msg-alert.msg-error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #f87171;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px 16px;">
     <!-- Header -->
     <div style="margin-bottom: 24px;">
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-            <a href="/integration/" style="color: #60a5fa; text-decoration: none; font-size: 0.9rem;">&larr; Quay lại Bảng điều khiển Tích hợp</a>
+            <a href="/noibo/integration/" style="color: #60a5fa; text-decoration: none; font-size: 0.9rem;">&larr; Quay lại Bảng điều khiển Tích hợp</a>
         </div>
         <h1 style="font-size: 1.75rem; font-weight: 700; margin: 0;">Trình Hướng dẫn Nhập Dữ liệu (Ingestion Wizard)</h1>
         <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 4px;">Tải lên tệp CSV hoặc Excel ngoài, hoặc lấy dữ liệu từ Mock REST API với tính năng xem trước cấu trúc tức thì.</p>
@@ -17,14 +49,14 @@
     {% if messages %}
     <div style="margin-bottom: 20px;">
         {% for message in messages %}
-        <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; {% if message.tags == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399;{% else %}background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171;{% endif %}">
+        <div class="msg-alert {% if message.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
     </div>
     {% endif %}
 
-    <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+    <div class="import-grid-layout">
         <!-- Left Column: Form Controls -->
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px;">
             <h3 style="font-size: 1.15rem; font-weight: 700; color: #f8fafc; margin-top: 0; margin-bottom: 18px;">1. Cấu hình Nhập liệu</h3>
@@ -113,7 +145,7 @@
 
                 <!-- Sample Table -->
                 <h5 style="color: #cbd5e1; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; text-transform: uppercase;">Dòng Dữ liệu Mẫu (5 bản ghi đầu tiên)</h5>
-                <div style="overflow-x: auto; background: #0f172a; border: 1px solid #334155; border-radius: 8px;">
+                <div class="table-responsive" style="overflow-x: auto; background: #0f172a; border: 1px solid #334155; border-radius: 8px;">
                     <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
                         <thead id="res-table-head" style="background: rgba(255,255,255,0.05); color: #cbd5e1; border-bottom: 1px solid #334155;"></thead>
                         <tbody id="res-table-body" style="color: #f8fafc;"></tbody>

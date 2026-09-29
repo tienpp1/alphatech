@@ -738,12 +738,18 @@ def classify_business_intent(
         elif _contains_word_or_phrase(norm, ["chi nhanh", "doanh thu", "canh bao", "giam"]):
             target_t = "BRANCH_WARNING"
 
+        entity_name = category or extract_branch_name(query) or ""
+        root_cause_tools = ["explain_root_cause"]
+        # Generic branch alerts can use recorded workspace recommendations.
+        # Do not attribute workspace-wide evidence to a named branch.
+        if target_t == "BRANCH_WARNING" and not entity_name:
+            root_cause_tools.append("get_recommendations")
         return {
             "intent": BusinessIntent.ROOT_CAUSE_EXPLANATION,
-            "tools": ["explain_root_cause"],
+            "tools": root_cause_tools,
             "parameters": {
                 "target_type": target_t,
-                "entity_name": category or extract_branch_name(query) or "",
+                "entity_name": entity_name,
             },
         }
 

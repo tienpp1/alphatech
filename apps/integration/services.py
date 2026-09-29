@@ -2,6 +2,7 @@ import os
 from typing import Dict, Any, List, Optional, Tuple
 from django.core.files.base import File
 from django.db import transaction
+from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from django.utils.text import get_valid_filename
 from apps.audit.services import log_action
@@ -208,6 +209,8 @@ def execute_import_job(
     5. Aggregates row statistics and error summaries without fatal crashes.
     6. Updates ImportJob status (COMPLETED, PARTIAL, or FAILED) and writes AuditLog.
     """
+    if data_source.workspace_id != workspace.pk:
+        raise PermissionDenied("Nguồn dữ liệu không thuộc workspace hiện tại.")
     now = timezone.now()
 
     # Validate file upload safety before creating/running job

@@ -1,10 +1,13 @@
 """
-Comprehensive Vietnamese AI Business Intent Benchmark Test Suite (88 Benchmark Scenarios).
+Deterministic Vietnamese Business Intent & Keyword Router Benchmark (88 Benchmark Scenarios).
 
-Evaluates the AI Assistant's semantic understanding across:
+Evaluates the rule-based pattern matching and keyword heuristics of the offline intent router
+(`classify_business_intent` and `resolve_follow_up_context`) across:
 - Retail: Products, Categories, Sales Rankings, Customer History, Branch Intersections, Trends, Comparisons, Stockout vs Balances
 - Service Ops: Tickets, SLA Deadlines, Technician Skills, Availability, Workload, Labor Costs, Schedules & Conflict Detection
 - Advanced Cross-Domain: Spatial GIS Clusters, Forecasting, Policy RAG, Hybrid Queries, Root-Cause ("Vì sao?"), What-If Simulations, Multi-Condition Intersections, Conversational Memory, Ambiguity, and Controlled Mutations.
+
+NOTE: This benchmark tests deterministic application routing heuristics, NOT generative LLM capabilities or live model comprehension.
 """
 
 from datetime import date

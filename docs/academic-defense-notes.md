@@ -12,7 +12,7 @@ Tài liệu này cung cấp các câu trả lời kỹ thuật chuẩn mực, c�
 - **QUÁ TRÌNH XỬ LÝ?**: Định tuyến URL $\to$ Middleware An ninh $\to$ Xác thực phiên & Không gian làm việc (Tenancy) $\to$ Thực thi View/ViewSet $\to$ Biên dịch truy vấn ORM sang SQL.
 - **ĐẦU RA LÀ GÌ?**: Phản hồi HTTP (trang giao diện HTML hoặc cấu trúc JSON chuẩn hóa).
 - **ĐÁNH GIÁ NHƯ THẾ NÀO?**: 276 bài kiểm thử tự động, không có độ trôi migration, lệnh kiểm tra sức khỏe `python manage.py check`.
-- **GIỚI HẠN LÀ GÌ?**: Chi phí tài nguyên cho mô hình request-response nguyên khối; xử lý bất đồng bộ phức tạp hơn các framework async nhẹ (như FastAPI), nhưng đối với dữ liệu quan hệ doanh nghiệp và GIS, Django ORM và GeoDjango vượt trội hoàn toàn.
+- **GIỚI HẠN LÀ GÌ?**: Chi phí tài nguyên cho mô hình request-response nguyên khối; xử lý bất đồng bộ phức tạp hơn các framework async nhẹ (như FastAPI). Trong phạm vi đồ án, Django ORM và GeoDjango phù hợp vì hệ thống dùng nhiều dữ liệu quan hệ và truy vấn GIS; đây không phải kết luận benchmark rằng framework này vượt trội tuyệt đối.
 
 ---
 
@@ -39,7 +39,7 @@ Tài liệu này cung cấp các câu trả lời kỹ thuật chuẩn mực, c�
 ---
 
 ### 4. Động cơ Tiếp nhận Dữ liệu (CSV, Excel, Mock API)
-- **BẢN CHẤT LÀ GÌ?**: Đường ống tiếp nhận dữ liệu đưa các tệp dữ liệu bên ngoài không đồng nhất vào bảng đệm staging bất biến (`RawImportRecord`).
+- **BẢN CHẤT LÀ GÌ?**: Đường ống tiếp nhận dữ liệu đưa các tệp dữ liệu bên ngoài không đồng nhất vào bảng đệm staging (`RawImportRecord`).
 - **TẠI SAO CHỌN?**: Dữ liệu doanh nghiệp bên ngoài thường có bảng mã, định dạng và cấu trúc rất đa dạng. Việc phân tích trực tiếp vào các mô hình miền nghiệp vụ sẽ làm ứng dụng sập khi gặp các dòng dữ liệu lỗi.
 - **ĐẦU VÀO LÀ GÌ?**: Tệp CSV bên ngoài (UTF-8, Windows-1258), bảng tính Excel `.xlsx`/`.xls`, hoặc JSON từ Mock REST API.
 - **QUÁ TRÌNH XỬ LÝ?**: Kiểm tra tệp (dung lượng $\le$ 10MB, đuôi tệp an toàn) $\to$ Tự động nhận diện bảng mã $\to$ Đọc luồng dữ liệu từng dòng $\to$ Lưu vào JSONB kèm theo ghi nhận lỗi ở mức từng dòng.
@@ -77,7 +77,7 @@ Tài liệu này cung cấp các câu trả lời kỹ thuật chuẩn mực, c�
 - **ĐẦU VÀO LÀ GÌ?**: Câu hỏi bằng ngôn ngữ tự nhiên của người dùng (ví dụ: "Chính sách đổi trả hàng là gì?").
 - **QUÁ TRÌNH XỬ LÝ?**: Vector hóa câu hỏi $\to$ Tìm kiếm vector tương đồng cosine $\to$ Lắp ghép ngữ cảnh $\to$ Tổng hợp prompt có căn cứ cho LLM $\to$ Trích xuất trích dẫn nguồn.
 - **ĐẦU RA LÀ GÌ?**: Câu trả lời bằng ngôn ngữ tự nhiên kèm theo tiêu đề tài liệu, mã đoạn trích và điểm tương đồng.
-- **ĐÁNH GIÁ NHƯ THẾ NÀO?**: Độ chính xác truy xuất (85.7%), Độ đúng đắn có căn cứ (100%), Trích dẫn nguồn (100%), Độ chính xác câu dự phòng chống ảo giác (100%).
+- **ĐÁNH GIÁ NHƯ THẾ NÀO?**: Đối chiếu chunk IDs, nội dung, số liệu và nguồn theo từng ca. Các tỷ lệ cũ 85.7/100 chưa có bộ bằng chứng tương ứng nên không dùng để bảo vệ. Bộ replay 25/09 là offline; điểm ngữ nghĩa chưa được người chấm xác nhận.
 - **GIỚI HẠN LÀ GÌ?**: Phụ thuộc vào chất lượng phân đoạn (chunking) và mô hình embedding; không thể suy diễn các thông tin hoàn toàn không có trong tài liệu.
 
 ---
@@ -99,14 +99,14 @@ Tài liệu này cung cấp các câu trả lời kỹ thuật chuẩn mực, c�
 - **ĐẦU VÀO LÀ GÌ?**: System prompt với chỉ dẫn quản trị nghiêm ngặt, các đoạn tài liệu được truy xuất, danh sách công cụ được phép gọi và tin nhắn của người dùng.
 - **QUÁ TRÌNH XỬ LÝ?**: Sinh token bị ràng buộc bởi system prompt; ý định thay đổi trạng thái được trích xuất thành tham số gọi công cụ có cấu trúc.
 - **ĐẦU RA LÀ GÌ?**: Lời giải thích có căn cứ hoặc gói dữ liệu gọi công cụ có cấu trúc.
-- **ĐÁNH GIÁ NHƯ THẾ NÀO?**: Đảm bảo 100% không có lệnh ghi CSDL trực tiếp, độ chính xác của trích dẫn và tuân thủ câu dự phòng khi câu hỏi nằm ngoài phạm vi.
+- **ĐÁNH GIÁ NHƯ THẾ NÀO?**: Kiểm tra quyền, nguồn trích dẫn, hành vi từ chối và action contract trên từng ca cụ thể. Kết quả test không chứng nhận an toàn hay độ đúng 100%; ca tài liệu mâu thuẫn trong đợt 35 vẫn chưa đạt kỳ vọng.
 - **GIỚI HẠN LÀ GÌ?**: Độ trễ suy luận, chi phí token và câu từ có thể thay đổi nhẹ giữa các lần gọi.
 
 ---
 
 ### 10. Dự báo Chuỗi Thời gian với XGBoost
 - **BẢN CHẤT LÀ GÌ?**: Thuật toán cây quyết định tăng cường gradient (Gradient Boosted Decision Trees) tối ưu hóa, dùng cho hồi quy dạng bảng và dự báo chuỗi thời gian nhiều bước.
-- **TẠI SAO CHỌN?**: Vượt trội hơn hẳn so với các mô hình tuyến tính và trung bình trượt trên dữ liệu có tính mùa vụ phi tuyến kèm đặc trưng lịch, đồng thời không đòi hỏi lượng dữ liệu khổng lồ hay bất ổn định trong huấn luyện như mạng nơ-ron hồi quy sâu (LSTM).
+- **TẠI SAO CHỌN?**: XGBoost là mô hình được triển khai để thực nghiệm hồi quy trên đặc trưng trễ, thống kê trượt và lịch. Lựa chọn này không chứng minh mô hình vượt baseline: bảng lịch sử cho thấy doanh thu và số ticket kém naive baseline, cả ba R² đều âm. Chưa có thực nghiệm đối chứng LSTM hoặc mô hình tuyến tính để kết luận hơn/kém các mô hình đó.
 - **ĐẦU VÀO LÀ GÌ?**: Chuỗi thời gian lịch sử theo ngày (doanh thu, đơn hàng, phiếu sự cố), độ trễ tự hồi quy ($t-1, t-7, t-14$), thống kê trượt ($\mu_7, \sigma_7$), và các đặc trưng ngày trong tuần/tháng.
 - **QUÁ TRÌNH XỬ LÝ?**: Tạo đặc trưng trượt an toàn (chống rò rỉ dữ liệu) $\to$ Chia tập dữ liệu theo thời gian (80% train / 20% test) $\to$ Huấn luyện ensemble cây gradient-boosted $\to$ Dự báo đệ quy chu kỳ 14 ngày tới.
 - **ĐẦU RA LÀ GÌ?**: Dự báo điểm, chặn giá trị không âm, dải dự báo xấp xỉ 95% ($\pm 1.96 \cdot \sigma_{\text{residuals}} \cdot \sqrt{1 + 0.05(h-1)}$).
@@ -127,7 +127,7 @@ Tài liệu này cung cấp các câu trả lời kỹ thuật chuẩn mực, c�
 
 ### 12. Động cơ Khuyến nghị Vận hành Xác định & Tính điểm
 - **BẢN CHẤT LÀ GÌ?**: Hệ thống khuyến nghị vận hành dựa trên quy tắc (Rule-based), kết hợp các chỉ số KPI, khoảng cách GIS và khối lượng công việc.
-- **TẠI SAO CHỌN?**: Tính minh bạch và xác định tuyệt đối. Trong quản trị doanh nghiệp, người vận hành cần hiểu rõ lý do đề xuất để tin tưởng, thay vì các quyết định tự động kiểu hộp đen.
+- **TẠI SAO CHỌN?**: Luật được định nghĩa và có thể truy vết trong mã nguồn. Trong quản trị doanh nghiệp, người vận hành cần hiểu rõ lý do đề xuất để tin tưởng, thay vì các quyết định tự động kiểu hộp đen.
 - **ĐẦU VÀO LÀ GÌ?**: Phiếu sự cố đang mở, trạng thái sẵn sàng của kỹ sư, khoảng cách trắc địa PostGIS, số công việc đang xử lý và xu hướng doanh số lịch sử.
 - **QUÁ TRÌNH XỬ LÝ?**: Tổ hợp tuyến tính có trọng số đa tiêu chí:
   $$\text{Điểm} = 0.40 \times S_{\text{khoảng\_cách}} + 0.40 \times S_{\text{tải\_công\_việc}} + 0.20 \times S_{\text{kỹ\_năng}}$$
@@ -150,7 +150,7 @@ Tài liệu này cung cấp các câu trả lời kỹ thuật chuẩn mực, c�
 ---
 
 ### 14. Có Con người Kiểm duyệt (HITL) & Phân tách Trách nhiệm (SoD)
-- **BẢN CHẤT LÀ GÌ?**: Chính sách quản trị yêu cầu người quản lý phê duyệt các thay đổi trạng thái quan trọng, kết hợp với sự phân tách tuyệt đối giữa người yêu cầu và người phê duyệt.
+- **BẢN CHẤT LÀ GÌ?**: Chính sách quản trị yêu cầu người quản lý phê duyệt các thay đổi trạng thái quan trọng, kết hợp với quy tắc người yêu cầu không tự phê duyệt, được kiểm trên các luồng đã nêu.
 - **TẠI SAO CHỌN?**: Ngăn ngừa gian lận đơn phương hoặc tự động, hạn chế sai sót vô tình và tránh điều phối nhân sự tùy tiện.
 - **ĐẦU VÀO LÀ GÌ?**: Bản ghi `ApprovalRequest` ở trạng thái `CHỜ XỬ LÝ` và thông tin xác thực của người duyệt.
 - **QUÁ TRÌNH XỬ LÝ?**: Hệ thống xác minh `người_duyệt != người_yêu_cầu` (trừ superuser) và kiểm tra người duyệt có quyền `approvals.manage_approval`.
@@ -165,17 +165,17 @@ Tài liệu này cung cấp các câu trả lời kỹ thuật chuẩn mực, c�
 - **TẠI SAO CHỌN?**: Chống chối bỏ (non-repudiation), đáp ứng tiêu chuẩn tuân thủ doanh nghiệp và phục vụ điều tra sau sự cố.
 - **ĐẦU VÀO LÀ GÌ?**: Người thực hiện, không gian làm việc, hành động, thực thể đích và siêu dữ liệu thay đổi.
 - **QUÁ TRÌNH XỬ LÝ?**: Ghi nhận trong cùng một giao dịch cơ sở dữ liệu nguyên tử với hành động chính.
-- **ĐẦU RA LÀ GÌ?**: Bản ghi kiểm toán bất biến.
+- **ĐẦU RA LÀ GÌ?**: Bản ghi kiểm toán có model guard và PostgreSQL trigger chống UPDATE/DELETE; không chống quyền chủ database hoặc outer transaction rollback.
 - **ĐÁNH GIÁ NHƯ THẾ NÀO?**: Xác minh nhật ký kiểm toán được sinh ra trên mọi sự kiện nạp dữ liệu, ánh xạ, gọi công cụ, phê duyệt và hỏi đáp AI; không có bất kỳ API nào cho phép sửa hoặc xóa nhật ký này.
 - **GIỚI HẠN LÀ GÌ?**: Tăng dung lượng lưu trữ CSDL theo thời gian; trong môi trường lớn cần có chiến lược phân vùng lưu trữ (table partitioning).
 
 ---
 
 ### 16. Phân tách Ranh giới Đa Không gian làm việc (Multi-Tenant Workspaces)
-- **BẢN CHẤT LÀ GÌ?**: Mẫu kiến trúc cô lập dữ liệu trong đó mọi mô hình nghiệp vụ đều kế thừa `WorkspaceScopedModel` và chứa khóa ngoại trỏ tới `Workspace`.
+- **BẢN CHẤT LÀ GÌ?**: Cách ly logic trong CSDL dùng chung. Thực thể gốc có workspace; bảng con như `OrderItem` và `Task` lấy phạm vi qua đối tượng cha. `User` và `Role` là các thực thể dùng chung.
 - **TẠI SAO CHỌN?**: Cho phép nhiều đơn vị kinh doanh (ví dụ Cửa hàng Bán lẻ và Công ty Dịch vụ Kỹ thuật) cùng hoạt động an toàn trên một hạ tầng dùng chung mà không xảy ra rò rỉ dữ liệu chéo.
 - **ĐẦU VÀO LÀ GÌ?**: Yêu cầu của người dùng đã xác thực kèm ngữ cảnh không gian làm việc đang chọn.
-- **QUÁ TRÌNH XỬ LÝ?**: `WorkspaceMiddleware` xác thực tư cách thành viên; Custom Model Manager `.for_workspace(ws)` lọc tự động mọi truy vấn ORM.
-- **ĐẦU RA LÀ GÌ?**: Tập dữ liệu (queryset) được cô lập tuyệt đối theo không gian làm việc.
+- **QUÁ TRÌNH XỬ LÝ?**: Resolver/middleware xác thực workspace; view/service phải gọi `.for_workspace(ws)` hoặc lọc qua cha và kiểm tra quyền. Truy vấn ORM không áp dụng điều kiện này vẫn cần được rà soát; không có bộ lọc tự động cho mọi truy vấn.
+- **ĐẦU RA LÀ GÌ?**: Queryset đã áp dụng điều kiện workspace tại đường thực thi tương ứng. Một người có thể có nhiều membership với quyền khác nhau; có bypass superuser được quy định.
 - **ĐÁNH GIÁ NHƯ THẾ NÀO?**: Kiểm thử thâm nhập chéo không gian làm việc, đảm bảo trả về lỗi `403 Forbidden` hoặc `404 Not Found` khi cố truy cập dữ liệu của tenant khác.
 - **GIỚI HẠN LÀ GÌ?**: Kiến trúc CSDL dùng chung (cô lập mức dòng) đòi hỏi lập trình viên phải kỷ luật luôn sử dụng scoped queryset thay vì phụ thuộc vào việc chia tách vật lý CSDL.

@@ -7,6 +7,7 @@ and transactional canonical domain persistence.
 from decimal import Decimal
 from typing import Dict, Any, List, Optional, Tuple, Sequence
 from django.db import transaction
+from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from django.contrib.gis.geos import Point
 
@@ -314,7 +315,13 @@ def apply_mapping_to_domain(
     4. Atomically persists records into Retail or Service domain tables.
     5. Writes an immutable AuditLog entry.
     """
-    raw_records_qs = import_job.raw_records.all().order_by("row_number")
+    if (profile.workspace_id != workspace.pk or import_job.workspace_id != workspace.pk
+            or import_job.data_source.workspace_id != workspace.pk
+            or (profile.data_source_id and profile.data_source.workspace_id != workspace.pk)):
+        raise PermissionDenied("Dữ liệu mapping không thuộc workspace hiện tại.")
+    if import_job.raw_records.exclude(workspace=workspace).exists():
+        raise PermissionDenied("Dữ liệu mapping không thuộc workspace hiện tại.")
+    raw_records_qs = import_job.raw_records.filter(workspace=workspace).order_by("row_number")
     total_records = raw_records_qs.count()
 
     if total_records == 0:
@@ -343,6 +350,14 @@ def apply_mapping_to_domain(
     # Phase 1: Transform and Validate in memory
     for raw_rec in raw_records_qs:
         row_num = raw_rec.row_number
+        if not raw_rec.is_valid or raw_rec.validation_errors:
+            import_errors.append({"row": row_num, "errors": [{
+                "code": "INVALID_STAGED_RECORD", "message": "Dòng dữ liệu không đạt kiểm tra khi import."
+            }]})
+            if strict:
+                return {"status": "FAILED", "message": "Strict mode: invalid staged record.",
+                        "inserted_count": 0, "failed_count": len(import_errors), "errors": import_errors}
+            continue
         canonical_dict, transform_errs = transform_single_record(
             raw_data=raw_rec.raw_data,
             rules=active_rules,

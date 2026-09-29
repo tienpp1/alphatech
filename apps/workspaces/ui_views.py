@@ -24,8 +24,8 @@ def switch_workspace_ui_view(request, workspace_id):
         )
         messages.success(request, f"Đã chuyển sang không gian làm việc: {workspace.name}")
         if workspace.workspace_type == WorkspaceType.SERVICE:
-            return redirect("services_ui_dashboard")
-        return redirect("retail_ui_dashboard")
+            return redirect("/noibo/services/")
+        return redirect("/noibo/retail/")
     except PermissionDenied as e:
         messages.error(request, f"Không có quyền truy cập không gian làm việc này: {e}")
-        return redirect("health_check_ui")
+        return redirect("/noibo/")

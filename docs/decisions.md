@@ -69,7 +69,7 @@
 - **Status**: Accepted (Phase 1)
 - **Context**: AI scope can easily become over-engineered, unprovable, or ungrounded.
 - **Decision**: Restrict V1 AI exclusively to 4 auditable capabilities: (1) RAG grounded Q&A, (2) XGBoost tabular forecasting, (3) Deterministic Business Rules, (4) Safe Tool Calling with Approval.
-- **Reason**: Provides a complete, demonstrable end-to-end intelligent platform with mathematically sound evaluation metrics (MAE, RMSE, RAG Groundedness) that is 100% defendable.
+- **Reason**: Provides a complete, demonstrable end-to-end intelligent platform with mathematically sound evaluation metrics (MAE, RMSE, RAG Groundedness) that is academically sound, verifiable, and defendable.
 - **Consequences**: Multi-agent swarms, black-box autonomous actions, and deep reinforcement learning are strictly deferred to future versions.
 
 ---

@@ -143,7 +143,7 @@ class ForecastRunListAPIView(APIView):
         if not check_view_permission(request, ws, "forecasting.view_forecast"):
             return api_response(error="Permission denied", status_code=status.HTTP_403_FORBIDDEN)
 
-        runs = ForecastRun.objects.for_workspace(ws)
+        runs = ForecastRun.objects.for_workspace(ws).select_related("model_config")
         target_type = request.query_params.get("target_type")
         if target_type:
             runs = runs.filter(target_type=target_type)
@@ -162,7 +162,7 @@ class ForecastRunDetailAPIView(APIView):
         if not check_view_permission(request, ws, "forecasting.view_forecast"):
             return api_response(error="Permission denied", status_code=status.HTTP_403_FORBIDDEN)
 
-        run = ForecastRun.objects.for_workspace(ws).filter(pk=pk).first()
+        run = ForecastRun.objects.for_workspace(ws).select_related("model_config").filter(pk=pk).first()
         if not run:
             return api_response(error="ForecastRun not found", status_code=status.HTTP_404_NOT_FOUND)
 

@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import dateparse
 
 from apps.accounts.services import has_workspace_permission
-from apps.workspaces.permissions import IsWorkspaceMember
+from apps.workspaces.permissions import IsWorkspaceMember, require_permission
 from apps.service_ops.models import (
     Service,
     Employee,
@@ -104,7 +104,19 @@ def check_permission(request, perm_codename: str) -> bool:
 # Service Catalog Endpoints
 # ==========================================
 
-class ServiceListCreateAPIView(APIView):
+class ServiceReadPermissionAPIView(APIView):
+    """Reuse workspace RBAC for reads without changing mutation permissions."""
+    read_permission = None
+
+    def get_permissions(self):
+        permissions = super().get_permissions()
+        if self.request.method in ("GET", "HEAD") and self.read_permission:
+            permissions.append(require_permission(self.read_permission)())
+        return permissions
+
+
+class ServiceListCreateAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_service"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
@@ -125,7 +137,8 @@ class ServiceListCreateAPIView(APIView):
             return api_error(str(e.message if hasattr(e, "message") else e), code="VALIDATION_ERROR")
 
 
-class ServiceDetailAPIView(APIView):
+class ServiceDetailAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_service"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request, pk):
@@ -160,7 +173,8 @@ class ServiceDetailAPIView(APIView):
 # Employee / Technician Endpoints
 # ==========================================
 
-class EmployeeListCreateAPIView(APIView):
+class EmployeeListCreateAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_employee"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
@@ -180,7 +194,8 @@ class EmployeeListCreateAPIView(APIView):
             return api_error(str(e.message if hasattr(e, "message") else e), code="VALIDATION_ERROR")
 
 
-class EmployeeDetailAPIView(APIView):
+class EmployeeDetailAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_employee"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request, pk):
@@ -203,7 +218,8 @@ class EmployeeDetailAPIView(APIView):
 # SLA Policy Endpoints
 # ==========================================
 
-class SLAListCreateAPIView(APIView):
+class SLAListCreateAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_sla"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
@@ -226,7 +242,8 @@ class SLAListCreateAPIView(APIView):
 # Service Request (Ticket) Endpoints
 # ==========================================
 
-class ServiceRequestListCreateAPIView(APIView):
+class ServiceRequestListCreateAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_request"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
@@ -248,7 +265,8 @@ class ServiceRequestListCreateAPIView(APIView):
             return api_error(str(e.message if hasattr(e, "message") else e), code="VALIDATION_ERROR")
 
 
-class ServiceRequestDetailAPIView(APIView):
+class ServiceRequestDetailAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_request"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request, pk):
@@ -260,10 +278,11 @@ class ServiceRequestDetailAPIView(APIView):
         return api_success(data=ServiceRequestSerializer(req).data)
 
 
-class ServiceRequestCostAPIView(APIView):
+class ServiceRequestCostAPIView(ServiceReadPermissionAPIView):
     """
     Returns aggregated labor time, hourly rate snapshots, and labor cost summary for a ticket.
     """
+    read_permission = "service.view_analytics"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request, pk):
@@ -352,7 +371,8 @@ class ServiceRequestCancelAPIView(APIView):
 # Task Endpoints
 # ==========================================
 
-class TaskListCreateAPIView(APIView):
+class TaskListCreateAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_task"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
@@ -374,7 +394,8 @@ class TaskListCreateAPIView(APIView):
             return api_error(str(e.message if hasattr(e, "message") else e), code="VALIDATION_ERROR")
 
 
-class TaskDetailAPIView(APIView):
+class TaskDetailAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_task"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request, pk):
@@ -429,7 +450,8 @@ class TaskCancelAPIView(APIView):
 # Labor Time Tracking Endpoints
 # ==========================================
 
-class LaborEntryListCreateAPIView(APIView):
+class LaborEntryListCreateAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_analytics"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
@@ -481,7 +503,8 @@ class LaborEntryListCreateAPIView(APIView):
             return api_error(str(e.message if hasattr(e, "message") else e), code="VALIDATION_ERROR")
 
 
-class TaskLaborListCreateAPIView(APIView):
+class TaskLaborListCreateAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_task"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request, task_id):
@@ -533,7 +556,8 @@ class TaskLaborListCreateAPIView(APIView):
 # Schedule Endpoints
 # ==========================================
 
-class ScheduleListCreateAPIView(APIView):
+class ScheduleListCreateAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_schedule"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
@@ -572,7 +596,8 @@ class ScheduleListCreateAPIView(APIView):
             return api_error(str(e.message if hasattr(e, "message") else e), code="VALIDATION_ERROR")
 
 
-class ScheduleDetailAPIView(APIView):
+class ScheduleDetailAPIView(ServiceReadPermissionAPIView):
+    read_permission = "service.view_schedule"
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request, pk):
@@ -585,7 +610,7 @@ class ScheduleDetailAPIView(APIView):
 # ==========================================
 
 class AnalyticsOverviewAPIView(APIView):
-    permission_classes = [IsWorkspaceMember]
+    permission_classes = [IsWorkspaceMember, require_permission("service.view_analytics")]
 
     def get(self, request):
         summary = get_service_dashboard_summary(request.active_workspace)
@@ -593,7 +618,7 @@ class AnalyticsOverviewAPIView(APIView):
 
 
 class AnalyticsWorkloadAPIView(APIView):
-    permission_classes = [IsWorkspaceMember]
+    permission_classes = [IsWorkspaceMember, require_permission("service.view_analytics")]
 
     def get(self, request):
         breakdown = get_technicians_workload_breakdown(request.active_workspace)
@@ -601,7 +626,7 @@ class AnalyticsWorkloadAPIView(APIView):
 
 
 class AnalyticsSLAAPIView(APIView):
-    permission_classes = [IsWorkspaceMember]
+    permission_classes = [IsWorkspaceMember, require_permission("service.view_analytics")]
 
     def get(self, request):
         summary = get_service_dashboard_summary(request.active_workspace)
@@ -610,5 +635,7 @@ class AnalyticsSLAAPIView(APIView):
             "at_risk_count": summary["at_risk_sla_count"],
             "breached_count": summary["breached_sla_count"],
             "compliance_rate": summary["sla_compliance_rate"],
+            "unknown_count": summary["unknown_sla_count"],
+            "evaluated_count": summary["evaluated_sla_count"],
         }
         return api_success(data=sla_data)

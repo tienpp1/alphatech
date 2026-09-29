@@ -5,11 +5,15 @@ Core System Views for Health Check and Platform Status.
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.db import connection
+import logging
 
 from django.utils import timezone
 import sys
 import django
 import os
+from django.db import DatabaseError, OperationalError, ProgrammingError
+
+logger = logging.getLogger(__name__)
 
 
 def _report_workspaces(user, surface):
@@ -58,9 +62,9 @@ def get_health_status():
                 postgis_version = cursor.fetchone()
                 if postgis_version:
                     postgis_status = f"available ({postgis_version[0]})"
-            except Exception:
+            except (DatabaseError, OperationalError, ProgrammingError):
                 postgis_status = "extension_not_installed_or_disabled"
-    except Exception:
+    except (DatabaseError, OperationalError, ProgrammingError):
         db_status = "disconnected"
         db_error = "database_unavailable"
 
@@ -85,8 +89,8 @@ def get_health_status():
         },
         "metrics": {},
         "phase": {
-            "current": "Production readiness baseline (local verified)",
-            "status": "LOCAL VERIFIED / EXTERNAL GATES PENDING",
+            "current": "Production readiness baseline (ready)",
+            "status": "LOCAL READY / EXTERNAL GATES PENDING",
             "total_phases": 13,
             "completed_phases": 12,
             "next": "Staging, credential rotation, HTTPS OAuth/email, observability and restore evidence",
@@ -131,22 +135,33 @@ def root_dashboard_ui_view(request):
     status_data = get_health_status()
     authorized_workspaces = get_user_authorized_workspaces(request.user)
 
-    from apps.accounts.services import has_workspace_permission
+    from apps.accounts.services import get_user_permissions
 
-    def permitted(*permissions):
-        return authorized_workspaces.filter(pk__in=[
-            ws.pk for ws in authorized_workspaces
-            if all(has_workspace_permission(request.user, ws, p) for p in permissions)
+    # Preload user permissions once per authorized workspace to prevent N+1 queries
+    perms_cache = {ws.pk: get_user_permissions(request.user, ws) for ws in authorized_workspaces}
+
+    def user_has_perm(ws, perm_name):
+        if request.user.is_superuser:
+            return True
+        return perm_name in perms_cache.get(ws.pk, set())
+
+    retail_workspaces = authorized_workspaces.filter(workspace_type="RETAIL")
+    service_workspaces = authorized_workspaces.filter(workspace_type="SERVICE")
+
+    def permitted(ws_queryset, *permissions):
+        return ws_queryset.filter(pk__in=[
+            ws.pk for ws in ws_queryset
+            if all(user_has_perm(ws, p) for p in permissions)
         ])
 
-    retail_scope = permitted("retail.view_analytics", "retail.view_order", "retail.view_product", "retail.view_branch")
-    service_scope = permitted("service.view_analytics", "service.view_request", "service.view_service", "service.view_employee")
-    order_activity_scope = permitted("retail.view_order", "retail.view_customer")
-    customer_scope = permitted("retail.view_customer")
-    request_scope = permitted("service.view_request")
-    forecast_scope = permitted("forecasting.view_forecast")
-    recommendation_scope = permitted("recommendations.view_recommendation")
-    approval_scope = permitted("approvals.view_approval")
+    retail_scope = permitted(retail_workspaces, "retail.view_analytics", "retail.view_order", "retail.view_product", "retail.view_branch")
+    service_scope = permitted(service_workspaces, "service.view_analytics", "service.view_request", "service.view_service", "service.view_employee")
+    order_activity_scope = permitted(retail_workspaces, "retail.view_order", "retail.view_customer")
+    customer_scope = permitted(retail_workspaces, "retail.view_customer")
+    request_scope = permitted(service_workspaces, "service.view_request")
+    forecast_scope = permitted(authorized_workspaces, "forecasting.view_forecast")
+    recommendation_scope = permitted(authorized_workspaces, "recommendations.view_recommendation")
+    approval_scope = permitted(authorized_workspaces, "approvals.view_approval")
 
     from decimal import Decimal
     from django.db.models import Sum, Q
@@ -162,19 +177,20 @@ def root_dashboard_ui_view(request):
             status__in=[OrderStatus.CONFIRMED, OrderStatus.COMPLETED]
         ).aggregate(total=Sum("total_amount"))
 
+        total_rev_val = revenue_agg["total"] or Decimal("0.00")
         retail_metrics = {
             "products_count": Product.objects.filter(workspace__in=retail_scope).count(),
             "new_orders_count": retail_orders.filter(status__in=[OrderStatus.PENDING, OrderStatus.CONFIRMED]).count(),
             "total_orders_count": retail_orders.count(),
-            "total_revenue": revenue_agg["total"] or Decimal("0.00"),
+            "total_revenue": f"{total_rev_val:,.0f}",
             "branches_count": Branch.objects.filter(workspace__in=retail_scope).count(),
         }
-    except Exception:
+    except (DatabaseError, OperationalError, ProgrammingError):
         retail_metrics = {
             "products_count": 0,
             "new_orders_count": 0,
             "total_orders_count": 0,
-            "total_revenue": Decimal("0.00"),
+            "total_revenue": "0",
             "branches_count": 0,
         }
 
@@ -205,7 +221,7 @@ def root_dashboard_ui_view(request):
             "technicians_count": Employee.objects.filter(workspace__in=service_scope, is_active=True).count(),
             "total_tickets_count": service_requests.count(),
         }
-    except Exception:
+    except (DatabaseError, OperationalError, ProgrammingError):
         service_metrics = {
             "services_count": 0,
             "new_requests_count": 0,
@@ -227,7 +243,7 @@ def root_dashboard_ui_view(request):
             "pending_approvals_count": ApprovalRequest.objects.filter(workspace__in=approval_scope, status=ApprovalStatus.PENDING).count(),
             "latest_recommendations": list(Recommendation.objects.filter(workspace__in=recommendation_scope, status=RecommendationStatus.PENDING).select_related("workspace").order_by("-created_at")[:3]),
         }
-    except Exception:
+    except (DatabaseError, OperationalError, ProgrammingError):
         ai_insights = {
             "active_forecasts_count": 0,
             "pending_recommendations_count": 0,
@@ -302,7 +318,7 @@ def root_dashboard_ui_view(request):
 
         recent_activities.sort(key=lambda item: item["timestamp"], reverse=True)
         recent_activities = recent_activities[:10]
-    except Exception:
+    except (DatabaseError, OperationalError, ProgrammingError):
         recent_activities = []
 
     if not retail_scope.exists():
@@ -334,7 +350,7 @@ from django.http import HttpResponse
 def _csv_text(value):
     """Prevent spreadsheet software interpreting untrusted text as formulas."""
     value = str(value or "")
-    return "'" + value if value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(("\t", "\r", "\n")) else value
+    return "'" + value if value.lstrip().startswith(("=", "+", "-", "@", "%", "|")) or value.startswith(("\t", "\r", "\n")) else value
 
 
 def _forecast_improvement(mae, baseline_mae):
@@ -417,6 +433,17 @@ def executive_operational_report_ui_view(request):
         .order_by("-created_at")[:5]
     )
 
+    # 6. Operational Bulletins & Internal Collaboration
+    from apps.notifications.models import InternalBulletin, TeamChatMessage, BulletinPriority
+    recent_bulletins = list(
+        InternalBulletin.objects.filter(workspace__in=authorized_workspaces, is_published=True)
+        .select_related("workspace", "author")
+        .order_by("-created_at")[:5]
+    )
+    total_bulletins_cnt = InternalBulletin.objects.filter(workspace__in=authorized_workspaces).count()
+    pinned_bulletins_cnt = InternalBulletin.objects.filter(workspace__in=authorized_workspaces, priority=BulletinPriority.PINNED).count()
+    total_chat_messages_cnt = TeamChatMessage.objects.filter(workspace__in=authorized_workspaces).count()
+
     # Display reference only: this is not a signature or content verification.
     raw_signature_data = f"EXEC_REPORT_{now.strftime('%Y%m%d%H%M')}_{total_rev}_{total_tickets}_{request.user.id}"
     report_hash = hashlib.sha256(raw_signature_data.encode("utf-8")).hexdigest()[:16].upper()
@@ -446,6 +473,12 @@ def executive_operational_report_ui_view(request):
         },
         "forecast_runs": forecast_runs,
         "recent_approvals": recent_approvals,
+        "operations": {
+            "recent_bulletins": recent_bulletins,
+            "total_bulletins": total_bulletins_cnt,
+            "pinned_bulletins": pinned_bulletins_cnt,
+            "total_chat_messages": total_chat_messages_cnt,
+        },
     }
     return render(request, "dashboard/executive_report.html", context)
 
@@ -492,13 +525,14 @@ def export_report_csv_view(request):
 
     orders = Order.objects.filter(workspace__in=authorized_workspaces).select_related("workspace", "customer").order_by("-created_at")[:100]
     for o in orders:
+        total_val = o.total_amount if o.total_amount is not None else 0
         writer.writerow([
             _csv_text(o.order_number),
             _csv_text(o.workspace.name),
             _csv_text(o.customer.name if o.customer else "N/A"),
             _csv_text(o.customer.phone if o.customer else "N/A"),
-            f"{o.total_amount:,.0f}",
-            o.get_status_display(),
+            f"{total_val:,.0f}",
+            _csv_text(o.get_status_display()),
             o.created_at.strftime("%d/%m/%Y %H:%M"),
         ])
 
@@ -525,37 +559,51 @@ def system_telemetry_ui_view(request):
     # 1. PostGIS Connection & Spatial Table Metrics
     postgis_version = "Chưa xác minh phiên bản PostGIS"
     db_engine = connection.settings_dict.get("ENGINE", "")
-    db_name = connection.settings_dict.get("NAME", "")
+    raw_db_name = connection.settings_dict.get("NAME", "")
+    safe_db_name = os.path.basename(str(raw_db_name)) if raw_db_name else "N/A"
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT PostGIS_Full_Version();")
             row = cursor.fetchone()
             if row:
                 postgis_version = row[0][:80]
-    except Exception:
-        pass
+    except (DatabaseError, OperationalError, ProgrammingError):
+        logger.warning("POSTGIS_VERSION_CHECK_FAILED")
 
     from apps.retail.models import Branch, Customer
     from apps.service_ops.models import Employee
+    try:
+        branches_cnt = Branch.objects.filter(workspace__in=authorized_workspaces, location__isnull=False).count()
+        customers_cnt = Customer.objects.filter(workspace__in=authorized_workspaces, location__isnull=False).count()
+        technicians_cnt = Employee.objects.filter(workspace__in=authorized_workspaces, current_location__isnull=False).count()
+    except (DatabaseError, OperationalError, ProgrammingError):
+        logger.warning("SPATIAL_METRICS_QUERY_FAILED")
+        branches_cnt, customers_cnt, technicians_cnt = 0, 0, 0
+
     spatial_stats = {
         "engine": db_engine,
-        "database": db_name,
+        "database": safe_db_name,
         "postgis_version": postgis_version,
         "srid": 4326,
-        "branches_geocoded": Branch.objects.filter(workspace__in=authorized_workspaces, location__isnull=False).count(),
-        "customers_geocoded": Customer.objects.filter(workspace__in=authorized_workspaces, location__isnull=False).count(),
-        "technicians_geocoded": Employee.objects.filter(workspace__in=authorized_workspaces, current_location__isnull=False).count(),
+        "branches_geocoded": branches_cnt,
+        "customers_geocoded": customers_cnt,
+        "technicians_geocoded": technicians_cnt,
     }
 
     # 2. XGBoost Machine Learning Model Latency & Status
     from apps.forecasting.models import ForecastModelConfig, ForecastRun
-    t0 = time.perf_counter()
-    trained_runs_count = ForecastRun.objects.filter(workspace__in=authorized_workspaces, status="COMPLETED").count()
-    xgb_bench_latency = round((time.perf_counter() - t0) * 1000, 2)
+    try:
+        t0 = time.perf_counter()
+        trained_runs_count = ForecastRun.objects.filter(workspace__in=authorized_workspaces, status="COMPLETED").count()
+        xgb_bench_latency = round((time.perf_counter() - t0) * 1000, 2)
+        models_configured_cnt = ForecastModelConfig.objects.filter(workspace__in=authorized_workspaces).count()
+    except (DatabaseError, OperationalError, ProgrammingError):
+        logger.warning("FORECAST_METRICS_QUERY_FAILED")
+        trained_runs_count, models_configured_cnt, xgb_bench_latency = 0, 0, 0.0
 
     ml_stats = {
         "framework": "XGBoost Regressor v2.0 (Scikit-Learn API)",
-        "models_configured": ForecastModelConfig.objects.filter(workspace__in=authorized_workspaces).count(),
+        "models_configured": models_configured_cnt,
         "runs_completed": trained_runs_count,
         "count_query_latency_ms": xgb_bench_latency,
         "drift_status": "Chưa đánh giá trong phiên đo này",
@@ -564,15 +612,21 @@ def system_telemetry_ui_view(request):
 
     # 3. Grounded RAG Knowledge Base & pgvector Stats
     from apps.knowledge.models import KnowledgeBase, Document, DocumentChunk
-    t_rag = time.perf_counter()
-    total_chunks = DocumentChunk.objects.filter(document__knowledge_base__workspace__in=authorized_workspaces).count()
-    rag_bench_latency = round((time.perf_counter() - t_rag) * 1000, 2)
+    try:
+        t_rag = time.perf_counter()
+        total_chunks = DocumentChunk.objects.filter(document__knowledge_base__workspace__in=authorized_workspaces).count()
+        rag_bench_latency = round((time.perf_counter() - t_rag) * 1000, 2)
+        kb_cnt = KnowledgeBase.objects.filter(workspace__in=authorized_workspaces).count()
+        doc_cnt = Document.objects.filter(knowledge_base__workspace__in=authorized_workspaces).count()
+    except (DatabaseError, OperationalError, ProgrammingError):
+        logger.warning("RAG_METRICS_QUERY_FAILED")
+        total_chunks, kb_cnt, doc_cnt, rag_bench_latency = 0, 0, 0, 0.0
 
     rag_stats = {
         "vector_engine": "PostgreSQL pgvector (Cosine Distance <->)",
         "embedding_dimensions": 768,
-        "knowledge_bases": KnowledgeBase.objects.filter(workspace__in=authorized_workspaces).count(),
-        "documents_ingested": Document.objects.filter(knowledge_base__workspace__in=authorized_workspaces).count(),
+        "knowledge_bases": kb_cnt,
+        "documents_ingested": doc_cnt,
         "chunks_indexed": total_chunks,
         "count_query_latency_ms": rag_bench_latency,
         "grounded_accuracy": "Chưa đo trong phiên này",
@@ -582,10 +636,17 @@ def system_telemetry_ui_view(request):
     # 4. Human-in-the-loop & RBAC Governance
     from apps.approvals.models import ApprovalRequest
     from apps.audit.models import AuditLog
+    try:
+        approvals_cnt = ApprovalRequest.objects.filter(workspace__in=authorized_workspaces).count()
+        audit_cnt = AuditLog.objects.filter(workspace__in=authorized_workspaces).count()
+    except (DatabaseError, OperationalError, ProgrammingError):
+        logger.warning("GOVERNANCE_METRICS_QUERY_FAILED")
+        approvals_cnt, audit_cnt = 0, 0
+
     governance_stats = {
         "hitl_enforced": True,
-        "approval_requests_count": ApprovalRequest.objects.filter(workspace__in=authorized_workspaces).count(),
-        "audit_logs_count": AuditLog.objects.filter(workspace__in=authorized_workspaces).count(),
+        "approval_requests_count": approvals_cnt,
+        "audit_logs_count": audit_cnt,
         "workspaces_active": authorized_workspaces.count(),
     }
 

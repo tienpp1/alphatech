@@ -3,6 +3,7 @@ Reusable filtering and search helpers for Retail queries.
 """
 
 from django.db.models import Q
+from django.utils.dateparse import parse_date
 
 
 def filter_products(queryset, params):
@@ -21,7 +22,10 @@ def filter_products(queryset, params):
         queryset = queryset.filter(deleted_at__isnull=True)
 
     if category_id:
-        queryset = queryset.filter(category_id=category_id)
+        try:
+            queryset = queryset.filter(category_id=int(category_id))
+        except (ValueError, TypeError):
+            pass
     if is_active is not None and is_active != "":
         if str(is_active).lower() in ("true", "1"):
             queryset = queryset.filter(is_active=True)
@@ -105,13 +109,23 @@ def filter_orders(queryset, params):
     if status_val:
         queryset = queryset.filter(status=status_val.upper())
     if branch_id:
-        queryset = queryset.filter(branch_id=branch_id)
+        try:
+            queryset = queryset.filter(branch_id=int(branch_id))
+        except (ValueError, TypeError):
+            pass
     if customer_id:
-        queryset = queryset.filter(customer_id=customer_id)
+        try:
+            queryset = queryset.filter(customer_id=int(customer_id))
+        except (ValueError, TypeError):
+            pass
     if start_date:
-        queryset = queryset.filter(order_date__gte=start_date)
+        parsed_start = parse_date(str(start_date).strip()) if isinstance(start_date, (str, bytes)) else start_date
+        if parsed_start:
+            queryset = queryset.filter(order_date__gte=parsed_start)
     if end_date:
-        queryset = queryset.filter(order_date__lte=end_date)
+        parsed_end = parse_date(str(end_date).strip()) if isinstance(end_date, (str, bytes)) else end_date
+        if parsed_end:
+            queryset = queryset.filter(order_date__lte=parsed_end)
     if search:
         search = search.strip()
         queryset = queryset.filter(Q(order_number__icontains=search) | Q(customer__name__icontains=search))

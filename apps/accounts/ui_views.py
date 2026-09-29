@@ -5,6 +5,7 @@ Handles browser authentication flow, session establishment, and safe URL redirec
 
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout
+from django.conf import settings
 from django.utils.http import url_has_allowed_host_and_scheme
 from rest_framework.authtoken.models import Token
 
@@ -55,6 +56,11 @@ def login_ui_view(request):
             if memberships.exists():
                 default_membership = memberships.first()
                 request.session["active_workspace_id"] = str(default_membership.workspace.id)
+            elif user.is_superuser:
+                from apps.workspaces.models import Workspace
+                first_ws = Workspace.objects.filter(is_active=True).order_by("created_at").first()
+                if first_ws:
+                    request.session["active_workspace_id"] = str(first_ws.id)
 
             # 4. Safe redirection respecting ?next=...
             if (
@@ -73,6 +79,9 @@ def login_ui_view(request):
         "next": next_url,
         "error": error_message,
         "logged_out": logged_out_notice,
+        "show_demo_credentials": bool(
+            settings.DEBUG and getattr(settings, "SHOW_DEMO_CREDENTIALS", False)
+        ),
     }
     return render(request, "accounts/login.html", context)
 
@@ -87,4 +96,3 @@ def logout_ui_view(request):
         Token.objects.filter(user=request.user).delete()
         logout(request)
     return redirect("/")
-

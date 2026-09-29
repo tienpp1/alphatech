@@ -122,6 +122,19 @@ class PostGISSpatialServicesTests(TestCase):
         self.assertEqual(results[2].code, "BR-D7")
         self.assertTrue(5000 <= results[2].distance.m <= 5800)
 
+    def test_radius_includes_point_at_measured_boundary(self):
+        """The measured PostGIS distance itself is an included boundary."""
+        origin = Point(106.7032, 10.7745, srid=4326)
+        measured = calculate_distances(
+            queryset=Branch.objects.filter(workspace=self.workspace),
+            origin_point=origin, location_field="location", order_by_distance=True,
+        ).get(code="BR-BT").distance.km
+        boundary = find_objects_within_radius(
+            queryset=Branch.objects.filter(workspace=self.workspace),
+            point=origin, radius_km=float(measured), location_field="location",
+        )
+        self.assertIn("BR-BT", set(boundary.values_list("code", flat=True)))
+
     def test_filter_by_bounding_box(self):
         """Verifies polygon bounding box filtering (ST_Within)."""
         # Bounding box covering District 1 and Binh Thanh, excluding District 7

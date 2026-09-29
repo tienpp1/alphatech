@@ -41,8 +41,17 @@
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
+.dashboard-2col-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
 @media (max-width: 900px) {
-    .charts-grid { grid-template-columns: 1fr; }
+    .charts-grid,
+    .dashboard-2col-grid {
+        grid-template-columns: 1fr;
+    }
 }
 .chart-container {
     background: rgba(255, 255, 255, 0.02);
@@ -86,11 +95,19 @@
 {% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 2rem;">
-    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem;">Bảng điều khiển Vận hành Bán lẻ</h1>
-    <p style="color: #94a3b8;">
-        Tổng quan hoạt động thương mại theo thời gian thực của <strong>{{ active_workspace.name }}</strong> ({{ active_workspace.code }}).
-    </p>
+<div class="dashboard-header" style="margin-bottom: 2rem;">
+    <div>
+        <h1 class="page-title">Bảng điều khiển Vận hành Bán lẻ</h1>
+        <p class="page-subtitle">
+            Tổng quan hoạt động thương mại theo thời gian thực của <strong>{{ active_workspace.name }}</strong> ({{ active_workspace.code }}).
+        </p>
+    </div>
+    <div class="header-actions">
+        <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary">← Tổng quan Nội bộ</a>
+        <a href="/noibo/retail/products/" class="btn btn-secondary">📦 Sản phẩm</a>
+        <a href="/noibo/retail/orders/" class="btn btn-secondary">🛒 Đơn hàng</a>
+        <a href="/noibo/retail/goods-receiving/" class="btn btn-primary">+ Nhập hàng</a>
+    </div>
 </div>
 
 <!-- KPI Cards -->
@@ -126,59 +143,64 @@
 </div>
 
 <!-- Tables Row -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+<div class="dashboard-2col-grid">
     <!-- Top Products -->
     <div class="table-card">
         <h3 style="font-size: 1.1rem; font-weight: 600;">Top Sản phẩm Bán chạy</h3>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Sản phẩm</th>
-                    <th>Danh mục</th>
-                    <th>Số lượng bán</th>
-                    <th>Doanh thu</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in top_products %}
-                <tr>
-                    <td><strong>{{ item.name }}</strong><br><small style="color: #64748b;">{{ item.sku }}</small></td>
-                    <td>{{ item.category }}</td>
-                    <td>{{ item.quantity_sold }}</td>
-                    <td style="color: #38bdf8;">{{ item.revenue|floatformat:0 }} VND</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" style="text-align: center; color: #64748b;">Chưa có dữ liệu sản phẩm đã bán.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Danh mục</th>
+                        <th>Số lượng bán</th>
+                        <th>Doanh thu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in top_products %}
+                    <tr>
+                        <td><strong>{{ item.name }}</strong><br><small style="color: #64748b;">{{ item.sku }}</small></td>
+                        <td>{{ item.category }}</td>
+                        <td>{{ item.quantity_sold }}</td>
+                        <td style="color: #38bdf8;">{{ item.revenue|floatformat:0 }} VND</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" style="text-align: center; color: #64748b;">Chưa có dữ liệu sản phẩm đã bán.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Branch Breakdown -->
     <div class="table-card">
         <h3 style="font-size: 1.1rem; font-weight: 600;">Hiệu quả Kinh doanh Chi nhánh</h3>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Chi nhánh</th>
-                    <th>Khu vực</th>
-                    <th>Đơn hàng</th>
-                    <th>Doanh thu</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for b in branch_breakdown %}
-                <tr>
-                    <td><strong>{{ b.branch_name }}</strong><br><small style="color: #64748b;">{{ b.branch_code }}</small></td>
-                    <td>{{ b.region }}</td>
-                    <td>{{ b.order_count }}</td>
-                    <td style="color: #38bdf8;">{{ b.revenue|floatformat:0 }} VND</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" style="text-align: center; color: #64748b;">Chưa ghi nhận dữ liệu chi nhánh.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Chi nhánh</th>
+                        <th>Khu vực</th>
+                        <th>Đơn hàng</th>
+                        <th>Doanh thu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in branch_breakdown %}
+                    <tr>
+                        <td><strong>{{ b.branch_name }}</strong><br><small style="color: #64748b;">{{ b.branch_code }}</small></td>
+                        <td>{{ b.region }}</td>
+                        <td>{{ b.order_count }}</td>
+                        <td style="color: #38bdf8;">{{ b.revenue|floatformat:0 }} VND</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" style="text-align: center; color: #64748b;">Chưa ghi nhận dữ liệu chi nhánh.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <!-- Stockout Risk & Reorder Alerts Section -->
@@ -194,170 +216,187 @@
             </span>
         </div>
         <div style="display: flex; gap: 0.5rem;">
-            <a href="/retail/stockout-risk/" style="color: #6366f1; text-decoration: none; font-size: 0.875rem; font-weight: 600;">Xem toàn bộ dự báo &rarr;</a>
-            <a href="/retail/goods-receiving/create/" style="background: #6366f1; color: #fff; padding: 0.35rem 0.85rem; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600;">+ Nhập hàng ngay</a>
+            <a href="/noibo/retail/stockout-risk/" style="color: #6366f1; text-decoration: none; font-size: 0.875rem; font-weight: 600;">Xem toàn bộ dự báo &rarr;</a>
+            <a href="/noibo/retail/goods-receiving/create/" style="background: #6366f1; color: #fff; padding: 0.35rem 0.85rem; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600;">+ Nhập hàng ngay</a>
         </div>
     </div>
 
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Sản phẩm</th>
-                <th>Tồn kho hiện tại</th>
-                <th>Nhu cầu dự báo</th>
-                <th>Dự kiến hết hàng</th>
-                <th>Thời gian nhập (Lead time)</th>
-                <th>Đề xuất nhập thêm</th>
-                <th>Trạng thái rủi ro</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for p in stockout_data.products_at_risk %}
-            <tr>
-                <td>
-                    <strong>{{ p.product_name }}</strong><br>
-                    <small style="color: #64748b;">{{ p.product_sku }} | {{ p.branch_name }}</small>
-                </td>
-                <td style="font-weight: 700;">{{ p.current_stock }} {{ p.unit }}</td>
-                <td style="color: #38bdf8;">{{ p.predicted_daily_demand }}/ngày</td>
-                <td>
-                    {% if p.risk_level == 'OUT_OF_STOCK' %}
-                    <span style="color: #ef4444; font-weight: 700;">Hết hàng hôm nay</span>
-                    {% else %}
-                    <strong style="color: {{ p.risk_color }};">{{ p.days_to_stockout }} ngày</strong>
-                    {% endif %}
-                </td>
-                <td>{{ p.lead_time_days }} ngày</td>
-                <td>
-                    {% if p.suggested_reorder_quantity > 0 %}
-                    <strong style="color: #38bdf8;">+{{ p.suggested_reorder_quantity }} {{ p.unit }}</strong>
-                    {% else %}
-                    <span style="color: #64748b;">0</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if p.risk_level == 'OUT_OF_STOCK' %}
-                    <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);">🔴 Hết hàng</span>
-                    {% elif p.risk_level == 'HIGH' %}
-                    <span class="badge" style="background: rgba(248, 113, 113, 0.2); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.4);">🟠 Nguy cơ cao</span>
-                    {% elif p.risk_level == 'MEDIUM' %}
-                    <span class="badge" style="background: rgba(250, 204, 21, 0.2); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.4);">🟡 Nguy cơ TB</span>
-                    {% else %}
-                    <span class="badge" style="background: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4);">🟢 Tồn kho an toàn</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="7" style="text-align: center; color: #4ade80; padding: 1.5rem;">
-                    ✅ Toàn bộ sản phẩm đang có mức tồn kho an toàn đáp ứng trên 10 ngày bán hàng.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Tồn kho hiện tại</th>
+                    <th>Nhu cầu dự báo</th>
+                    <th>Dự kiến hết hàng</th>
+                    <th>Thời gian nhập (Lead time)</th>
+                    <th>Đề xuất nhập thêm</th>
+                    <th>Trạng thái rủi ro</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in stockout_data.products_at_risk %}
+                <tr>
+                    <td>
+                        <strong>{{ p.product_name }}</strong><br>
+                        <small style="color: #64748b;">{{ p.product_sku }} | {{ p.branch_name }}</small>
+                    </td>
+                    <td style="font-weight: 700;">{{ p.current_stock }} {{ p.unit }}</td>
+                    <td style="color: #38bdf8;">{{ p.predicted_daily_demand }}/ngày</td>
+                    <td>
+                        {% if p.risk_level == 'OUT_OF_STOCK' %}
+                        <span style="color: #ef4444; font-weight: 700;">Hết hàng hôm nay</span>
+                        {% elif p.risk_level == 'HIGH' %}
+                        <strong style="color: #f87171;">{{ p.days_to_stockout }} ngày</strong>
+                        {% elif p.risk_level == 'MEDIUM' %}
+                        <strong style="color: #facc15;">{{ p.days_to_stockout }} ngày</strong>
+                        {% else %}
+                        <strong style="color: #4ade80;">{{ p.days_to_stockout }} ngày</strong>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.lead_time_days }} ngày</td>
+                    <td>
+                        {% if p.suggested_reorder_quantity > 0 %}
+                        <strong style="color: #38bdf8;">+{{ p.suggested_reorder_quantity }} {{ p.unit }}</strong>
+                        {% else %}
+                        <span style="color: #64748b;">0</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if p.risk_level == 'OUT_OF_STOCK' %}
+                        <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);">🔴 Hết hàng</span>
+                        {% elif p.risk_level == 'HIGH' %}
+                        <span class="badge" style="background: rgba(248, 113, 113, 0.2); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.4);">🟠 Nguy cơ cao</span>
+                        {% elif p.risk_level == 'MEDIUM' %}
+                        <span class="badge" style="background: rgba(250, 204, 21, 0.2); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.4);">🟡 Nguy cơ TB</span>
+                        {% else %}
+                        <span class="badge" style="background: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4);">🟢 Tồn kho an toàn</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #4ade80; padding: 1.5rem;">
+                        ✅ Toàn bộ sản phẩm đang có mức tồn kho an toàn đáp ứng trên 10 ngày bán hàng.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- Recent Orders -->
 
 <div class="table-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
         <h3 style="font-size: 1.1rem; font-weight: 600;">Đơn hàng Gần đây</h3>
-        <a href="/retail/orders/" style="color: #6366f1; text-decoration: none; font-size: 0.875rem;">Xem tất cả đơn hàng →</a>
+        <a href="/noibo/retail/orders/" style="color: #6366f1; text-decoration: none; font-size: 0.875rem;">Xem tất cả đơn hàng →</a>
     </div>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Mã đơn</th>
-                <th>Ngày đặt</th>
-                <th>Khách hàng</th>
-                <th>Chi nhánh</th>
-                <th>Trạng thái</th>
-                <th>Tổng tiền</th>
-                <th>Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for o in recent_orders %}
-            <tr>
-                <td><strong>{{ o.order_number }}</strong></td>
-                <td>{{ o.order_date|date:"Y-m-d" }}</td>
-                <td>{{ o.customer.name }}</td>
-                <td>{{ o.branch.name|default:"Bán trực tiếp" }}</td>
-                <td>
-                    <span class="badge badge-{{ o.status|lower }}">
-                        {% if o.status == 'COMPLETED' %}Hoàn thành
-                        {% elif o.status == 'CONFIRMED' %}Đã xác nhận
-                        {% elif o.status == 'PROCESSING' %}Đang xử lý
-                        {% elif o.status == 'CANCELLED' %}Đã hủy
-                        {% else %}Chờ xử lý{% endif %}
-                    </span>
-                </td>
-                <td style="font-weight: 700; color: #f8fafc;">{{ o.total_amount|floatformat:0 }} VND</td>
-                <td><a href="/retail/orders/{{ o.id }}/" style="color: #38bdf8; text-decoration: none;">Chi tiết →</a></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="7" style="text-align: center; color: #64748b;">Chưa có đơn hàng nào được đặt.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Ngày đặt</th>
+                    <th>Khách hàng</th>
+                    <th>Chi nhánh</th>
+                    <th>Trạng thái</th>
+                    <th>Tổng tiền</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in recent_orders %}
+                <tr>
+                    <td><strong>{{ o.order_number }}</strong></td>
+                    <td>{{ o.order_date|date:"Y-m-d" }}</td>
+                    <td>{{ o.customer.name }}</td>
+                    <td>{{ o.branch.name|default:"Bán trực tiếp" }}</td>
+                    <td>
+                        <span class="badge badge-{{ o.status|lower }}">
+                            {% if o.status == 'COMPLETED' %}Hoàn thành
+                            {% elif o.status == 'CONFIRMED' %}Đã xác nhận
+                            {% elif o.status == 'PROCESSING' %}Đang xử lý
+                            {% elif o.status == 'CANCELLED' %}Đã hủy
+                            {% else %}Chờ xử lý{% endif %}
+                        </span>
+                    </td>
+                    <td style="font-weight: 700; color: #f8fafc;">{{ o.total_amount|floatformat:0 }} VND</td>
+                    <td><a href="/noibo/retail/orders/{{ o.id }}/" style="color: #38bdf8; text-decoration: none;">Chi tiết →</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" style="text-align: center; color: #64748b;">Chưa có đơn hàng nào được đặt.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+{{ timeseries|json_script:"timeseries-data" }}
+{{ branch_breakdown|json_script:"branch-data" }}
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     // 1. Revenue Timeseries Chart
-    const timeseriesData = {{ timeseries|safe }};
+    const timeseriesData = JSON.parse(document.getElementById('timeseries-data')?.textContent || '[]');
     const labels = timeseriesData.map(d => d.date);
     const revenues = timeseriesData.map(d => d.revenue);
 
-    const ctxRev = document.getElementById('revenueChart').getContext('2d');
-    new Chart(ctxRev, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Revenue (VND)',
-                data: revenues,
-                borderColor: '#6366f1',
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                tension: 0.3,
-                fill: true,
-                borderWidth: 2,
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
-                y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } }
+    const revElem = document.getElementById('revenueChart');
+    if (revElem) {
+        const ctxRev = revElem.getContext('2d');
+        new Chart(ctxRev, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Revenue (VND)',
+                    data: revenues,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    tension: 0.3,
+                    fill: true,
+                    borderWidth: 2,
+                }]
             },
-            plugins: { legend: { display: false } }
-        }
-    });
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
+                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
 
     // 2. Branch Breakdown Doughnut Chart
-    const branchData = {{ branch_breakdown|safe }};
+    const branchData = JSON.parse(document.getElementById('branch-data')?.textContent || '[]');
     const bLabels = branchData.map(b => b.branch_name);
     const bRevenues = branchData.map(b => b.revenue);
 
-    const ctxBranch = document.getElementById('branchChart').getContext('2d');
-    new Chart(ctxBranch, {
-        type: 'doughnut',
-        data: {
-            labels: bLabels,
-            datasets: [{
-                data: bRevenues,
-                backgroundColor: ['#6366f1', '#38bdf8', '#4ade80', '#fb923c', '#c084fc'],
-                borderWidth: 0,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'bottom', labels: { color: '#94a3b8' } }
+    const branchElem = document.getElementById('branchChart');
+    if (branchElem) {
+        const ctxBranch = branchElem.getContext('2d');
+        new Chart(ctxBranch, {
+            type: 'doughnut',
+            data: {
+                labels: bLabels,
+                datasets: [{
+                    data: bRevenues,
+                    backgroundColor: ['#6366f1', '#38bdf8', '#4ade80', '#fb923c', '#c084fc'],
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8' } }
+                }
             }
-        }
-    });
+        });
+    }
 });
 </script>
 {% endblock %}

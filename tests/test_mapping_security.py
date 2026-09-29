@@ -79,7 +79,7 @@ class MappingSecurityTestCase(TestCase):
 
     def test_audit_logging_lifecycle(self):
         """Verifies AuditLog records are written for profile creation, rule addition, and AI review."""
-        AuditLog.objects.all().delete()
+        initial_count = AuditLog.objects.count()
 
         profile = create_mapping_profile(self.ws_a, self.user_a, "Audited Profile", "Customer")
         self.assertTrue(AuditLog.objects.filter(action="MAPPING_PROFILE_CREATED", entity_id=str(profile.id)).exists())
@@ -98,3 +98,4 @@ class MappingSecurityTestCase(TestCase):
 
         reject_ai_mapping_rule(rule, self.user_a)
         self.assertTrue(AuditLog.objects.filter(action="MAPPING_RULE_REJECTED", entity_id=str(rule.id)).exists())
+        self.assertEqual(AuditLog.objects.count(), initial_count + 4)

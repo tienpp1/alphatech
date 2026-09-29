@@ -30,6 +30,7 @@ from apps.retail.services import (
     receive_goods_receipt,
     cancel_goods_receipt,
 )
+from apps.audit.models import AuditLog
 
 
 class RetailGoodsReceivingTestCase(TestCase):
@@ -199,6 +200,14 @@ class RetailGoodsReceivingTestCase(TestCase):
         # Verify branch B stock remains unaffected
         stock_b_asus = StockBalance.objects.filter(workspace=self.ws_retail, branch=self.branch_b, product=self.product_asus).first()
         self.assertIsNone(stock_b_asus)
+
+        audit = AuditLog.objects.filter(action="GOODS_RECEIPT_RECEIVED", entity_id=str(receipt.id)).latest("timestamp")
+        stock_changes = {entry["product_id"]: entry for entry in audit.changes["stock_changes"]}
+        self.assertEqual(stock_changes[str(self.product_asus.id)]["before_quantity"], 4)
+        self.assertEqual(stock_changes[str(self.product_asus.id)]["after_quantity"], 14)
+        self.assertEqual(stock_changes[str(self.product_lenovo.id)]["before_quantity"], 0)
+        self.assertEqual(stock_changes[str(self.product_lenovo.id)]["after_quantity"], 8)
+        self.assertTrue(stock_changes[str(self.product_lenovo.id)]["created_balance"])
 
     def test_cannot_receive_twice(self):
         """Prevents duplicate stock increments by throwing error on already received receipts."""

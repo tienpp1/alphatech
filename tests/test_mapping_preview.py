@@ -8,7 +8,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from apps.accounts.models import User, Role
+from apps.accounts.models import User, Role, Permission
 from apps.workspaces.models import Workspace, WorkspaceType, WorkspaceMembership
 from apps.integration.models import DataSource, SourceType, ImportJob, RawImportRecord
 from apps.retail.models import Customer, Order
@@ -29,6 +29,11 @@ class MappingPreviewTestCase(TestCase):
         )
         self.user = User.objects.create_user(username="previewer", email="previewer@example.com")
         self.role_admin = Role.objects.create(name="ADMIN")
+        permission, _ = Permission.objects.get_or_create(
+            codename="mapping.view_mapping",
+            defaults={"name": "View mapping", "module": "mapping"},
+        )
+        self.role_admin.permissions.add(permission)
         WorkspaceMembership.objects.create(
             workspace=self.workspace,
             user=self.user,

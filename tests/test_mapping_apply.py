@@ -12,7 +12,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from apps.accounts.models import User, Role
+from apps.accounts.models import User, Role, Permission
 from apps.workspaces.models import Workspace, WorkspaceType, WorkspaceMembership
 from apps.integration.models import DataSource, SourceType, ImportJob, RawImportRecord
 from apps.retail.models import Customer, Product, Category, Order
@@ -42,6 +42,11 @@ class MappingApplyTestCase(TestCase):
 
         self.user = User.objects.create_user(username="apply_user", email="apply@example.com")
         self.role_admin = Role.objects.create(name="ADMIN")
+        permission, _ = Permission.objects.get_or_create(
+            codename="mapping.apply_mapping",
+            defaults={"name": "Apply mapping", "module": "mapping"},
+        )
+        self.role_admin.permissions.add(permission)
 
         WorkspaceMembership.objects.create(workspace=self.retail_ws, user=self.user, role=self.role_admin, is_default=True)
         WorkspaceMembership.objects.create(workspace=self.service_ws, user=self.user, role=self.role_admin)

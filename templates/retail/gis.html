@@ -75,6 +75,22 @@
         border-radius: 50%;
         display: inline-block;
     }
+    @media (max-width: 900px) {
+        .gis-layout {
+            grid-template-columns: 1fr;
+            height: auto;
+            min-height: auto;
+        }
+        .map-container {
+            height: 420px;
+            order: 1;
+        }
+        .gis-sidebar {
+            order: 2;
+            padding-right: 0;
+            max-height: 500px;
+        }
+    }
 </style>
 {% endblock %}
 

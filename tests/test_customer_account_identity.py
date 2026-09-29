@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.public_web.customer_identity import customer_for_submission
 from apps.retail.models import Customer, Order
 from apps.workspaces.models import Workspace
+from apps.service_ops.models import Service, ServiceRequest
 
 
 class CustomerAccountIdentityTests(TestCase):
@@ -62,3 +63,33 @@ class CustomerAccountIdentityTests(TestCase):
         contact = ContactSubmission.objects.get()
         self.assertEqual(contact.user, self.user)
         self.assertEqual(contact.workspace, self.ws)
+
+    def test_service_inquiry_uses_service_workspace_not_retail_profile(self):
+        service = Service.objects.create(workspace=self.other, code="S", name="Test")
+        self.client.force_login(self.user)
+        response = self.client.post("/yeu-cau-dich-vu/", {
+            "customer_name": "Owner", "phone": "0900000000", "email": "different@example.com",
+            "service_id": service.pk, "description": "Test inquiry",
+        })
+        self.assertContains(response, "tiếp nhận thành công")
+        request = ServiceRequest.objects.get()
+        self.assertEqual(request.workspace_id, self.other.pk)
+        self.assertEqual(request.customer.workspace_id, self.other.pk)
+        self.assertEqual(request.customer.user_id, self.user.pk)
+        self.assertNotEqual(request.customer_id, self.customer.pk)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "owner@example.com")
+        self.assertFalse(self.user.workspace_memberships.exists())
+
+    def test_guest_service_inquiry_cannot_claim_existing_customer_email(self):
+        profile = customer_for_submission(workspace=self.other, user=self.user, name="Owner")
+        service = Service.objects.create(workspace=self.other, code="S", name="Test")
+        response = self.client.post("/yeu-cau-dich-vu/", {
+            "customer_name": "Owner", "phone": "0900000000", "email": self.user.email,
+            "service_id": service.pk, "description": "Guest inquiry",
+        })
+        self.assertContains(response, "tiếp nhận thành công")
+        request = ServiceRequest.objects.get()
+        self.assertEqual(request.customer.workspace_id, self.other.pk)
+        self.assertNotEqual(request.customer_id, profile.pk)
+        self.assertIsNone(request.customer.user_id)
