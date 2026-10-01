@@ -38,6 +38,7 @@ DATABASES = {'default': {
     'TEST': {'NAME': 'test_alphatech_evidence_' + EVIDENCE_RUN_ID},
 }}
 DEBUG = True
+FORECAST_ASYNC_ENABLED = True
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False

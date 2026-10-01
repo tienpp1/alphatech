@@ -13,6 +13,7 @@ from config.views import (
     executive_operational_report_ui_view,
     export_report_csv_view,
     system_telemetry_ui_view,
+    ai_command_center_ui_view,
 )
 from apps.workspaces.ui_views import switch_workspace_ui_view
 from apps.notifications.ui_views import bulletin_board_ui_view, bulletin_create_ui_view, team_chat_ui_view
@@ -24,6 +25,7 @@ urlpatterns = [
 
     # 2. Internal Business Management Portal (/noibo/)
     path("noibo/", root_dashboard_ui_view, name="noibo_dashboard"),
+    path("noibo/ai-command-center/", ai_command_center_ui_view, name="noibo_ai_command_center"),
     path("noibo/bao-cao-dieu-hanh/", executive_operational_report_ui_view, name="noibo_executive_report"),
     path("noibo/bao-cao-dieu-hanh/export-csv/", export_report_csv_view, name="noibo_executive_report_csv"),
     path("noibo/telemetry/", system_telemetry_ui_view, name="noibo_telemetry"),

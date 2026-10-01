@@ -79,6 +79,8 @@ if RENDER_EXTERNAL_HOSTNAME:
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
+    "channels",
     # Django built-in & GIS apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -336,6 +338,8 @@ LLM_API_KEY = os.getenv("LLM_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 FORECASTING_ARTIFACTS_DIR = BASE_DIR / "ml_models" / "forecasting"
 FORECASTING_ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 FORECAST_DEFAULT_HORIZON_DAYS = int(os.getenv("FORECAST_DEFAULT_HORIZON_DAYS", "14"))
+# Enable only when a supervised worker is actually running.
+FORECAST_ASYNC_ENABLED = os.getenv("FORECAST_ASYNC_ENABLED", str(DEBUG)).lower() in ("true", "1", "yes")
 FORECAST_DEFAULT_TEST_SIZE = float(os.getenv("FORECAST_DEFAULT_TEST_SIZE", "0.20"))
 FORECAST_DEFAULT_ESTIMATORS = int(os.getenv("FORECAST_DEFAULT_ESTIMATORS", "100"))
 FORECAST_DEFAULT_MAX_DEPTH = int(os.getenv("FORECAST_DEFAULT_MAX_DEPTH", "4"))
@@ -423,3 +427,5 @@ LOGGING = {
         },
     },
 }
+
+ASGI_APPLICATION = "config.asgi.application"

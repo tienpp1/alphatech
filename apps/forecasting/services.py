@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 import datetime
 import logging
 from django.utils import timezone
+from django.conf import settings
 from django.db.models import Q
 
 from apps.workspaces.models import Workspace, WorkspaceType
@@ -80,6 +81,8 @@ def execute_training_job(
     Triggers model training. When is_async=True, persists a job for forecast_worker
     and returns immediately with a PENDING run record.
     """
+    if is_async and not settings.FORECAST_ASYNC_ENABLED:
+        raise ValueError("Dự báo bất đồng bộ chưa được bật vì môi trường này chưa có worker vận hành.")
     validate_target_for_workspace(workspace, target_type)
     config = get_or_create_default_config(workspace, target_type)
     if dimensions:

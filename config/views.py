@@ -62,9 +62,11 @@ def get_health_status():
                 postgis_version = cursor.fetchone()
                 if postgis_version:
                     postgis_status = f"available ({postgis_version[0]})"
-            except (DatabaseError, OperationalError, ProgrammingError):
+            except Exception:
                 postgis_status = "extension_not_installed_or_disabled"
-    except (DatabaseError, OperationalError, ProgrammingError):
+    except Exception:
+        # Dependency probe only: adapters can raise non-Django exceptions.
+        # Do not expose their messages or traceback through the public probe.
         db_status = "disconnected"
         db_error = "database_unavailable"
 
@@ -89,8 +91,8 @@ def get_health_status():
         },
         "metrics": {},
         "phase": {
-            "current": "Production readiness baseline (ready)",
-            "status": "LOCAL READY / EXTERNAL GATES PENDING",
+            "current": "Production readiness baseline (local verified)",
+            "status": "LOCAL VERIFIED / EXTERNAL GATES PENDING",
             "total_phases": 13,
             "completed_phases": 12,
             "next": "Staging, credential rotation, HTTPS OAuth/email, observability and restore evidence",
@@ -659,3 +661,14 @@ def system_telemetry_ui_view(request):
         "authorized_workspaces": authorized_workspaces,
     }
     return render(request, "dashboard/telemetry.html", context)
+
+
+@login_required(login_url="/accounts/login/")
+def ai_command_center_ui_view(request):
+    """
+    Phase 2: Next-Gen AI Command Center.
+    """
+    from django.core.exceptions import PermissionDenied
+    if getattr(request, "workspace_access_denied", False) or not _report_workspaces(request.user, "telemetry").exists():
+        raise PermissionDenied("Bạn không có quyền xem màn hình này.")
+    return render(request, "dashboard/ai_command_center.html")

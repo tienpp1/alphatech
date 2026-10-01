@@ -52,6 +52,9 @@ ml_models/*.bin
 !ml_models/.gitkeep
 
 # Local evidence, reports and test-generated model artifacts are not releases.
+backup*.sql
+*.dump
+*.backup
 output/
 tmp/
 ml_models/forecasting/*.json

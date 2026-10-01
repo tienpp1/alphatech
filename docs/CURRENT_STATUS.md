@@ -1,4 +1,8 @@
-> **HIỆN HÀNH 25/09/2026 — đợt claims:** **84/97 (86,6%) tạm đóng**, 70 kế thừa + 14 đối chiếu lại; 13 mở. Đóng thêm 7/11/13 trong phạm vi tài liệu. Xem ACCEPTANCE_BATCH_2026_09_25_CLAIMS.md. Không chứng nhận production hoặc toàn bộ các mục kế thừa.
+> **HIỆN HÀNH 30/09/2026:** Checklist đủ 97 ID, 89 mục tạm đóng (91/94 theo xác nhận trực tiếp của chủ dự án), 8 mục còn thiếu tiêu chí gốc: 39, 57, 90, 92, 93, 95, 96, 97. Mục 96 hoãn vô thời hạn theo chủ dự án; mục 93 chỉ chấp nhận phần local, chưa chứng nhận remote CI. Xem ACCEPTANCE_REPAIR_2026_09_30.md. Không chứng nhận lại toàn bộ các mục kế thừa.
+
+AI Command Center dùng quyền telemetry hiện có. WebSocket kiểm tra user đang active và quyền trước accept, kiểm tra lại khi gửi; ASGI kiểm tra Origin. Giao diện và payload ghi rõ DEMO; bỏ số ngẫu nhiên được mô tả như độ chính xác AI thật, thêm nút tạm dừng và trạng thái mất kết nối. Khai báo channels/daphne trong requirements. Backup SQL được loại khỏi release candidates bằng .gitignore; không xóa hoặc restore dữ liệu.
+
+Tiếp tục 30/09: sửa khởi tạo Django trong forecast worker spawn/forkserver và shutdown child có timeout; 16/16 tests worker/queue/training OK (20.667s). Quét thêm 32 commit Git local: 0 finding theo mẫu secret, không chứng nhận provider rotation. Kết nối GitHub thất bại nên chưa push/deploy. Các số liệu nghiệm thu không tăng chỉ vì thêm test; mục 92 vẫn cần worker deployment thật.
 
 ## 2026-09-27 — System Optimization: Navigation Resilience, Selector Query Consolidation, RAG Error Boundaries & 23-Route RBAC Matrix
 
@@ -1418,3 +1422,12 @@ Last source review: 2026-09-06. This is code-based, not a historical phase repor
 - Validation conclusion: the repository is structurally healthy, but the complete suite is not green and its runtime exceeds the current onboarding cap.
 - Authorization hardening (2026-09-04): 49 focused Service/GIS/RBAC/isolation/routing tests passed in 115.450s; `manage.py check` passed and migration drift check reported no changes.
 - Production security baseline (2026-09-04): 37 focused cross-module security/RBAC tests passed in 202.403s; 10 tenancy isolation tests passed in 37.791s; 3 convergence UI/API tests passed in 18.595s; 11 tool/RAG/Phase-10 integration tests passed in 46.823s. `manage.py check` passed with 0 issues and migration drift reported no changes.
+## 2026-10-01 — Continuation (không đổi tiến độ 97 mục)
+
+Sửa health probe redaction/nhãn local verified, worker bounded join/start failure,
+và RAG nguồn mâu thuẫn số liệu. Render Free không có worker theo xác nhận mới:
+`FORECAST_ASYNC_ENABLED` mặc định theo DEBUG; production False từ chối enqueue,
+local test có opt-in. Chủ dự án nghiệm thu CI local, không chứng nhận remote PASS.
+GitHub API run 36538969165 failure; Render đang live SHA 27e7be7, chưa chứa các
+sửa đổi đợt này. RAG phiếu cũ 3/4 đủ ý; phản hồi sửa cần được chấm lại. Xem
+ACCEPTANCE_CONTINUATION_2026_10_01.md cho test/evidence; restore vẫn hoãn.

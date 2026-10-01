@@ -42,8 +42,12 @@ jobs:
         run: python scripts/check_release_secrets.py --output secret-scan.json
       - name: Provider transport and secret-guard regressions
         run: python manage.py test tests.test_provider_http_boundary tests.test_generation_provenance tests.test_embedding_provenance tests.test_release_secret_scan tests.test_legacy_admin_seed_disabled --noinput
-      - name: Provider transport and secret-guard regressions
-        run: python manage.py test tests.test_provider_http_boundary tests.test_generation_provenance tests.test_embedding_provenance tests.test_release_secret_scan --noinput
+      - name: Command Center authentication and simulation boundary
+        run: python manage.py test tests.test_command_center_security --noinput
+      - name: Forecast worker process and recovery regressions
+        run: python manage.py test tests.test_forecast_worker_process tests.test_forecasting_queue --noinput
+      - name: Grounded source disagreement regressions
+        run: python manage.py test tests.test_rag_source_authority tests.test_adversarial_rag_execution --noinput
       - run: python manage.py check
       - run: python manage.py makemigrations --check --dry-run
       - run: python manage.py migrate --noinput
@@ -54,16 +58,23 @@ jobs:
         run: bandit -q -r apps config -x "*/migrations/*" -f json -o bandit.json
       - name: Focused regressions with coverage
         if: ${{ !cancelled() }}
-        run: coverage run --branch manage.py test tests.test_customer_account_identity tests.test_approval_state_integrity tests.test_approvals tests.test_recommendations tests.test_public_ecommerce_cart_and_checkout tests.test_production_readiness tests.test_health tests.test_web_auth_routing tests.test_phase10_demonstration_scenarios tests.test_executive_reporting_and_telemetry tests.test_authorization_convergence tests.test_public_copilot_and_cart_api tests.test_internal_notifications tests.test_noibo_route_convergence --noinput
+        run: |
+          set -o pipefail
+          coverage run --branch manage.py test tests.test_customer_account_identity tests.test_approval_state_integrity tests.test_approvals tests.test_recommendations tests.test_public_ecommerce_cart_and_checkout tests.test_production_readiness tests.test_health tests.test_web_auth_routing tests.test_phase10_demonstration_scenarios tests.test_executive_reporting_and_telemetry tests.test_authorization_convergence tests.test_public_copilot_and_cart_api tests.test_internal_notifications tests.test_noibo_route_convergence --noinput 2>&1 | tee focused-tests.log
       - name: HTTPS email and deployment regressions
         if: ${{ !cancelled() }}
-        run: coverage run --append --branch manage.py test tests.test_brevo_email_backend tests.test_deployment_boundaries tests.test_report_metric_truthfulness tests.test_registration_codes tests.test_customer_email_outbox_and_oauth_security tests.test_google_oauth_and_email_notifications tests.test_public_auth_and_customer_experience --noinput
+        run: |
+          set -o pipefail
+          coverage run --append --branch manage.py test tests.test_brevo_email_backend tests.test_deployment_boundaries tests.test_report_metric_truthfulness tests.test_registration_codes tests.test_customer_email_outbox_and_oauth_security tests.test_google_oauth_and_email_notifications tests.test_public_auth_and_customer_experience --noinput 2>&1 | tee integrations-tests.log
       - name: Coverage gate
         if: ${{ !cancelled() }}
         run: coverage report --include="apps/accounts/*,apps/approvals/*,apps/public_web/*,apps/retail/*,apps/recommendations/*,apps/forecasting/*,config/*" --fail-under=40
       - name: Export coverage evidence
         if: ${{ !cancelled() }}
         run: coverage xml
+      - name: Record tested release
+        if: ${{ !cancelled() }}
+        run: git rev-parse HEAD > release-sha.txt
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
@@ -73,4 +84,7 @@ jobs:
             bandit.json
             coverage.xml
             secret-scan.json
+            focused-tests.log
+            integrations-tests.log
+            release-sha.txt
           retention-days: 14

@@ -1,6 +1,10 @@
 # AI Business Platform — canonical project context
 
 Last verified against source: 2026-09-15
+Command Center update (2026-09-30): /noibo/ai-command-center/ and the
+/ws/telemetry/ illustrative stream use existing telemetry permissions. ASGI
+validates Origin; the stream rechecks current active identity/membership on each
+send. DEMO data is explicitly labeled and never represents measured AI accuracy.
 Authority: current source code and migrations. Historical phase documents are secondary and may be stale.
 
 Provider transport update (2026-09-25): OAuth token/UserInfo and AI generation/
@@ -410,3 +414,7 @@ Render trust is limited to configured domains. See September 10 release evidence
 for deployed-versus-local status and prior administrator seed exposure.
 
 Keep customer UI Vietnamese; identifiers/enums are English/uppercase. Use `.for_workspace()` or an authorized set. Put mutation/calculation in services and reads in selectors. Use atomic transactions/locks for checkout, stock and approvals. Use explicit enums/transitions and historical snapshots. Audit significant mutations. Bound and validate uploads. Add migrations only intentionally, run schema checks, and add focused workspace/RBAC/IDOR tests. Reuse existing abstractions; do not create parallel models/routes/services.
+Forecast async contract (2026-10-01): `FORECAST_ASYNC_ENABLED` defaults to DEBUG.
+Production must explicitly enable it only with an operated worker; disabled
+async requests are rejected before creating configs/jobs. Render Free remains
+synchronous-only by owner decision; no paid worker provisioned.

@@ -1,5 +1,5 @@
 import datetime
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from apps.accounts.models import User
 from apps.workspaces.models import Workspace
@@ -9,6 +9,7 @@ from apps.forecasting.queue import claim_job, heartbeat, finish_failed, cancel_r
 from apps.forecasting.training import train_forecast_model
 
 
+@override_settings(FORECAST_ASYNC_ENABLED=True)
 class ForecastQueueTests(TestCase):
     def setUp(self):
         self.ws = Workspace.objects.create(code="queue-retail", name="Queue", workspace_type="RETAIL")
@@ -16,6 +17,14 @@ class ForecastQueueTests(TestCase):
 
     def enqueue(self):
         return execute_training_job(self.ws, TargetType.RETAIL_REVENUE, user=self.user, is_async=True)
+
+    @override_settings(FORECAST_ASYNC_ENABLED=False)
+    def test_disabled_async_creates_no_pending_job_or_config(self):
+        from apps.forecasting.models import ForecastModelConfig
+        with self.assertRaisesMessage(ValueError, 'chưa có worker'):
+            self.enqueue()
+        self.assertEqual(ForecastRun.objects.count(), 0)
+        self.assertEqual(ForecastModelConfig.objects.count(), 0)
 
     def test_job_persists_until_worker_claims_it(self):
         pending = self.enqueue()

@@ -520,6 +520,25 @@ def _call_gemini_chat_api(prompt: str, api_key: str, model_name: str) -> Optiona
     return None
 
 
+def _numeric_source_disagreements(chunks):
+    """Conservative offline warning: same sentence, one differing number.
+
+    This is not a semantic contradiction classifier. Different wording,
+    negations, units or effective dates are deliberately not inferred.
+    """
+    groups = {}
+    number_pattern = r"(?<!\w)\d+(?:[.,]\d+)?(?!\w)"
+    for chunk in chunks[:3]:
+        for sentence in re.split(r"(?<=[.!?])\s+|\n", chunk['content']):
+            sentence = ' '.join(sentence.casefold().strip(' .!?').split())
+            numbers = re.findall(number_pattern, sentence)
+            if len(numbers) != 1:
+                continue
+            key = re.sub(number_pattern, '<number>', sentence)
+            groups.setdefault(key, set()).add(numbers[0])
+    return [sorted(values) for values in groups.values() if len(values) > 1]
+
+
 def generate_grounded_answer(
     workspace: Workspace,
     user: User,
@@ -580,6 +599,9 @@ QUY TẮC CỐT LÕI (BẮT BUỘC):
 2. Nếu ngữ cảnh KHÔNG đủ thông tin để trả lời, hãy trả lời chính xác: "{FALLBACK_NO_CONTEXT_MESSAGE}".
 3. Trích dẫn rõ ràng nguồn tài liệu (Tên tài liệu, Trang hoặc Mục) hoặc số liệu hệ thống trong câu trả lời.
 4. Trả lời mạch lạc, súc tích bằng tiếng Việt.
+5. Nếu các nguồn đưa ra thông tin khác nhau, nêu rõ từng thông tin và nguồn;
+không tự chọn một nguồn là hiện hành hoặc có thẩm quyền chỉ vì đứng đầu kết quả
+tìm kiếm. Nếu không có bằng chứng về hiệu lực, yêu cầu người dùng xác nhận.
 
 DỮ LIỆU NGỮ CẢNH:
 {full_context}
@@ -1060,6 +1082,20 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
 
     # 2. Extract grounded text from relevant chunks
     if chunks:
+        disagreements = _numeric_source_disagreements(chunks)
+        if disagreements:
+            values = '; '.join('/'.join(group) for group in disagreements)
+            answer_parts.append(
+                f"Có mâu thuẫn số liệu giữa các trích đoạn cùng cách diễn đạt ({values}). "
+                "Chưa thể kết luận giá trị nào áp dụng; cần xác nhận tài liệu có hiệu lực. "
+                "Các nguồn tương ứng được trích dẫn bên dưới."
+            )
+        if len({ch['document_title'] for ch in chunks}) > 1:
+            answer_parts.append(
+                "Các trích đoạn đến từ nhiều tài liệu; thứ tự tìm kiếm không xác nhận "
+                "nguồn nào đang có hiệu lực. Nếu thông tin khác nhau, cần xác nhận "
+                "tài liệu được áp dụng trước khi kết luận hoặc thực hiện."
+            )
         top_chunk = chunks[0]
         cite_str = f"[Nguồn: {top_chunk['document_title']}"
         if top_chunk.get("heading"):
@@ -1078,9 +1114,9 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
 
         # Multi-chunk synthesis: if additional distinct sections match, append key grounded points
         if len(chunks) > 1:
-            seen_sections = {f"{top_chunk['document_title']}::{top_chunk.get('heading') or ''}"}
+            seen_sections = {(top_chunk['document_title'], top_chunk.get('heading'), top_chunk['content'].strip())}
             for sec_chunk in chunks[1:3]:
-                sec_key = f"{sec_chunk['document_title']}::{sec_chunk.get('heading') or ''}"
+                sec_key = (sec_chunk['document_title'], sec_chunk.get('heading'), sec_chunk['content'].strip())
                 if sec_key in seen_sections:
                     continue
                 seen_sections.add(sec_key)

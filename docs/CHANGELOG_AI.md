@@ -1000,3 +1000,21 @@ bypass. Vietnamese registration UI supports paste/autofill and failed-mail warni
   forecast coverage metrics, and full-suite discovery vs execution claims.
 - Added full-suite evidence runner using an isolated local PostgreSQL/PostGIS DB,
   before/after source hashes and persisted execution log. Production not certified.
+# 2026-09-30 — Command Center authorization and evidence correction
+
+- Forecast worker initializes Django before child model imports for spawn/forkserver; closes inherited connections and bounds terminate/kill cleanup. Verified by process import and existing queue/training tests; no production recovery claim.
+- Added a redacted read-only scan of reachable local Git history; no history rewrite or credential changes.
+
+- Reuse telemetry workspace permissions for the new internal page and socket; reject public customers and foreign origins, and re-check permissions on open connections.
+- Label the illustrative feed DEMO throughout; replace random accuracy claims with fixed fixture values and plain-text logs, pause control and disconnect feedback.
+- Declare Channels/Daphne dependencies; ignore database backup artifacts.
+- Restore 97 unique checklist IDs and UTF-8 from the Git baseline; retain source claims with explicit corrections where CI, worker and human review evidence is missing. No production gate is inferred from local tests.
+### 2026-10-01 — Safe health failures, worker bounds and grounded disagreement
+
+- Restored public health redaction for non-Django adapter failures and truthful
+  local-verified metadata, preserving existing regression assertions.
+- Bounded worker join and sanitized start failures; production async opt-in
+  prevents orphan pending jobs when no worker is operated on Render Free.
+- RAG preserves distinct same-section excerpts; source rank is not authority.
+  Conservative same-sentence numeric disagreement warning (not semantic grading).
+- CI retains failing exit codes and exports test logs with release SHA.
