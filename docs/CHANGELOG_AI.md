@@ -2,6 +2,12 @@
 
 Do not log cosmetic edits.
 
+### 2026-10-01 — CSP enforcement compatibility
+
+- Allowed the exact Tailwind, Iconify and existing cdnjs script origins used by current templates; allowed Iconify API fallback origins. No wildcard script origin or new frontend dependency.
+- Added template-origin and enforcement-header regressions and a CI step. Retained legacy inline/eval allowances explicitly; this is a compatibility baseline, not strict nonce-based CSP certification.
+- Local HTTPS/email group: 77/77 OK (249.440s); CSP/readiness/deployment/health: 15/15 OK (5.702s). These results do not replace the failed remote CI run or database restore evidence.
+
 ### 2026-09-26 — Internal login credential boundary and readiness gates
 
 - Hid fixed demo credentials on `/accounts/login/` unless the process is in DEBUG mode and an explicit `SHOW_DEMO_CREDENTIALS` opt-in is enabled. Production rechecks DEBUG in the view and cannot expose the panel by setting the opt-in alone.

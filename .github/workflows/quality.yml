@@ -44,6 +44,8 @@ jobs:
         run: python manage.py test tests.test_provider_http_boundary tests.test_generation_provenance tests.test_embedding_provenance tests.test_release_secret_scan tests.test_legacy_admin_seed_disabled --noinput
       - name: Command Center authentication and simulation boundary
         run: python manage.py test tests.test_command_center_security --noinput
+      - name: Existing asset CSP compatibility
+        run: python manage.py test tests.test_csp_asset_compatibility --noinput
       - name: Forecast worker process and recovery regressions
         run: python manage.py test tests.test_forecast_worker_process tests.test_forecasting_queue --noinput
       - name: Grounded source disagreement regressions

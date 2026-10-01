@@ -42,8 +42,10 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         "img-src 'self' data: blob: https:; "
         "font-src 'self' data: https://fonts.gstatic.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
-        "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://router.project-osrm.org; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com "
+        "https://cdn.tailwindcss.com https://code.iconify.design https://cdnjs.cloudflare.com; "
+        "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://router.project-osrm.org "
+        "https://api.iconify.design https://api.simplesvg.com https://api.unisvg.com; "
         "frame-src https://accounts.google.com; form-action 'self' https://accounts.google.com"
     )
 
