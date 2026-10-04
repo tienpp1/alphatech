@@ -25,3 +25,30 @@ Validation (2026-10-04):
 Release intentionally excludes unrelated policy-copy/UI edits and the 97-item
 ledger. Neither local tests nor this record constitutes proof of deployment or
 live Google UAT; those results must be recorded after verification.
+
+## Deployment and live observations
+
+- Pushed eef91502469ba80608a58f8cbf8697d642c7c9b7 to origin/main.
+- Render deploy dep-db0sgrvavr4c7395c590 is live at that exact SHA.
+- Reused the authorized Google test account through the real account chooser.
+  Its session existed before deployment. Reload after deployment removes the
+  internal banner and internal links; customer profile and cancelled test orders
+  remain visible. Screenshot output/uat_20261004/google-banner-removed.png.
+- Direct browser navigation to /noibo/ was ERR_BLOCKED_BY_CLIENT with no captured
+  response; do NOT cite this as a live HTTP 403. Denial 403 is proven by automated
+  regressions, not that blocked browser navigation.
+- Real HTTPS password logins for admin, manager, employee all return 200/success;
+  all three can GET /noibo/ with 200. Verification sessions/tokens logged out.
+  Redacted evidence output/internal_live_auth_20261004.json.
+- No migrations, customer data or password changes in this fix. No 97-item
+  progress changes. Other pre-existing dirty edits remain uncommitted.
+
+## Independent HTTPS denial observation (04/10 follow-up)
+
+The browser still blocks JSON navigation; a separate read-only HTTPS diagnostic
+reused an already-issued session belonging to the authorized Google-linked test
+identity. Public /tai-khoan/ returned 200 with the expected authenticated account.
+/noibo/, /noibo/retail/orders/162/ and /api/v1/auth/me/ each returned 403.
+No synthetic session was created. No cookie, token, session data or credential
+was retained in output/google_http_live_20261004.json. The production DB connection
+was read-only. This supplies the HTTP evidence missing from the browser attempt.

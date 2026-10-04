@@ -46,6 +46,8 @@ jobs:
         run: python manage.py test tests.test_command_center_security tests.test_google_internal_boundary --noinput
       - name: Existing asset CSP compatibility
         run: python manage.py test tests.test_csp_asset_compatibility --noinput
+      - name: Public policy and customer notification boundaries
+        run: python manage.py test tests.test_public_policy_copy tests.test_policy_and_claim_consistency tests.test_customer_approval_notices tests.test_public_website_and_portal_separation --noinput
       - name: Forecast worker process and recovery regressions
         run: python manage.py test tests.test_forecast_worker_process tests.test_forecasting_queue --noinput
       - name: Grounded source disagreement regressions

@@ -31,9 +31,26 @@ from apps.public_web.email_service import (
 
 class PolicyAndClaimConsistencyTests(SimpleTestCase):
     """
-    Rigorously validates that all public templates, chatbot handlers,
-    and transactional emails strictly adhere to verified policy boundaries.
+    Validates published templates, chatbot handlers and email policy boundaries.
     """
+
+    def test_homepage_does_not_reintroduce_unmeasured_production_claims(self):
+        html = render_to_string('public/home.html', {})
+        for claim in ('99.98%', '&lt; 1.2ms', '100% Chính hãng / Đầy đủ CO-CQ',
+                      'Cam kết phản hồi SLA:', 'SLA &lt; 15 PHÚT', 'triệt tiêu lỗi lan truyền'):
+            self.assertNotIn(claim, html)
+        for notice in ('ví dụ giả định', 'không phải báo giá hay cam kết SLA thực tế',
+                       'Chỉ số minh họa', 'Mốc thời gian giả định:'):
+            self.assertIn(notice, html)
+
+    def test_service_inquiry_countdown_is_not_a_response_commitment(self):
+        html = render_to_string('public/service_request.html', {})
+        for claim in ('Phản hồi xác nhận trong vòng', 'Cam kết phản hồi SLA',
+                      '(Phản hồi &lt; 15 phút)', 'thuật toán điều phối kỹ sư phù hợp nhất'):
+            self.assertNotIn(claim, html)
+        for notice in ('không phải cam kết SLA', 'ĐẾM NGƯỢC MÔ PHỎNG',
+                       'chưa đồng nghĩa lịch hẹn hoặc kỹ sư đã được phân công'):
+            self.assertIn(notice, html)
 
     # -------------------------------------------------------------------------
     # 1. Gate 43 & 44: Web Templates Free of Unverified / Hyperbolic Claims

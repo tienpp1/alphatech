@@ -128,7 +128,7 @@
                         </label>
                         <input type="email" name="email" id="email" required value="{{ customer_email }}" placeholder="nguyenvana@gmail.com"
                                class="pub-form-control">
-                        <div style="font-size: 0.8rem; color: var(--pub-text-muted); margin-top: 5px;">Mã vận đơn và hóa đơn điện tử sẽ được gửi về địa chỉ này.</div>
+                        <div style="font-size: 0.8rem; color: var(--pub-text-muted); margin-top: 5px;">Email này dùng để nhận thông tin đơn hàng. Vận chuyển và hóa đơn cần được xác nhận riêng.</div>
                     </div>
                 </div>
 
@@ -149,7 +149,7 @@
                             <input type="radio" name="delivery_method" value="HOME_DELIVERY" {% if delivery_method == 'HOME_DELIVERY' %}checked{% endif %} style="margin-top: 4px; accent-color: #2563EB;">
                             <div>
                                 <strong style="display: block; font-size: 0.95rem; color: var(--pub-text-heading); font-weight: 700;">Giao hàng tận nơi</strong>
-                                <span style="font-size: 0.8rem; color: var(--pub-text-muted); line-height: 1.4; display: block; margin-top: 2px;">Giao nhanh toàn quốc, phí tiêu chuẩn 30.000đ (Miễn phí từ 5 triệu)</span>
+                                <span style="font-size: 0.8rem; color: var(--pub-text-muted); line-height: 1.4; display: block; margin-top: 2px;">Giao tận nơi theo địa chỉ được xác nhận, phí tiêu chuẩn 30.000đ (Miễn phí từ 5 triệu)</span>
                             </div>
                         </label>
 

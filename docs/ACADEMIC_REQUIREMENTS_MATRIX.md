@@ -4,6 +4,13 @@
 tính từ root repository. Có test không có nghĩa test đã chạy ở commit production.
 Batch là hồ sơ kết quả lịch sử có phạm vi, không cộng tổng test giữa các batch.
 
+Cập nhật đối chiếu 04/10: các thiếu sót lịch sử trong bảng dưới đây phải đọc cùng
+`RELEASE_ACCEPTANCE_2026_10_04.md`. UAT retail đúng người/ack/reload và restore
+độc lập đã có bằng chứng; RAG conflict, GPS, email và xác minh khác thiết bị có
+Human Evaluation của chủ dự án. Không biến các xác nhận theo mẫu thành độ chính
+xác toàn hệ thống. Mỗi release có test/CI riêng; giữ phạm vi local storage và
+worker production tắt theo lựa chọn đồ án.
+
 | Mã | Mã nguồn | Kiểm thử đại diện | Bằng chứng / thiếu |
 |---|---|---|---|
 | AUTH | `apps/public_web/registration.py` | `tests/test_registration_codes.py` | Batch 09/10: local replay/trùng/xác minh; inbox/HTTPS từng sự kiện còn mở |

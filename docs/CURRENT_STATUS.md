@@ -1,6 +1,150 @@
-> **HIỆN HÀNH 30/09/2026:** Checklist đủ 97 ID, 89 mục tạm đóng (91/94 theo xác nhận trực tiếp của chủ dự án), 8 mục còn thiếu tiêu chí gốc: 39, 57, 90, 92, 93, 95, 96, 97. Mục 96 hoãn vô thời hạn theo chủ dự án; mục 93 chỉ chấp nhận phần local, chưa chứng nhận remote CI. Xem ACCEPTANCE_REPAIR_2026_09_30.md. Không chứng nhận lại toàn bộ các mục kế thừa.
+> **HIỆN HÀNH 04/10/2026:** xem RELEASE_ACCEPTANCE_2026_10_04.md cho bản sửa nội dung, kiểm thử staged tree, CI/Render và UAT. Restore độc lập 02/10 đã PASS; TEST retail 162 đã hủy sau kiểm tra owner/nonowner/ack. HTTP Google-linked identity thật: public 200, ba endpoint nội bộ 403. Ledger 97 giữ nguyên theo Rule 12; không dùng số lịch sử làm chứng nhận production.
 
-AI Command Center dùng quyền telemetry hiện có. WebSocket kiểm tra user đang active và quyền trước accept, kiểm tra lại khi gửi; ASGI kiểm tra Origin. Giao diện và payload ghi rõ DEMO; bỏ số ngẫu nhiên được mô tả như độ chính xác AI thật, thêm nút tạm dừng và trạng thái mất kết nối. Khai báo channels/daphne trong requirements. Backup SQL được loại khỏi release candidates bằng .gitignore; không xóa hoặc restore dữ liệu.
+> **LỊCH SỬ 01/10/2026 — TIẾP TỤC KIỂM CHỨNG:** Checklist đủ 97 ID, **96 mục tạm đóng theo phạm vi**, chỉ 96 hoãn vô thời hạn. Render dep-dav1j7e0tbcc73d6ddlg live SHA f2a831c; GitHub run 36836448440 cùng SHA completed/success, mọi bước quality success. HTTP thật có HSTS 3600s/CSP enforcement/CSRF Secure; browser map/video/3D khởi tạo được. Mục 92 đóng có điều kiện vì FORECAST_ASYNC_ENABLED=False và chủ dự án không dùng async production trên Free; không chứng nhận worker production. Secret source/history known-pattern scan không có findings, rotation theo Human Evaluation. Local 77/77 HTTPS/email và 15/15 CSP/readiness/deployment/health PASS; check/migration drift exit 0. Xem RELEASE_GATE_REOPEN_2026_10_01.md. Không chứng nhận 100%, disaster recovery, mọi mục kế thừa hoặc strict nonce CSP. Tài liệu nghiệm thu local còn dirty, không coi là đã deploy.
+
+## 2026-10-04 — Đối chiếu release nội dung và bằng chứng nghiệm thu
+
+Thông tin hiện hành của đợt này nằm trong RELEASE_ACCEPTANCE_2026_10_04.md.
+Header 01/10 và trạng thái restore hoãn bên trên là lịch sử: restore độc lập
+02/10 đã PASS, TEST 162 đã hủy sau UAT, eef9150 đã live và CI 37174258042 success.
+Không lấy ghi nhận cũ làm trạng thái hiện tại. Ledger 97 giữ nguyên theo Rule 12.
+Đang xác nhận bản sửa nội dung công bố trên staged tree, CI và production.
+
+## 2026-10-04 — Cấp lại thông tin đăng nhập nội bộ theo xác nhận chủ dự án
+
+Sửa boundary Google-linked identity: không cho password/token/legacy superuser
+vượt ranh giới customer/internal; ẩn banner bằng cùng policy server. Exact release
+tree 72 tests PASS/11.988s; full local snapshot 1197 PASS/276.170s, 711 fingerprint
+không đổi. check/migration drift/diff check đạt. Xem GOOGLE_ACCOUNT_ISOLATION_2026_10_04.md.
+Đã push eef9150, Render dep-db0sgrvavr4c7395c590 live đúng SHA. Browser phiên
+Google thật sau reload không còn banner/link nội bộ; profile/đơn vẫn có. Browser
+tool chặn navigation JSON /noibo/ bằng ERR_BLOCKED_BY_CLIENT, không coi là bằng
+chứng live HTTP 403. Ba internal password login và GET /noibo/ đều 200; sessions
+kiểm chứng đã logout. Chi tiết trong GOOGLE_ACCOUNT_ISOLATION_2026_10_04.md.
+Ledger 97 không đổi; ghi nhận banner cũ bên dưới là lịch sử trước bản deploy này.
+
+UAT retail TEST 162 đã hoàn tất bước còn chờ: browser chủ đơn hiển thị thông báo
+đúng mã ORD-20261004-7ACE63; đóng rồi reload không lặp. Admin đã hủy đơn qua UI.
+DB read-only xác nhận CANCELLED, notice 28 đã đọc/đúng owner, read_at
+2026-10-04T03:12:32.101194+00:00. Ảnh owner/after-reload/cancelled lưu trong
+output/uat_20261004. Thay thế trạng thái “còn chờ” trong các ghi nhận lịch sử
+bên dưới. Banner nội bộ vẫn hiện trên trang khách hàng Google của production;
+chưa chứng nhận phân tách quyền hoặc triển khai dirty patch. Không đổi ledger 97.
+
+**Cập nhật cuối:** chủ dự án yêu cầu dùng mật khẩu demo dễ đoán cho đúng ba tài
+khoản sau khi được cảnh báo rủi ro production. Đã đổi theo xác nhận, giữ tên
+`employee`, không đổi quyền hoặc password validators toàn hệ thống, không tạo
+quy tắc đánh số tự động. Ba HTTPS login và truy cập `/noibo/` đều 200/success;
+token cũ và token kiểm chứng đã thu hồi. Các mật khẩu cấp trước đã hết hiệu lực.
+Thông tin hiện hành lưu riêng ngoài Git tại
+`D:/AlphaTech_Private/internal_demo_credentials_20261004/`.
+Đây là ngoại lệ demo theo yêu cầu người dùng, không phải cấu hình mật khẩu
+đạt chuẩn production; không thay đổi tiến độ/cấu trúc checklist 97 mục.
+
+Theo yêu cầu tiếp theo, đã thay ba mật khẩu bằng ba passphrase độc lập, mỗi
+passphrase gồm năm từ tiếng Việt không dấu chọn ngẫu nhiên và bốn chữ số.
+Giữ nguyên mọi membership/quyền; thu hồi token cũ, ghi audit password-only.
+File thông tin mới nằm trong thư mục riêng `D:/AlphaTech_Private/internal_passphrases_20261004/`;
+mật khẩu trong file cấp lần trước không còn hiệu lực. Không công bố giá trị bí mật.
+
+Đã dùng lại ba tài khoản production `admin`, `manager`, `employee`, đặt ba mật khẩu
+ngẫu nhiên khác nhau và thu hồi token cũ. ADMIN (giữ superuser), MANAGER và EMPLOYEE
+được gán tương ứng trên cả `abc-retail` và `xyz-service`; giữ nguyên bộ permission
+hiện có, email và dữ liệu khác. Sáu audit records ghi nhận thao tác bảo trì theo
+ủy quyền chủ dự án, không giả lập danh tính người đăng nhập. Không thay đổi `minhtien`
+hoặc tài khoản khách hàng/Google, không migration, không đổi checklist 97 mục.
+
+Kiểm chứng HTTPS production: cả ba POST `/api/v1/auth/login/` trả 200/success,
+GET `/noibo/` trả 200 đúng đường dẫn; password readback hợp lệ, sáu membership
+đúng vai trò. Token dùng cho kiểm chứng đã thu hồi. Mật khẩu chỉ nằm trong thư mục
+riêng ngoài repository có ACL giới hạn người dùng Windows hiện tại và SYSTEM;
+không ghi vào tài liệu/log. Email của ba tài khoản vẫn là placeholder `example.com`,
+chưa dùng để khôi phục email thật. Đây là bảo trì tài khoản, không chứng minh bản
+vá phân tách tài khoản Google/nội bộ đang dirty đã được triển khai.
+
+## 2026-10-04 — Full regression và ordinary-customer UAT tiếp nối
+
+Full snapshot cuối: 1194 tests/196.973s OK, 0 failure/error/skip, exit 0;
+710 input fingerprints không đổi. Lượt đầu 1192 tests có 33 failures/7 errors:
+sửa sessionless middleware, đồng bộ fixture vai trò hợp lệ mà giữ grants và
+assertion nghiệp vụ, denial 403 và manifest. Nhóm giữa 124 tests còn 2 lỗi
+expectation redirect, đã sửa rồi chạy full lại. Không bỏ/skip tests.
+35 use cases đều có file/test ID thực thi; check 0 issues, không migration drift.
+Bandit sau patch exit 0; pip-audit local không known vulnerability; secret scanner
+797 files/34 local commits không findings theo mẫu. Không chứng nhận provider.
+Production TEST ORD-20261004-7ACE63 (162) đã tạo/duyệt qua UI với cho phép cụ thể;
+khách thường Tien Billy không thấy dialog và không xem được đơn của Minh,
+notice 28 vẫn unread/đúng owner theo read-only DB. Còn chờ owner login để
+ack/reload và hủy TEST; chưa push/deploy patch. Xem ACCEPTANCE_CONTINUATION_2026_10_04.md.
+Không sửa số tiến độ/cấu trúc 97 mục; giới hạn off-site/local storage/async giữ nguyên.
+
+## 2026-10-03 — Tách phiên Google khỏi cổng nội bộ
+
+Theo xác nhận của chủ dự án: phiên Google chỉ dùng public; ADMIN/superuser,
+MANAGER và EMPLOYEE vẫn vào nội bộ bằng mật khẩu. Chặn HTTP nội bộ/legacy/admin,
+API profile chứa token và WebSocket telemetry; ẩn nút nội bộ theo cùng policy.
+Phiên Google-linked cũ không rõ phương thức phải đăng nhập lại bằng mật khẩu.
+Không xóa membership/quyền hay thay đổi schema/dữ liệu nghiệp vụ; không sửa
+tiến độ/cấu trúc checklist 97 mục. Chưa push/deploy hoặc UAT production thay đổi này.
+
+Kiểm chứng local: nhóm tổng hợp 110 tests PASS/38.051s, exit 0, trên database
+PostgreSQL/PostGIS test riêng (settings_evidence_test). Lượt tổng hợp chỉ override
+password hasher sang MD5 trong process TEST để tăng tốc; không đổi hasher ứng dụng.
+Trước đó lượt xác nhận 16 tests/121.892s và 2 tests/14.327s PASS với hasher mặc định.
+Django check: 0 issues; makemigrations --check --dry-run: No changes detected.
+Chi tiết lệnh, lỗi đầu tiên và điều chỉnh test: GOOGLE_INTERNAL_BOUNDARY_2026_10_03.md.
+
+## 2026-10-03 — Full snapshot xanh và vá khoảng trống câu chữ mua hàng
+
+Full isolated PostgreSQL/PostGIS: 1179 tests/3108.343s OK, 0 failures/errors/
+skips, wrapper exit 0; fingerprint 705 inputs không đổi. Join đủ 35 use case,
+không thiếu referenced file/test execution IDs. Evidence ở
+output/acceptance_verification/20261003T014851Z; đây là snapshot trước patch
+câu chữ tiếp nối, không phải certification production hoặc full suite sau mọi
+patch. Sau đó bỏ cam kết mặc định bảo hành/đổi mới/VAT/hóa đơn/giao hỏa tốc trên
+product/cart/checkout/order success và “toàn quyền” trên staff banner; giữ
+layout/animation/phép tính/schema. Thêm 5 tests. Lượt đầu 48 tests có 2 errors
+do fixture thiếu field; bổ sung fixture giữ assertion, rerun 48/48 OK (105.797s).
+Browser local product 44 đúng copy; production account thứ hai gặp Not Found
+khi mở đơn TEST của người khác nhưng có quyền nội bộ, chưa ordinary-customer
+unread-notice UAT. Chưa tạo TEST mới/push/deploy; không đổi số/cấu trúc 97 mục.
+Xem ACCEPTANCE_CONTINUATION_2026_10_03.md. Local readiness BLOCKED không phải
+cấu hình Render; off-site/storage/worker production vẫn giữ giới hạn đã chốt.
+
+## 2026-10-02 — Restore được cho phép và kiểm chứng độc lập
+
+Browser UAT tiếp nối: với cho phép cụ thể, tạo đơn TEST ORD-20261002-9733DF
+(ID 161, 09:06), xác nhận qua /noibo/; tab chủ đơn thấy animation và đúng mã
+đơn. Sau ack/reload/chu kỳ polling không lặp. Đã hủy đúng đơn TEST qua UI,
+giữ record/audit, không thanh toán/giao hàng. Hai tab cùng tài khoản có quyền
+nội bộ; chưa browser-test tài khoản thứ hai. Screenshot và giới hạn bằng chứng
+ở ACCEPTANCE_CONTINUATION_2026_10_02.md; không tự nâng số tiến độ 97 mục.
+
+UAT chủ dự án: 08:30 ngày 02/10 đăng ký Windows 11/Chrome → xác minh iPhone
+14/Gmail/Safari → máy tính tự đăng nhập: PASS theo Human Evaluation. 08:40
+duyệt dịch vụ Windows/Chrome → đúng khách iPhone/Safari thấy animation: PASS
+theo Human Evaluation. Riêng animation đơn bán lẻ chưa nghiệm thu production;
+6/6 notification regressions OK (6.273s) không thay thế UAT. Browser nay mở được,
+tài khoản đang đăng nhập có quyền nội bộ/chưa có đơn; chờ xác nhận đơn TEST.
+
+Full diagnostic kết thúc 1170 tests/3229.868s, 2 failures (exit 1): stale role
+cache sau thu hồi membership và thiếu 8 file trong manifest. Đã sửa cache
+quyền/vai trò thành đọc DB hiện hành và bổ sung manifest; 2/2 regression mới
+OK (22.099s). Tái kiểm chứng bulletin/chat/manifest/RBAC/authorization đạt
+36/36 OK (310.089s); customer notices với controlled transition và persistent
+ack đạt 7/7 OK (16.939s). Không gọi full suite cuối cùng xanh.
+Nhóm authorization/approval concurrency/registration: 35/35 OK (229.113s).
+Không thay cấu trúc hoặc số tiến độ checklist 97 mục.
+
+Tiếp tục nghiệm thu: chủ dự án đính chính R2 endpoint là ví dụ, chưa có bucket; chốt Local Storage cho đồ án và không triển khai S3 production trong đợt này. Runtime giữ FileSystemStorage, không upload dữ liệu hoặc gọi storage production PASS. Bandit local 0 findings/0 parse errors; phát hiện runtime Python toàn máy có advisories nên tạo .venv-acceptance riêng, không sửa global runtime. Trang service inquiry cũng còn claim dưới 15 phút: sửa thành minh họa/cần xác nhận, 16/16 copy regressions PASS (2.046s). Full diagnostic suite có failure, đang chờ traceback; xem ACCEPTANCE_CONTINUATION_2026_10_02.md. Không nâng số tiến độ 97 mục.
+
+Chủ dự án xác nhận chưa có nơi lưu ngoài máy và hoãn off-site backup để làm sau. Backup mã hóa D chỉ là local; không chứng nhận phục hồi khi mất máy. Tiếp tục harden công cụ backup: từ chối .env.*, archive traversal/tên trùng/manifest giả; 9/9 guard/backup unit tests PASS (0.120s). Full suite trên database evidence tách biệt đang được chạy, chưa có kết luận cuối; không nâng tiến độ 97 mục.
+
+Tiếp tục 02/10: theo lựa chọn lưu ổ D, tạo backup.fernet tại D:/AlphaTech_Backups/alphatech_20261002_a3abbcd933, 868 files/5000716 bytes; giải mã/hash verification và tamper rejection PASS. Key DPAPI ở thư mục riêng, không portable/off-site. Render Free/disk null + FileSystemStorage chưa chứng minh backup production filesystem; 3 model artifact references trong DB không có local file tương ứng. Checklist đủ 97 ID nhưng 70 trạng thái kế thừa, không chứng nhận tái nghiệm thu 100%. Homepage còn claim chưa đo; chuẩn bị patch local giữ animation và nhãn minh họa, 14/14 policy/CSP PASS; 7/7 guard/backup unit tests PASS. Chưa push/deploy patch; không sửa cấu trúc/số tiến độ checklist. Xem BACKUP_AND_97_REVIEW_2026_10_02.md.
+
+Yêu cầu mới cho phép diễn tập an toàn, thay trạng thái hoãn restore ngày 01/10 cho lần này. pg_dump production Render alphatech_db → custom archive → pg_restore trên database mới local alphatech_restore_20261002_398b4903fc đã hoàn tất. 60 bảng/10576 dòng (gồm PostGIS) khớp count/hash sau chuẩn hóa UTC; constraints/triggers khớp, 53 sequences hợp lệ, 0 invalid indexes/0 unvalidated constraints/0 pending migrations, Django check 0 issues. Dump 633369 bytes, dump 64.704s/restore 10.575s. Không ghi/reset nguồn, không dùng TEMPLATE clone; artifacts private có ACL và Git ignore. Lưu bằng chứng mismatch timezone ban đầu, verification_utc.json PASS sau điều tra; 3/3 guard tests PASS. Xem PRODUCTION_RESTORE_DRILL_2026_10_02.md. Không tự sửa số tiến độ hoặc cấu trúc checklist 97 mục; không chứng nhận cloud failover/PITR/off-site backup, media/model files hoặc production role/grant recovery.
+
+AI Command Center dùng quyền telemetry hiện có. WebSocket kiểm tra user đang active và quyền trước accept, kiểm tra lại khi gửi; ASGI kiểm tra Origin. Giao diện và payload ghi rõ DEMO; bỏ số ngẫu nhiên được mô tả như độ chính xác AI thật, thêm nút tạm dừng và trạng thái mất kết nối. Khai báo channels/daphne trong requirements. Backup SQL được loại khỏi release candidates bằng .gitignore; không xóa dữ liệu hiện hành.
 
 Tiếp tục 30/09: sửa khởi tạo Django trong forecast worker spawn/forkserver và shutdown child có timeout; 16/16 tests worker/queue/training OK (20.667s). Quét thêm 32 commit Git local: 0 finding theo mẫu secret, không chứng nhận provider rotation. Kết nối GitHub thất bại nên chưa push/deploy. Các số liệu nghiệm thu không tăng chỉ vì thêm test; mục 92 vẫn cần worker deployment thật.
 

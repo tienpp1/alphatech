@@ -228,8 +228,8 @@
                 <!-- ================= BƯỚC 2: MỨC ƯU TIÊN & SLA ĐẾM NGƯỢC ================= -->
                 <div class="wizard-pane" id="wizard-pane-2">
                     <div style="margin-bottom: 1.5rem;">
-                        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 6px;">Bước 2: Mức độ ưu tiên xử lý &amp; Cam kết phản hồi SLA</h3>
-                        <p style="font-size: 0.88rem; color: var(--pub-text-muted); margin: 0;">Lựa chọn cấp độ khẩn cấp để thuật toán điều phối kỹ sư phù hợp nhất.</p>
+                        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pub-text-heading); margin: 0 0 6px;">Bước 2: Mức độ ưu tiên &amp; Minh họa thời gian</h3>
+                        <p style="font-size: 0.88rem; color: var(--pub-text-muted); margin: 0;">Các mốc thời gian chỉ là ví dụ mô phỏng, không phải cam kết SLA. Thời gian phản hồi và phân công cần được nhân viên xác nhận sau khi tiếp nhận yêu cầu.</p>
                     </div>
 
                     <!-- Priority Choice Cards -->
@@ -237,7 +237,7 @@
                         <div class="priority-card selected" id="pcard-p1" onclick="selectPriority('P1', 15, 'Khẩn cấp')">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span style="background: #FEF2F2; color: #DC2626; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">P1 • KHẨN CẤP</span>
-                                <span style="font-size: 0.74rem; color: #EF4444; font-weight: 700;">&lt; 15 Phút</span>
+                                <span style="font-size: 0.74rem; color: #EF4444; font-weight: 700;">Ví dụ: 15 phút</span>
                             </div>
                             <div style="font-size: 0.95rem; font-weight: 800; color: #0F172A; margin-bottom: 4px;">Sự cố hệ thống sập</div>
                             <div style="font-size: 0.8rem; color: #64748B; line-height: 1.4;">Server ngưng hoạt động, mạng toàn công ty gián đoạn.</div>
@@ -246,7 +246,7 @@
                         <div class="priority-card" id="pcard-p2" onclick="selectPriority('P2', 30, 'Tiêu chuẩn')">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span style="background: #EFF6FF; color: #2563EB; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">P2 • TIÊU CHUẨN</span>
-                                <span style="font-size: 0.74rem; color: #2563EB; font-weight: 700;">&lt; 30 Phút</span>
+                                <span style="font-size: 0.74rem; color: #2563EB; font-weight: 700;">Ví dụ: 30 phút</span>
                             </div>
                             <div style="font-size: 0.95rem; font-weight: 800; color: #0F172A; margin-bottom: 4px;">Máy trạm &amp; Thiết bị</div>
                             <div style="font-size: 0.8rem; color: #64748B; line-height: 1.4;">Hỏng phần cứng máy trạm, lỗi phần mềm kế toán, in ấn.</div>
@@ -255,7 +255,7 @@
                         <div class="priority-card" id="pcard-p3" onclick="selectPriority('P3', 120, 'Kế hoạch')">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span style="background: #F8FAFC; color: #64748B; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">P3 • KẾ HOẠCH</span>
-                                <span style="font-size: 0.74rem; color: #64748B; font-weight: 700;">Trong ngày</span>
+                                <span style="font-size: 0.74rem; color: #64748B; font-weight: 700;">Cần xác nhận</span>
                             </div>
                             <div style="font-size: 0.95rem; font-weight: 800; color: #0F172A; margin-bottom: 4px;">Bảo trì &amp; Nâng cấp</div>
                             <div style="font-size: 0.8rem; color: #64748B; line-height: 1.4;">Vệ sinh bảo dưỡng máy, nâng cấp RAM/SSD, tư vấn mở rộng.</div>
@@ -265,12 +265,12 @@
                     <!-- Live SLA Countdown Simulator -->
                     <div class="sla-clock-box">
                         <div>
-                            <div style="font-size: 0.74rem; color: #38BDF8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">MÔ PHỎNG THỜI GIAN PHẢN HỒI CAM KẾT (SLA)</div>
-                            <div style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF; margin: 4px 0;" id="sla-display-text">Ưu tiên P1: Phản hồi xác nhận trong vòng &lt; 15 phút</div>
-                            <div style="font-size: 0.8rem; color: #94A3B8;">Kỹ sư trực điều phối tại trạm kỹ thuật gần nhất sẽ gọi điện xác nhận.</div>
+                            <div style="font-size: 0.74rem; color: #38BDF8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">BỘ ĐẾM MINH HỌA — KHÔNG PHẢI SLA THỰC TẾ</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF; margin: 4px 0;" id="sla-display-text">Ưu tiên P1: Ví dụ mô phỏng 15 phút</div>
+                            <div style="font-size: 0.8rem; color: #94A3B8;">Gửi biểu mẫu chưa đồng nghĩa lịch hẹn hoặc kỹ sư đã được phân công.</div>
                         </div>
                         <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 10px 18px; text-align: center;">
-                            <div style="font-size: 0.7rem; color: #94A3B8; font-weight: 700;">THỜI GIAN DỰ KIẾN</div>
+                            <div style="font-size: 0.7rem; color: #94A3B8; font-weight: 700;">ĐẾM NGƯỢC MÔ PHỎNG</div>
                             <div style="font-family: var(--pub-mono-font, monospace); font-size: 1.45rem; font-weight: 800; color: #34D399;" id="sla-countdown-val">14:59</div>
                         </div>
                     </div>
@@ -357,7 +357,7 @@
         </div>
 
         <div style="text-align: center; margin-top: 2rem; font-size: 0.88rem; color: var(--pub-text-muted);">
-            Cần hỗ trợ kỹ thuật khẩn cấp? Gọi ngay tổng đài: <strong style="color: var(--pub-primary); font-family: var(--pub-mono-font);">1900 6868</strong> (Phản hồi &lt; 15 phút)
+            Cần hỗ trợ kỹ thuật? <a href="/lien-he/">Liên hệ để được xác nhận thời gian và điều kiện phục vụ.</a>
         </div>
     </div>
 </div>
@@ -426,7 +426,7 @@ function selectPriority(level, slaMins, label) {
     selectedSlaMinutes = slaMins;
     var display = document.getElementById('sla-display-text');
     if (display) {
-        display.textContent = `Ưu tiên ${level} (${label}): Phản hồi xác nhận trong vòng < ${slaMins} phút`;
+        display.textContent = `Ưu tiên ${level} (${label}): Ví dụ mô phỏng ${slaMins} phút — cần xác nhận thời gian thực tế`;
     }
     startSlaSimulation();
 }

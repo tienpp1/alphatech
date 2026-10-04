@@ -44,6 +44,26 @@ class CustomerApprovalNoticeTests(TestCase):
         csrf=Client(enforce_csrf_checks=True); csrf.force_login(self.user)
         self.assertEqual(csrf.post(f'/tai-khoan/thong-bao-duyet/{notice.pk}/da-xem/').status_code,403)
 
+    def test_controlled_retail_confirmation_and_ack_survive_new_browser(self):
+        from apps.retail.services import transition_order_status
+        order = self.order()
+        admin = get_user_model().objects.create_superuser(
+            username='retail-approver', email='approver@example.test', password=None
+        )
+        transition_order_status(order, 'CONFIRMED', admin)
+        notice = Notification.objects.get(event_type='CUSTOMER_ORDER_APPROVED')
+        self.assertEqual(notice.recipient_id, self.user.pk)
+        self.assertNotEqual(notice.recipient_id, admin.pk)
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.get('/tai-khoan/thong-bao-duyet/').json()['notifications'][0]['id'], notice.pk)
+        self.assertEqual(self.client.post(f'/tai-khoan/thong-bao-duyet/{notice.pk}/da-xem/').status_code, 200)
+        fresh = Client()
+        fresh.force_login(self.user)
+        self.assertEqual(fresh.get('/tai-khoan/thong-bao-duyet/').json()['notifications'], [])
+        notice.refresh_from_db()
+        self.assertTrue(notice.is_read)
+        self.assertIsNotNone(notice.read_at)
+
     def test_cancelled_or_reassigned_order_does_not_celebrate(self):
         order=self.order(); order.status='CONFIRMED'; order.save()
         order.status='CANCELLED'; order.save()

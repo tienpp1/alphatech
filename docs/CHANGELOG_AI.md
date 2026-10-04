@@ -2,6 +2,54 @@
 
 Do not log cosmetic edits.
 
+### 2026-10-04 — Public publication boundary and release evidence
+
+- Extend the existing policy boundary to customer order detail and service
+  discovery: no default VAT, 30-day warranty, 24/7 support or staff certificate
+  assurances without approved evidence. Preserve animations, prices and workflow.
+- CI now executes public policy and customer approval-notice regressions.
+- Current release evidence is recorded separately without changing the 97-item
+  ledger, historical failures, business data or database schema.
+
+### 2026-10-03 — Google session / internal password boundary
+
+- Google callback marks the server-side session public-only and clears active
+  workspace selection. Existing linked legacy sessions require password reauth.
+- Internal middleware denies Google sessions even for superusers, including
+  legacy routes, admin and API token disclosure. Password entry admits only
+  ADMIN/MANAGER/EMPLOYEE and superusers; tokens recheck current role eligibility.
+- Telemetry checks session method as well as current identity/permissions.
+- Public navigation/account banners follow authorization, not is_staff alone.
+  Password form supports autocomplete; no layout or animation redesign.
+- No roles, memberships, database schema/data or 97-item progress modified.
+
+### 2026-10-03 — Customer policy-copy boundary follow-up
+
+- Removed unsupported default delivery/warranty/return/VAT/invoice assurances
+  from populated cart, product detail, checkout and order receipt; staff account
+  copy no longer implies unconditional permissions. Preserved pricing/shipping
+  calculations, layouts, animation, routes and database schema.
+- Added five rendered-template regressions, including a populated cart and
+  receipt total preservation. Initial fixture errors retained in evidence;
+  corrected fields without weakening assertions, 48 focused tests OK.
+- Full pre-copy snapshot: 1179 tests OK, 3108.343s, unchanged fingerprint of
+  705 inputs. Expanded acceptance runner input fingerprint to UI/fixtures/docs
+  as well as Python. No claim that this full run covers subsequent copy patch.
+- No production deployment or change to the 97-item progress ledger. See
+  ACCEPTANCE_CONTINUATION_2026_10_03.md for evidence and deferred gates.
+
+### 2026-10-02 — Private local encrypted backup and publication-boundary regression
+
+- Created authenticated encrypted archive on owner-selected D: with DPAPI-wrapped random key, restricted ACL, disk-readback hash verification and tamper rejection. Clearly not off-site/portable key recovery or verified production filesystem backup.
+- Added non-mutating 97-item evidence review, retaining ledger IDs/count. Identified inherited evidence and missing local copies of three recorded production model artifacts.
+- Prepared homepage copy-only correction for unmeasured uptime/latency/CO-CQ/SLA claims; existing counter/3D/video/JS animations preserved with explicit simulation labels. Added regression without weakening existing tests; local 14/14 policy/CSP pass. Not deployed in this review.
+
+### 2026-10-02 — Authorized independent production database restore drill
+
+- Added guarded production dump/fresh-loopback restore and read-only verification scripts. No reset/reuse of existing databases or application migrations; credentials remain in memory/child environment, archives in restricted ignored output.
+- Executed Render production pg_dump custom archive and pg_restore single transaction on a fresh local database. All 60 tables match snapshot counts/hashes after UTC normalization; constraints/triggers/sequences and Django migration/read checks pass. Preserved initial timezone-comparison failure as evidence rather than replacing it.
+- Added 3 guard unit tests; preserved 97-item checklist structure/count. This is logical schema/data recovery, not cloud failover, role/ACL or filesystem/off-site backup certification.
+
 ### 2026-10-01 — CSP enforcement compatibility
 
 - Allowed the exact Tailwind, Iconify and existing cdnjs script origins used by current templates; allowed Iconify API fallback origins. No wildcard script origin or new frontend dependency.
@@ -1024,3 +1072,41 @@ bypass. Vietnamese registration UI supports paste/autofill and failed-mail warni
 - RAG preserves distinct same-section excerpts; source rank is not authority.
   Conservative same-sentence numeric disagreement warning (not semantic grading).
 - CI retains failing exit codes and exports test logs with release SHA.
+
+### 2026-10-02 — Publication boundary and backup guard follow-up
+
+Service inquiry countdown/priority text now explicitly describes illustrative
+timing rather than a verified response SLA or automatic technician dispatch.
+Existing wizard and animations remain unchanged. Backup input validation rejects
+environment variants, unsafe/duplicate archive names and mismatched manifests.
+Owner chose local storage only for academic acceptance; no S3 runtime activation
+or production persistence certification. These changes remain locally verified.
+
+### 2026-10-02 — Revoked membership must not retain cached rights
+
+Full diagnostic tests exposed a stale per-User role cache after membership
+revocation. Authorization now reads current membership/grants rather than
+process-local cache invalidation; regressions cover direct database updates and
+permission-through deletion. Existing failing assertions remain unchanged.
+Test manifest now names eight omitted modules without claiming their mere
+presence is execution evidence. Owner UAT records cross-device registration and
+service celebration only; retail celebration still needs production UAT.
+# 2026-10-04 — Internal-boundary regression completion
+
+- Workspace middleware tolerates a request without session while still denying
+  unknown Google-linked sessions. No role grants/schema/business DB changes.
+- Full-suite fixture roles now match the user-approved internal entry policy;
+  read-only EMPLOYEE assertions retained, VIEWER/custom-role denial added.
+  New Google-boundary module included in CI and evidence manifest.
+- Full local snapshot: 1194 tests OK (196.973s), no skips; prior 33 failures and
+  7 errors retained with root causes in ACCEPTANCE_CONTINUATION_2026_10_04.md.
+- Browser TEST 162 nonowner check recorded; owner acknowledgment and cancellation
+  pending. No 97-item ledger changes or new production certification.
+# 2026-10-04 — Google-linked identities are public-only
+
+Supersedes session-only access: linked Google identities cannot enter internal UI,
+API or telemetry using old password sessions, tokens or legacy superuser flags.
+Separate non-Google ADMIN/MANAGER/EMPLOYEE accounts retain password entry.
+Public banner and navigation reuse the server authorization policy. No migration
+or customer privilege mutation. Validation: staged release 72 tests and full local
+1197 tests pass; see GOOGLE_ACCOUNT_ISOLATION_2026_10_04.md. No 97-item ledger changes.

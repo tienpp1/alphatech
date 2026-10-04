@@ -244,7 +244,8 @@ class PublicWebsiteAndPortalSeparationTestCase(TestCase):
         self.assertContains(response, "LAP-DELL-01")
         self.assertContains(response, "22500000")
         self.assertContains(response, "Mua ngay")
-        self.assertContains(response, "Còn hàng")
+        # The earlier policy-copy fix intentionally requires stock confirmation.
+        self.assertContains(response, "Tình trạng hàng được xác nhận khi xử lý đơn")
 
     def test_public_product_detail_inactive_returns_404(self):
         """GET /san-pham/<id>/ on an inactive product returns 404."""

@@ -4,6 +4,12 @@
 
 Nhóm bổ sung đối chiếu cuối: `test_academic_current_claims.py` (nội dung hiện hành), `test_rag_review_packet.py` (nguồn/định danh phiếu chấm RAG), `test_release_secret_scan.py` (scan không lộ giá trị secret). Đây là kiểm tra công cụ/hồ sơ, không tự chứng nhận semantic hoặc production.
 
+Đối chiếu 04/10: bằng chứng release/UAT/restore mới tại
+`RELEASE_ACCEPTANCE_2026_10_04.md` thay thông tin thiếu đã lỗi thời theo phạm vi
+ghi rõ. Không sửa danh sách/số tiến độ 97 mục hoặc bản Word thầy duyệt. Manifest
+bao gồm công cụ local; tên file trong danh mục không đồng nghĩa mọi file được
+phát hành lên Render hoặc đã được chạy trong một phiên test duy nhất.
+
 Kiểm thử bổ sung 25/09: `test_collaboration_workspace_selection.py` thuộc WORKSPACES & ISOLATION, BULLETIN BOARD và TEAM CHAT; kiểm invalid/foreign/blank selector, active membership, header conflict, no-write và PermissionDenied. Kết quả ghi riêng, không cộng vào full suite trước bản vá.
 ## ĐỒ ÁN TỐT NGHIỆP ĐẠI HỌC / KỸ SƯ CÔNG NGHỆ THÔNG TIN
 
@@ -1502,3 +1508,19 @@ Hồ sơ này là bản làm việc của đề tài **"Xây dựng nền tảng
 - `test_tool_registry.py`
 - `test_web_auth_routing.py`
 - `test_workspaces.py`
+
+### Bổ sung manifest ngày 02/10/2026 (không phải chứng nhận mọi test PASS)
+
+- `test_command_center_security.py` — quyền và boundary Command Center.
+- `test_google_internal_boundary.py` — phiên Google chỉ ở cổng khách hàng; đăng nhập mật khẩu ADMIN/MANAGER/EMPLOYEE, token và telemetry. Google HTTP được mô phỏng, không phải UAT OAuth thật.
+- `test_csp_asset_compatibility.py` — tương thích CSP/assets.
+- `test_encrypted_local_backup.py` — archive/mã hóa và guard local.
+- `test_forecast_worker_process.py` — lifecycle tiến trình worker local.
+- `test_noibo_empty_state_and_boundary.py` — empty state/boundary nội bộ.
+- `test_r2_storage_probe.py` — diagnostic mô phỏng; chưa có bucket thật.
+- `test_rag_source_authority.py` — quyền ưu tiên và nguồn RAG.
+- `test_restore_drill_safety.py` — guard database restore riêng.
+
+Full diagnostic 02/10 phát hiện 2 failures trên 1170 tests; xem
+ACCEPTANCE_CONTINUATION_2026_10_02.md. File có trong manifest không đồng nghĩa
+đã nghiệm thu production hoặc bằng chứng bên ngoài.

@@ -1,6 +1,24 @@
 # AI Business Platform — canonical project context
 
 Last verified against source: 2026-09-15
+Policy superseding the session-only boundary (2026-10-04): any Google-linked
+identity is public-only even with an old password, token, membership or superuser
+flag. Separate non-Google ADMIN/superuser, MANAGER and EMPLOYEE identities keep
+password access. No account records or schema are changed by this enforcement.
+See GOOGLE_ACCOUNT_ISOLATION_2026_10_04.md for validation and release scope.
+Historical session-only entry update (2026-10-03, superseded above): Google OAuth sessions are public-only,
+including Google sessions belonging to existing staff/superusers. Password
+reauthentication through /accounts/login/ restores entry for active workspace
+ADMIN/MANAGER/EMPLOYEE or platform superusers, without modifying any grants.
+Legacy Google-linked sessions lacking authentication-method evidence must
+reauthenticate. Internal HTTP routes (including legacy URLs/admin/token profile),
+token role eligibility and telemetry WebSocket entry enforce this boundary.
+Existing workspace-scoped permissions remain additional requirements. Public
+navigation uses the same entry policy. No schema change; 97-item ledger unchanged.
+Authorization follow-up (2026-10-02): role/permission decisions re-read current
+active WorkspaceMembership and grants. Per-User memoization was removed after a
+full-suite regression exposed stale bulletin management rights following a
+membership revocation. No new roles, permission system or database schema.
 Command Center update (2026-09-30): /noibo/ai-command-center/ and the
 /ws/telemetry/ illustrative stream use existing telemetry permissions. ASGI
 validates Origin; the stream rechecks current active identity/membership on each
