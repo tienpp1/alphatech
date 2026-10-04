@@ -14,7 +14,9 @@ class CommandCenterPermissionsTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="cc-user", email="cc@example.com")
         self.workspace = Workspace.objects.create(code="cc", name="CC", workspace_type="RETAIL")
-        self.role = Role.objects.create(name="CC_VIEWER")
+        # Internal entry now requires an employee/manager/admin role; individual
+        # permissions are still required and tested independently below.
+        self.role = Role.objects.create(name="EMPLOYEE")
         self.client.force_login(self.user)
 
     def test_public_customer_denied(self):

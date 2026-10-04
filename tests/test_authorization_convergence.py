@@ -42,7 +42,9 @@ class AuthorizationConvergenceRegressionTests(TestCase):
                 codename=code, name=code, module=code.split(".")[0]
             )
 
-        cls.viewer_role = Role.objects.create(name="CONVERGENCE_VIEWER")
+        # Read-only capability fixture now uses an eligible internal role.
+        # Keep its grants unchanged; VIEWER entry is denied by the new policy.
+        cls.viewer_role = Role.objects.create(name="EMPLOYEE")
         cls.viewer_role.permissions.set(
             [permission for code, permission in cls.permissions.items() if ".view_" in code]
         )
@@ -75,7 +77,7 @@ class AuthorizationConvergenceRegressionTests(TestCase):
         session.save()
         return client
 
-    def test_viewer_can_read_internal_pages_but_mutation_controls_are_hidden(self):
+    def test_read_only_employee_can_read_but_mutation_controls_are_hidden(self):
         client = self._browser(self.viewer)
 
         sources = client.get("/integration/sources/")

@@ -3,6 +3,7 @@ Django Template Context Processors for Workspace data.
 """
 
 from apps.workspaces.services import get_user_workspaces
+from apps.accounts.internal_access import can_access_internal
 
 
 def workspace_context(request):
@@ -13,7 +14,8 @@ def workspace_context(request):
     active_membership = getattr(request, "active_membership", None)
 
     user_workspaces = []
-    if hasattr(request, "user") and request.user.is_authenticated:
+    internal_access = can_access_internal(request)
+    if internal_access:
         cached = getattr(request, "_cached_user_workspaces", None)
         if cached is not None:
             user_workspaces = cached
@@ -22,6 +24,7 @@ def workspace_context(request):
             request._cached_user_workspaces = user_workspaces
 
     return {
+        "can_access_internal": internal_access,
         "active_workspace": active_workspace,
         "active_membership": active_membership,
         "user_workspaces": user_workspaces,

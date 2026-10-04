@@ -65,10 +65,13 @@ class BulletinUpdateTests(TestCase):
         self.assertEqual(self.client.post(self.ui, self.data).status_code, 302)
         board = f"/noibo/bang-tin/?workspace_id={self.ws.pk}"
         self.assertContains(self.client.get(board), "Sửa bản tin")
-        self.role.name = "VIEWER"
+        self.role.name = "EMPLOYEE"
         self.role.save()
         self.assertNotContains(self.client.get(board), "Sửa bản tin")
         self.assertEqual(self.client.get(self.ui, {"workspace_id": self.ws.pk}).status_code, 403)
+        self.role.name = "VIEWER"
+        self.role.save()
+        self.assertEqual(self.client.get(board).status_code, 403)
 
     def test_csrf_and_get_cannot_mutate(self):
         secure = Client(enforce_csrf_checks=True)

@@ -222,6 +222,11 @@ class WebAuthRoutingTestCase(TestCase):
             session.save()
 
             response = client.get("/retail/gis/")
+            if role_name == "VIEWER":
+                # Explicit new portal policy: VIEWER no longer has entry, even
+                # with a read permission. Do not silently omit this role.
+                self.assertEqual(response.status_code, 403)
+                continue
             self.assertEqual(
                 response.status_code,
                 200,

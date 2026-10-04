@@ -499,8 +499,7 @@ class InternalNotificationsTestCase(TestCase):
         self.assertEqual(cust_api_resp.status_code, 403)
 
         cust_ui_resp = self.client.get("/noibo/thong-bao/")
-        self.assertEqual(cust_ui_resp.status_code, 302)
-        self.assertIn("customer_only", cust_ui_resp.url)
+        self.assertEqual(cust_ui_resp.status_code, 403)
 
     # =========================================================================
     # H. DEDUPLICATION

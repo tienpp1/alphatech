@@ -3,6 +3,7 @@ Middleware resolving and attaching verified active Workspace and Membership cont
 """
 
 from apps.workspaces.services import get_explicit_workspace_selector, resolve_active_workspace
+from apps.accounts.internal_access import is_public_only_session
 
 
 class WorkspaceMiddleware:
@@ -23,6 +24,9 @@ class WorkspaceMiddleware:
         request.workspace_access_denied = False
 
         if hasattr(request, "user") and request.user.is_authenticated:
+            if is_public_only_session(request.user, getattr(request, "session", {})):
+                request.workspace_access_denied = True
+                return self.get_response(request)
             workspace, membership = resolve_active_workspace(request, request.user)
             request.active_workspace = workspace
             request.active_membership = membership

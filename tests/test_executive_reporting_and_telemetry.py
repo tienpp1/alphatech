@@ -148,20 +148,17 @@ class ExecutiveReportingAndTelemetryTests(TestCase):
         self.assertNotContains(response, "HIDDEN-ORDER")
 
     def test_customer_only_access_is_fenced(self):
-        """Customer without internal workspace membership must be redirected safely."""
+        """Customer is denied before internal collections are rendered."""
         self.client.force_login(self.customer_user)
 
         res_report = self.client.get("/noibo/bao-cao-dieu-hanh/")
-        self.assertEqual(res_report.status_code, 302)
-        self.assertIn("/tai-khoan/?notice=customer_only", res_report.url)
+        self.assertEqual(res_report.status_code, 403)
 
         res_csv = self.client.get("/noibo/bao-cao-dieu-hanh/export-csv/")
-        self.assertEqual(res_csv.status_code, 302)
-        self.assertIn("/tai-khoan/?notice=customer_only", res_csv.url)
+        self.assertEqual(res_csv.status_code, 403)
 
         res_telemetry = self.client.get("/noibo/telemetry/")
-        self.assertEqual(res_telemetry.status_code, 302)
-        self.assertIn("/tai-khoan/?notice=customer_only", res_telemetry.url)
+        self.assertEqual(res_telemetry.status_code, 403)
 
     def test_manager_can_access_executive_report(self):
         """Internal manager can access executive operational report with HTTP 200."""

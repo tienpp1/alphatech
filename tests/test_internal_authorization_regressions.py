@@ -231,11 +231,11 @@ class InternalAuthorizationRegressionTests(TestCase):
             for code in permission_codes
         }
 
-        cls.admin_role = Role.objects.create(name="AUTHZ_ADMIN")
+        cls.admin_role = Role.objects.create(name="ADMIN")
         cls.admin_role.permissions.set(cls.permissions.values())
-        cls.manager_role = Role.objects.create(name="AUTHZ_MANAGER")
+        cls.manager_role = Role.objects.create(name="MANAGER")
         cls.manager_role.permissions.set(cls.permissions.values())
-        cls.employee_role = Role.objects.create(name="AUTHZ_EMPLOYEE")
+        cls.employee_role = Role.objects.create(name="EMPLOYEE")
         cls.employee_role.permissions.set(
             [
                 cls.permissions["service.view_service"],

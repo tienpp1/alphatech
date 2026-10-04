@@ -11,6 +11,7 @@ from apps.accounts.models import User, Role, Permission
 from apps.accounts.services import (
     has_workspace_permission,
     get_user_permissions,
+    get_user_role_in_workspace,
     assign_role_to_user_in_workspace,
 )
 from apps.workspaces.models import Workspace, WorkspaceMembership, WorkspaceType
@@ -85,6 +86,26 @@ class RBACTestCase(TestCase):
         # Manager in Retail, Employee in Service
         assign_role_to_user_in_workspace(self.user, self.retail_ws, self.manager_role)
         assign_role_to_user_in_workspace(self.user, self.service_ws, self.employee_role)
+
+    def test_reused_user_observes_membership_revocation_and_role_reassignment(self):
+        self.assertTrue(has_workspace_permission(self.user, self.retail_ws, "retail.create_order"))
+        self.assertEqual(get_user_role_in_workspace(self.user, self.retail_ws).pk, self.manager_role.pk)
+        membership = WorkspaceMembership.objects.get(user=self.user, workspace=self.retail_ws)
+        # QuerySet writes do not emit model signals, as in another process.
+        WorkspaceMembership.objects.filter(pk=membership.pk).update(is_active=False)
+        self.assertEqual(get_user_permissions(self.user, self.retail_ws), set())
+        self.assertIsNone(get_user_role_in_workspace(self.user, self.retail_ws))
+        WorkspaceMembership.objects.filter(pk=membership.pk).update(is_active=True, role=self.viewer_role)
+        self.assertFalse(has_workspace_permission(self.user, self.retail_ws, "retail.create_order"))
+        self.assertEqual(get_user_role_in_workspace(self.user, self.retail_ws).pk, self.viewer_role.pk)
+
+    def test_reused_user_observes_permission_removal_without_signal(self):
+        self.assertTrue(has_workspace_permission(self.user, self.retail_ws, "retail.create_order"))
+        Role.permissions.through.objects.filter(
+            role_id=self.manager_role.pk, permission_id=self.p_create_order.pk
+        ).delete()
+        self.assertFalse(has_workspace_permission(self.user, self.retail_ws, "retail.create_order"))
+        self.assertTrue(has_workspace_permission(self.user, self.retail_ws, "retail.view_order"))
 
     def test_role_has_permission_method(self):
         """Verify Role.has_permission returns correct boolean."""

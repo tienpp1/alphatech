@@ -79,7 +79,7 @@
     </form>
     {% endfor %}
 
-    {% if request.user.is_superuser or request.user.is_staff %}
+    {% if can_access_internal %}
     <div class="pub-card" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #3b82f6; padding: 1.25rem 1.75rem; border-radius: 12px; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
         <div>
             <div style="font-weight: 700; color: #f8fafc; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
@@ -87,7 +87,7 @@
                 <span>Tài khoản Quản trị viên / Nhân sự Nội bộ</span>
             </div>
             <p style="margin: 4px 0 0; font-size: 0.88rem; color: #94a3b8;">
-                Bạn có toàn quyền truy cập Hệ sinh thái Quản trị Nội bộ, Kho Sản phẩm, Dịch vụ Kỹ thuật và Trung tâm AI &amp; Dữ liệu.
+                Quyền truy cập được kiểm tra theo vai trò và workspace của bạn; tài khoản nội bộ không mặc nhiên có mọi quyền.
             </p>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -107,7 +107,7 @@
     </div>
     {% endif %}
 
-    {% if customer_only_notice and not request.user.is_superuser and not request.user.is_staff %}
+    {% if customer_only_notice and not can_access_internal %}
     <div style="background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; padding: 14px 18px; border-radius: 12px; font-size: 0.92rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
         <div style="display: flex; align-items: center; gap: 12px;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>

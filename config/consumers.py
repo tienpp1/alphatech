@@ -9,12 +9,23 @@ from django.core.exceptions import PermissionDenied
 
 
 @database_sync_to_async
-def may_view_telemetry(user_id):
+def may_view_telemetry(user_id, session=None):
     from apps.accounts.models import User
     from config.views import _report_workspaces
+    from apps.accounts.internal_access import has_internal_role, is_public_only_session
+
+    if session is not None and getattr(session, "session_key", None):
+        from importlib import import_module
+        from django.conf import settings
+        from django.contrib.auth import SESSION_KEY
+        session = import_module(settings.SESSION_ENGINE).SessionStore(session.session_key)
+        if str(session.get(SESSION_KEY)) != str(user_id):
+            return False
 
     user = User.objects.filter(pk=user_id, is_active=True).first()
     if user is None:
+        return False
+    if not has_internal_role(user) or is_public_only_session(user, session or {}):
         return False
     try:
         return _report_workspaces(user, "telemetry").exists()
@@ -25,7 +36,7 @@ def may_view_telemetry(user_id):
 class TelemetryConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         user = self.scope.get("user")
-        if not user or not user.is_authenticated or not await may_view_telemetry(user.pk):
+        if not user or not user.is_authenticated or not await may_view_telemetry(user.pk, self.scope.get("session")):
             await self.close(code=4403)
             return
         self.user_id = user.pk
@@ -43,7 +54,7 @@ class TelemetryConsumer(AsyncJsonWebsocketConsumer):
         frame = 0
         while True:
             # Reload identity and membership so revocation applies to open sockets.
-            if not await may_view_telemetry(self.user_id):
+            if not await may_view_telemetry(self.user_id, self.scope.get("session")):
                 await self.close(code=4403)
                 return
             await self.send_json({

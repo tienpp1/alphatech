@@ -98,7 +98,7 @@ class CollaborationWorkspaceSelectionTests(TestCase):
         customer = User.objects.create_user(username='collab-customer', email='customer@example.test')
         self.client.force_login(customer)
         for url in self.reads[:2]:
-            self.assertRedirects(self.client.get(url), '/tai-khoan/?notice=customer_only', fetch_redirect_response=False)
+            self.assertEqual(self.client.get(url).status_code, 403)
         for url in self.reads[2:]:
             self.assertEqual(self.client.get(url).status_code, 403)
 

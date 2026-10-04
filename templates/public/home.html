@@ -253,7 +253,7 @@
                     <iconify-icon icon="ph:user-circle-light" class="text-sm"></iconify-icon>
                     <span>{{ request.user.first_name|default:request.user.username }}</span>
                 </a>
-                {% if request.user.is_superuser or active_membership %}
+                {% if can_access_internal %}
                 <a href="/noibo/" class="font-mono text-xs border border-cyber-amber/50 px-3 py-2 bg-cyber-surface text-cyber-amber hover:border-cyber-amber transition-all hidden xl:inline-block">
                     Cổng Quản Trị /noibo/ →
                 </a>

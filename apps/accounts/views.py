@@ -11,6 +11,7 @@ from django.contrib.auth import login, logout
 
 from apps.accounts.serializers import LoginSerializer, UserSerializer, MeSerializer
 from apps.accounts.services import authenticate_user, get_user_permissions
+from apps.accounts.internal_access import AUTH_METHOD_KEY, has_internal_role
 from apps.workspaces.models import WorkspaceMembership
 
 
@@ -53,8 +54,12 @@ class LoginAPIView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        if not has_internal_role(user):
+            return Response({"detail": "Tài khoản không có quyền đăng nhập nội bộ."}, status=403)
+
         # 1. Establish Django session authentication
         login(request, user)
+        request.session[AUTH_METHOD_KEY] = "password"
 
         # 2. Get or create DRF Token
         token, _ = Token.objects.get_or_create(user=user)

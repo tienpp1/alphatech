@@ -38,7 +38,7 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
         )
 
         # 3. Create full-permission manager role
-        self.manager_role = Role.objects.create(name="EMPTY_TEST_MANAGER", description="Full View Manager")
+        self.manager_role = Role.objects.create(name="MANAGER", description="Full View Manager")
         all_perms = (
             "retail.view_analytics", "retail.view_order", "retail.view_customer",
             "retail.view_product", "retail.manage_product", "retail.view_branch",
@@ -260,8 +260,7 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
         )
         self.client.force_login(customer_user)
         resp_cust = self.client.get("/noibo/bao-cao-dieu-hanh/export-csv/")
-        self.assertEqual(resp_cust.status_code, 302)
-        self.assertIn("/tai-khoan/?notice=customer_only", resp_cust.url)
+        self.assertEqual(resp_cust.status_code, 403)
 
         # 6. DOM XSS Defense in Executive Report template
         self.client.force_login(self.empty_manager)
@@ -355,8 +354,7 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
         )
         self.client.force_login(cust_user)
         resp_cust = self.client.get("/noibo/telemetry/")
-        self.assertEqual(resp_cust.status_code, 302)
-        self.assertIn("/tai-khoan/?notice=customer_only", resp_cust.url)
+        self.assertEqual(resp_cust.status_code, 403)
 
     def test_system_hardening_csv_none_guard_and_absolute_links(self):
         """
@@ -489,6 +487,4 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
         resp_anon = self.client.get("/noibo/")
         self.assertEqual(resp_anon.status_code, 302)
         self.assertTrue(resp_anon.url.startswith("/accounts/login/") or "/dang-nhap/" in resp_anon.url)
-
-
 

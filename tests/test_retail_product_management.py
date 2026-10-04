@@ -104,7 +104,7 @@ class RetailProductManagementTestCase(TestCase):
         )
 
         self.role_manager, _ = Role.objects.get_or_create(
-            name="Retail Manager",
+            name="MANAGER",
             defaults={"description": "Retail Store Manager"},
         )
         self.role_manager.permissions.add(self.perm_manage_prod, self.perm_view_prod)

@@ -67,6 +67,7 @@ from apps.public_web.email_service import (
     send_contact_confirmation_email,
 )
 from apps.public_web.models import CustomerEmailDelivery, SocialIdentity, RegistrationCode
+from apps.accounts.internal_access import AUTH_METHOD_KEY, can_access_internal, has_internal_role, is_public_destination
 from apps.public_web.registration import (
     issue_registration_code, consume_registration_code, registration_link_user,
     consume_registration_link,
@@ -580,11 +581,10 @@ def public_login_view(request):
             and not next_url.startswith("/dang-xuat")
             and not next_url.startswith("/accounts/login")
         ):
-            return redirect(next_url)
+            if can_access_internal(request) or is_public_destination(next_url):
+                return redirect(next_url)
 
-        has_staff_role = request.user.is_superuser or WorkspaceMembership.objects.filter(
-            user=request.user, is_active=True
-        ).exists()
+        has_staff_role = can_access_internal(request)
         if has_staff_role:
             return redirect("/noibo/")
         return redirect("/tai-khoan/")
@@ -631,6 +631,7 @@ def public_login_view(request):
         user = authenticate_user(username_or_email, password)
         if user:
             login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+            request.session[AUTH_METHOD_KEY] = "password"
 
             # Dispatch security login alert to customer email
             if user.email:
@@ -645,9 +646,7 @@ def public_login_view(request):
                 if not email_result:
                     request.session["customer_email_warning"] = True
 
-            has_staff_role = user.is_superuser or WorkspaceMembership.objects.filter(
-                user=user, is_active=True
-            ).exists()
+            has_staff_role = has_internal_role(user)
 
             if (
                 next_url
@@ -657,7 +656,7 @@ def public_login_view(request):
                 and not next_url.startswith("/dang-xuat")
                 and not next_url.startswith("/accounts/login")
             ):
-                if next_url.startswith("/noibo") and not has_staff_role:
+                if not has_staff_role and not is_public_destination(next_url):
                     return redirect("/tai-khoan/?notice=customer_only")
                 return redirect(next_url)
 
@@ -1313,6 +1312,8 @@ def public_google_callback_view(request):
 
     # 5. Log user in with standard ModelBackend
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    request.session[AUTH_METHOD_KEY] = "google"
+    request.session.pop("active_workspace_id", None)
 
     # 6. Dispatch Customer Emails
     # A. Welcome Email if newly registered via Google
@@ -1354,7 +1355,7 @@ def public_google_callback_view(request):
         and not next_url.startswith("/accounts/login")
         and not next_url.startswith("/accounts/google")
     ):
-        if next_url.startswith("/noibo"):
+        if not is_public_destination(next_url):
             return redirect("/tai-khoan/?notice=customer_only")
         return redirect(next_url)
 
