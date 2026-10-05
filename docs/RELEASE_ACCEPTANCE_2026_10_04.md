@@ -74,8 +74,30 @@ không bỏ/hạ assertion. Nhóm policy/manifest riêng: 29 tests, 2.335s, OK.
 staged diff check: PASS. Quét known-pattern: 800 files và 35 commits, 0 findings
 trong phạm vi công cụ (không phải chứng nhận không tồn tại mọi loại secret).
 
-GitHub/Render và quan sát live của release mới đang chờ kết quả thật; sẽ bổ sung
-SHA/URL sau phát hành. Bằng chứng Google-linked identity dùng session đã cấp:
+Đã push commit `939bba6b2020ead8773585975ad6b0e161e7df13` lên main.
+Render deploy `dep-db10pmqd0e5s73dim6dg` **live đúng SHA**.
+GitHub Actions run https://github.com/tienpp1/alphatech/actions/runs/37188696697
+**completed/success cùng SHA**; các nhóm chạy 22, 20, 2, 50, 10, 5, 146 và 77
+tests đều OK (không dùng tổng các nhóm làm số test độc lập toàn dự án).
+Coverage nhóm include của workflow: **58%**, không phải 100%.
+Dependency audit không có known vulnerabilities; static security scan success.
+
+HTTPS GET thật xác nhận 5 trang public HTTP 200 với nội dung đã sửa; HSTS
+max-age=3600, CSP enforcement và nosniff hiện diện. CSP vẫn unsafe-inline/eval,
+không được ghi strict nonce CSP. Browser trực tiếp thấy điều kiện bảo hành
+được xác nhận riêng; ảnh `output/public_service_policy_20261004.png`.
+Ba tài khoản nội bộ password login/portal HTTP 200; session cookie đều Secure,
+HttpOnly, SameSite=Lax; phiên kiểm chứng đã logout. Không đổi credential.
+
+Bằng chứng Google-linked identity dùng session đã cấp:
 trang tài khoản HTTP 200; `/noibo/`, order nội bộ và `/api/v1/auth/me/` HTTP 403.
 Đây không phải lần chạy OAuth mới. Browser ERR_BLOCKED_BY_CLIENT không được dùng
 làm bằng chứng HTTP 403.
+
+Các báo cáo redacted: `output/public_release_live_20261004.json`,
+`output/internal_live_auth_20261004.json`, `output/google_http_live_20261004.json`.
+35 use case có file và test đã quan sát trong full release log:
+`output/use_case_release_20261004.json`. Không tạo thêm đơn production.
+Ledger 97 không sửa trong đợt này. Các ghi nhận sau deploy trong phần này đang
+ở hồ sơ local; commit phát hành chứa báo cáo local trước khi deploy, tránh
+nhầm SHA được kiểm chứng với một commit chỉ bổ sung bằng chứng sau đó.

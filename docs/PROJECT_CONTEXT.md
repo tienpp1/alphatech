@@ -1,6 +1,14 @@
 # AI Business Platform — canonical project context
 
 Last verified against source: 2026-09-15
+Forecast inference update (2026-10-05): recursive roll-forward reuses build_features
+and the run's saved training feature/column/granularity/dimension provenance.
+Legacy runs without provenance use their existing model configuration; their
+historical configuration cannot be reconstructed. Missing/invalid RMSE yields
+null bounds rather than invented scale; zero is preserved. Results are prepared
+before a locked atomic replacement, retaining prior results on failures.
+Weekly runs retain weekly cadence; horizon_days keeps the existing point count.
+No schema/data migration; production async remains disabled by project choice.
 Policy superseding the session-only boundary (2026-10-04): any Google-linked
 identity is public-only even with an old password, token, membership or superuser
 flag. Separate non-Google ADMIN/superuser, MANAGER and EMPLOYEE identities keep

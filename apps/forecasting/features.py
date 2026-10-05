@@ -70,3 +70,36 @@ def build_features(
 def get_feature_column_names(df: pd.DataFrame) -> List[str]:
     """Returns all engineered feature column names excluding 'target'."""
     return [c for c in df.columns if c != "target"]
+
+
+def recursive_feature_predictions(model, history, dates, feature_config=None, feature_columns=None):
+    """Roll forward using the SAME feature builder as training, never future actuals.
+
+    Caller supplies only observations known at the forecast origin. Returned
+    predictions become history for subsequent steps. No DB writes or fitting.
+    """
+    if history.empty or list(history.columns) != ["target"]:
+        raise ValueError("Require nonempty target history.")
+    if history.index.has_duplicates or not history.index.is_monotonic_increasing:
+        raise ValueError("History must be unique and chronological.")
+    if not np.isfinite(history.target.to_numpy(dtype=float)).all():
+        raise ValueError("History must be finite.")
+    extended = history.copy()
+    predictions = []
+    for date in dates:
+        if date <= extended.index[-1]:
+            raise ValueError("Forecast dates must follow known history in order.")
+        # The placeholder is not a known actual: all target features are shifted.
+        extended.loc[date, "target"] = np.nan
+        engineered = build_features(extended, feature_config, drop_na=False)
+        columns = feature_columns if feature_columns is not None else get_feature_column_names(engineered)
+        row = engineered.loc[[date], columns]
+        if row.empty or not np.isfinite(row.to_numpy(dtype=float)).all():
+            raise ValueError("Insufficient history for trained features.")
+        value = float(model.predict(row)[0])
+        if not np.isfinite(value):
+            raise ValueError("Prediction must be finite.")
+        value = max(0.0, value)
+        extended.loc[date, "target"] = value
+        predictions.append(value)
+    return np.asarray(predictions, dtype=float)

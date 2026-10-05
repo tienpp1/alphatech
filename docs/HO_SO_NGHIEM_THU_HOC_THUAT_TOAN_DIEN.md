@@ -1524,3 +1524,7 @@ Hồ sơ này là bản làm việc của đề tài **"Xây dựng nền tảng
 Full diagnostic 02/10 phát hiện 2 failures trên 1170 tests; xem
 ACCEPTANCE_CONTINUATION_2026_10_02.md. File có trong manifest không đồng nghĩa
 đã nghiệm thu production hoặc bằng chứng bên ngoài.
+
+Đối chiếu bổ sung 05/10: `test_forecast_recursive_integrity.py` thuộc TIME-SERIES
+FORECASTING, kiểm tra parity feature training/inference, snapshot cấu hình,
+RMSE thiếu/zero, giữ kết quả cũ và rollback khi lỗi. Không thay mẫu số ledger 97.

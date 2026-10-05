@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-from apps.forecasting.features import build_features, get_feature_column_names, DEFAULT_FEATURE_CONFIG
+from apps.forecasting.features import build_features, get_feature_column_names, DEFAULT_FEATURE_CONFIG, recursive_feature_predictions
 from apps.forecasting.evaluation import compute_metrics, generate_naive_baseline_predictions, generate_moving_average_baseline_predictions
 
 PARAMS = dict(n_estimators=100, max_depth=4, learning_rate=0.05,
@@ -69,9 +69,33 @@ def run(output, dataset=None):
                      "z": 1.96, "covered": int(covered.sum()), "total": len(test),
                      "coverage": float(covered.mean()), "certified_calibration": False},
     }
+    # Locked first 14 test dates, single origin. Unlike one-step, no actual
+    # inside this horizon enters any model/baseline history; no refitting.
+    recursive_test = test.iloc[:14]
+    origin_history = frame.loc[frame.index < recursive_test.index[0]]
+    recursive_prediction = recursive_feature_predictions(model, origin_history, recursive_test.index,
+                                                         DEFAULT_FEATURE_CONFIG, columns)
+    baseline_history = {'lag7': origin_history.target.to_list(), 'ma7': origin_history.target.to_list()}
+    recursive_baselines = {'lag7': [], 'ma7': []}
+    for _ in recursive_test.index:
+        for name, history in baseline_history.items():
+            value = history[-7] if name == 'lag7' else float(np.mean(history[-7:]))
+            recursive_baselines[name].append(value)
+            history.append(value)
+    results['recursive_14_day'] = {
+        'evaluation': 'single_origin_recursive_no_future_actuals',
+        'origin': str(origin_history.index[-1].date()), 'horizon': len(recursive_test),
+        'model': compute_metrics(recursive_test.target.to_numpy(), recursive_prediction),
+        'lag7': compute_metrics(recursive_test.target.to_numpy(), np.asarray(recursive_baselines['lag7'])),
+        'moving_average7': compute_metrics(recursive_test.target.to_numpy(), np.asarray(recursive_baselines['ma7'])),
+        'interval_calibration': 'not_evaluated_for_recursive_horizon',
+    }
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     frame.to_csv(output / "dataset.csv", index_label="date")
+    pd.DataFrame({'actual': recursive_test.target, 'prediction': recursive_prediction,
+                  'lag7': recursive_baselines['lag7'], 'ma7': recursive_baselines['ma7'],
+                  'step': np.arange(1, len(recursive_test) + 1)}).to_csv(output / 'recursive_predictions.csv', index_label='date')
     model.save_model(output / "model.json")
     pd.DataFrame({"actual": test.target, "prediction": prediction, "lag7": lag7, "ma7": ma7,
                   "lower": lower, "upper": upper, "covered": covered}).to_csv(output / "test_predictions.csv", index_label="date")
@@ -82,6 +106,9 @@ def run(output, dataset=None):
               "split": {"train": train_end, "calibration": calibration_end-train_end, "test": len(test)},
               "feature_columns": columns, "evaluation": "one_step_observed_history", "unit": "VND",
               "validation": "calibration only, no hyperparameter search; test never used in fit"}
+    config['recursive_evaluation'] = {'horizon': 14, 'origin_selection': 'before_first_test_day',
+                                    'fit': 'same_train_only_model', 'future_actuals_used': False,
+                                    'baseline_history': 'each method recursively appends its own predictions'}
     (output / "config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
     manifest = {
         "dataset_kind": "synthetic_formula_v1" if dataset is None else "explicit_snapshot_replay",

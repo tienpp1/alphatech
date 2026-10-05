@@ -8,7 +8,12 @@ Thông tin hiện hành của đợt này nằm trong RELEASE_ACCEPTANCE_2026_10
 Header 01/10 và trạng thái restore hoãn bên trên là lịch sử: restore độc lập
 02/10 đã PASS, TEST 162 đã hủy sau UAT, eef9150 đã live và CI 37174258042 success.
 Không lấy ghi nhận cũ làm trạng thái hiện tại. Ledger 97 giữ nguyên theo Rule 12.
-Đang xác nhận bản sửa nội dung công bố trên staged tree, CI và production.
+Đã push/deploy 939bba6: Render dep-db10pmqd0e5s73dim6dg live; CI run
+37188696697 cùng SHA completed/success. Full release 1187 tests/189.552s OK;
+35 use case có test được quan sát. Live public 5 trang đạt nội dung/header;
+Google-linked identity public 200/internal 403; ba role nội bộ login/portal 200,
+cookie Secure/HttpOnly/Lax. Chi tiết sau deploy được bổ sung ở hồ sơ local
+RELEASE_ACCEPTANCE_2026_10_04.md; không sửa ledger 97 hoặc dữ liệu nghiệp vụ.
 
 ## 2026-10-04 — Cấp lại thông tin đăng nhập nội bộ theo xác nhận chủ dự án
 
@@ -1575,3 +1580,12 @@ local test có opt-in. Chủ dự án nghiệm thu CI local, không chứng nh�
 GitHub API run 36538969165 failure; Render đang live SHA 27e7be7, chưa chứa các
 sửa đổi đợt này. RAG phiếu cũ 3/4 đủ ý; phản hồi sửa cần được chấm lại. Xem
 ACCEPTANCE_CONTINUATION_2026_10_01.md cho test/evidence; restore vẫn hoãn.
+## 2026-10-05 — Tiếp nối trong phạm vi đã chốt
+
+Sửa cụm forecasting: parity feature training/inference, snapshot cấu hình,
+weekly cadence, không bịa RMSE và atomic replacement giữ kết quả tốt khi lỗi.
+Nhóm prediction/training/queue: 25 tests/85.897s OK. Gói offline/replay: 4 tests/
+10.044s OK; recursive 14 ngày giữ R² âm và kém lag7 về MAE/RMSE. Đang kiểm tra
+full release đã đạt 1197 tests/323.998s OK, không failure/error/skip; check/drift
+đạt. CI/deploy commit mới còn chờ; hồ sơ FORECAST_INTEGRITY_2026_10_05.md.
+Ledger 97 giữ nguyên.

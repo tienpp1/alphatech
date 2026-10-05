@@ -50,6 +50,8 @@ jobs:
         run: python manage.py test tests.test_public_policy_copy tests.test_policy_and_claim_consistency tests.test_customer_approval_notices tests.test_public_website_and_portal_separation --noinput
       - name: Forecast worker process and recovery regressions
         run: python manage.py test tests.test_forecast_worker_process tests.test_forecasting_queue --noinput
+      - name: Recursive forecast integrity and reproducible horizon
+        run: python manage.py test tests.test_forecast_recursive_integrity tests.test_forecasting_prediction tests.test_forecast_experiment_bundle --noinput
       - name: Grounded source disagreement regressions
         run: python manage.py test tests.test_rag_source_authority tests.test_adversarial_rag_execution --noinput
       - run: python manage.py check

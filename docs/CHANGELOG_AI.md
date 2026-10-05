@@ -1110,3 +1110,12 @@ Separate non-Google ADMIN/MANAGER/EMPLOYEE accounts retain password entry.
 Public banner and navigation reuse the server authorization policy. No migration
 or customer privilege mutation. Validation: staged release 72 tests and full local
 1197 tests pass; see GOOGLE_ACCOUNT_ISOLATION_2026_10_04.md. No 97-item ledger changes.
+# 2026-10-05 — Recursive forecast integrity
+
+Reused training feature builder in inference, preserving saved configuration and
+sample standard deviation. Null bounds for missing/invalid RMSE; zero stays zero.
+Prediction/persistence failure retains last good results through locked atomic
+replacement. Weekly cadence follows run snapshot. Added offline single-origin
+14-day evaluation with recursively rolled lag7/MA7 baselines and leakage/replay
+tests. Synthetic data and worse-than-baseline results remain explicitly labeled.
+No migrations, production data writes, worker enablement or ledger edits.
