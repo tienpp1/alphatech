@@ -1,6 +1,12 @@
 # AI Business Platform — canonical project context
 
 Last verified against source: 2026-09-15
+RAG scope repair (2026-10-05): explicit external market queries do not invoke
+workspace forecast tools or retrieve unrelated SOPs; they use the existing
+no-context fallback. Technical-request phrasing routes to the existing service
+ticket summary rather than stock balance. Existing permissions remain required.
+Recorded IND outputs are offline synthetic, not a blinded holdout or live LLM
+benchmark; human judgments remain blank until provided by a reviewer.
 Forecast inference update (2026-10-05): recursive roll-forward reuses build_features
 and the run's saved training feature/column/granularity/dimension provenance.
 Legacy runs without provenance use their existing model configuration; their

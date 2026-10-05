@@ -12,9 +12,9 @@
 
 Theo quy định tại **Mục 67 và 68 của Đề cương và Checklist 97 mục**, một hệ thống quản lý vận hành doanh nghiệp đáng tin cậy không thể chỉ "tuyên bố" có ghi nhật ký hoặc suy diễn từ mã nguồn, mà phải **đo lường trực tiếp từ sự kiện phát sinh thực tế**:
 1. **Đầy đủ định danh chủ thể tác động (Actor Provenance)**: Mọi thao tác đều phải gắn với `actor_user`, `actor_type` (`USER`, `AI_ASSISTANT`, `SYSTEM_JOB`), `workspace_id` và địa chỉ IP (`ip_address`).
-2. **Dấu thời gian chuẩn hóa (Tamper-evident Timestamp)**: Được sinh tự động tại thời điểm ghi (`auto_now_add=True`) với độ chính xác microsecond.
+2. **Dấu thời gian ghi nhận**: Được sinh tự động tại thời điểm ghi (`auto_now_add=True`); riêng timestamp không chứng minh tamper-evidence hoặc tính chính xác của đồng hồ.
 3. **Cấu trúc biến động Before/After rõ ràng**: Không chỉ lưu thông báo chung chung, trường `changes` (JSONField) phải lưu trữ trạng thái trước và sau của đối tượng biến động (`before` vs `after`), cho phép phục hồi hoặc truy cứu trách nhiệm nghiệp vụ.
-4. **Bảo vệ bất biến tầng Cơ sở Dữ liệu (Database-level Immutability Trigger)**: Không chỉ dựa vào tầng ứng dụng (Application Layer), quyền toàn vẹn của bảng `AuditLog` phải được bảo vệ bằng Trigger PostgreSQL mức CSDL để ngăn chặn 100% các câu lệnh SQL can thiệp trực tiếp (`UPDATE` và `DELETE`).
+4. **Bảo vệ tầng Cơ sở Dữ Liệu**: Trigger PostgreSQL từ chối `UPDATE` và `DELETE` trong các ca đã kiểm thử. Chủ database/quyền quản trị có thể thay đổi hoặc vô hiệu hóa trigger; không tuyên bố ngăn chặn mọi can thiệp hoặc bảo vệ tuyệt đối.
 5. **Bất biến Phân quyền & Assertion (Cổng 78)**: Đảm bảo nguyên tắc an ninh *Fail-Closed* — không bao giờ nới lỏng quyền hạn hoặc làm yếu các điều kiện kiểm thử (assertions) để ép test vượt qua.
 
 ---

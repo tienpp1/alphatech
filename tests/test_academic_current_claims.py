@@ -15,6 +15,17 @@ ACTIVE = [
 
 
 class AcademicCurrentClaimTests(SimpleTestCase):
+    def test_closure_annex_keeps_all_ids_and_references_real_files(self):
+        import re
+        text = (ROOT / 'docs/CLOSURE_97_EVIDENCE_2026_10_05.md').read_text(encoding='utf-8')
+        ids = [int(value) for value in re.findall(r'^\| (\d+) \|', text, re.MULTILINE)]
+        self.assertEqual(ids, list(range(1, 98)))
+        for reference in re.findall(r'(?:tests|docs|apps)/[A-Za-z0-9_./-]+\.(?:py|md)', text):
+            with self.subTest(reference=reference):
+                self.assertTrue((ROOT / reference).is_file())
+        self.assertIn('không phải biên bản 97/97 PASS', text)
+        self.assertIn('CHƯA', text.upper())
+
     def test_withdrawn_positive_claims_do_not_return(self):
         banned = ['97 / 97 mục (đạt 100,0%)', 'Toàn bộ 97/97 mục đã được đóng hoàn toàn',
                   'Độ đúng đắn có căn cứ (100%)', 'chính xác tuyệt đối',

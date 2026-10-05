@@ -2,6 +2,18 @@
 
 Do not log cosmetic edits.
 
+### 2026-10-05 — Actual IND execution and RAG scope repair
+
+- Execute the existing five IND questions on synthetic test records through
+  real offline services, with a non-superuser and external network blocked.
+- Preserve first observations: external gold-price query cited warranty SOP;
+  technical-request query selected stock balance. Scope external market queries
+  out of workspace forecasts/retrieval and recognize technical-request wording.
+- Export blank, fingerprint-bound human review plus readable Markdown using
+  the existing review service; no semantic score inferred from passing tests.
+- Add a separate 97-ID evidence annex, preserving ledger and approved Word.
+  Correct absolute audit-trigger/timestamp claims; no schema or business DB writes.
+
 ### 2026-10-04 — Public publication boundary and release evidence
 
 - Extend the existing policy boundary to customer order detail and service

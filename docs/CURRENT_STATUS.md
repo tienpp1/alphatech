@@ -1,4 +1,6 @@
-> **HIỆN HÀNH 04/10/2026:** xem RELEASE_ACCEPTANCE_2026_10_04.md cho bản sửa nội dung, kiểm thử staged tree, CI/Render và UAT. Restore độc lập 02/10 đã PASS; TEST retail 162 đã hủy sau kiểm tra owner/nonowner/ack. HTTP Google-linked identity thật: public 200, ba endpoint nội bộ 403. Ledger 97 giữ nguyên theo Rule 12; không dùng số lịch sử làm chứng nhận production.
+> **ĐỐI CHIẾU 05/10/2026:** CLOSURE_97_EVIDENCE_2026_10_05.md là phụ lục đủ97 ID, phân biệt D/T/H/P/C/M, không sửa ledger hoặc công bố97/97 PASS. Bộ IND thực thi offline đã phát hiện/sửa external-market query lấy SOP sai và technical-request query chọn stock tool. Chủ dự án đã đọc/chấm5 câu ĐẠT lúc09:40; giữ nguồn Human Evaluation, không live LLM/general quality. Full staged tree c800480:1201 tests/414.870s OK. Chủ dự án chưa có báo cáo/slide cuối khác: chưa nghiệm thu bản nộp cuối. Release production04406c8/CI37253354379 là phiên bản trước sửa RAG đợt này; không coi code local mới đã deploy.
+
+> **BẰNG CHỨNG 04/10/2026:** xem RELEASE_ACCEPTANCE_2026_10_04.md cho bản sửa nội dung, kiểm thử staged tree, CI/Render và UAT. Restore độc lập 02/10 đã PASS; TEST retail 162 đã hủy sau kiểm tra owner/nonowner/ack. HTTP Google-linked identity thật: public 200, ba endpoint nội bộ 403. Ledger 97 giữ nguyên theo Rule 12; không dùng số lịch sử làm chứng nhận production.
 
 > **LỊCH SỬ 01/10/2026 — TIẾP TỤC KIỂM CHỨNG:** Checklist đủ 97 ID, **96 mục tạm đóng theo phạm vi**, chỉ 96 hoãn vô thời hạn. Render dep-dav1j7e0tbcc73d6ddlg live SHA f2a831c; GitHub run 36836448440 cùng SHA completed/success, mọi bước quality success. HTTP thật có HSTS 3600s/CSP enforcement/CSRF Secure; browser map/video/3D khởi tạo được. Mục 92 đóng có điều kiện vì FORECAST_ASYNC_ENABLED=False và chủ dự án không dùng async production trên Free; không chứng nhận worker production. Secret source/history known-pattern scan không có findings, rotation theo Human Evaluation. Local 77/77 HTTPS/email và 15/15 CSP/readiness/deployment/health PASS; check/migration drift exit 0. Xem RELEASE_GATE_REOPEN_2026_10_01.md. Không chứng nhận 100%, disaster recovery, mọi mục kế thừa hoặc strict nonce CSP. Tài liệu nghiệm thu local còn dirty, không coi là đã deploy.
 
@@ -1585,10 +1587,12 @@ ACCEPTANCE_CONTINUATION_2026_10_01.md cho test/evidence; restore vẫn hoãn.
 Sửa cụm forecasting: parity feature training/inference, snapshot cấu hình,
 weekly cadence, không bịa RMSE và atomic replacement giữ kết quả tốt khi lỗi.
 Nhóm prediction/training/queue: 25 tests/85.897s OK. Gói offline/replay: 4 tests/
-10.044s OK; recursive 14 ngày giữ R² âm và kém lag7 về MAE/RMSE. Đang kiểm tra
-full release đã đạt 1197 tests/323.998s OK, không failure/error/skip; check/drift
-đạt. CI/deploy commit mới còn chờ; hồ sơ FORECAST_INTEGRITY_2026_10_05.md.
+10.044s OK; recursive 14 ngày giữ R² âm và kém lag7 về MAE/RMSE.
+Full release đã đạt1197 tests/323.998s OK, không failure/error/skip; check/drift
+đạt. Render dep-db1g7fdg1s2s73a1n6u0 live04406c8; CI37253354379 cùng SHA
+completed/success. Hồ sơ FORECAST_INTEGRITY_2026_10_05.md có kết quả cuối local.
 Ledger 97 giữ nguyên. CI 37252582257 có lỗi teardown sau 77 tests OK: worker
 test giữ persistent DB connection. Đã sửa finally close_all, thêm assertion
-connection None; test CONN_MAX_AGE=600 đạt, đang chạy lại CI. Không phải SMTP
+connection None; test CONN_MAX_AGE=600 đạt; integrations77 local và CI đều OK.
+Không phải SMTP
 hay lỗi assertion, không dùng keepdb/skip hoặc reset dữ liệu để bỏ qua lỗi.

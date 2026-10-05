@@ -2,6 +2,12 @@
 
 # HỒ SƠ NGHIỆM THU HỌC THUẬT TOÀN DIỆN
 
+Đối chiếu 05/10: `test_rag_independent_execution.py` chạy năm câu IND có sẵn
+qua pipeline offline thật với dữ liệu synthetic và người dùng không superuser.
+Test PASS chỉ xác nhận thực thi/lưu hồ sơ; mọi điểm semantic vẫn chưa chấm.
+Không gọi đây là holdout mù hoặc bằng chứng chất lượng Gemini API thật.
+Phụ lục từng ID: CLOSURE_97_EVIDENCE_2026_10_05.md; không đổi ledger.
+
 Nhóm bổ sung đối chiếu cuối: `test_academic_current_claims.py` (nội dung hiện hành), `test_rag_review_packet.py` (nguồn/định danh phiếu chấm RAG), `test_release_secret_scan.py` (scan không lộ giá trị secret). Đây là kiểm tra công cụ/hồ sơ, không tự chứng nhận semantic hoặc production.
 
 Đối chiếu 04/10: bằng chứng release/UAT/restore mới tại

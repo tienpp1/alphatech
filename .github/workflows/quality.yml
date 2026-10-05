@@ -53,7 +53,7 @@ jobs:
       - name: Recursive forecast integrity and reproducible horizon
         run: python manage.py test tests.test_forecast_recursive_integrity tests.test_forecasting_prediction tests.test_forecast_experiment_bundle --noinput
       - name: Grounded source disagreement regressions
-        run: python manage.py test tests.test_rag_source_authority tests.test_adversarial_rag_execution --noinput
+        run: python manage.py test tests.test_rag_source_authority tests.test_adversarial_rag_execution tests.test_rag_independent_execution tests.test_rag_review_packet --noinput
       - run: python manage.py check
       - run: python manage.py makemigrations --check --dry-run
       - run: python manage.py migrate --noinput

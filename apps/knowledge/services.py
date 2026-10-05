@@ -1251,7 +1251,6 @@ def answer_grounded_query(
 
     # 5. Hybrid Question Routing: Document Retrieval + Business Tools
     retrieval_observation = {}
-    retrieved_chunks = search_relevant_chunks(workspace, clean_message, metadata=retrieval_observation)
 
     # -----------------------------------------------------------------------
     # Multi-turn Conversation Context Memory (Workspace & Session Scoped)
@@ -1270,6 +1269,11 @@ def answer_grounded_query(
     # -----------------------------------------------------------------------
     from apps.knowledge.intent_router import classify_business_intent, BusinessIntent
     intent_result = classify_business_intent(clean_message, workspace, conversation_context=conv_context)
+    if intent_result.get("allow_document_retrieval", True):
+        retrieved_chunks = search_relevant_chunks(workspace, clean_message, metadata=retrieval_observation)
+    else:
+        retrieved_chunks = []
+        retrieval_observation['scope_reason'] = intent_result['scope_reason']
 
     # Handle AMBIGUOUS intent: return clarification question immediately.
     if intent_result.get("intent") == BusinessIntent.AMBIGUOUS:

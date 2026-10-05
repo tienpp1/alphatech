@@ -4,6 +4,15 @@ from apps.knowledge.human_review import prepare_adversarial_review, create_revie
 
 
 class RAGReviewPacketTests(SimpleTestCase):
+    def test_readable_packet_preserves_actual_output_and_ungraded_state(self):
+        from scripts.prepare_rag_review_packet import render_review_markdown
+        report = prepare_adversarial_review(self.raw)
+        text = render_review_markdown(report)
+        self.assertIn('A1', text)
+        self.assertIn('Reference', text)
+        self.assertEqual(text.count('Đánh giá: CHƯA CHẤM'), 2)
+        self.assertNotIn('Đánh giá: PASS', text)
+
     def setUp(self):
         self.raw = {'details': [
             {'id': 'same', 'question': 'Q1', 'status': 'ANSWERED', 'response': {'answer': 'A1'}, 'fixture_documents': [{'text': 'Reference'}]},

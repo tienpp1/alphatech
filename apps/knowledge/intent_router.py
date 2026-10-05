@@ -403,6 +403,14 @@ def classify_business_intent(
     category = extract_product_category(query)
     exclusions = extract_negations_and_exclusions(query)
 
+    # External investment/market questions are not workspace revenue forecasts.
+    # A hash-vector coincidence must not turn unrelated SOPs into their answer.
+    if _contains_word_or_phrase(norm, [
+        "gia vang the gioi", "gia vang quoc te", "chung khoan", "co phieu", "nasdaq",
+    ]):
+        return {"intent": BusinessIntent.DOCUMENT_RAG, "tools": [], "parameters": {},
+                "allow_document_retrieval": False, "scope_reason": "UNSUPPORTED_EXTERNAL_MARKET"}
+
     # 0. Conversational Follow-up Resolution
     follow_up = resolve_follow_up_context(query, conversation_context, workspace)
     if follow_up and follow_up.get("inherited_intent"):
@@ -1061,7 +1069,7 @@ def classify_business_intent(
 
     # 18. Service Tickets / Single Ticket Lookup / SLA Details
     is_co_phieu = _contains_word_or_phrase(norm, ["co phieu", "chung khoan", "hang khong", "boeing"])
-    if _contains_word_or_phrase(norm, ["ticket", "phieu", "phieu yeu cau", "phieu su co", "su co", "sla", "yeu cau dich vu", "case"]) and not is_co_phieu:
+    if _contains_word_or_phrase(norm, ["ticket", "phieu", "phieu yeu cau", "phieu su co", "su co", "sla", "yeu cau dich vu", "yeu cau ky thuat", "case"]) and not is_co_phieu:
         m_ticket = re.search(r"(?:ticket|phieu|yeu cau|request|case)\s*#?\s*(\d+)", norm)
 
         # Check single ticket lookup e.g. "Ticket 5 đang ở trạng thái gì?", "Phiếu #12 ai phụ trách?", "Ticket 5 sắp trễ SLA..."
