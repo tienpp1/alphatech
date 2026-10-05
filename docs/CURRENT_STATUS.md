@@ -1,6 +1,36 @@
-> **ĐỐI CHIẾU 05/10/2026:** CLOSURE_97_EVIDENCE_2026_10_05.md là phụ lục đủ97 ID, phân biệt D/T/H/P/C/M, không sửa ledger hoặc công bố97/97 PASS. Bộ IND thực thi offline đã phát hiện/sửa external-market query lấy SOP sai và technical-request query chọn stock tool. Chủ dự án đã đọc/chấm5 câu ĐẠT lúc09:40; giữ nguồn Human Evaluation, không live LLM/general quality. Full staged tree c800480:1201 tests/414.870s OK. Chủ dự án chưa có báo cáo/slide cuối khác: chưa nghiệm thu bản nộp cuối. Release production04406c8/CI37253354379 là phiên bản trước sửa RAG đợt này; không coi code local mới đã deploy.
+> **HIỆN HÀNH 05/10/2026:** Release ea18f14 đã push, CI37256797585 success và Render dep-db1h2hegekts73dptdbg live cùng SHA. Full tree c800480:1201tests/414.870s OK, source khớp release. Chủ dự án đã chấm5 IND offline ĐẠT lúc09:40; không live LLM/general quality. CLOSURE_97_EVIDENCE_2026_10_05.md đủ97 ID nhưng không phải97/97 PASS. Đợt tiếp theo sửa tài liệu/ERD draft local, không thay đổi ledger/Word hoặc gọi tài liệu chưa phát hành là đã deploy. Chưa nghiệm thu bản nộp cuối; xem DRAFT_SOURCE_AND_DIAGRAM_AUDIT_2026_10_05.md.
 
 > **BẰNG CHỨNG 04/10/2026:** xem RELEASE_ACCEPTANCE_2026_10_04.md cho bản sửa nội dung, kiểm thử staged tree, CI/Render và UAT. Restore độc lập 02/10 đã PASS; TEST retail 162 đã hủy sau kiểm tra owner/nonowner/ack. HTTP Google-linked identity thật: public 200, ba endpoint nội bộ 403. Ledger 97 giữ nguyên theo Rule 12; không dùng số lịch sử làm chứng nhận production.
+
+### Kết quả phát hành sau đối chiếu 05/10 (bổ sung local sau deploy)
+
+UAT collaboration 05/10: MANAGER gửi chat và đăng bản tin TEST trong abc-retail;
+EMPLOYEE đọc/phản hồi, không thấy nút đăng/sửa và URL sửa trả 403. xyz-service
+không hiển thị nội dung TEST. Hai tab cùng phiên nhận tin qua polling không
+reload; không gọi đó là hai tài khoản đồng thời. Phát hiện timestamp polling
+UTC khác HTML local; đã sửa local và thêm regression. Local 35 tests/333.401s
+OK; staged tree aaaab062 có 47 tests/14.718s OK (fast hasher chỉ trong test).
+check/migration drift exit 0; chưa coi patch là live trước khi xác minh deploy.
+Xem COLLABORATION_UAT_2026_10_05.md. Không đổi ledger/Word hoặc role/password.
+
+Đợt tài liệu tiếp theo (local): sửa ERD 22 FK theo snapshot 48 model, bốn
+sequence, RBAC/customer boundary, outbox, audit trigger và các phiên bản/claims
+trong thuyết minh nháp; đối chiếu lại nguồn Bezemer/Zaidman và Krebs et al.
+12 guard tests OK/0.045s; check và migration drift đạt. Thêm bước CI cho các
+guard, chưa push/run remote source mới. Word duyệt và ledger 97 giữ hash.
+User chốt chỉ nghiệm thu 5 IND đã chấm, không holdout mù. UAT chat/bản tin đã
+quan sát theo hai role lần lượt như ghi nhận trên; chưa chứng nhận hai phiên
+tài khoản đồng thời. Không đổi database,
+không sửa mật khẩu/Google grants và không tự công bố 97/97. Chi tiết tại
+DRAFT_SOURCE_AND_DIAGRAM_AUDIT_2026_10_05.md.
+
+GitHub main ea18f14410c760f36dcd4055d1c73e789540c6ef đã push; CI37256797585
+completed/success đúng SHA, RAG12testsOK, integrations77OK, coverage58%.
+Render dep-db1h2hegekts73dptdbg live cùng SHA; probeHTTPS5public200, headers và
+copy baseline đúng. Xem CLOSURE_RELEASE_2026_10_05.md, gói bàn giao v2 trong
+output. Full1201/414.870s tree c800480 khớp apps/config/tests/scripts/templates/
+static/data của release. Human review5/5PASS trên mẫu offline, không quality
+Gemini live. Chưa nghiệm thu bản nộp cuối. Word/ledger không đổi hash.
 
 > **LỊCH SỬ 01/10/2026 — TIẾP TỤC KIỂM CHỨNG:** Checklist đủ 97 ID, **96 mục tạm đóng theo phạm vi**, chỉ 96 hoãn vô thời hạn. Render dep-dav1j7e0tbcc73d6ddlg live SHA f2a831c; GitHub run 36836448440 cùng SHA completed/success, mọi bước quality success. HTTP thật có HSTS 3600s/CSP enforcement/CSRF Secure; browser map/video/3D khởi tạo được. Mục 92 đóng có điều kiện vì FORECAST_ASYNC_ENABLED=False và chủ dự án không dùng async production trên Free; không chứng nhận worker production. Secret source/history known-pattern scan không có findings, rotation theo Human Evaluation. Local 77/77 HTTPS/email và 15/15 CSP/readiness/deployment/health PASS; check/migration drift exit 0. Xem RELEASE_GATE_REOPEN_2026_10_01.md. Không chứng nhận 100%, disaster recovery, mọi mục kế thừa hoặc strict nonce CSP. Tài liệu nghiệm thu local còn dirty, không coi là đã deploy.
 

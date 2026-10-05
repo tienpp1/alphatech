@@ -1,5 +1,12 @@
 # Đối chiếu nguồn và giới hạn — 25/09/2026
 
+> CẬP NHẬT05/10: metadata Krebs/Momm/Kounev đã chọn bản CLOSER2012,
+> pp.426–431, DOI10.5220/0003957604260431. Related-work nguồn3 và chương1–2
+> nguồn2 thay bằng bài Bezemer/Zaidman IWPSE-EVOL2010, pp.88–92 trên trang
+> tác giả; không giữ tựa/hội nghị trộn cũ. Xem
+> DRAFT_SOURCE_AND_DIAGRAM_AUDIT_2026_10_05.md. Đoạn25/09 bên dưới là lịch sử;
+> chưa đọc/duyệt mọibài hoặc mọi kết luận ở bản nộp cuối.
+
 Mục 89 còn mở: đây là kiểm tra chọn lọc, không phải duyệt toàn bộ IEEE/Word.
 Không sửa bản đề cương đã duyệt, không dùng blog/arXiv làm nguồn thay thế.
 

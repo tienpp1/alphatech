@@ -25,7 +25,7 @@ Nguồn viết tắt (đường dẫn từ repository):
 | A | docs/HO_SO_KIEM_TOAN_AUDIT_TRAIL.md; tests/test_approval_concurrency_evidence.py; tests/test_audit_database_evidence.py |
 | G | docs/GIS_REFERENCE_EVIDENCE.md; docs/PRODUCTION_OSM_EVIDENCE_2026_09_26.md |
 | B | docs/HO_SO_DOI_CHIEU_TAC_VU_EMPLOYEE_VA_RBAC.md; docs/ACADEMIC_USE_CASE_TRACEABILITY_2026_09_25.md |
-| L | docs/RELEASE_ACCEPTANCE_2026_10_04.md; docs/FORECAST_INTEGRITY_2026_10_05.md |
+| L | docs/CLOSURE_RELEASE_2026_10_05.md; docs/RELEASE_ACCEPTANCE_2026_10_04.md; docs/FORECAST_INTEGRITY_2026_10_05.md |
 | Q | docs/ACCEPTANCE_BATCH_2026_09_25_CLAIMS.md; tests/test_public_policy_copy.py; tests/test_customer_email_policy_boundary.py |
 | X | docs/HO_SO_THUC_NGHIEM_DU_BAO_VA_DATA_CATALOG.md; docs/FORECAST_REPRODUCIBLE_BUNDLE_2026_09_24.md |
 
@@ -34,7 +34,7 @@ Nguồn viết tắt (đường dẫn từ repository):
 | ID | Tiêu chí kiểm tra / nguồn | Loại và ranh giới nghiệm thu |
 |---|---|---|
 | 1 | Tên đề tài — S/W | D; tên chuẩn trong bản duyệt, tên cũ ở nhật ký không là tên bản nộp. |
-| 2 | Bắt buộc/mở rộng — S/B | D/C; chat và bản tin bắt buộc, roadmap không tự thành yêu cầu. |
+| 2 | Bắt buộc/mở rộng — S/B; docs/COLLABORATION_UAT_2026_10_05.md | D/C/P; chat và bản tin bắt buộc, MANAGER/EMPLOYEE UAT theo thứ tự; same-session polling không là hai user đồng thời, roadmap không tự thành yêu cầu. |
 | 3 | Phụ lục — W | H/D; chủ dự án xác nhận bản duyệt giữ hướng tương lai. |
 | 4 | ERP/WMS — S/Q | D; không chứng nhận ERP/WMS đầy đủ. |
 | 5 | Ví dụ LST/deep learning — S | D; không tự bổ sung model theo hình minh họa. |
@@ -45,7 +45,7 @@ Nguồn viết tắt (đường dẫn từ repository):
 | 10 | Workspace bảng con — docs/PROJECT_CONTEXT.md | D/T; phạm vi kế thừa qua cha, không tự động lọc mọi query. |
 | 11 | Tuyệt đối/không ảo giác — Q | D/T; guard nội dung không chứng minh an toàn tuyệt đối. |
 | 12 | Ingestion/handler/training — docs/AI_METHOD_BOUNDARIES.md | D; không fine-tune Gemini. |
-| 13 | Đồng bộ trạng thái — L/phụ lục này | D/M; nhật ký cũ được giữ, không dùng header cũ làm trạng thái release mới. |
+| 13 | Đồng bộ trạng thái — L/phụ lục này | D; trạng thái hiện hành ghi ea18f14/1201; nhật ký cũ giữ riêng, không dùng header lịch sử làm release mới. |
 | 14 | Không cộng test trùng — L | T; dùng một log full riêng và các focused run riêng. |
 | 15 | Nhận xét metric — F/X | T/D; XGBoost kém lag7 về MAE/RMSE vẫn được ghi nhận. |
 | 16 | R² âm — F | T/D; không diễn giải là giải thích phần lớn phương sai. |
@@ -63,13 +63,13 @@ Nguồn viết tắt (đường dẫn từ repository):
 | 28 | Bài toán chính — F | D/C; doanh thu ngày, chưa nghiên cứu đa origin/dữ liệu doanh nghiệp thật. |
 | 29 | Keyword không là semantic — R | T; required groups/numeric chỉ proxy. |
 | 30 | Chunk retrieval — R; tests/test_rag_chunk_metrics.py | T; gold IDs khác nguồn do chính answer trả về. |
-| 31 | Hybrid cả hai nguồn — tests/test_rag_evaluation_scoring.py | T; kiểm contract; câu IND thực tế cần chấm riêng. |
+| 31 | Hybrid cả hai nguồn — tests/test_rag_evaluation_scoring.py | T/H; user đã chấm IND-HYB ngày05/10 trên output offline thật; không đánh giá mọi câu hybrid. |
 | 32 | Citation rate — R | T; source presence không tự chứng minh entailment. |
 | 33 | Fallback precision — R | T; TP/(TP+FP), không dùng recall thay precision. |
 | 34 | Từ chối nhầm — R | T; false positive có mẫu số riêng. |
 | 35 | API/fallback — tests/test_generation_provenance.py | T; simulated provider không gọi live API. |
 | 36 | Embedding thực dùng — tests/test_embedding_provenance.py | T; legacy UNKNOWN giữ UNKNOWN. |
-| 37 | Bộ độc lập — apps/knowledge/independent_benchmark.py | M; tách IND nhưng chưa có bằng chứng holdout mù độc lập với lịch sửa router. |
+| 37 | Bộ độc lập — apps/knowledge/independent_benchmark.py | H/C; user chốt chỉ nghiệm thu5 IND đã chấm, không holdout mù; không tính đã chứng minh bộ mù độc lập. |
 | 38 | Output/time/error — tests/test_rag_evaluation_runner.py | T; mới bổ sung IND execution, không chỉ mock runner. |
 | 39 | Đúng/đủ/số liệu — docs/RAG_REVIEW_FORM_2026_09_30.md; docs/RAG_INDEPENDENT_EXECUTION_2026_10_05.md | H; user đã đọc/chấm5 IND mới ĐẠT lúc09:40 ngày05/10; không semantic quality tổng quát. |
 | 40 | Đối kháng — tests/test_adversarial_rag_execution.py | T/H; bốn answer/two denials, không quality tổng quát. |
@@ -111,21 +111,21 @@ Nguồn viết tắt (đường dẫn từ repository):
 | 76 | Registration/replay — tests/test_registration_codes.py; L | T/H; cross-device user UAT riêng. |
 | 77 | Import→mapping — tests/test_import_mapping_acceptance.py | T; scoped invalid/duplicate, không replay-idempotency mọi child entity. |
 | 78 | Không yếu assertion — L | T/D; cleanup connection sửa teardown, không skip/keepdb để che lỗi. |
-| 79 | Nghiên cứu so sánh — docs/RESEARCH_SOURCE_CHECK_2026_09_25.md | D/M; không tự ký duyệt toàn báo cáo từ danh sách nguồn. |
+| 79 | Nghiên cứu so sánh — docs/RESEARCH_SOURCE_CHECK_2026_09_25.md; docs/DRAFT_SOURCE_AND_DIAGRAM_AUDIT_2026_10_05.md | D/M; sửa nguồn3/4, thêm so sánh5nguồn và giới hạn GIS; chưa fullpaper-review mọinguồn hoặc khảo sát trongnước. |
 | 80 | Gap ứng dụng — S/W | D; tích hợp không tự là tính mới thuật toán. |
 | 81 | Requirement→evidence — B | T/D; 35 UC matched log, không chứng nhận adequacy/visual tự động. |
-| 82 | Sơ đồ/code — B | D/M; snapshot model/routes riêng; trước nộp cần đối chiếu mọi hình bản nộp cuối. |
+| 82 | Sơ đồ/code — B; tests/test_academic_diagram_contract.py | D/T/M; sửa22 FK và4 sequence draft, snapshot48model mới; chưa có bản nộp cuối để kiểm mọi hình. |
 | 83 | Data catalog — X | D/T; synthetic nguồn/seed/hash; dữ liệu production không đưa vào gói công khai. |
 | 84 | Replay experiment — F/X | T; CSV/model/manifest replay, không multi-origin generalization. |
-| 85 | Cùng source/run — F/L | T; full 1197 ở staged tree trước cleanup; CI exact04406c8, không nhập thành một run. |
+| 85 | Cùng source/run — F/L | T; full1201 tree c800480 khớp source release ea18f14; CI exactea18f14, không nhập các run thành một. Sửa tài liệu tiếp theo có focused run riêng. |
 | 86 | Fail/skip — F/L | D/T; lỗi CI teardown trước giữ lại, full log0skip không chứng minh provider thật. |
 | 87 | README/demo/migrations — docs/DEMO_IDENTITY_RUNBOOK.md; B | D/T; seed chỉ DB local trống, không reseed/reset hệ thống hiện hành. |
 | 88 | Demo mạng lỗi — docs/DEMO_FALLBACK_RUNBOOK.md | D/T; phải ghi offline/deterministic, không giả live API. |
-| 89 | IEEE/tên/claims — W/Q | D/M; Word đã duyệt giữ hash; không tự áp bibliography hồ sơ khác lên Word. |
-| 90 | Deploy SHA — F | P; Render dep-db1g7fdg1s2s73a1n6u0 exact04406c8. |
+| 89 | IEEE/tên/claims — W/Q; docs/DRAFT_SOURCE_AND_DIAGRAM_AUDIT_2026_10_05.md | D/M; sửa claims/citation draft, Word duyệt giữ hash; không áp bibliography khác lên Word, chưa nghiệm thu bản nộp cuối. |
+| 90 | Deploy SHA — L | P; Render dep-db1h2hegekts73dptdbg exactea18f14. Sửa draft local sau đó không gọi đã deploy. |
 | 91 | Inbox bốn event — L | H; không Message ID độc lập cho release cuối. |
 | 92 | Worker production — F | C/T; tắt async Render Free, local lifecycle không production certification. |
-| 93 | CI/security — F | P; run37253354379 success, coverage58%, không100%. |
+| 93 | CI/security — L | P; run37256797585 success exactea18f14, coverage58%, không100%. |
 | 94 | Sentry — L | H; user thấy events, chưa có Event ID độc lập cho release cuối. |
 | 95 | HTTPS/cookie/CSP — L/F | P; baseline enforcement, còn inline/eval, không strict nonce CSP. |
 | 96 | pg_dump→pg_restore — docs/PRODUCTION_RESTORE_DRILL_2026_10_02.md | T;60 bảng/10576 dòng cùng snapshot; offsite/media/grants không bao gồm. |
@@ -133,10 +133,12 @@ Nguồn viết tắt (đường dẫn từ repository):
 
 ## Gói bằng chứng hiện hành và những gì không được gọi PASS
 
-`output/use_case_closure_20261005.json`: 35 UC, không missing file hoặc unobserved
-test file khi nối với full log 1197. Đây là reference/execution check, không là
-chứng chỉ nghiệp vụ. Full log: output/policy_release_pi3guvup/tests.log, tree
-0fb3a0ec4d6f48eb48a741495d020759c0839c87; CI và Render 04406c8 ghi riêng ở F.
+`output/use_case_closure_release_20261005.json`: 35 UC, không missing file hoặc
+unobserved test file khi nối với full log1201. Đây là reference/execution check,
+không là chứng chỉ nghiệp vụ. Full log: output/policy_release_jx0ekuc9/tests.log,
+tree c80048022ab604cb3a807dee49b5f77a0fecb532; source khớp release ea18f14.
+Các run1197/04406c8 là lịch sử, không cộng với run này. Thay đổi draft sau release
+có kết quả focused riêng, không hồi gán full1201 cho source chưa chạy lại.
 
 Giữ Word duyệt SHA256 9daeefdb61d1f0241b601e71882d2babb3ace148173acbba57fa40d4b8fd1816.
 Không ghi đè Word, upload dump production, sửa mật khẩu demo hoặc mở async/S3.

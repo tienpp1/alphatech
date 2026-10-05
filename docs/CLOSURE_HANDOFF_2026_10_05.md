@@ -12,6 +12,8 @@ Tên đề tài: Xây dựng nền tảng quản lý vận hành doanh nghiệp 
    policy synthetic như chính sách thương mại thật.
 4. FORECAST_INTEGRITY_2026_10_05.md: one-step/recursive và metric không tô hồng.
 5. RELEASE_ACCEPTANCE_2026_10_04.md: UAT/restore/provider theo nguồn riêng.
+6. DRAFT_SOURCE_AND_DIAGRAM_AUDIT_2026_10_05.md: sửa nguồn tham khảo,
+   22 FK, các sơ đồ tuần tự và mô tả triển khai trong bản Markdown nháp.
 
 Các JSON/CSV/model trong thư mục forecast là dữ liệu synthetic, không dữ liệu
 khách hàng production. Không đưa .env, database dump, session/token hoặc mật
@@ -33,7 +35,9 @@ khẩu vào gói. Word giữ SHA256 đã xác nhận, không tự chỉnh bản 
 Chủ dự án xác nhận chưa có báo cáo/slide cuối khác: **chưa nghiệm thu bản nộp cuối**.
 Gửi bản cuối khi có để rà sơ đồ/trích dẫn/claims. Bộ IND đã tách từ trước nhưng được dùng để repair
 trong đợt này: không gọi là holdout mù độc lập. Muốn đánh giá khả năng tổng quát
-cần câu hỏi do reviewer giữ riêng, chưa dùng để sửa router/prompt.
+cần câu hỏi do reviewer giữ riêng, chưa dùng để sửa router/prompt. Chủ dự án
+đã chốt chỉ nghiệm thu 5 câu đã chấm, không yêu cầu thực hiện holdout mù trong
+đợt này; quyết định đó không biến bộ đã dùng repair thành bộ mù.
 
 Các lựa chọn Local Storage, async production tắt và offsite backup hoãn được
 giữ. Chúng có thể là quyết định phạm vi đồ án, không trở thành PASS production.

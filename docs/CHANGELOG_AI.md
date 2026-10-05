@@ -2,6 +2,17 @@
 
 Do not log cosmetic edits.
 
+### 2026-10-05 — Consistent team-chat display time after browser UAT
+
+- Use the current Django timezone for polling timestamps, matching initial HTML.
+- Return the same formatted creation time on successful send rather than leaving
+  the sender with a permanent "Vừa xong" placeholder. Existing fields/permissions
+  and 3-second polling remain unchanged; no schema or migration change.
+- Add regression coverage for Vietnam date rollover and an activated UTC timezone.
+- Browser UAT observed MANAGER publish/send, EMPLOYEE read/reply and an actual
+  403 on bulletin edit; separate workspace lists did not show the TEST contents.
+  Same-session two-tab polling is not simultaneous two-account evidence.
+
 ### 2026-10-05 — Actual IND execution and RAG scope repair
 
 - Execute the existing five IND questions on synthetic test records through

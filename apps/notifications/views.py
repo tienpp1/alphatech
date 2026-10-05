@@ -319,7 +319,7 @@ def team_chat_messages_api(request):
             "is_me": m.sender.id == request.user.id,
             "message": m.message,
             "time_ago": _format_time_ago(m.created_at),
-            "created_at": m.created_at.strftime("%H:%M %d/%m"),
+            "created_at": timezone.localtime(m.created_at).strftime("%H:%M %d/%m"),
         })
 
     return JsonResponse({
@@ -373,6 +373,7 @@ def team_chat_send_api(request):
         "ok": True,
         "message_id": msg.id,
         "sender_name": request.user.get_full_name() or request.user.username,
+        "created_at": timezone.localtime(msg.created_at).strftime("%H:%M %d/%m"),
         "message": {
             "id": msg.id,
             "text": msg.message,

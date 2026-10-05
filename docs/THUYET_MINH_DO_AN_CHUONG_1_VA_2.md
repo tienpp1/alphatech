@@ -62,14 +62,14 @@ Không dùng nhận xét chưa kiểm chứng về SAP, Odoo hoặc các sản p
 Đề tài không tuyên bố tính mới về mặt phát minh thuật toán toán học cơ bản mà tập trung giải quyết **ba khoảng trống tích hợp ứng dụng thực tiễn** trong chuyển đổi số doanh nghiệp SMEs:
 1. **Khoảng trống Tích hợp Dọc (Vertical Integration Gap):** Kết nối liền mạch chuỗi cung ứng bán lẻ (Retail Order & Inventory) với quy trình bảo hành, sửa chữa kỹ thuật hiện trường (Service Operations & SLA) trên một mô hình dữ liệu quan hệ thống nhất có phân lập Workspace.
 2. **Khoảng trống Kiểm soát Đại lượng Số học trong RAG (Factual Grounding & Numeric Verification Gap):** Bổ sung phép đo offline cho retrieval và đại lượng số dựa trên rubric. Regex không kiểm chứng đầy đủ ngữ nghĩa; không tuyên bố loại bỏ ảo giác hoặc dùng bộ chấm như rào chắn runtime.
-3. **Khoảng trống Thực thi An toàn và Nhật ký Bất biến (Safe Action Execution & Auditing Gap):** Cung cấp cơ chế chuyển tiếp từ khuyến nghị của trí tuệ nhân tạo sang hành động kinh doanh thực tế thông qua mô hình phê duyệt có con người giám sát (Human-in-the-Loop), giao dịch bồi hoàn bù trừ an toàn (Compensating Transactions) và nhật ký kiểm toán bất biến được bảo vệ bằng Trigger PostgreSQL.
+3. **Nhu cầu thực thi có kiểm soát và truy vết:** action có contract đi qua phê duyệt với con người giám sát, transaction và audit append-only. DB rollback không tự bồi hoàn side effect ngoài database; trigger không bảo vệ trước chủ DB vô hiệu hóa nó. Stock reorder và workload balancing vẫn advisory, không tuyên bố saga tổng quát đã triển khai.
 
 # CHƯƠNG 2: CƠ SỞ LÝ THUYẾT VÀ NỀN TẢNG KỸ THUẬT
 
 ## 2.1. Mô hình Kiểm soát Truy cập Dựa trên Vai trò (RBAC) và Kiến trúc Đa khách thuê (Multi-Tenancy)
 
 ### 2.1.1. Lý thuyết Mô hình RBAC96
-Theo nghiên cứu kinh điển của Sandhu et al. (1996), mô hình kiểm soát truy cập dựa trên vai trò (Role-Based Access Control - RBAC) tổ chức quyền hạn thông qua các tập hợp hình thức:
+Theo nghiên cứu kinh điển của Sandhu et al. (1996) [1], mô hình kiểm soát truy cập dựa trên vai trò (Role-Based Access Control - RBAC) tổ chức quyền hạn thông qua các tập hợp hình thức:
 - Tập hợp người dùng: $U = \{u_1, u_2, \dots, u_m\}$
 - Tập hợp vai trò: $R = \{r_1, r_2, \dots, r_n\}$
 - Tập hợp quyền hạn: $P = \{p_1, p_2, \dots, p_k\}$
@@ -120,7 +120,7 @@ $$\hat{y}_t = \frac{1}{k} \sum_{i=1}^{k} y_{t-i}$$
 Mô hình này có ưu điểm đơn giản, phản ánh nhanh xu hướng ngắn hạn, đóng vai trò chuẩn so sánh (Baseline) để đánh giá các mô hình phức tạp hơn.
 
 ### 2.3.2. Cây Quyết định Tăng cường (Gradient Tree Boosting - XGBoost)
-Theo Chen & Guestrin (2016), XGBoost là một hệ thống học máy mở rộng dựa trên thuật toán tăng cường độ dốc (Gradient Boosting). Mô hình dự đoán $\hat{y}_i$ được biểu diễn dưới dạng tổng của $K$ cây quyết định hồi quy (regression trees):
+Theo Chen & Guestrin (2016) [4], XGBoost là một hệ thống học máy mở rộng dựa trên thuật toán tăng cường độ dốc (Gradient Boosting). Mô hình dự đoán $\hat{y}_i$ được biểu diễn dưới dạng tổng của $K$ cây quyết định hồi quy (regression trees):
 $$\hat{y}_i = \sum_{k=1}^{K} f_k(x_i), \quad f_k \in \mathcal{F}$$
 
 Hàm mục tiêu cần tối thiểu hóa tại bước lặp $t$:
@@ -149,7 +149,7 @@ Trong đề tài AlphaTech, cấu hình mặc định tại `apps/forecasting/fe
 ## 2.4. Hệ thống Thông tin Địa lý (GIS) và Bài toán Định tuyến Đơn hàng
 
 ### 2.4.1. Cơ sở dữ liệu Không gian và Tiện ích mở rộng PostGIS
-Theo Güting (1994), hệ thống cơ sở dữ liệu không gian mở rộng các kiểu dữ liệu quan hệ truyền thống bằng các kiểu hình học không gian (Points, LineStrings, Polygons) và các hàm quan hệ không gian (Spatial Predicates).
+Theo Güting (1994) [6], hệ thống cơ sở dữ liệu không gian mở rộng các kiểu dữ liệu quan hệ truyền thống bằng các kiểu hình học không gian (Points, LineStrings, Polygons) và các hàm quan hệ không gian (Spatial Predicates).
 - PostGIS bổ sung kiểu dữ liệu `GEOMETRY(Point, 4326)` (Hệ quy chiếu WGS 84).
 - Tọa độ các chi nhánh cửa hàng và địa chỉ giao hàng của khách hàng được lưu trữ dưới dạng:
   $$\text{Location} = \text{ST\_SetSRID}(\text{ST\_MakePoint}(\text{Longitude}, \text{Latitude}), 4326)$$
@@ -170,7 +170,7 @@ Trong `apps/gis/services.py`, truy vấn nội bộ dùng `Distance(..., spheroi
 
 [1] R. S. Sandhu, E. J. Coyne, H. L. Feinstein, and C. E. Youman, "Role-based access control models," *IEEE Computer*, vol. 29, no. 2, pp. 38–47, Feb. 1996, doi: 10.1109/2.485845.
 
-[2] C.-P. Bezemer and A. Zaidman, "Multi-tenant SaaS applications: Maintenance and evolution challenges," in *Proc. 2010 IEEE International Conference on Software Maintenance (ICSM)*, Timisoara, Romania, 2010, pp. 1–4, doi: 10.1109/ICSM.2010.5609735.
+[2] C.-P. Bezemer and A. Zaidman, "Multi-tenant SaaS applications: Maintenance dream or nightmare?," in *Proc. 4th Int. Joint ERCIM/IWPSE Symp. Software Evolution (IWPSE-EVOL)*, Antwerp, Belgium, 2010, pp. 88–92. [Online]. Available: https://azaidman.github.io/publications/bezemerIWPSE2010.pdf [Accessed: Oct. 5, 2026].
 
 [3] P. Lewis *et al.*, "Retrieval-augmented generation for knowledge-intensive NLP tasks," in *Advances in Neural Information Processing Systems (NeurIPS 2020)*, vol. 33, Curran Associates, Inc., 2020, pp. 9459–9474.
 
