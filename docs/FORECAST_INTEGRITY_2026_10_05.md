@@ -68,5 +68,16 @@ drift: No changes detected; known-pattern secret scan: 802 files/0 findings,
 không chứng nhận rotation hay mọi loại secret. Giữ nguyên assertions và failure
 lịch sử. Full release không gồm các thay đổi unrelated/untracked của agent khác.
 
-CI/deploy đang chờ kiểm chứng commit mới. Không cần browser cho kiểm chứng số
+CI run 37252582257 (9f54cfa) giữ nguyên trạng thái failure: 77 tests OK nhưng
+teardown DROP test_platform_ci bị ObjectInUse do một session còn mở. Đọc raw
+job log 111583073636 xác nhận lỗi, không phải SMTP/test assertion failure.
+ConcurrentOutboxTests dùng close_old_connections trong finally; nó giữ healthy
+persistent connection. Sửa test worker finally dùng connections.close_all và
+assert connection đã None; giữ race/once-only assertions, không keepdb/skip.
+Đang kiểm chứng lại cùng nhóm và CI commit tiếp nối.
+Kiểm thử riêng ConcurrentOutboxTests với CONN_MAX_AGE=600 trong process test
+độc lập: 1 test/1.959s OK, teardown hủy đúng test database UUID thành công.
+Không terminate session hoặc reset DB nghiệp vụ để làm xanh runner.
+
+CI/deploy đang chờ kiểm chứng commit tiếp nối. Không cần browser cho kiểm chứng số
 liệu backend này và không tạo giao dịch production.

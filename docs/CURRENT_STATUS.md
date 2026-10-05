@@ -1588,4 +1588,7 @@ Nhóm prediction/training/queue: 25 tests/85.897s OK. Gói offline/replay: 4 tes
 10.044s OK; recursive 14 ngày giữ R² âm và kém lag7 về MAE/RMSE. Đang kiểm tra
 full release đã đạt 1197 tests/323.998s OK, không failure/error/skip; check/drift
 đạt. CI/deploy commit mới còn chờ; hồ sơ FORECAST_INTEGRITY_2026_10_05.md.
-Ledger 97 giữ nguyên.
+Ledger 97 giữ nguyên. CI 37252582257 có lỗi teardown sau 77 tests OK: worker
+test giữ persistent DB connection. Đã sửa finally close_all, thêm assertion
+connection None; test CONN_MAX_AGE=600 đạt, đang chạy lại CI. Không phải SMTP
+hay lỗi assertion, không dùng keepdb/skip hoặc reset dữ liệu để bỏ qua lỗi.

@@ -22,7 +22,7 @@ class ConcurrentOutboxTests(TransactionTestCase):
     def test_two_workers_send_one_record_once(self, post):
         from concurrent.futures import ThreadPoolExecutor
         from threading import Barrier
-        from django.db import close_old_connections
+        from django.db import close_old_connections, connections
 
         delivery = CustomerEmailDelivery.objects.create(event_type="CONTACT",
             recipient="one@example.com", subject="Liên hệ", plain_body="Đã ghi nhận",
@@ -37,7 +37,11 @@ class ConcurrentOutboxTests(TransactionTestCase):
                 barrier.wait(timeout=10)
                 return deliver_outbox_record(stale).status
             finally:
-                close_old_connections()
+                # close_old_connections retains healthy persistent connections.
+                # This executor is ending: close this worker's thread-local DB
+                # connection even when CONN_MAX_AGE has not elapsed.
+                connections.close_all()
+                self.assertIsNone(connections['default'].connection)
 
         with ThreadPoolExecutor(max_workers=2) as pool:
             futures = [pool.submit(attempt) for _ in range(2)]
