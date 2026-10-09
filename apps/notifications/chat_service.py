@@ -69,11 +69,13 @@ def get_recent_team_messages(
 
     qs = TeamChatMessage.objects.filter(workspace=workspace).select_related("sender")
 
-    if since_id:
-        return list(qs.filter(id__gt=since_id).order_by("created_at")[:limit])
+    # Cursor and ordering must use the same key: timestamps can tie or be
+    # edited independently, otherwise a page can skip messages permanently.
+    if since_id is not None:
+        return list(qs.filter(id__gt=since_id).order_by("id")[:limit])
 
     # Default initial load: get latest `limit` messages in chronological order in 1 query
-    messages = list(qs.order_by("-created_at")[:limit])
+    messages = list(qs.order_by("-id")[:limit])
     messages.reverse()
     return messages
 

@@ -2,6 +2,28 @@
 
 Do not log cosmetic edits.
 
+## 2026-10-09 — Additional operational context (local, batch 2)
+
+Add source-reviewed order/stock, staging/mapping and service triage guides:
+six new authorized local documents, preserving previous documents/chunks.
+Public navigation help now covers change/cancel requests, sanitized incident
+reports and purchase-needs clarification without executing actions or exposing
+internal SOPs. Regressions cover accent/case variants, ingestion and informational
+questions not creating approvals. No schema, paid API, release or ledger changes.
+See AI_CONTEXT_BATCH_2_2026_10_09.md for measured scope and limitations.
+
+## 2026-10-09 — Source-reviewed AI context and retrieval precision (local)
+
+Public-only navigation FAQ, accent-insensitive whole-phrase matching, explicit
+upper-budget filtering and corrected RAM/SSD/IT routing reuse existing catalog
+and owned-order queries. Internal RAG lexical overlap uses whole tokens; new
+ingestion embeds headings with original citation text retained. Exact FAQ
+headings rank first only after existing confidence/provenance/tenancy gates.
+Prompt marks source text as evidence, not authority or execution instructions.
+User authorized eight new local guide documents (44 chunks across two workspaces);
+legacy documents/chunks unchanged. 229 focused tests pass; no schema change,
+paid provider calls, deployment or 97-ledger edits. See AI_CONTEXT_IMPROVEMENT_2026_10_09.md.
+
 ### 2026-10-05 — Consistent team-chat display time after browser UAT
 
 - Use the current Django timezone for polling timestamps, matching initial HTML.
@@ -1142,3 +1164,11 @@ replacement. Weekly cadence follows run snapshot. Added offline single-origin
 14-day evaluation with recursively rolled lag7/MA7 baselines and leakage/replay
 tests. Synthetic data and worse-than-baseline results remain explicitly labeled.
 No migrations, production data writes, worker enablement or ledger edits.
+## 2026-10-09 — Collaboration polling reliability (local)
+
+Reuse the existing team-chat/bulletin services and routes. Order message pages
+by the ID cursor and keep send responses from skipping unread peer messages.
+Replace chat interval with bounded single-flight polling, visible error states,
+safe draft retention and no automatic POST replay. Add scoped bulletin feed
+polling without page reload/editor loss. Render untrusted strings as text.
+No schema, role, customer boundary or 97-ledger changes; not deployed yet.

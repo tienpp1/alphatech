@@ -7,6 +7,8 @@ from django.utils import timezone
 
 from apps.accounts.models import Role, User
 from apps.workspaces.models import Workspace, WorkspaceMembership
+from apps.notifications.models import TeamChatMessage
+from apps.notifications.chat_service import get_recent_team_messages
 
 
 @override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
@@ -40,3 +42,23 @@ class TeamChatDisplayTimeTests(TestCase):
 
     def test_active_utc_timezone_matches_initial_template_not_hardcoded_vietnam(self):
         self.assert_display_time('UTC', '23:58 04/10')
+
+    def test_cursor_pages_use_id_order_even_when_timestamps_are_reversed(self):
+        items = [TeamChatMessage.objects.create(workspace=self.workspace, sender=self.user, message=str(i)) for i in range(55)]
+        TeamChatMessage.objects.filter(pk=items[0].pk).update(created_at=timezone.now())
+        TeamChatMessage.objects.filter(pk=items[-1].pk).update(created_at=datetime(2000, 1, 1, tzinfo=datetime_timezone.utc))
+        first = get_recent_team_messages(self.workspace, self.user, limit=50, since_id=0)
+        second = get_recent_team_messages(self.workspace, self.user, limit=50, since_id=first[-1].pk)
+        self.assertEqual([m.pk for m in first + second], [m.pk for m in items])
+        self.assertEqual(get_recent_team_messages(self.workspace, self.user, limit=1)[0].pk, items[-1].pk)
+
+    def test_live_scripts_and_accessible_feedback_are_loaded(self):
+        page = self.client.get('/noibo/trao-doi/', {'workspace_id': self.workspace.pk})
+        self.assertContains(page, 'js/internal_team_chat.js')
+        self.assertContains(page, 'id="chatSendStatus"')
+        self.assertContains(page, 'for="chatInputMessage"')
+        # The shared notification bell still has its unrelated timer.
+        from pathlib import Path
+        from django.conf import settings
+        template = (Path(settings.BASE_DIR) / 'templates/notifications/team_chat.html').read_text(encoding='utf-8')
+        self.assertNotIn('setInterval(', template)

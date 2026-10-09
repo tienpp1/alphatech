@@ -1,5 +1,22 @@
 # AI Business Platform — canonical project context
 
+AI context improvement (2026-10-09, local): public copilot remains rule-based,
+with a public-only source-reviewed navigation FAQ, whole-phrase Vietnamese
+matching and explicit million-VND upper-budget filtering. Internal KB ingestion
+now includes section headings in embedding input while preserving original
+chunk content for citations. Compatible candidates still require the dense gate;
+exact substantive FAQ headings have navigational priority, not policy authority.
+Eight local guide documents were added with permission; old chunks are unchanged.
+No fine-tuning, public SOP exposure, model migration or production rollout implied.
+
+Collaboration reliability update (2026-10-09, local): existing workspace chat
+retains 3-second polling with one in-flight request, bounded timeout and safe
+draft retention on unconfirmed sends. Only read responses advance the ID
+cursor; initial/incremental pages order by ID. Bulletin pages poll the existing
+scoped API every 10 seconds and replace only the feed, preserving editor drafts.
+Hidden tabs pause requests; access denial stops synchronization. No WebSocket,
+Redis, schema change or production rollout is implied.
+
 Last verified against source: 2026-09-15
 Chat display-time follow-up (2026-10-05): polling and send responses use the
 active Django timezone, matching initial template timestamps. Successful sends

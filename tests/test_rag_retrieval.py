@@ -18,10 +18,39 @@ from apps.knowledge.services import (
 from apps.knowledge.retrieval import (
     search_relevant_chunks,
     calculate_cosine_similarity,
+    calculate_lexical_score,
 )
 
 
 class VectorRetrievalTests(TestCase):
+    def test_lexical_matching_does_not_boost_substrings(self):
+        for query, content in [("RAM", "program"), ("giá", "giao hàng"), ("IT", "digital")]:
+            with self.subTest(query=query):
+                self.assertEqual(calculate_lexical_score(query, content), 0.0)
+
+    def test_lexical_matching_normalizes_accents_case_and_repetition(self):
+        self.assertEqual(calculate_lexical_score("Giá RAM ram", "GIA ram"), 1.0)
+        self.assertEqual(calculate_lexical_score("ram ssd", "ram", heading="SSD"), 1.0)
+        self.assertEqual(calculate_lexical_score("", "ram"), 0.0)
+
+    def test_exact_faq_heading_ranks_before_a_higher_dense_score_without_bypassing_gate(self):
+        from unittest.mock import patch
+        query = "Hai tài liệu mâu thuẫn thì trả lời thế nào?"
+        chunks = list(DocumentChunk.objects.filter(document=self.doc_a))
+        exact = chunks[0]
+        exact.content = "Cần trích dẫn cả hai nguồn và xác nhận hiệu lực."
+        exact.metadata['heading'] = query
+        exact.save(update_fields=['content', 'metadata'])
+        decoy = DocumentChunk.objects.create(workspace=self.ws_a, document=self.doc_a,
+            chunk_index=100, content="Văn bản dài có chủ đề khác", embedding=exact.embedding,
+            metadata={'heading': 'Một mục khác'})
+        with patch('apps.knowledge.retrieval.calculate_cosine_similarity', side_effect=[0.2, 0.9]):
+            result = search_relevant_chunks(self.ws_a, query, threshold=0.1)
+        self.assertEqual(result[0]['chunk_id'], exact.id)
+        with patch('apps.knowledge.retrieval.calculate_cosine_similarity', side_effect=[0.05, 0.9]):
+            result = search_relevant_chunks(self.ws_a, query, threshold=0.1)
+        self.assertEqual([r['chunk_id'] for r in result], [decoy.id])
+
     def setUp(self):
         self.user = User.objects.create_user(username="test_search_user")
 

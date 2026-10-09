@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Kênh Trao đổi Nhân sự — {{ active_workspace.name }}{% endblock %}
 
@@ -32,6 +33,7 @@
     overflow: hidden;
 }
 .chat-main-window {
+    min-width: 0;
     background: #1e293b;
     border: 1px solid #334155;
     border-radius: 14px;
@@ -184,6 +186,11 @@
     background: rgba(255, 255, 255, 0.1);
     color: #ffffff;
 }
+@media (max-width: 900px) {
+    .chat-sidebar { display: none; }
+    .chat-bubble-row { max-width: 95%; }
+    .chat-input-field { min-width: 0; }
+}
 </style>
 {% endblock %}
 
@@ -225,7 +232,7 @@
         <div style="padding-bottom: 12px; border-bottom: 1px solid #334155; margin-bottom: 12px;">
             <div style="font-size: 0.85rem; font-weight: 700; color: #f8fafc; text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center;">
                 <span>Thành viên ({{ colleagues|length }})</span>
-                <span style="color: #10b981; font-size: 0.75rem;">● Đang kết nối</span>
+                <span style="color: #94a3b8; font-size: 0.75rem;">Thành viên được cấp quyền</span>
             </div>
             <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">
                 Phạm vi: {{ active_workspace.code }}
@@ -262,6 +269,7 @@
 
     <!-- Right Main Chat Window -->
     <div class="chat-main-window">
+        <div id="chatConnectionStatus" role="status" aria-live="polite" style="padding: 10px 18px; color: #cbd5e1;">Đang kết nối kênh trao đổi…</div>
         <!-- Messages Stream -->
         <div id="chatMessagesStream" class="chat-messages-container"
              data-workspace-id="{{ active_workspace.id }}"
@@ -297,6 +305,7 @@
         <!-- Chat Input Form -->
         <form id="chatForm" method="POST" action="/noibo/trao-doi/?workspace_id={{ active_workspace.id }}" class="chat-input-bar">
             {% csrf_token %}
+            <label for="chatInputMessage" class="visually-hidden" style="position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%);">Nội dung tin nhắn</label>
             <input type="text" id="chatInputMessage" name="message" required placeholder="Nhập tin nhắn trao đổi (nhấn Enter để gửi)..."
                    autocomplete="off" class="chat-input-field">
             <button type="submit" id="btnSendChat" class="btn btn-primary" style="padding: 10px 18px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
@@ -304,122 +313,9 @@
                 <span>➤</span>
             </button>
         </form>
+        <div id="chatSendStatus" role="status" aria-live="polite" style="padding: 0 18px 10px; color: #cbd5e1;"></div>
     </div>
 </div>
 
-<script>
-(function() {
-    var streamEl = document.getElementById('chatMessagesStream');
-    var workspaceId = streamEl ? (streamEl.getAttribute('data-workspace-id') || '') : '';
-    var currentUserId = streamEl ? parseInt(streamEl.getAttribute('data-user-id') || '0', 10) : 0;
-    var latestMessageId = streamEl ? parseInt(streamEl.getAttribute('data-latest-id') || '0', 10) : 0;
-    var formEl = document.getElementById('chatForm');
-    var inputEl = document.getElementById('chatInputMessage');
-    var noMsgNotice = document.getElementById('noMsgNotice');
-
-    function scrollToBottom() {
-        if (streamEl) {
-            streamEl.scrollTop = streamEl.scrollHeight;
-        }
-    }
-    scrollToBottom();
-
-    // AJAX Send
-    if (formEl) {
-        formEl.addEventListener('submit', function(e) {
-            e.preventDefault();
-            var text = inputEl.value.trim();
-            if (!text) return;
-
-            inputEl.value = '';
-            inputEl.focus();
-
-            var tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
-            var csrfToken = tokenInput ? tokenInput.value : '';
-            fetch('/api/v1/notifications/chat/send/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({
-                    workspace_id: workspaceId,
-                    message: text
-                })
-            })
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-                if (data.status === 'success' || data.ok) {
-                    var msgText = (typeof data.message === 'object' && data.message) ? data.message.text : (data.message || text);
-                    appendMessage({
-                        id: data.message_id || (data.message && data.message.id) || Date.now(),
-                        sender_id: currentUserId,
-                        sender_name: data.sender_name || 'Bạn',
-                        is_me: true,
-                        message: msgText,
-                        created_at: data.created_at || 'Vừa xong'
-                    });
-                }
-            })
-            .catch(function(err) {
-                console.error('Lỗi gửi tin:', err);
-            });
-        });
-    }
-
-    function appendMessage(item) {
-        if (document.querySelector('[data-msg-id="' + item.id + '"]')) {
-            return;
-        }
-        if (noMsgNotice) {
-            noMsgNotice.style.display = 'none';
-        }
-
-        var row = document.createElement('div');
-        row.className = 'chat-bubble-row ' + (item.is_me ? 'mine' : 'theirs');
-        row.setAttribute('data-msg-id', item.id);
-
-        var initials = (item.sender_name || 'NV').substring(0, 2).toUpperCase();
-
-        row.innerHTML = 
-            '<div class="chat-avatar">' + initials + '</div>' +
-            '<div class="chat-bubble-content">' +
-                '<span class="chat-sender-name">' + escapeHtml(item.sender_name) + '</span>' +
-                '<div class="chat-bubble-box">' + escapeHtml(item.message) + '</div>' +
-                '<span class="chat-time-stamp">' + (item.created_at || '') + '</span>' +
-            '</div>';
-
-        streamEl.appendChild(row);
-        if (item.id && typeof item.id === 'number') {
-            latestMessageId = Math.max(latestMessageId, item.id);
-        }
-        scrollToBottom();
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        var div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // Periodic live polling (every 3 seconds)
-    if (workspaceId) {
-        setInterval(function() {
-            fetch('/api/v1/notifications/chat/messages/?workspace_id=' + workspaceId + '&since_id=' + latestMessageId)
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-                if ((data.status === 'success' || data.ok) && data.messages && data.messages.length > 0) {
-                    data.messages.forEach(function(item) {
-                        appendMessage(item);
-                    });
-                }
-            })
-            .catch(function(err) {
-                // Silently ignore network errors during periodic poll
-            });
-        }, 3000);
-    }
-})();
-</script>
+<script src="{% static 'js/internal_team_chat.js' %}" defer></script>
 {% endblock %}

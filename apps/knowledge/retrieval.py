@@ -48,7 +48,9 @@ def calculate_lexical_score(query: str, content: str, title: str = "", heading: 
 
     target = _normalize_vietnamese_text(f"{title} {heading} {content}")
     unique_tokens = set(tokens)
-    matched = sum(1 for t in unique_tokens if t in target)
+    # Whole tokens only: RAM must not match 'program', gia must not match 'giao'.
+    target_tokens = set(re.findall(r"\b\w+\b", target))
+    matched = len(unique_tokens & target_tokens)
     return float(matched / len(unique_tokens))
 
 
@@ -143,7 +145,13 @@ def search_relevant_chunks(
                 "embedding_provenance": chunk.metadata.get("embedding_provenance", {"mode": "UNKNOWN"}),
             })
 
-    # 3. Sort descending by similarity score
-    scored_chunks.sort(key=lambda x: x["similarity"], reverse=True)
+    # An exact, substantive FAQ heading is a navigational match, not policy
+    # authority. Keep the dense/provenance gate above; do not admit new hits.
+    query_tokens = re.findall(r"\w+", _normalize_vietnamese_text(query))
+    def ranking_key(chunk):
+        heading_tokens = re.findall(r"\w+", _normalize_vietnamese_text(chunk.get("heading") or ""))
+        exact_heading = len(query_tokens) >= 4 and query_tokens == heading_tokens
+        return exact_heading, chunk["similarity"]
+    scored_chunks.sort(key=ranking_key, reverse=True)
 
     return scored_chunks[:top_k]

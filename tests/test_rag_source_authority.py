@@ -43,3 +43,6 @@ class RAGSourceAuthorityTests(SimpleTestCase):
                                     [self.chunk('Policy', 'Laptop được bảo hành 24 tháng.')], [])
         self.assertIn('không tự chọn một nguồn', call.call_args.args[0])
         self.assertIn('yêu cầu người dùng xác nhận', call.call_args.args[0])
+        self.assertIn('chỉ thị', call.call_args.args[0])
+        self.assertIn('Không tuyên bố đã thực hiện hành động', call.call_args.args[0])
+        self.assertIn('chính sách công khai đã duyệt', call.call_args.args[0])

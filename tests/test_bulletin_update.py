@@ -8,6 +8,17 @@ from apps.notifications.models import InternalBulletin
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class BulletinUpdateTests(TestCase):
+    def test_live_feed_preserves_editor_outside_replacement_region(self):
+        response = self.client.get('/noibo/bang-tin/', {'workspace_id': self.ws.pk})
+        self.assertContains(response, 'id="bulletinLiveFeed"')
+        self.assertContains(response, 'js/internal_bulletins.js')
+        self.assertContains(response, 'data-can-manage="true"')
+        self.role.name = 'EMPLOYEE'
+        self.role.save()
+        employee_page = self.client.get('/noibo/bang-tin/', {'workspace_id': self.ws.pk})
+        self.assertContains(employee_page, 'data-can-manage="false"')
+        self.assertNotContains(employee_page, 'id="new-bulletin-modal"')
+
     def setUp(self):
         self.ws = Workspace.objects.create(code="edit-a", name="A", workspace_type="RETAIL")
         self.other = Workspace.objects.create(code="edit-b", name="B", workspace_type="RETAIL")

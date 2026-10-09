@@ -4,6 +4,7 @@ Covers PDF, DOCX, TXT, MD parsing, status transitions, metadata retention, and e
 """
 
 import io
+from pathlib import Path
 import docx
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -25,6 +26,42 @@ from apps.knowledge.services import (
 
 
 class DocumentIngestionTests(TestCase):
+    def test_source_reviewed_platform_guides_ingest_and_retrieve_in_workspace(self):
+        from apps.knowledge.retrieval import search_relevant_chunks
+        from apps.knowledge.services import generate_grounded_answer
+        guide_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge" / "platform_guides"
+        queries = {
+            "01_tai_khoan_va_workspace.md": "Vì sao không xem được dữ liệu workspace khác?",
+            "02_rag_va_nguon.md": "Hai tài liệu mâu thuẫn thì trả lời thế nào?",
+            "03_du_bao_va_phe_duyet.md": "Khi XGBoost kém baseline thì kết luận thế nào?",
+            "04_trao_doi_va_kenh_thong_bao.md": "Chat nhóm nội bộ hoạt động như thế nào?",
+            "05_don_hang_va_ton_kho.md": "Hủy đơn có tự hoàn tiền không?",
+            "06_nhap_du_lieu_va_mapping.md": "Import thành công có nghĩa đã cập nhật dữ liệu bán hàng không?",
+            "07_tiep_nhan_dich_vu_va_chan_doan.md": "Ticket thiếu deadline thì có được tính đạt SLA không?",
+        }
+        documents = {}
+        for filename in queries:
+            with self.subTest(ingest=filename):
+                document = upload_and_ingest_document(
+                    self.workspace, self.user, self.kb,
+                    SimpleUploadedFile(filename, (guide_dir / filename).read_bytes(), content_type="text/markdown"),
+                    filename, "MD")
+                self.assertEqual(document.status, DocumentStatus.READY)
+                self.assertGreater(document.chunk_count, 0)
+                for chunk in document.chunks.all():
+                    self.assertEqual(chunk.metadata['embedding_input_kind'], 'heading_and_content_v1')
+                documents[filename] = document
+        for filename, query in queries.items():
+            with self.subTest(retrieve=query):
+                chunks = search_relevant_chunks(self.workspace, query, top_k=5)
+                self.assertIn(documents[filename].id, [chunk["document_id"] for chunk in chunks])
+                self.assertEqual(chunks[0]["document_id"], documents[filename].id)
+                answer, sources = generate_grounded_answer(self.workspace, self.user, query, chunks)
+                self.assertIn("Nguồn:", answer)
+                self.assertTrue(sources)
+        foreign = Workspace.objects.create(code="foreign-platform-guide", name="Foreign", workspace_type=WorkspaceType.RETAIL)
+        self.assertEqual(search_relevant_chunks(foreign, queries["01_tai_khoan_va_workspace.md"]), [])
+
     def setUp(self):
         self.user = User.objects.create_user(username="test_admin", email="admin@example.com")
         self.workspace = Workspace.objects.create(

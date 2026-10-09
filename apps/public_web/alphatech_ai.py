@@ -9,11 +9,24 @@ Hệ sinh thái AlphaTech: ABC Tech Store (Bán lẻ thiết bị) & XYZ IT Serv
 """
 
 import re
+import unicodedata
 from decimal import Decimal
 from django.db.models import Q
 from apps.retail.models import Product, Branch, Order
 from apps.service_ops.models import Service, ServiceCategory
 from apps.workspaces.models import WorkspaceType
+
+
+def normalize_question(text):
+    """Accent-insensitive Vietnamese matching; keep original text for display."""
+    text = unicodedata.normalize("NFKD", text.casefold().replace("đ", "d"))
+    return " ".join("".join(c for c in text if not unicodedata.combining(c)).split())
+
+
+def contains_keywords(text, keywords):
+    normalized = normalize_question(text)
+    return any(re.search(r"(?<!\w)" + re.escape(normalize_question(k)) + r"(?!\w)", normalized)
+               for k in keywords)
 
 
 def format_vnd(amount):
@@ -28,7 +41,7 @@ def format_vnd(amount):
 def handle_order_tracking(request, user_query, q_lower):
     """Xử lý tra cứu tiến độ đơn hàng có bảo mật quyền sở hữu."""
     order_match = re.search(r'(ORD-[A-Z0-9\-]+|[0-9]{5,})', user_query, re.IGNORECASE)
-    if not (any(k in q_lower for k in ["đơn hàng", "tra cứu", "vận chuyển", "kiểm tra đơn", "order", "mã đơn", "tiến độ đơn"]) and order_match):
+    if not (contains_keywords(q_lower, ["đơn hàng", "tra cứu", "vận chuyển", "kiểm tra đơn", "order", "mã đơn", "tiến độ đơn"]) and order_match):
         return None
 
     matched_code = order_match.group(1).upper()
@@ -79,7 +92,7 @@ def handle_authenticity_and_cocq(q_lower):
         "hàng dựng", "mới 100%", "nguyên seal", "fullbox", "serial", "imei", "service tag",
         "kiểm tra máy", "check hãng", "hàng thật", "chất lượng máy", "bồi hoàn", "bồi thường"
     ]
-    if not any(k in q_lower for k in keywords):
+    if not contains_keywords(q_lower, keywords):
         return None
 
     reply = "**Nguồn gốc và giấy tờ sản phẩm**\n\nTôi chưa có hồ sơ đã xác minh để cam kết xuất xứ, CO/CQ hoặc mức bồi hoàn cho từng sản phẩm. Quý khách nên yêu cầu thông tin Serial/Service Tag, chứng từ và điều kiện bảo hành của đúng mã hàng trước khi mua.\n\nVui lòng [liên hệ tư vấn](/lien-he/) hoặc xem [sản phẩm](/san-pham/) để được xác nhận."
@@ -96,7 +109,7 @@ def handle_installment_procedure(q_lower):
         "fe credit", "hd saison", "duyệt hồ sơ", "trả trước bao nhiêu", "trả góp 0%",
         "trả góp thẻ tín dụng", "lãi suất trả góp", "hướng dẫn trả góp", "mua góp"
     ]
-    if not any(k in q_lower for k in keywords):
+    if not contains_keywords(q_lower, keywords):
         return None
 
     reply = "**Thông tin mua trả góp**\n\nTôi chưa có chính sách trả góp đã xác minh về đối tác, lãi suất, phí, kỳ hạn hay điều kiện duyệt hồ sơ. Không thể xác nhận trả góp có sẵn tại bước thanh toán.\n\nQuý khách vui lòng [liên hệ tư vấn](/lien-he/) để được xác nhận bằng văn bản trước khi quyết định. Không gửi ảnh CCCD, số thẻ, mật khẩu hay mã OTP trong cuộc trò chuyện này."
@@ -112,7 +125,7 @@ def handle_return_and_refund(q_lower):
         "đổi trả theo nhu cầu", "không thích", "nhầm cấu hình", "trả hàng", "hoàn tiền",
         "phí đổi trả", "trả lại máy", "mua nhầm", "đổi máy khác", "chính sách đổi hàng"
     ]
-    if not any(k in q_lower for k in keywords):
+    if not contains_keywords(q_lower, keywords):
         return None
 
     reply = "**Yêu cầu đổi trả và hoàn tiền**\n\nQuý khách vui lòng chuẩn bị mã đơn hàng và mô tả tình trạng sản phẩm tại [Liên hệ](/lien-he/). Tôi chưa có chính sách đã xác minh để xác nhận thời hạn đổi trả, mức phí hoặc thời gian hoàn tiền cho đơn hàng này. Cần được nhân viên xác nhận điều kiện áp dụng trước khi gửi trả hàng."
@@ -125,11 +138,11 @@ def handle_return_and_refund(q_lower):
 def handle_hardware_upgrade_maintenance(user_query, q_lower):
     """Tư vấn dịch vụ nâng cấp RAM, SSD NVMe lấy liền, vệ sinh máy tính và tra keo tản nhiệt chuyên sâu."""
     keywords = [
-        "nâng cấp", "ram", "ssd", "ổ cứng", "vệ sinh", "keo tản nhiệt", "tra keo",
+        "nâng cấp", "vệ sinh", "keo tản nhiệt", "tra keo",
         "nóng máy", "quạt kêu", "mất bảo hành", "bảo dưỡng", "thay ram", "thay ổ cứng",
         "vệ sinh laptop", "vệ sinh máy tính"
     ]
-    if not any(k in q_lower for k in keywords):
+    if not contains_keywords(q_lower, keywords):
         return None
 
     reply = "**Nâng cấp RAM/SSD và vệ sinh máy**\n\nQuý khách có thể gửi model máy và nhu cầu tại [Yêu cầu dịch vụ](/yeu-cau-dich-vu/). Cần được kỹ thuật viên xác nhận tính tương thích, ảnh hưởng đến bảo hành, chi phí và thời gian thực hiện. Tôi chưa có chính sách đã xác minh về bảo dưỡng miễn phí hay linh kiện tặng kèm."
@@ -146,7 +159,7 @@ def handle_software_and_remote_support(q_lower):
         "ultraviewer", "anydesk", "từ xa", "cài lại win", "diệt virus", "hỗ trợ từ xa",
         "cài phần mềm", "cài đặt máy"
     ]
-    if not any(k in q_lower for k in keywords):
+    if not contains_keywords(q_lower, keywords):
         return None
 
     reply = "**Cài đặt phần mềm và chuyển dữ liệu**\n\nQuý khách có thể gửi nhu cầu tại [Yêu cầu dịch vụ](/yeu-cau-dich-vu/). Cần xác nhận phạm vi công việc, chi phí và giấy phép phần mềm trước khi thực hiện; tôi chưa có căn cứ xác nhận máy được tặng bản quyền. Hãy sao lưu dữ liệu cần thiết và không gửi mật khẩu, mã OTP hoặc mã truy cập từ xa vào cuộc trò chuyện."
@@ -159,15 +172,14 @@ def handle_software_and_remote_support(q_lower):
 def handle_b2b_corporate_quotation(q_lower):
     """Tư vấn chính sách khách hàng doanh nghiệp, báo giá dự án số lượng lớn và điều khoản công nợ."""
     b2b_direct_keywords = [
-        "doanh nghiệp", "b2b", "chiết khấu số lượng", "mua sỉ", "mua số lượng lớn",
+        "b2b", "chiết khấu số lượng", "mua sỉ", "mua số lượng lớn",
         "công nợ", "hợp đồng mua bán", "hợp đồng kinh tế", "nghiệm thu", "procurement",
         "phòng mua hàng", "mua cho công ty", "trang bị công ty", "trang bị cho công ty",
         "dự án công ty", "chính sách b2b", "cung cấp số lượng lớn"
     ]
-    is_quotation_request = "báo giá" in q_lower and any(
-        k in q_lower for k in ["công ty", "dự án", "số lượng", "b2b", "hợp đồng", "pháp nhân", "sỉ", "đối tác"]
-    )
-    if not (any(k in q_lower for k in b2b_direct_keywords) or is_quotation_request):
+    is_quotation_request = contains_keywords(q_lower, ["báo giá"]) and contains_keywords(
+        q_lower, ["công ty", "dự án", "số lượng", "b2b", "hợp đồng", "pháp nhân", "sỉ", "đối tác"])
+    if not (contains_keywords(q_lower, b2b_direct_keywords) or is_quotation_request):
         return None
 
     reply = "**Yêu cầu báo giá doanh nghiệp B2B**\n\nVui lòng cung cấp loại thiết bị, số lượng và yêu cầu sử dụng qua [Liên hệ](/lien-he/). Tôi chưa có chính sách đã xác minh về chiết khấu, công nợ hoặc thời hạn cấp báo giá. Giá và điều kiện giao dịch cần được nhân viên xác nhận cho yêu cầu cụ thể."
@@ -183,7 +195,7 @@ def handle_privacy_and_data_security(q_lower):
         "bảo mật dữ liệu", "lộ thông tin", "riêng tư", "bán thông tin", "xem trộm",
         "dữ liệu cá nhân", "quyền riêng tư", "an toàn dữ liệu", "bảo mật thông tin", "iso 27001", "iso27001"
     ]
-    if not any(k in q_lower for k in keywords):
+    if not contains_keywords(q_lower, keywords):
         return None
 
     reply = "**Thông tin bảo mật dữ liệu**\n\nTôi chưa có bằng chứng xác minh chứng nhận ISO 27001 hoặc các cam kết bảo mật tuyệt đối của đơn vị. Không thể xác nhận điều kiện camera, lưu trữ hay mã hóa chỉ từ cuộc trò chuyện này.\n\nTrước khi bàn giao thiết bị, Quý khách nên sao lưu dữ liệu cần thiết và yêu cầu xác nhận phạm vi truy cập, xử lý dữ liệu. Không gửi mật khẩu, mã OTP hoặc tài liệu nhạy cảm ở đây. Có thể [liên hệ](/lien-he/) để yêu cầu chính sách áp dụng."
@@ -196,7 +208,7 @@ def handle_privacy_and_data_security(q_lower):
 def handle_onsite_booking_guide(q_lower):
     """Tư vấn quy trình đặt lịch kỹ thuật viên đến tận nơi, bảng phí minh bạch và hỗ trợ ngoài giờ."""
     # Never intercept emergency network/server outage questions
-    if any(k in q_lower for k in ["rớt mạng", "sập server", "khẩn cấp", "p1", "sự cố mạng", "gấp"]):
+    if contains_keywords(q_lower, ["rớt mạng", "sập server", "khẩn cấp", "p1", "sự cố mạng", "gấp"]):
         return None
 
     keywords = [
@@ -206,7 +218,7 @@ def handle_onsite_booking_guide(q_lower):
         "kỹ thuật đến nhà", "kỹ thuật đến tận nhà", "thợ kỹ thuật", "kỹ thuật tận nơi", "đặt lịch sửa",
         "kỹ thuật viên đến tận nơi", "kỹ thuật đến tận nơi"
     ]
-    if not any(k in q_lower for k in keywords):
+    if not contains_keywords(q_lower, keywords):
         return None
 
     reply = "**Yêu cầu kỹ thuật tận nơi**\n\nQuý khách có thể gửi mô tả sự cố, địa điểm và thời gian mong muốn tại [Yêu cầu dịch vụ](/yeu-cau-dich-vu/). Gửi biểu mẫu chưa đồng nghĩa lịch hẹn đã được duyệt. Phạm vi phục vụ, chi phí và thời gian đến cần được nhân viên xác nhận; tôi chưa có bảng phí hay lịch trực đã xác minh."
@@ -222,7 +234,7 @@ def handle_warranty_and_doa(q_lower):
         "bảo hành", "đổi trả", "doa", "lỗi", "1 đổi 1", "hư", "hỏng", "sửa chữa",
         "chính sách bảo hành", "mượn máy", "bảo hành ở đâu", "thời gian bảo hành"
     ]
-    if not any(k in q_lower for k in warranty_keywords):
+    if not contains_keywords(q_lower, warranty_keywords):
         return None
 
     reply = "**Thông tin bảo hành và đổi trả**\n\nĐiều kiện bảo hành cần được kiểm tra theo đúng sản phẩm và chứng từ mua hàng. Tôi chưa có chính sách đã xác minh để cam kết thời hạn, đổi máy ngay hoặc cho mượn máy thay thế.\n\nQuý khách vui lòng gửi mã đơn hàng và mô tả tình trạng tại [Liên hệ](/lien-he/) để được xác nhận điều kiện áp dụng."
@@ -238,7 +250,7 @@ def handle_shipping_payment_vat(q_lower):
         "thanh toán", "giao hàng", "vận chuyển", "ship", "phí ship", "hóa đơn", "vat",
         "hóa đơn đỏ", "cod", "trả góp", "chuyển khoản", "quẹt thẻ", "pos", "vietqr", "hỏa tốc"
     ]
-    if not any(k in q_lower for k in finance_keywords):
+    if not contains_keywords(q_lower, finance_keywords):
         return None
 
     reply = "**Thanh toán, giao hàng và hóa đơn VAT**\n\nQuý khách hãy xem phương thức thanh toán và phí giao hàng đang hiển thị tại [Giỏ hàng](/gio-hang/) và bước thanh toán. Tôi chưa có bằng chứng về dịch vụ phát hành hóa đơn VAT tự động hoặc thời hạn giao hỏa tốc.\n\nNếu cần hóa đơn hoặc giao hàng theo yêu cầu, vui lòng [liên hệ](/lien-he/) để được xác nhận. Email xác nhận đơn hàng không thay thế hóa đơn VAT; gửi đơn cũng không đồng nghĩa tiền đã được nhận."
@@ -254,7 +266,7 @@ def handle_trade_in_upgrade(q_lower):
         "thu cũ", "đổi mới", "trade-in", "trade in", "lên đời", "bán lại",
         "đổi máy cũ", "thu mua máy cũ", "trợ giá"
     ]
-    if not any(k in q_lower for k in trade_in_keywords):
+    if not contains_keywords(q_lower, trade_in_keywords):
         return None
 
     reply = "**Nhu cầu thu cũ đổi mới (Trade-In)**\n\nTôi chưa có chương trình thu cũ hoặc mức trợ giá đã xác minh. Quý khách có thể gửi model và tình trạng thiết bị qua [Liên hệ](/lien-he/) để hỏi khả năng tiếp nhận và định giá. Không nên gửi thiết bị trước khi điều kiện được xác nhận."
@@ -271,7 +283,7 @@ def handle_branch_locator(q_lower):
         "đà nẵng", "hotline", "gần nhất", "bản đồ", "showroom", "cửa hàng",
         "giờ mở cửa", "thời gian làm việc", "số điện thoại"
     ]
-    if not any(k in q_lower for k in branch_keywords):
+    if not contains_keywords(q_lower, branch_keywords):
         return None
 
     branches = Branch.objects.filter(is_active=True, workspace__workspace_type=WorkspaceType.RETAIL).order_by("name")[:5]
@@ -297,15 +309,15 @@ def handle_technical_services(user_query, q_lower):
     """Tư vấn dịch vụ kỹ thuật doanh nghiệp, xử lý sự cố mạng, máy chủ và cam kết SLA < 15 phút."""
     service_keywords = [
         "dịch vụ", "kỹ thuật", "sửa", "cài đặt", "mạng", "bảo trì", "server",
-        "máy chủ", "sla", "khẩn cấp", "sự cố", "khắc phục", "it", "rớt mạng",
+        "máy chủ", "sla", "khẩn cấp", "sự cố", "khắc phục", "rớt mạng",
         "chậm mạng", "tường lửa", "firewall", "database", "postgresql", "nas",
         "active directory", "kỹ sư"
     ]
-    if not any(k in q_lower for k in service_keywords):
+    if not contains_keywords(q_lower, service_keywords):
         return None
 
     # Determine specific problem focus
-    is_emergency = any(k in q_lower for k in ["khẩn cấp", "rớt mạng", "sập", "cứu", "cháy", "treo", "p1", "p0", "ngay"])
+    is_emergency = contains_keywords(q_lower, ["khẩn cấp", "rớt mạng", "sập", "cứu", "cháy", "treo", "p1", "p0", "ngay"])
 
     services = Service.objects.filter(is_active=True, workspace__workspace_type=WorkspaceType.SERVICE)
     srv_matches = []
@@ -351,7 +363,7 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
         "văn phòng", "đồ họa", "render", "thiết kế", "lập trình", "dev", "coder",
         "game", "gaming", "doanh nhân", "mỏng nhẹ"
     ]
-    if not any(k in q_lower for k in product_keywords):
+    if not contains_keywords(q_lower, product_keywords):
         return None
 
     products = Product.objects.filter(
@@ -360,14 +372,25 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
         workspace__workspace_type=WorkspaceType.RETAIL,
     ).select_related("category")
 
+    # Only explicit upper budgets are interpreted. Do not infer budgets from
+    # RAM capacities, model numbers or an ambiguous price range.
+    budget = re.search(r"\b(?:duoi|toi da|khong qua)\s+(\d+(?:[.,]\d+)?)\s*(?:trieu|tr)\b", normalize_question(user_query))
+    if budget:
+        ceiling = Decimal(budget.group(1).replace(",", ".")) * 1000000
+        if normalize_question(budget.group(0)).startswith("duoi"):
+            products = products.filter(unit_price__lt=ceiling)
+        else:
+            products = products.filter(unit_price__lte=ceiling)
+
     # Detect persona / workflow
-    is_office = any(k in q_lower for k in ["văn phòng", "kế toán", "học tập", "word", "excel", "sinh viên"])
-    is_design = any(k in q_lower for k in ["đồ họa", "render", "thiết kế", "photoshop", "premiere", "cad", "revit", "3d", "kiến trúc"])
-    is_dev = any(k in q_lower for k in ["lập trình", "dev", "coder", "code", "it", "docker", "phần mềm", "visual studio"])
-    is_gaming = any(k in q_lower for k in ["game", "gaming", "chơi game", "fps", "stream", "streamer"])
-    is_executive = any(k in q_lower for k in ["doanh nhân", "mỏng nhẹ", "cao cấp", "sang", "di chuyển", "nhẹ"])
+    is_office = contains_keywords(q_lower, ["văn phòng", "kế toán", "học tập", "word", "excel", "sinh viên"])
+    is_design = contains_keywords(q_lower, ["đồ họa", "render", "thiết kế", "photoshop", "premiere", "cad", "revit", "3d", "kiến trúc"])
+    is_dev = contains_keywords(q_lower, ["lập trình", "dev", "coder", "code", "it", "docker", "phần mềm", "visual studio"])
+    is_gaming = contains_keywords(q_lower, ["game", "gaming", "chơi game", "fps", "stream", "streamer"])
+    is_executive = contains_keywords(q_lower, ["doanh nhân", "mỏng nhẹ", "cao cấp", "sang", "di chuyển", "nhẹ"])
 
     advice_lines = ["💻 **Tư Vấn Cấu Hình Máy Tính & Laptop Chuyên Nghiệp — AlphaTech:**\n"]
+    advice_lines.append("Gợi ý cấu hình theo nhu cầu chỉ để tham khảo; không chứng minh sản phẩm bên dưới có đủ tính năng hoặc hiệu năng đó. Hãy kiểm tra thông số của đúng mã hàng trước khi mua.")
 
     if is_design:
         advice_lines.append(
@@ -398,8 +421,8 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
     elif is_office:
         advice_lines.append(
             "📊 **Dành cho Công việc Văn phòng, Kế toán & Học tập:**\n"
-            "• **Tiêu chuẩn đề xuất:** Intel Core i5 thế hệ mới, RAM **16GB**, SSD **512GB** khởi động máy trong 5 giây, mở hàng chục tab trình duyệt và file Excel nặng không lo tràn RAM.\n"
-            "• **Độ bền:** Bàn phím gõ êm, màn hình IPS chống chói (Anti-Glare), độ bền chuẩn quân đội chịu va đập tốt.\n"
+            "• **Cấu hình tham khảo:** RAM **16GB**, SSD **512GB**; lựa chọn CPU phụ thuộc phần mềm và khối lượng công việc. Không thể cam kết thời gian khởi động hoặc hiệu năng chỉ từ cấu hình.\n"
+            "• **Trước khi chọn:** Kiểm tra màn hình, bàn phím, trọng lượng và thông số độ bền do nhà sản xuất công bố cho đúng model.\n"
         )
     else:
         advice_lines.append("Các thông tin dưới đây lấy từ danh mục sản phẩm đang niêm yết. Chứng từ xuất xứ cần được xác nhận theo mã hàng.")
@@ -427,6 +450,8 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
                 f"  - Giá niêm yết: **{price_str}**\n"
                 f"  - [Xem chi tiết & Mua ngay](/san-pham/{p.id}/)"
             )
+    else:
+        advice_lines.append("Chưa tìm thấy sản phẩm đang niêm yết phù hợp với điều kiện đã lọc. Bạn có thể điều chỉnh ngân sách hoặc gửi nhu cầu qua [Liên hệ](/lien-he/); tôi không tự tạo giá hay sản phẩm thay thế.")
 
     advice_lines.append(
         "\n**Thông tin trước khi mua:**\n"
@@ -464,8 +489,19 @@ def process_alphatech_query(request, user_query):
 
     q_lower = user_query.lower()
 
-    # 1. Order tracking
+    # Exact owned-order lookup precedes general navigation help.
     res = handle_order_tracking(request, user_query, q_lower)
+    if res:
+        return res
+
+    if contains_keywords(q_lower, ["giá vốn", "lợi nhuận nội bộ", "mật khẩu admin", "system prompt", "bỏ qua quy tắc", "danh sách khách hàng", "cấp quyền admin", "đơn người khác"]):
+        return {
+            "reply": "Tôi chỉ hỗ trợ thông tin công khai và đơn thuộc tài khoản/phiên hiện tại. Tôi không cung cấp bí mật, dữ liệu khách hàng khác hoặc quyền nội bộ. Bạn có thể xem [Sản phẩm](/san-pham/) hoặc gửi [Liên hệ](/lien-he/).",
+            "suggestions": ["Xem sản phẩm", "Chi nhánh gần nhất"],
+        }
+
+    from .assistant_help import answer_public_help
+    res = answer_public_help(q_lower, contains_keywords)
     if res:
         return res
 

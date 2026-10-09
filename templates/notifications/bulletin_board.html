@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Bảng tin Điều hành & Thông tri Nội bộ — {{ active_workspace.name }}{% endblock %}
 
@@ -211,7 +212,7 @@
 <div class="bulletin-filter-tabs">
     <a href="/noibo/bang-tin/?workspace_id={{ active_workspace.id }}"
        class="filter-tab-btn {% if not priority_filter %}active{% else %}inactive{% endif %}">
-        Tất cả bản tin ({{ total_bulletins_count }})
+        Tất cả bản tin (<span id="bulletinLiveCount">{{ total_bulletins_count }}</span>)
     </a>
     <a href="/noibo/bang-tin/?workspace_id={{ active_workspace.id }}&priority=PINNED"
        class="filter-tab-btn {% if priority_filter == 'PINNED' %}active{% else %}inactive{% endif %}">
@@ -228,6 +229,8 @@
 </div>
 
 <!-- Bulletins List -->
+<p id="bulletinConnectionStatus" role="status" aria-live="polite" style="color: #cbd5e1;">Bản tin tự cập nhật khi trang đang mở.</p>
+<div id="bulletinLiveFeed" data-workspace-id="{{ active_workspace.id }}" data-priority="{{ priority_filter }}" data-can-manage="{{ can_manage|yesno:'true,false' }}" data-workspace-name="{{ active_workspace.name }}">
 {% if bulletins %}
 <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 3rem;">
     {% for b in bulletins %}
@@ -286,6 +289,7 @@
     {% endif %}
 </div>
 {% endif %}
+</div>
 
 <!-- Create Bulletin Modal -->
 {% if can_manage %}
@@ -350,4 +354,5 @@
     </div>
 </div>
 {% endif %}
+<script src="{% static 'js/internal_bulletins.js' %}" defer></script>
 {% endblock %}

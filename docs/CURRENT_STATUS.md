@@ -1657,3 +1657,48 @@ test giữ persistent DB connection. Đã sửa finally close_all, thêm asserti
 connection None; test CONN_MAX_AGE=600 đạt; integrations77 local và CI đều OK.
 Không phải SMTP
 hay lỗi assertion, không dùng keepdb/skip hoặc reset dữ liệu để bỏ qua lỗi.
+## Nâng cấp chat nhóm và bản tin tự cập nhật — 09/10/2026 (local)
+
+Theo lựa chọn chủ dự án giữ Render Free, tái sử dụng TeamChatMessage,
+InternalBulletin và API hiện có. Chat polling 3 giây không chồng request,
+timeout 15 giây, pause khi tab ẩn, thử lại sau lỗi; gửi lỗi giữ bản nháp và
+không tự replay POST. Con trỏ đọc không bị đẩy bởi tin vừa gửi; backend phân
+trang theo ID thay vì timestamp, tránh bỏ sót khi timestamp không cùng thứ tự.
+Bản tin polling 10 giây thay riêng feed, giữ form đang soạn, ưu tiên/ghim và
+lọc workspace. Status thông báo kết nối/thu hồi quyền; textContent hiển thị nội
+dung không thực thi HTML. Không có WebSocket, Redis hoặc thay đổi schema.
+
+38 focused Django tests / 12.565s OK (4 module collaboration); JavaScript
+transport/DOM mô phỏng đạt các nhóm cursor/dedupe, draft failure, request
+overlap, hidden tab/access revocation, bulletin escaping/employee controls.
+Browser kiểm chứng với dữ liệu synthetic trên DB test riêng, không production.
+Không thay đổi cấu trúc/tiến độ sổ 97. Bản nâng cấp chưa push/deploy.
+
+## Nâng ngữ cảnh hai trợ lý — 09/10/2026 (local)
+
+Web bổ sung 6 nhóm hướng dẫn, matching tiếng Việt không dấu/biên từ,
+phân biệt mua RAM/SSD với nâng cấp, lọc trần ngân sách triệu/tr rõ ràng.
+Không đọc SOP nội bộ hoặc bỏ order ownership. RAG lexical không khớp từ con;
+ingestion mới embed cả heading, ưu tiên heading exact sau dense/provenance gate.
+Prompt phân biệt evidence với instructions và PENDING với thực thi.
+
+Chủ dự án cho phép nạp local abc-retail/xyz-service: 8 document/44 chunk mới,
+18 mục hướng dẫn nguồn code. Đã bind loopback DB_* thay vì DATABASE_URL remote;
+không paid API. Chỉ re-index các guide mới; hash chunk cũ nguyên vẹn.
+229 focused tests/80.773s OK; check 0 issues, drift no changes trên DB test mới.
+Probe tự thiết kế: heading 36/36 top1; paraphrase 31/36 top1, 36/36 top5.
+Không điểm semantic, không holdout mù hoặc benchmark Gemini thật. Xem
+AI_CONTEXT_IMPROVEMENT_2026_10_09.md cho lỗi còn lại và lệnh chính xác.
+Chưa push/deploy; không thay đổi sổ 97 hoặc giả định đã fine-tune mô hình.
+
+## Ngữ cảnh AI đợt 2 — 09/10/2026 (local)
+
+Thêm 12 mục về đơn/tồn, import/mapping và tiếp nhận dịch vụ; nạp sáu document
+mới vào hai workspace được cho phép. Tổng guides local 14 document/78 chunk,
+30 mục hướng dẫn. Web thêm ba nhóm FAQ, tổng chín; không tự hủy/hoàn tiền.
+Giữ chunk cũ nguyên vẹn; file lưu của đủ 14 guide khớp hash source.
+Regression tự thiết kế đợt 2: 24/24 heading và 24/24 paraphrase đúng mục top1
+sau sửa hai cách hỏi, không phải holdout mù hoặc chất lượng LLM thật.
+Chi tiết lỗi trung gian và test: AI_CONTEXT_BATCH_2_2026_10_09.md.
+Nhóm cuối 189 tests/104.870s OK; check 0 issues, migration drift No changes detected.
+Không paid API, production rollout hoặc thay đổi sổ 97.

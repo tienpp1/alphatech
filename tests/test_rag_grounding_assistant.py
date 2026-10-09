@@ -31,6 +31,27 @@ from apps.knowledge.tools import (
 
 
 class GroundingAssistantTests(TestCase):
+    def test_new_operational_questions_use_guides_without_creating_approvals(self):
+        from pathlib import Path
+        from apps.approvals.models import ApprovalRequest
+        root = Path(__file__).resolve().parents[1] / 'data' / 'knowledge' / 'platform_guides'
+        cases = [
+            ('05_don_hang_va_ton_kho.md', 'Hủy đơn có tự hoàn tiền không?'),
+            ('06_nhap_du_lieu_va_mapping.md', 'Import thành công có nghĩa đã cập nhật dữ liệu bán hàng không?'),
+            ('07_tiep_nhan_dich_vu_va_chan_doan.md', 'Ticket thiếu deadline thì có được tính đạt SLA không?'),
+        ]
+        for filename, query in cases:
+            upload_and_ingest_document(self.retail_ws, self.admin, self.retail_kb,
+                SimpleUploadedFile(filename, (root / filename).read_bytes(), content_type='text/markdown'),
+                filename, 'MD')
+        count = ApprovalRequest.objects.count()
+        for filename, query in cases:
+            with self.subTest(query=query):
+                result = answer_grounded_query(self.retail_ws, self.user, query)
+                self.assertIn(filename, [source['document_title'] for source in result['sources']])
+                self.assertNotEqual(result.get('mutation_status'), 'APPROVAL_REQUIRED')
+        self.assertEqual(ApprovalRequest.objects.count(), count)
+
     def setUp(self):
         # Create Superuser
         self.admin = User.objects.create_superuser(username="admin_user", email="admin@example.com", password="password")
