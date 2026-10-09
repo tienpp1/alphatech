@@ -117,3 +117,13 @@ Sổ 97 giữ hash đầu đợt
 Đây là sửa tài liệu và test guard local; không cần deploy ứng dụng chỉ để sửa
 tài liệu học thuật. Full 1201 thuộc release trước, không gán cho source mới.
 Không tuyên bố 97/97 PASS hoặc bỏ qua phần tài liệu nộp cuối chưa tồn tại.
+
+### Bổ sung sau phát hành cùng bản sửa chat
+
+Các trạng thái chưa đăng nhập/chưa remote ở trên là lịch sử trước UAT.
+Đã push 0c618c7 và Render dep-db1mb8vavr4c73ckipfg live đúng SHA. MANAGER
+và EMPLOYEE đã kiểm lần lượt đọc/gửi, đăng bản tin theo quyền, workspace khác
+không thấy TEST; EMPLOYEE mở URL sửa trả 403. Hai tab cùng phiên nhận polling,
+không chứng nhận hai phiên tài khoản đồng thời. Chi tiết và kết quả 47 focused
+tests/14.718s của staged source ở COLLABORATION_UAT_2026_10_05.md.
+Không đổi bản Word đã duyệt hoặc ledger 97; chưa có bản nộp cuối để nghiệm thu.

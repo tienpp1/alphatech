@@ -1534,3 +1534,10 @@ ACCEPTANCE_CONTINUATION_2026_10_02.md. File có trong manifest không đồng ng
 Đối chiếu bổ sung 05/10: `test_forecast_recursive_integrity.py` thuộc TIME-SERIES
 FORECASTING, kiểm tra parity feature training/inference, snapshot cấu hình,
 RMSE thiếu/zero, giữ kết quả cũ và rollback khi lỗi. Không thay mẫu số ledger 97.
+
+Đối chiếu bổ sung 09/10: `test_academic_diagram_contract.py` thuộc CROSS-CUTTING /
+INTEGRITY, kiểm tra 22 cạnh ERD với Django model cùng ranh giới sơ đồ/nguồn.
+`test_team_chat_display_time.py` thuộc TEAM CHAT, kiểm thời gian hiển thị thống
+nhất giữa gửi, polling và tải lại. Lần full 1207 test đầu ngày 09/10 có 1 failure
+do danh mục này thiếu hai tên trên; không phải lỗi chức năng hoặc test bị skip.
+Kết quả chạy lại được ghi riêng trong báo cáo chốt 09/10, không sửa log lần lỗi.

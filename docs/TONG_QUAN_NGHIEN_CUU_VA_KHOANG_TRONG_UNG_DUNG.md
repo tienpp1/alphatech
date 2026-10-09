@@ -56,11 +56,14 @@ THUYET_MINH_DO_AN_CHUONG_1_VA_2.md và ACADEMIC_USE_CASE_TRACEABILITY_2026_09_25
 | Lewis2020 [9] | Kết hợp mô hình sinh với bộ nhớ truy xuất trong bài toánNLP | Không tự đảm bảo câu tiếngViệt đúng/đủ hoặc tool số liệu có quyền; đo retrieval, provenance và chấm người riêng |
 | Ji2023 [11] | Tổng quan hallucination trong natural-language generation | Không gán tỷ lệ hallucination của tổng quan cho5câu đồ án hoặc gọi regex là semantic guard |
 | M42018 [16] | So sánh dự báo quy môcompetition, ghi nhận phương pháp hybrid/kết hợp | Không kết luận XGBoost thắnglag7 trên snapshot synthetic; giữ metric kém và horizon rõ |
+| Nguyen và cộng sự 2020, UIT-ViQuAD [25] | Nhóm UIT/VNU-HCM xây dựng bộ đọc hiểu tiếng Việt từ Wikipedia, có câu hỏi/đáp án do con người tạo và đánh giá mô hình | Có cơ sở đánh giá tiếng Việt; bài toán trích xuất span khác SOP kết hợp tool/workspace. Không chuyển điểm của bộ này thành chất lượng RAG AlphaTech |
 
 Đây là đối chiếu cách áp dụng, không tái hiện thí nghiệm các bài báo hoặc chứng
-minh đóng góp thuật toán mới. Bài2010/2012 là nền tảng lịch sử; các bài2018/2020/
-2023 bổ sung hướng nghiên cứu trong khoảng5–10năm. Chưa khảo sát riêng nghiên
-cứu trongnước, không tự gán nhãn đã đầy đủ theo yêu cầu thầy.
+minh đóng góp thuật toán mới. Bài 2010/2012 là nền tảng lịch sử; các bài 2018/2020/
+2023 bổ sung hướng nghiên cứu gần hơn. UIT-ViQuAD là công trình của nhóm tác giả
+tại Việt Nam, công bố ở COLING; đây là khảo sát có chọn lọc trong/ngoài nước,
+không phải systematic review bao phủ mọi công trình. Bộ 5 câu IND của đồ án đã
+được dùng sửa router và chấm lại, không phải holdout mù hay tái hiện UIT-ViQuAD.
 
 ## 3. KHOẢNG TRỐNG Ở MỨC ỨNG DỤNG VÀ PHẠM VI CHỨNG MINH
 
@@ -126,4 +129,5 @@ coi việc đóng ranh giới ứng dụng là đã duyệt tất cả tài li�
 [22] PostGIS Project Steering Committee, "PostGIS 3.6 Spatial Database Extension for PostgreSQL," Technical Documentation, 2025. [Online]. Available: https://postgis.net/documentation/
 [23] Z. Drezner and H. W. Hamacher, Eds., Facility Location: Applications and Theory. Berlin, Heidelberg: Springer, 2004.
 [24] R. L. Church and A. T. Murray, Business Site Selection, Location Analysis, and GIS. Hoboken, NJ: John Wiley & Sons, 2009.
+[25] K. V. Nguyen, D.-V. Nguyen, A. G.-T. Nguyen, and N. L.-T. Nguyen, "A Vietnamese dataset for evaluating machine reading comprehension," in Proc. 28th International Conference on Computational Linguistics, 2020, pp. 2595–2605, doi: 10.18653/v1/2020.coling-main.233. Available: https://aclanthology.org/2020.coling-main.233/
 ```

@@ -45,6 +45,18 @@ ba academic contracts): 47 tests/14.718s OK, test-process fast hasher, database
 test riêng được tạo/hủy; không reset database nghiệp vụ. manage.py check và
 makemigrations --check --dry-run đều exit 0, không migration mới.
 
-SHA/deploy sẽ bổ sung sau khi hoàn tất; chưa gọi patch local là production
-PASS. Full1201/CI ea18f14 của release trước không hồi gán cho source mới.
+Đã push commit 0c618c74aeb839952f6e210b02e5f3c751ca182b. Render deploy
+dep-db1mb8vavr4c73ckipfg live đúng SHA. Sau deploy, lúc 15:58 ngày 05/10,
+EMPLOYEE gửi thêm TEST-UAT-TIME: bên gửi, tab chờ qua polling không reload,
+và HTML sau reload đều hiển thị 15:58 05/10. Không còn UTC 08:58 hoặc
+placeholder “Vừa xong”. Ảnh chat_timestamp_after_deploy.jpg. Tổng dữ liệu TEST
+đợt này là bốn tin chat và một bản tin; không xóa hoặc thay dữ liệu nghiệp vụ.
+
+Kiểm tra lại ngày 06/10 sau khi máy tắt: CI run 37286413162 completed/success
+đúng SHA 0c618c74aeb839952f6e210b02e5f3c751ca182b. Tất cả bước job
+111686258724 success, gồm academic contracts, internal collaboration,
+dependency audit, static scan, coverage gate và HTTPS/email/deployment tests.
+Render vẫn live cùng SHA. Không chạy lại hoặc tạo thêm TEST chỉ để lấy lại ảnh.
+Ghi nhận sau deploy này là tài liệu local, không giả là nằm trong commit đã test.
+Full1201/CI ea18f14 của release trước không hồi gán cho source mới.
 Không sửa tiến độ/cấu trúc checklist 97 hoặc bản Word duyệt.

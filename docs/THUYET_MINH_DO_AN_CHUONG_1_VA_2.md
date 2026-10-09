@@ -1,20 +1,20 @@
 # THUYẾT MINH ĐỒ ÁN TỐT NGHIỆP: CHƯƠNG 1 VÀ CHƯƠNG 2
 **Đề tài:** Xây dựng nền tảng quản lý vận hành doanh nghiệp tích hợp trợ lí AI (*AlphaTech AI Platform*)  
 **Chuyên ngành:** Kỹ thuật Phần mềm / Hệ thống Thông tin  
-**Chuẩn trích dẫn yêu cầu:** IEEE. Bản nháp này chưa được xác minh toàn bộ nguồn và định dạng trích dẫn; không dùng nhãn “100% peer-reviewed”.  
+**Chuẩn trích dẫn yêu cầu:** IEEE. Danh mục được xếp theo lần trích dẫn đầu trong bản nháp ngày 09/10/2026; không thay bibliography của Word đã được duyệt.
 
 ---
 
 # CHƯƠNG 1: TỔNG QUAN VÀ KHẢO SÁT BÀI TOÁN
 
 ## 1.1. Đặt vấn đề và Tính cấp thiết của Đề tài
-Trong kỷ nguyên chuyển đổi số, các doanh nghiệp kinh doanh đa chi nhánh (bán lẻ thiết bị công nghệ và cung cấp dịch vụ bảo hành - sửa chữa kỹ thuật) đang đối mặt với những thách thức vận hành phức tạp:
-1. **Sự phân mảnh dữ liệu giữa các điểm bán:** Mỗi chi nhánh thường vận hành tồn kho riêng rẽ, dẫn đến tình trạng chi nhánh thừa hàng nhưng chi nhánh khác lại thiếu hụt, làm tăng chi phí lưu kho và giảm tỷ lệ hoàn thành đơn hàng.
-2. **Quy trình xử lý dịch vụ kỹ thuật và bảo hành thiếu minh bạch:** Khách hàng không thể chủ động tra cứu tiến độ sửa chữa thiết bị, trong khi đội ngũ kỹ thuật viên gặp khó khăn trong việc theo dõi thời hạn cam kết dịch vụ (SLA - Service Level Agreement).
-3. **Quá tải trong khâu hỗ trợ khách hàng và tư vấn kỹ thuật:** Khách hàng có nhu cầu hỏi đáp về chính sách đổi trả, tương thích phần cứng và dịch vụ 24/7. Các hệ thống chatbot truyền thống dựa trên quy tắc (Rule-based) thường cứng nhắc, trong khi các mô hình AI tạo sinh thông thường lại dễ gặp lỗi "ảo giác" (hallucination) do không nắm được quy chuẩn nội bộ của doanh nghiệp.
-4. **Bài toán dự báo nhu cầu thị trường:** Việc nhập hàng phần lớn dựa trên cảm tính của người quản lý, thiếu các công cụ phân tích dữ liệu chuỗi thời gian (time-series) để dự báo nhu cầu chính xác, dẫn đến tồn đọng vốn lưu động hoặc đứt gãy nguồn cung.
+Chuyển đổi số có thể hỗ trợ doanh nghiệp nhỏ và vừa tổ chức thông tin và vận hành, nhưng việc áp dụng còn phụ thuộc nguồn lực, kỹ năng và khả năng đầu tư. Báo cáo OECD về chuyển đổi số SMEs phân tích các rào cản này [1]. Đây là bối cảnh lựa chọn đề tài, không phải bằng chứng khảo sát doanh nghiệp AlphaTech hoặc kết quả đo lợi ích tài chính của hệ thống.
 
-Xuất phát từ thực tiễn trên, đề tài **"Xây dựng nền tảng quản lý vận hành doanh nghiệp tích hợp trợ lý AI"** hướng đến giải quyết toàn diện các bài toán trên thông qua một kiến trúc phần mềm hướng dịch vụ hiện đại, tích hợp chặt chẽ giữa quản trị đa chi nhánh, hệ thống thông tin địa lý (GIS), mô hình máy học dự báo chuỗi thời gian và trợ lý AI dựa trên kỹ thuật RAG (Retrieval-Augmented Generation).
+Trong kịch bản đồ án bán lẻ thiết bị và dịch vụ kỹ thuật, bài toán cần giải quyết là theo dõi đơn hàng, tồn kho và phiếu dịch vụ trên một nền tảng có phân quyền; cung cấp cổng riêng để khách hàng tra cứu giao dịch và tìm chi nhánh. Nhân viên còn cần hỏi đáp tài liệu có nguồn và tham khảo dự báo, nhưng không được xem dữ liệu ngoài workspace hoặc biến lời tư vấn của AI thành giao dịch tự động.
+
+RAG cung cấp một hướng kết hợp mô hình sinh với tài liệu truy xuất [2], song kết quả nghiên cứu không tự chứng minh câu trả lời tiếng Việt của đồ án đúng và đủ. Nghiên cứu UIT-ViQuAD của nhóm tác giả tại Việt Nam xây dựng bộ đọc hiểu tiếng Việt với câu hỏi và đáp án do con người tạo từ Wikipedia [3]. Bài toán đó khác hỏi đáp SOP kết hợp số liệu có phân quyền, vì vậy đồ án cần kiểm riêng truy xuất, nguồn, số liệu và đánh giá của người đọc thay vì chuyển điểm benchmark sang hệ thống này.
+
+Từ nhu cầu trên, đề tài **"Xây dựng nền tảng quản lý vận hành doanh nghiệp tích hợp trợ lí AI"** xây dựng một modular monolith Django, kết hợp quản lý nghiệp vụ, GIS, dự báo và trợ lý có nguồn. Đóng góp được giới hạn ở triển khai tích hợp và kiểm chứng trên kịch bản đã xác định; không tuyên bố giải quyết toàn diện vận hành doanh nghiệp hoặc phát minh thuật toán mới.
 
 ---
 
@@ -28,8 +28,8 @@ Xây dựng nền tảng web quản lý vận hành với cách ly logic theo wo
 ### 1.2.2. Mục tiêu cụ thể
 - Thiết kế mô hình kiểm soát truy cập dựa trên vai trò (RBAC) nghiêm ngặt, kiểm soát truy cập và phân lập logic giữa người dùng công khai và nhân sự nội bộ.
 - Tích hợp PostGIS để tính khoảng cách địa lý và nhà cung cấp định tuyến đường bộ; không phát minh thuật toán định tuyến.
-- Tích hợp mô hình máy học (XGBoost) kết hợp đường cơ sở (Moving Average) để dự báo doanh thu và số lượng đơn hàng theo chu kỳ.
-- Xây dựng module trợ lý AI vận dụng kỹ thuật RAG, kết nối trực tiếp với tài liệu quy trình chuẩn (SOP) và chính sách nội bộ để hỗ trợ tư vấn tự động, chính xác.
+- Đánh giá XGBoost so với lag-7 và trung bình trượt 7 ngày trên cùng horizon; bài toán thực nghiệm chính là doanh thu ngày. Baseline là đối chứng, không phải mô hình ensemble với XGBoost [4].
+- Xây dựng trợ lý nội bộ truy xuất SOP trong workspace được cấp quyền, ghi nguồn và đánh giá câu trả lời. Trợ lý công khai chỉ dùng phạm vi thông tin công khai, không mở SOP nội bộ cho khách hàng.
 
 ### 1.2.3. Đối tượng và Phạm vi áp dụng
 - **Đối tượng nghiên cứu:** Doanh nghiệp bán lẻ thiết bị công nghệ và dịch vụ kỹ thuật điện tử - tin học (mô hình chuỗi cửa hàng).
@@ -60,7 +60,7 @@ Không dùng nhận xét chưa kiểm chứng về SAP, Odoo hoặc các sản p
 ## 1.4. Khoảng trống Nghiên cứu & Đóng góp Ứng dụng Thực tiễn của Đề tài
 
 Đề tài không tuyên bố tính mới về mặt phát minh thuật toán toán học cơ bản mà tập trung giải quyết **ba khoảng trống tích hợp ứng dụng thực tiễn** trong chuyển đổi số doanh nghiệp SMEs:
-1. **Khoảng trống Tích hợp Dọc (Vertical Integration Gap):** Kết nối liền mạch chuỗi cung ứng bán lẻ (Retail Order & Inventory) với quy trình bảo hành, sửa chữa kỹ thuật hiện trường (Service Operations & SLA) trên một mô hình dữ liệu quan hệ thống nhất có phân lập Workspace.
+1. **Nhu cầu tích hợp cổng vận hành:** Đơn hàng, tồn kho và phiếu dịch vụ dùng chung nền tảng và quy tắc phân quyền; workspace bán lẻ và dịch vụ có thể tách biệt. Không tuyên bố có liên kết tự động từ mọi đơn hàng sang bảo hành hoặc đã triển khai toàn bộ chuỗi cung ứng.
 2. **Khoảng trống Kiểm soát Đại lượng Số học trong RAG (Factual Grounding & Numeric Verification Gap):** Bổ sung phép đo offline cho retrieval và đại lượng số dựa trên rubric. Regex không kiểm chứng đầy đủ ngữ nghĩa; không tuyên bố loại bỏ ảo giác hoặc dùng bộ chấm như rào chắn runtime.
 3. **Nhu cầu thực thi có kiểm soát và truy vết:** action có contract đi qua phê duyệt với con người giám sát, transaction và audit append-only. DB rollback không tự bồi hoàn side effect ngoài database; trigger không bảo vệ trước chủ DB vô hiệu hóa nó. Stock reorder và workload balancing vẫn advisory, không tuyên bố saga tổng quát đã triển khai.
 
@@ -69,7 +69,7 @@ Không dùng nhận xét chưa kiểm chứng về SAP, Odoo hoặc các sản p
 ## 2.1. Mô hình Kiểm soát Truy cập Dựa trên Vai trò (RBAC) và Kiến trúc Đa khách thuê (Multi-Tenancy)
 
 ### 2.1.1. Lý thuyết Mô hình RBAC96
-Theo nghiên cứu kinh điển của Sandhu et al. (1996) [1], mô hình kiểm soát truy cập dựa trên vai trò (Role-Based Access Control - RBAC) tổ chức quyền hạn thông qua các tập hợp hình thức:
+Theo nghiên cứu kinh điển của Sandhu et al. (1996) [5], mô hình kiểm soát truy cập dựa trên vai trò (Role-Based Access Control - RBAC) tổ chức quyền hạn thông qua các tập hợp hình thức:
 - Tập hợp người dùng: $U = \{u_1, u_2, \dots, u_m\}$
 - Tập hợp vai trò: $R = \{r_1, r_2, \dots, r_n\}$
 - Tập hợp quyền hạn: $P = \{p_1, p_2, \dots, p_k\}$
@@ -82,7 +82,7 @@ $$\text{AuthorizedPermissions}(u) = \bigcup_{r \in \{r \mid (u, r) \in UA\}} \{p
 Trong đề tài AlphaTech, quyền nội bộ được gán qua membership trong workspace với các vai trò seed `ADMIN`, `MANAGER`, `EMPLOYEE`, `VIEWER`. Không mô tả cơ chế này là kế thừa vai trò nếu chưa có mô hình kế thừa trong mã nguồn. Superuser là ngoại lệ kiểm soát riêng; kỹ thuật viên là hồ sơ nghiệp vụ, không phải một vai trò RBAC mới. Khách hàng công khai chỉ sử dụng chức năng công khai và dữ liệu thuộc quyền sở hữu; đăng ký không tự tạo membership nội bộ.
 
 ### 2.1.2. Kiến trúc Cô lập Dữ liệu Đa khách thuê (Shared Database, Workspace-scoped Rows)
-Đề tài dùng cơ sở dữ liệu chung và phạm vi workspace; đây là lựa chọn triển khai, không phải kết luận tối ưu chi phí đã đo. Nghiên cứu đa khách thuê [2] cung cấp bối cảnh về bảo trì và phát triển hệ thống.
+Đề tài dùng cơ sở dữ liệu chung và phạm vi workspace; đây là lựa chọn triển khai, không phải kết luận tối ưu chi phí đã đo. Nghiên cứu đa khách thuê [6] cung cấp bối cảnh về bảo trì và phát triển hệ thống.
 - Các thực thể gốc được gắn workspace; thực thể con có thể được giới hạn qua quan hệ cha thay vì có khóa workspace trực tiếp. Workspace không đồng nghĩa với chi nhánh.
 - Truy vấn dữ liệu bảo vệ phải áp dụng phạm vi được cấp quyền, trực tiếp hoặc qua quan hệ cha:
   $$\mathcal{Q}_{\text{scoped}} = \sigma_{\text{workspace\_id} = \text{current\_workspace}}(\mathcal{Q})$$
@@ -97,7 +97,7 @@ Mô hình ngôn ngữ lớn (LLM) tuy có khả năng suy luận mạnh mẽ nh�
 1. Tri thức tĩnh bị đóng băng tại thời điểm huấn luyện.
 2. Xu hướng tạo ra thông tin giả mạo nhưng nghe có vẻ thuyết phục (Hallucination).
 
-Nghiên cứu của Lewis et al. (2020) [3] kết hợp tri thức tham số của mô hình với bộ nhớ truy xuất phi tham số. RAG hỗ trợ đưa nguồn vào quá trình tạo câu trả lời, nhưng không loại bỏ hoàn toàn hallucination. Quy trình khái quát gồm:
+Nghiên cứu của Lewis et al. (2020) [2] kết hợp tri thức tham số của mô hình với bộ nhớ truy xuất phi tham số. RAG hỗ trợ đưa nguồn vào quá trình tạo câu trả lời, nhưng không loại bỏ hoàn toàn hallucination. Quy trình khái quát gồm:
 1. **Giai đoạn Ingestion (Chỉ mục hóa):**
    Tài liệu quy trình chuẩn (SOP), chính sách bảo hành được phân mảnh thành các đoạn văn (chunks) $D = \{d_1, d_2, \dots, d_N\}$. Mỗi chunk $d_i$ được chuyển đổi thành một vector nhúng:
    $$v_i = \text{Embed}(d_i) \in \mathbb{R}^d$$
@@ -120,7 +120,7 @@ $$\hat{y}_t = \frac{1}{k} \sum_{i=1}^{k} y_{t-i}$$
 Mô hình này có ưu điểm đơn giản, phản ánh nhanh xu hướng ngắn hạn, đóng vai trò chuẩn so sánh (Baseline) để đánh giá các mô hình phức tạp hơn.
 
 ### 2.3.2. Cây Quyết định Tăng cường (Gradient Tree Boosting - XGBoost)
-Theo Chen & Guestrin (2016) [4], XGBoost là một hệ thống học máy mở rộng dựa trên thuật toán tăng cường độ dốc (Gradient Boosting). Mô hình dự đoán $\hat{y}_i$ được biểu diễn dưới dạng tổng của $K$ cây quyết định hồi quy (regression trees):
+Theo Chen & Guestrin (2016) [7], XGBoost là một hệ thống học máy mở rộng dựa trên thuật toán tăng cường độ dốc (Gradient Boosting). Mô hình dự đoán $\hat{y}_i$ được biểu diễn dưới dạng tổng của $K$ cây quyết định hồi quy (regression trees):
 $$\hat{y}_i = \sum_{k=1}^{K} f_k(x_i), \quad f_k \in \mathcal{F}$$
 
 Hàm mục tiêu cần tối thiểu hóa tại bước lặp $t$:
@@ -149,13 +149,13 @@ Trong đề tài AlphaTech, cấu hình mặc định tại `apps/forecasting/fe
 ## 2.4. Hệ thống Thông tin Địa lý (GIS) và Bài toán Định tuyến Đơn hàng
 
 ### 2.4.1. Cơ sở dữ liệu Không gian và Tiện ích mở rộng PostGIS
-Theo Güting (1994) [6], hệ thống cơ sở dữ liệu không gian mở rộng các kiểu dữ liệu quan hệ truyền thống bằng các kiểu hình học không gian (Points, LineStrings, Polygons) và các hàm quan hệ không gian (Spatial Predicates).
+Theo Güting (1994) [8], hệ thống cơ sở dữ liệu không gian mở rộng các kiểu dữ liệu quan hệ truyền thống bằng các kiểu hình học không gian (Points, LineStrings, Polygons) và các hàm quan hệ không gian (Spatial Predicates).
 - PostGIS bổ sung kiểu dữ liệu `GEOMETRY(Point, 4326)` (Hệ quy chiếu WGS 84).
-- Tọa độ các chi nhánh cửa hàng và địa chỉ giao hàng của khách hàng được lưu trữ dưới dạng:
+- Tọa độ chi nhánh được biểu diễn bằng điểm không gian. Không suy ra mọi địa chỉ giao hàng dạng chữ đã được geocode hoặc lưu thành Point; vị trí người dùng trên bản đồ có thể chỉ tồn tại trong phiên browser. Biểu thức tạo điểm là:
   $$\text{Location} = \text{ST\_SetSRID}(\text{ST\_MakePoint}(\text{Longitude}, \text{Latitude}), 4326)$$
 
 ### 2.4.2. Công thức Khoảng cách Cầu (Haversine Formula) và Định vị Tối ưu
-Để xác định chi nhánh gần khách hàng nhất nhằm phục vụ giao hàng hỏa tốc hoặc chỉ định bảo hành, hệ thống sử dụng hàm tính khoảng cách cung tròn lớn trên mặt cầu trái đất (Great-Circle Distance):
+Để hỗ trợ tìm chi nhánh gần vị trí đã chọn, giao diện công khai sử dụng khoảng cách cung tròn lớn trên mặt cầu (Great-Circle Distance). Kết quả không tự điều phối kỹ thuật viên hoặc cam kết giao hàng hỏa tốc:
 $$d = 2 R \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_1) \cos(\phi_2) \sin^2\left(\frac{\Delta \lambda}{2}\right)} \right)$$
 Trong đó:
 - $R \approx 6,371,000 \text{ m}$ (Bán kính trung bình Trái đất).
@@ -168,14 +168,18 @@ Trong `apps/gis/services.py`, truy vấn nội bộ dùng `Distance(..., spheroi
 
 ## 2.5. Tài liệu tham khảo Chương 1 & Chương 2 (Chuẩn IEEE)
 
-[1] R. S. Sandhu, E. J. Coyne, H. L. Feinstein, and C. E. Youman, "Role-based access control models," *IEEE Computer*, vol. 29, no. 2, pp. 38–47, Feb. 1996, doi: 10.1109/2.485845.
+[1] OECD, *The Digital Transformation of SMEs*. Paris, France: OECD Publishing, 2021, doi: 10.1787/bdb9256a-en.
 
-[2] C.-P. Bezemer and A. Zaidman, "Multi-tenant SaaS applications: Maintenance dream or nightmare?," in *Proc. 4th Int. Joint ERCIM/IWPSE Symp. Software Evolution (IWPSE-EVOL)*, Antwerp, Belgium, 2010, pp. 88–92. [Online]. Available: https://azaidman.github.io/publications/bezemerIWPSE2010.pdf [Accessed: Oct. 5, 2026].
+[2] P. Lewis *et al.*, "Retrieval-augmented generation for knowledge-intensive NLP tasks," in *Advances in Neural Information Processing Systems (NeurIPS 2020)*, vol. 33, Curran Associates, Inc., 2020, pp. 9459–9474.
 
-[3] P. Lewis *et al.*, "Retrieval-augmented generation for knowledge-intensive NLP tasks," in *Advances in Neural Information Processing Systems (NeurIPS 2020)*, vol. 33, Curran Associates, Inc., 2020, pp. 9459–9474.
+[3] K. V. Nguyen, D.-V. Nguyen, A. G.-T. Nguyen, and N. L.-T. Nguyen, "A Vietnamese dataset for evaluating machine reading comprehension," in *Proc. 28th International Conference on Computational Linguistics*, 2020, pp. 2595–2605, doi: 10.18653/v1/2020.coling-main.233.
 
-[4] T. Chen and C. Guestrin, "XGBoost: A scalable tree boosting system," in *Proc. 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (KDD '16)*, San Francisco, CA, USA, 2016, pp. 785–794, doi: 10.1145/2939672.2939785.
+[4] R. J. Hyndman and G. Athanasopoulos, *Forecasting: Principles and Practice*, 3rd ed. Melbourne, Australia: OTexts, 2021. [Online]. Available: https://otexts.com/fpp3/ [Accessed: Oct. 9, 2026].
 
-[5] S. J. Taylor and B. Letham, "Forecasting at scale," *The American Statistician*, vol. 72, no. 1, pp. 37–45, 2018, doi: 10.1080/00031305.2017.1380080.
+[5] R. S. Sandhu, E. J. Coyne, H. L. Feinstein, and C. E. Youman, "Role-based access control models," *IEEE Computer*, vol. 29, no. 2, pp. 38–47, Feb. 1996, doi: 10.1109/2.485845.
 
-[6] R. H. Güting, "An introduction to spatial database systems," *The VLDB Journal*, vol. 3, no. 4, pp. 357–399, Oct. 1994, doi: 10.1007/BF01231602.
+[6] C.-P. Bezemer and A. Zaidman, "Multi-tenant SaaS applications: Maintenance dream or nightmare?," in *Proc. 4th Int. Joint ERCIM/IWPSE Symp. Software Evolution (IWPSE-EVOL)*, Antwerp, Belgium, 2010, pp. 88–92. [Online]. Available: https://azaidman.github.io/publications/bezemerIWPSE2010.pdf [Accessed: Oct. 5, 2026].
+
+[7] T. Chen and C. Guestrin, "XGBoost: A scalable tree boosting system," in *Proc. 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (KDD '16)*, San Francisco, CA, USA, 2016, pp. 785–794, doi: 10.1145/2939672.2939785.
+
+[8] R. H. Güting, "An introduction to spatial database systems," *The VLDB Journal*, vol. 3, no. 4, pp. 357–399, Oct. 1994, doi: 10.1007/BF01231602.

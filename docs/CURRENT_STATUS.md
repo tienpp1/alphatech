@@ -1,4 +1,32 @@
-> **HIỆN HÀNH 05/10/2026:** Release ea18f14 đã push, CI37256797585 success và Render dep-db1h2hegekts73dptdbg live cùng SHA. Full tree c800480:1201tests/414.870s OK, source khớp release. Chủ dự án đã chấm5 IND offline ĐẠT lúc09:40; không live LLM/general quality. CLOSURE_97_EVIDENCE_2026_10_05.md đủ97 ID nhưng không phải97/97 PASS. Đợt tiếp theo sửa tài liệu/ERD draft local, không thay đổi ledger/Word hoặc gọi tài liệu chưa phát hành là đã deploy. Chưa nghiệm thu bản nộp cuối; xem DRAFT_SOURCE_AND_DIAGRAM_AUDIT_2026_10_05.md.
+> **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
+
+## Đợt chốt 97 công việc ngày 09/10/2026
+
+Đối chiếu đủ 97 ID, cập nhật ma trận yêu cầu, sửa thuyết minh nháp vượt source
+về approval/superuser, stock transfer, kiểm tồn opt-in, RAG công khai, embedding,
+GIS và API provider. Thêm OECD/UIT-ViQuAD vào bối cảnh và nghiên cứu; đánh lại
+IEEE chương 1–2, bỏ 19 nguồn chưa trích dẫn chương 3–5. Bản Word tổng kết riêng
+5 trang đã render và kiểm từng trang tại output/closure_97_20261009/.
+
+Lần full đầu 1207/340.008s FAILED 1 do manifest thiếu tên hai file test mới.
+Chỉ bổ sung danh mục, giữ assertion và log lỗi; full chạy lại tree
+0c1324e6258e5a87bb3f3c388183240c35c42bbc đạt 1207/335.450s. Runtime parity
+với release đã phát hành được kiểm bằng diff Git và nội dung chuẩn hóa newline.
+35 UC có source/test references tồn tại và observed test IDs trong cùng log.
+Không cộng full, focused và untracked thành một lần full mới.
+
+Check đầu dùng database utility postgres phát hiện lịch sử migration không
+nhất quán ở DB đó. Đã chuyển migration gate sang database test mới, migrate
+và kiểm drift thành công rồi hủy đúng DB test của run; không sửa DB utility hoặc
+database nghiệp vụ. Log cả hai lần được giữ trong gói bằng chứng.
+
+RAG 5 IND không holdout mù, worker local/async production tắt, Local Storage,
+backup ổ D/offsite hoãn, policy học thuật, reorder/workload advisory và CSP
+baseline được chốt theo lựa chọn người dùng. Human Evaluation email/GPS/Sentry
+giữ loại H. Các ghi nhận 96 hoãn và trạng thái release cũ bên dưới là lịch sử;
+restore độc lập 02/10 có hồ sơ riêng. Sổ97 không thay cấu trúc hoặc tiến độ.
+
+> **LỊCH SỬ 06/10/2026:** Release 0c618c7 đã push; CI37286413162 completed/success và Render dep-db1mb8vavr4c73ckipfg live đúng SHA. UAT MANAGER/EMPLOYEE chat/bản tin theo phiên lần lượt đạt các kịch bản ghi trong COLLABORATION_UAT_2026_10_05.md; bản sửa giờ send/poll/HTML đã kiểm live. Local focused staged source 47 tests/14.718s OK; không hồi gán full1201 của release cũ. Word duyệt và ledger 97 giữ nguyên. Chưa nghiệm thu bản nộp cuối; không tuyên bố97/97 PASS.
 
 > **BẰNG CHỨNG 04/10/2026:** xem RELEASE_ACCEPTANCE_2026_10_04.md cho bản sửa nội dung, kiểm thử staged tree, CI/Render và UAT. Restore độc lập 02/10 đã PASS; TEST retail 162 đã hủy sau kiểm tra owner/nonowner/ack. HTTP Google-linked identity thật: public 200, ba endpoint nội bộ 403. Ledger 97 giữ nguyên theo Rule 12; không dùng số lịch sử làm chứng nhận production.
 
@@ -10,14 +38,17 @@ không hiển thị nội dung TEST. Hai tab cùng phiên nhận tin qua polling
 reload; không gọi đó là hai tài khoản đồng thời. Phát hiện timestamp polling
 UTC khác HTML local; đã sửa local và thêm regression. Local 35 tests/333.401s
 OK; staged tree aaaab062 có 47 tests/14.718s OK (fast hasher chỉ trong test).
-check/migration drift exit 0; chưa coi patch là live trước khi xác minh deploy.
+check/migration drift exit 0. Đã push 0c618c7, Render dep-db1mb8vavr4c73ckipfg
+live đúng SHA. Browser sau deploy: send/poll/HTML reload cùng 15:58 05/10;
+không lệch UTC. Kiểm tra lại 06/10: CI37286413162 completed/success đúng SHA,
+tất cả bước job111686258724 success. Bằng chứng sau deploy bổ sung local.
 Xem COLLABORATION_UAT_2026_10_05.md. Không đổi ledger/Word hoặc role/password.
 
 Đợt tài liệu tiếp theo (local): sửa ERD 22 FK theo snapshot 48 model, bốn
 sequence, RBAC/customer boundary, outbox, audit trigger và các phiên bản/claims
 trong thuyết minh nháp; đối chiếu lại nguồn Bezemer/Zaidman và Krebs et al.
-12 guard tests OK/0.045s; check và migration drift đạt. Thêm bước CI cho các
-guard, chưa push/run remote source mới. Word duyệt và ledger 97 giữ hash.
+12 guard tests OK/0.045s; check và migration drift đạt. Các sửa draft/guard
+đã push trong 0c618c7, bước CI tương ứng success. Word và ledger 97 giữ hash.
 User chốt chỉ nghiệm thu 5 IND đã chấm, không holdout mù. UAT chat/bản tin đã
 quan sát theo hai role lần lượt như ghi nhận trên; chưa chứng nhận hai phiên
 tài khoản đồng thời. Không đổi database,

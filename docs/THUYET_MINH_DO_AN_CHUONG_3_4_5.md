@@ -1,11 +1,13 @@
 > **ĐÍNH CHÍNH 23/09/2026:** Bản thảo CHƯA ĐỦ ĐIỀU KIỆN NỘP: bảng phân bổ test và kết luận hoàn tất ở các chương chưa được nghiệm thu. Đính chính RAG/coverage ở mục 4; không công bố 97/97. Xem ACCEPTANCE_REAUDIT_2026_09_23.md.
 
+> **ĐỐI CHIẾU HIỆN HÀNH 09/10/2026:** FINAL_97_CLOSURE_2026_10_09.md chốt đủ 97 công việc theo phạm vi đã điều chỉnh. Full 1207/335.450s OK và 13 guard bản nháp OK; đính chính 23/09 được giữ làm lịch sử. Nghiệm thu bản nháp hiện có chưa thay việc hoàn thiện và duyệt bản nộp mới.
+
 # THUYẾT MINH ĐỒ ÁN TỐT NGHIỆP: CHƯƠNG 3, CHƯƠNG 4 VÀ CHƯƠNG 5
 **Đề tài:** Xây dựng nền tảng quản lý vận hành doanh nghiệp tích hợp trợ lí AI (*AlphaTech AI Platform*)  
 **Sinh viên thực hiện:** Hà Minh Tiến — **MSSV:** 1250080194 — **Lớp:** 12_ĐH_CNPM3  
 **Khoa:** Công nghệ Thông tin — **Trường:** Đại học Tài nguyên và Môi trường TP.HCM (HCMUNRE)  
 **Giảng viên hướng dẫn:** ThS. Nguyễn Duy Tuấn  
-**Chuẩn trích dẫn yêu cầu:** IEEE [7]–[25]. Tài liệu được lập trên cơ sở hiện thực mã nguồn thực tế và số liệu đo đạc thực nghiệm trên hệ thống CSDL PostgreSQL 18 & PostGIS 3.6.
+**Chuẩn trích dẫn yêu cầu:** IEEE, theo nguồn thực sự trích dẫn ở chương 1–2. Các chương này đối chiếu source và log từng môi trường, không suy ra phiên bản production từ máy local.
 
 ---
 
@@ -20,12 +22,12 @@ Bao gồm các nhóm vai trò nhân sự trong doanh nghiệp:
 1. **Quản trị viên Hệ thống (System Administrator / Superuser):**
    - Quản lý danh mục Không gian làm việc (Workspace Management).
    - Thiết lập cấu hình hệ thống, quản lý tài khoản và phân quyền vai trò (RBAC).
-   - Phê duyệt action có contract và quyền tương ứng, không tự duyệt đề xuất của mình; giám sát audit append-only trong giới hạn quyền database.
+   - Phê duyệt action có contract và quyền tương ứng; reviewer thông thường không tự duyệt đề xuất của mình. Executor có bypass superuser tường minh, không được mô tả là phân tách nhiệm vụ tuyệt đối. Giám sát audit trong giới hạn quyền database.
 2. **Quản lý Chi nhánh / Cửa hàng (Branch / Operations Manager):**
    - Giám sát bảng điều khiển kinh doanh (Executive Dashboard) và hiệu quả bán lẻ.
    - Quản lý tồn kho đa chi nhánh, tạo lệnh chuyển kho và duyệt phiếu nhập/xuất kho.
    - Xem báo cáo phân tích dự báo chuỗi thời gian XGBoost và tiếp nhận các đề xuất vận hành tự động (AI Recommendations).
-   - Thực thi phê duyệt đơn hàng lớn, đề xuất điều chỉnh tồn kho theo quy trình Human-in-the-Loop.
+   - Xử lý đơn hàng theo lifecycle có quyền và phê duyệt action đã đăng ký. Không có ngưỡng “đơn hàng lớn” mặc định hoặc tự chuyển mọi đơn sang AI approval.
 3. **Nhân viên Bán hàng & Vận hành (Staff / Frontline Employee):**
    - Tạo và cập nhật đơn hàng bán lẻ tại quầy hoặc đơn giao tận nơi.
    - Tra cứu tồn kho tức thời tại các chi nhánh để tư vấn khách hàng.
@@ -41,7 +43,7 @@ Bao gồm các nhóm vai trò nhân sự trong doanh nghiệp:
    - Tìm kiếm chi nhánh cửa hàng gần nhất thông qua bản đồ số GIS tương tác và vị trí định vị GPS của trình duyệt.
    - Đặt hàng trực tuyến với 2 hình thức: Nhận tại cửa hàng (Store Pickup) hoặc Giao hàng tận nơi (Home Delivery).
    - Gửi yêu cầu hỗ trợ kỹ thuật / bảo hành thiết bị trực tuyến 24/7.
-   - Tương tác với Trợ lý AI tư vấn sản phẩm, chính sách đổi trả và tra cứu quy trình SLA được kiểm chứng sự thật (Grounded RAG).
+   - Hỏi trợ lý về sản phẩm, dịch vụ và thông tin được phép công khai. Điều kiện thương mại chưa duyệt phải yêu cầu xác nhận; khách hàng không truy xuất SOP nội bộ.
 
 ### 3.1.3. Ma trận Phân quyền Truy cập Dựa trên Vai trò (RBAC Matrix)
 
@@ -50,7 +52,7 @@ Hệ thống dùng permission được gán cho role theo workspace, không tri�
 | Nhóm chức năng | Nguồn quyết định quyền | Ranh giới |
 |---|---|---|
 | Retail, dịch vụ, GIS, dự báo | `seed_demo.py`, `has_workspace_permission` và view/service tương ứng | View/manage tách riêng; EMPLOYEE có `forecasting.view_forecast` trong seed, không được mô tả là cấm mọi đọc dự báo |
-| Phê duyệt | Registry, quyền action và executor | Cấm tự duyệt ngay cả khi có quyền quản lý |
+| Phê duyệt | Registry, quyền action và executor | Cấm reviewer không phải superuser tự duyệt; superuser là ngoại lệ tường minh |
 | Chat/bản tin | Active membership, entry policy và bulletin service | Chat polling 3 giây; đăng/sửa bản tin theo ADMIN/MANAGER hoặc superuser |
 | Cổng khách hàng | Ownership tài khoản hoặc guest session | Không cấp membership; không đồng nhất với VIEWER |
 
@@ -172,8 +174,8 @@ Sơ đồ con dùng tên model ORM thay vì giả tên bảng; chỉ vẽ FK th�
 ### 3. Phân hệ Bán lẻ & Tồn kho Đa chi nhánh (Retail Commerce & Multi-Branch Inventory)
 - Quản lý danh mục sản phẩm (`Product`), nhóm ngành hàng (`Category`), nhà cung cấp (`Supplier`).
 - Quản lý tồn kho vật lý tại từng chi nhánh thông qua bảng `StockBalance`.
-- Cơ chế điều chuyển tồn kho an toàn (`StockTransfer`) với hai bước xác nhận và tự động ghi nhật ký kiểm toán.
-- Quy trình Đơn hàng (`Order`) hỗ trợ cả hai phương thức hoàn tất: Nhận tại cửa hàng (`STORE_PICKUP`) và Giao hàng tận nơi (`HOME_DELIVERY`). Khóa giao dịch đồng thời (`select_for_update`) ngăn chặn tình trạng bán vượt tồn kho (Overselling).
+- Điều chuyển tồn kho (`StockTransfer`) qua service có transaction, khóa các số dư, kiểm tra tồn và ghi audit. Service thực thi tạo trạng thái EXECUTED; không có yêu cầu hai bước xác nhận bắt buộc trong chính service.
+- Đơn hàng (`Order`) hỗ trợ nhận tại cửa hàng (`STORE_PICKUP`) và giao tận nơi (`HOME_DELIVERY`). Kiểm tồn nghiêm ngặt là chính sách bật có chủ đích; test khóa giao dịch không chứng minh chính sách đó đã bật ở mọi deployment.
 
 ### 4. Phân hệ Vận hành Dịch vụ Kỹ thuật & Theo dõi SLA (Service Operations & SLA)
 - Tiếp nhận phiếu kỹ thuật `ServiceRequest` với `request_number` theo workspace; không giả field `tracking_code` khi không tồn tại.
@@ -184,7 +186,7 @@ Sơ đồ con dùng tên model ORM thay vì giả tên bảng; chỉ vẽ FK th�
 ### 5. Phân hệ Bản đồ Thông tin Địa lý (Geospatial GIS Engine)
 - Tích hợp tiện ích mở rộng PostGIS trên hệ quy chiếu không gian trắc địa chuẩn quốc tế WGS84 (SRID 4326).
 - Luồng GIS nội bộ dùng GeoDjango `Distance(..., spheroid=True)`; `ST_DistanceSphere` là sphere, không đồng nhất với spheroid.
-- Tính năng phân tích không gian: Tìm chi nhánh gần nhất, vẽ bán kính phục vụ đệm (Buffer 5.000m) xung quanh cửa hàng, điều phối kỹ thuật viên hiện trường gần vị trí sự cố nhất.
+- Tìm chi nhánh, lọc bán kính và hỗ trợ xem vị trí kỹ thuật viên theo quyền. Thông tin khoảng cách là gợi ý; việc phân công vẫn là thao tác nghiệp vụ riêng, không tự dispatch từ kết quả GIS.
 
 ### 6. Phân hệ Tích hợp & Ánh xạ Dữ liệu Chuẩn (Universal Data Ingestion & Mapping Studio)
 - Tiếp nhận các tệp dữ liệu bảng thô (CSV, Excel) từ các hệ thống đối tác hoặc chi nhánh cũ với tiêu đề cột phi chuẩn.
@@ -192,7 +194,7 @@ Sơ đồ con dùng tên model ORM thay vì giả tên bảng; chỉ vẽ FK th�
 - Cho phép người dùng xem trước bảng chuyển đổi (Preview Ingestion) và thực thi làm sạch dữ liệu vào cơ sở dữ liệu chính thức.
 
 ### 7. Phân hệ Cơ sở Tri thức & Trợ lý RAG (Knowledge Base & Grounded RAG)
-- Tiếp nhận và chỉ mục hóa tài liệu quy trình chuẩn (SOP), chính sách bảo hành, hướng dẫn kỹ thuật vào cơ sở dữ liệu vector `pgvector`.
+- Tiếp nhận tài liệu SOP và hướng dẫn kỹ thuật thành các chunk cùng metadata/embedding. Không đồng nhất việc có dependency pgvector với một truy vấn vector index đang được sử dụng; đường retrieval thực tế phải đối chiếu service và provenance của run.
 - Truy xuất cosine kết hợp lexical boost trên chunk READY cùng workspace và không gian embedding tương thích. Gold chunk IDs là nhãn đánh giá riêng, không tự gán cho đoạn được retrieval trả về.
 - **Bộ chấm số liệu ngoại tuyến:** `numeric_fact_metrics` đối chiếu đại lượng theo rubric trong pipeline đánh giá. Đây không phải bộ chặn câu trả lời tại runtime; khớp số không chứng minh đúng ngữ nghĩa, đặc biệt với câu phủ định. Chưa có tỷ lệ loại bỏ ảo giác đã kiểm chứng.
 
@@ -205,7 +207,7 @@ Sơ đồ con dùng tên model ORM thay vì giả tên bảng; chỉ vẽ FK th�
 ### 9. Phân hệ Phê duyệt & Kiểm soát Hành động (Approval Engine & Human-in-the-Loop)
 - Động cơ sinh khuyến nghị vận hành tự động (AI Recommendation Engine) phân tích dữ liệu dự báo để đề xuất hành động (ví dụ: bổ sung tồn kho, điều chỉnh giá).
 - Toàn bộ đề xuất AI chỉ dừng lại ở vai trò khuyến nghị (Advisory); hành động chỉ được kích hoạt khi có sự phê duyệt có thẩm quyền của người quản lý (Human-in-the-Loop).
-- Cơ chế chống tự phê duyệt (Self-approval Bypass Prevention): Người tạo yêu cầu tuyệt đối không được phép tự duyệt yêu cầu của chính mình.
+- Người tạo yêu cầu không được tự duyệt nếu reviewer không phải superuser. Ngoại lệ superuser trong executor phải được công bố và kiểm thử, không che giấu bằng nhận xét tuân thủ tuyệt đối.
 - Transaction bảo vệ action được hỗ trợ; hủy/rollback phụ thuộc domain contract, không có saga bù trừ tổng quát cho mọi quyết định hoặc side effect ngoài database.
 
 ### 10. Phân hệ Thông báo & Email Giao dịch (In-app Notification và CustomerEmailDelivery)
@@ -350,8 +352,8 @@ sequenceDiagram
 
 ### 3.6.1. Phòng ngừa các Lỗ hổng Bảo mật Web Phổ biến (OWASP Top 10)
 1. **Chống Tiêm nhiễm Lệnh (SQL Injection Prevention):** Django ORM và SQL tham số hóa được sử dụng trong các luồng đã rà soát. Mã nguồn còn có SQL trực tiếp (ví dụ advisory lock, migration trigger); cần kiểm tra từng vị trí, không suy ra toàn bộ SQL đều an toàn.
-2. **Chống Tấn công Giả mạo Yêu cầu Chéo trang (CSRF Protection):** Mọi biểu mẫu POST/PUT/DELETE trên giao diện đều được tích hợp thẻ ẩn `{% csrf_token %}` và kiểm tra token CSRF nghiêm ngặt ở middleware.
-3. **Chống Tấn công Chèn mã Độc Kịch bản (XSS Prevention):** Giao diện sử dụng hệ thống mẫu Django Template tự động mã hóa ký tự HTML (Auto-escaping). Các đoạn văn bản từ người dùng nhập vào đều được làm sạch trước khi kết xuất.
+2. **CSRF:** Form và yêu cầu dùng session cần token theo cơ chế Django; OAuth callback kiểm state một lần. Các API dùng cơ chế xác thực riêng phải đối chiếu đường xử lý cụ thể, không suy ra mọi request đều là form có thẻ ẩn.
+3. **XSS:** Template dùng auto-escaping và luồng render đã rà soát có regression. Auto-escaping không chứng minh mọi ngữ cảnh JS/HTML đều được làm sạch; CSP baseline còn cho inline/eval như đã ghi ở hồ sơ deployment.
 4. **Phiên/cookie/HTTPS:** cấu hình phụ thuộc môi trường; probe release ea18f14 ghi HSTS3600s và cookieSecure/HttpOnly/Lax ở các lượt kiểm riêng. Không mặc định31.536.000s hoặc suy ra strictCSP từ headerbaseline còninline/eval.
 
 ### 3.6.2. Cơ chế Nhật ký Kiểm toán Bất biến (Tamper-Resistant Audit Trail)
@@ -509,10 +511,10 @@ Các nhóm vấn đề lịch sử dưới đây có biện pháp xử lý và g
 
 ## 5.1. Đánh giá Mức độ Hoàn thành Mục tiêu Đề tài
 
-Căn cứ vào Đề cương Đồ án Tốt nghiệp đã được Khoa Công nghệ Thông tin - Trường Đại học Tài nguyên và Môi trường TP.HCM thông qua, cùng Danh mục 97 Tiêu chí Nghiệm thu Học thuật Toàn diện ([docs/CHECKLIST_97_PROGRESS.md](file:///d:/ai_business_platform/docs/CHECKLIST_97_PROGRESS.md)):
+Căn cứ bản đề cương teacher_review_v2 được chủ dự án xác nhận là bản thầy đã duyệt, cùng biên bản FINAL_97_CLOSURE_2026_10_09.md:
 - **Tổng số tiêu chí nghiệm thu:** 97 tiêu chí (Gates 01 – 97).
-- **Trạng thái hiện hành:** đọc CHECKLIST_97_PROGRESS.md; số mục kế thừa không phải chứng nhận độc lập.
-- **Mục thiếu bằng chứng:** giữ nguyên từng ID và điều kiện trong ledger; không suy ra đã đóng từ việc có tài liệu.
+- **Trạng thái hiện hành:** 97 công việc được xử lý theo phạm vi đồ án đã chốt, với D/T/P/H/C tường minh cho từng ID. Ledger cũ giữ nguyên để truy vết lịch sử.
+- **Ranh giới:** RAG năm mẫu đã chấm, worker/storage local, policy học thuật và các lựa chọn khác đọc trong biên bản; không suy rộng test hữu hạn thành chất lượng tổng quát.
 - **Production:** chưa được chứng nhận; runbook không thay thế log vận hành thật.
 
 Các phân hệ có mã nguồn và kiểm thử đại diện. Mức hoàn thành phải đối chiếu từng tiêu chí, log test cùng phiên bản và bằng chứng vận hành; không suy ra hoàn tất từ số lượng test hoặc sự hiện diện của tài liệu.
@@ -522,7 +524,7 @@ Các phân hệ có mã nguồn và kiểm thử đại diện. Mức hoàn thà
 ## 5.2. Đóng góp Khoa học và Ứng dụng Thực tiễn của Đồ án
 
 ### 5.2.1. Đóng góp về mặt Khoa học & Kiến trúc Phần mềm
-1. **Kiến trúc Tích hợp Dọc Nhất quán:** Đề tài chứng minh tính khả thi của mô hình Modular Monolith phân lập Workspace trên nền tảng Django và PostgreSQL, kết hợp hài hòa giữa cơ sở dữ liệu quan hệ, dữ liệu không gian PostGIS và dữ liệu vector nhúng pgvector trong một hạ tầng duy nhất mà không cần phân tách quá sớm thành các hệ thống vi dịch vụ phức tạp tốn kém.
+1. **Kiến trúc tích hợp:** Triển khai modular monolith Django/PostgreSQL với dữ liệu quan hệ, PostGIS và metadata/embedding phục vụ truy xuất. Chưa đo lợi thế chi phí so với microservices hoặc benchmark vector index; kết quả thể hiện khả năng tích hợp trong phạm vi đồ án.
 2. **Bộ đánh giá số liệu và truy xuất RAG:** hỗ trợ đối chiếu câu trả lời với rubric và gold chunk IDs khi có nhãn. Không giải quyết triệt để ảo giác, không thay thế chấm ngữ nghĩa và chưa là cơ chế bắt buộc ở runtime.
 3. **Chuẩn mực Thực nghiệm Dự báo Minh bạch:** Xây dựng quy trình đánh giá mô hình học máy chuỗi thời gian nghiêm ngặt, tuân thủ nguyên tắc phân chia tuần tự theo trục thời gian (Chronological Split), đối chiếu sòng phẳng với các mô hình cơ sở đơn giản (Baselines) và công khai phân tích nguyên nhân khoa học của các kết quả chưa tối ưu.
 
@@ -537,7 +539,7 @@ Các phân hệ có mã nguồn và kiểm thử đại diện. Mức hoàn thà
 
 Bên cạnh những kết quả tích cực đã đạt được, đồ án vẫn còn một số mặt hạn chế khách quan cần được ghi nhận trung thực:
 1. **Quy mô và nguồn dữ liệu:** Snapshot Batch 44 có train/test ngắn; thực nghiệm mới có 180 ngày synthetic và một origin. Cả hai chưa đủ chứng minh hiệu quả mùa vụ dài hạn hoặc khả năng áp dụng trên dữ liệu doanh nghiệp thật.
-2. **Mô hình Ngôn ngữ Lớn Phụ thuộc API Bên ngoài:** Hệ thống RAG hiện tại sử dụng API của các nhà cung cấp đám mây (OpenAI / Google Gemini), dẫn đến sự phụ thuộc vào đường truyền mạng Internet và chính sách giá của bên thứ ba.
+2. **Phụ thuộc API:** Cấu hình mặc định chọn Google Gemini; bằng chứng offline/deterministic không chứng minh chất lượng của API live. Mỗi run cần ghi provider và mode thực tế; không suy ra mọi nhà cung cấp đều đã được nghiệm thu.
 3. **Giới hạn định tuyến:** GIS backend tính khoảng cách trên ellipsoid WGS84. Trang chi nhánh còn gọi OSRM route/table trong `static/public/js/branch-finder.js` để lấy tuyến và khoảng cách đường bộ; chọn ngắn nhất trong các tuyến hợp lệ được trả về khi chọn chế độ đó. Không bảo đảm tối ưu toàn mạng đường, không có giao thông trực tiếp và phụ thuộc dịch vụ công cộng; phải phân biệt với khoảng cách trắc địa và bộ lọc bán kính Haversine trên browser.
 
 ---
@@ -551,7 +553,7 @@ Nhằm tiếp tục hoàn thiện và thương mại hóa nền tảng sau khi b
 1. **Tích hợp Phần cứng Máy quét Mã vạch & Cân Điện tử tại Điểm bán (Hardware POS Integration):**
    - Xây dựng module kết nối trực tiếp với máy quét mã vạch 1D/2D (USB/Bluetooth HID Scanner) và máy in nhiệt hóa đơn ESC/POS để tối ưu hóa tốc độ bán hàng tại quầy.
 2. **Kết nối Trực tiếp Cổng Hóa đơn Điện tử e-VAT (Direct e-Invoice Integration):**
-   - Tích hợp API truyền nhận dữ liệu hóa đơn điện tử có mã của cơ quan thuế theo chuẩn Thông tư 78/2021/TT-BTC thông qua các nhà cung cấp giải pháp được Tổng cục Thuế công nhận (VNPT-Invoice, Viettel S-Invoice, MISA meInvoice).
+   - Chỉ nghiên cứu tích hợp sau khi xác định nhu cầu nghiệp vụ, nhà cung cấp và quy định còn hiệu lực tại thời điểm triển khai; đồ án hiện chưa phát hành hóa đơn điện tử hoặc chứng nhận tuân thủ thuế.
 3. **Phát triển Ứng dụng Di động Chuyên dụng cho Kỹ thuật viên (Field Technician Mobile App):**
    - Xây dựng ứng dụng di động đa nền tảng (React Native hoặc Flutter) tích hợp GPS ngầm để theo dõi hành trình kỹ thuật viên thời gian thực, quét mã linh kiện và chụp ảnh nghiệm thu tại chỗ có chữ ký số khách hàng.
 4. **Triển khai Mô hình Ngôn ngữ Lớn Cục bộ Lượng tử hóa (On-Premise Quantized LLM):**
@@ -561,48 +563,14 @@ Nhằm tiếp tục hoàn thiện và thương mại hóa nền tảng sau khi b
 
 ---
 
-## 5.5. Danh mục Tài liệu Tham khảo Chương 3, 4, 5 (Chuẩn IEEE)
+## 5.5. Nguồn đối chiếu triển khai và kết quả
 
-Đây là danh mục đọc của bản nháp, chưa phải bibliography nộp cuối: nhiều nguồn
-chưa có citation tương ứng trong nội dung. Trước nộp cần giữ nguồn thực sự dùng,
-đối chiếu từng kết luận và thống nhất số IEEE với chương 1–2; không áp danh mục
-này vào Word duyệt. Các tài liệu công nghệ là tài liệu chính thức, không tự gọi
-tất cả là nghiên cứu peer-reviewed hoặc đã đọc toàn văn.
+Các chương này mô tả triển khai của đồ án, đối chiếu trực tiếp với source,
+migrations, tests và log được nêu trong nội dung; không gắn một sách kiến trúc
+với kết quả test của AlphaTech. Danh mục nghiên cứu đã sử dụng nằm ở mục 2.5
+của bản nháp chương 1–2. Đã bỏ danh sách 19 nguồn đọc thêm không có trích dẫn
+trong chương 3–5 để tránh dùng chúng như bằng chứng cho triển khai.
 
-[7] M. Fowler, *Patterns of Enterprise Application Architecture*. Boston, MA, USA: Addison-Wesley, 2002.
-
-[8] E. Evans, *Domain-Driven Design: Tackling Complexity in the Heart of Software*. Boston, MA, USA: Addison-Wesley, 2003.
-
-[9] R. C. Martin, *Clean Architecture: A Craftsman's Guide to Software Structure and Design*. Boston, MA, USA: Prentice Hall, 2017.
-
-[10] S. Newman, *Building Microservices: Designing Fine-Grained Systems*, 2nd ed. Sebastopol, CA, USA: O'Reilly Media, 2021.
-
-[11] Open Web Application Security Project (OWASP), "OWASP Top 10: 2021 - The Ten Most Critical Web Application Security Risks," *OWASP Foundation*, 2021. [Online]. Available: https://owasp.org/Top10/
-
-[12] PostgreSQL Global Development Group, "PostgreSQL 16.0 Documentation: Triggers and Concurrency Control," 2023. [Online]. Available: https://www.postgresql.org/docs/16/
-
-[13] PostGIS Project Steering Committee, "PostGIS 3.4.0 Manual: Spatial Database Extender for PostgreSQL," 2023. [Online]. Available: https://postgis.net/docs/manual-3.4/
-
-[14] pgvector Development Team, "pgvector: Open-source vector similarity search for Postgres," 2023. [Online]. Available: https://github.com/pgvector/pgvector
-
-[15] C. Bergmeir and J. M. Benítez, "On the use of cross-validation for time series predictor evaluation," *Information Sciences*, vol. 191, pp. 192–213, May 2012, doi: 10.1016/j.ins.2011.12.028.
-
-[16] R. J. Hyndman and G. Athanasopoulos, *Forecasting: Principles and Practice*, 3rd ed. Melbourne, Australia: OTexts, 2021.
-
-[17] F. Pedregosa *et al.*, "Scikit-learn: Machine learning in Python," *Journal of Machine Learning Research*, vol. 12, pp. 2825–2830, 2011.
-
-[18] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, "BERT: Pre-training of deep bidirectional transformers for language understanding," in *Proc. NAACL-HLT 2019*, Minneapolis, MN, USA, 2019, pp. 4171–4186.
-
-[19] C. F. Gauss, "Theoria motus corporum coelestium in sectionibus conicis solem ambientium," Hamburg: Perthes et Besser, 1809. (Nguồn lịch sử trong danh mục cũ; chưa được sử dụng để chứng minh công thức Haversine hay triển khai GIS. Cần loại khỏi bibliography nộp nếu không có nội dung trích dẫn phù hợp.)
-
-[20] C. F. F. Karney, "Algorithms for geodesics," *Journal of Geodesy*, vol. 87, no. 1, pp. 43–55, 2013, doi: 10.1007/s00190-012-0578-z.
-
-[21] G. Hohpe and B. Woolf, *Enterprise Integration Patterns: Designing, Building, and Deploying Messaging Solutions*. Boston, MA, USA: Addison-Wesley, 2003.
-
-[22] C. Richardson, *Microservices Patterns: With examples in Java*. Shelter Island, NY, USA: Manning Publications, 2018. (Mô hình Transactional Outbox Pattern).
-
-[23] I. Sommerville, *Software Engineering*, 10th ed. Boston, MA, USA: Pearson, 2015.
-
-[24] ISO/IEC/IEEE, "Systems and software engineering — Software life cycle processes," *ISO/IEC/IEEE 12207:2017*, Nov. 2017.
-
-[25] IEEE Computer Society, *Guide to the Software Engineering Body of Knowledge (SWEBOK Guide)*, Version 3.0. Los Alamitos, CA, USA: IEEE Computer Society, 2014.
+Bản Word teacher_review_v2 được giữ nguyên; bản nháp này không phải bản nộp
+cuối được thầy ký duyệt. Nếu ghép thành báo cáo cuối với nội dung mới, phải
+đánh số IEEE theo lần xuất hiện trên toàn báo cáo và kiểm lại từng hình.
