@@ -54,6 +54,19 @@ def calculate_lexical_score(query: str, content: str, title: str = "", heading: 
     return float(matched / len(unique_tokens))
 
 
+def _matches_requested_navigation_topic(query, title, heading):
+    """Exclude clearly different navigation topics, not a semantic classifier.
+
+    Applied only after the dense/provenance gate. Broad questions and semantic
+    provider embeddings retain their existing behavior.
+    """
+    query = _normalize_vietnamese_text(query)
+    section = _normalize_vietnamese_text(f"{title} {heading}")
+    purchase = any(term in query for term in ("mua hang", "dat hang", "thanh toan"))
+    topics = ("doi tra", "bao hanh", "khuyen mai", "flash sale", "churn", "roi bo")
+    return not purchase or not any(term in section and term not in query for term in topics)
+
+
 def search_relevant_chunks(
     workspace: Workspace,
     query: str,
@@ -125,6 +138,10 @@ def search_relevant_chunks(
         if dense_sim >= threshold:
             heading = chunk.metadata.get("heading") or ""
             doc_title = chunk.document.title
+            if query_provenance.get("mode") == "DETERMINISTIC" and not _matches_requested_navigation_topic(query, doc_title, heading):
+                if metadata is not None:
+                    metadata["off_topic_navigation_skipped"] = metadata.get("off_topic_navigation_skipped", 0) + 1
+                continue
             lex_score = calculate_lexical_score(query, chunk.content, doc_title, heading)
 
             # Hybrid blend: dense semantic score + lexical match boost
@@ -143,6 +160,13 @@ def search_relevant_chunks(
                 "dense_similarity": round(float(dense_sim), 4),
                 "lexical_score": round(float(lex_score), 4),
                 "embedding_provenance": chunk.metadata.get("embedding_provenance", {"mode": "UNKNOWN"}),
+                "source_authority": {
+                    "status": chunk.document.source_metadata.get("approval_status", "UNVERIFIED"),
+                    "academic_only": chunk.document.source_metadata.get("academic_only", False),
+                    "public_publication_approved": chunk.document.source_metadata.get("public_publication_approved") is True,
+                },
+                "effective_from": chunk.document.source_metadata.get("effective_from"),
+                "effective_to": chunk.document.source_metadata.get("effective_to"),
             })
 
     # An exact, substantive FAQ heading is a navigational match, not policy

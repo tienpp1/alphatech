@@ -24,6 +24,7 @@ from apps.forecasting.models import (
 from apps.forecasting.selectors import get_historical_timeseries
 from apps.forecasting.training import train_forecast_model, validate_target_for_workspace
 from apps.audit.services import log_audit_event
+from apps.forecasting.diagnostics import assess_model_quality, assess_snapshot
 
 
 logger = logging.getLogger(__name__)
@@ -128,10 +129,11 @@ def get_forecast_chart_data(
     target_type: Optional[str] = None,
     history_days: int = 60,
     horizon_days: int = 14,
+    dimensions: Optional[dict] = None,
 ) -> Dict[str, Any]:
     """
     Builds a unified visual payload for Chart.js containing historical actuals,
-    future predictions, approximate 95% prediction bands, baseline metrics, and feature importances.
+    stored predictions, uncalibrated error bands, baseline metrics, and feature importances.
     """
     if not target_type:
         target_type = get_default_target_for_workspace(workspace)
@@ -139,11 +141,12 @@ def get_forecast_chart_data(
     validate_target_for_workspace(workspace, target_type)
 
     # 1. Historical actuals
-    cutoff_date = (timezone.now() - datetime.timedelta(days=history_days)).date()
-    ts_df = get_historical_timeseries(workspace, target_type, start_date=cutoff_date)
+    dimensions = dimensions or {}
+    cutoff_date = timezone.localdate() - datetime.timedelta(days=history_days)
+    ts_df = get_historical_timeseries(workspace, target_type, start_date=cutoff_date, dimensions=dimensions)
     if ts_df.empty:
         # Fallback to available historical sequence if data is from another date range
-        ts_df = get_historical_timeseries(workspace, target_type)
+        ts_df = get_historical_timeseries(workspace, target_type, dimensions=dimensions)
 
 
     historical_points = [
@@ -155,7 +158,7 @@ def get_forecast_chart_data(
     latest_run = (
         ForecastRun.objects.for_workspace(workspace)
         .filter(target_type=target_type, status=RunStatus.COMPLETED)
-        .filter(Q(job_parameters__dimensions={}) | Q(job_parameters__dimensions__isnull=True))
+        .filter(Q(job_parameters__dimensions=dimensions) | Q(job_parameters__dimensions__isnull=True) if not dimensions else Q(job_parameters__dimensions=dimensions))
         .order_by("-created_at")
         .first()
     )
@@ -187,11 +190,20 @@ def get_forecast_chart_data(
             for k, v in (latest_run.feature_importances or {}).items()
         ]
 
+    snapshot = assess_snapshot(latest_run.dataset_period_end if latest_run else None,
+                               [datetime.date.fromisoformat(point["date"]) for point in forecast_points],
+                               latest_run.model_config.granularity if latest_run else "DAILY")
     return {
         "workspace_code": workspace.code,
         "target_type": target_type,
         "run_id": latest_run.id if latest_run else None,
-        "run_date": latest_run.created_at.strftime("%Y-%m-%d %H:%M") if latest_run else None,
+        "run_date": timezone.localtime(latest_run.created_at).strftime("%d/%m/%Y %H:%M %Z") if latest_run else None,
+        "dimensions": dimensions,
+        "forecast_point_count": len(forecast_points),
+        "forecast_start": forecast_points[0]["date"] if forecast_points else None,
+        "forecast_end": forecast_points[-1]["date"] if forecast_points else None,
+        "snapshot": snapshot,
+        "quality": assess_model_quality(model_metrics, baseline_metrics),
         "historical": historical_points,
         "forecast": forecast_points,
         "metrics": model_metrics,

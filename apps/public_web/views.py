@@ -77,6 +77,7 @@ from apps.public_web.fulfillment import FulfillmentError, allocate_home_delivery
 logger = logging.getLogger(__name__)
 
 EMAIL_VERIFICATION_SALT = "public_web.email_verification.v1"
+SERVICE_SUBMISSION_SALT = "public_web.service_submission.v1"
 
 
 def _email_verification_token(user):
@@ -338,12 +339,20 @@ def public_service_request_view(request):
     Public Service Request / Inquiry Form (GET & POST /yeu-cau-dich-vu/) - Light Theme.
     Allows customer to submit an operational IT service request safely.
     """
-    services = Service.objects.filter(is_active=True, workspace__workspace_type="SERVICE").order_by("category", "name")
+    services = Service.objects.filter(is_active=True, workspace__is_active=True, workspace__workspace_type="SERVICE").order_by("category", "name")
     preselected_service_id = request.GET.get("service_id", "").strip()
+    if request.method == "GET" and not request.user.is_authenticated:
+        # Ensure a browser owns a stable session before it can double-submit.
+        request.session.setdefault("public_service_principal", uuid.uuid4().hex)
+    if request.method == "POST":
+        preselected_service_id = request.POST.get("service_id", "").strip()
 
-    success_message = None
+    receipt = request.session.pop("public_service_receipt", {}) if request.method == "GET" else {}
+    success_message = receipt.get("success_message")
     error_message = None
-    email_warning = False
+    email_warning = receipt.get("email_warning", False)
+    submission_token = request.POST.get("submission_token", "") if request.method == "POST" else ""
+    form_data = request.POST if request.method == "POST" else {}
 
     if request.method == "POST":
         customer_name = request.POST.get("customer_name", "").strip()
@@ -357,42 +366,63 @@ def public_service_request_view(request):
             request.user if request.user.is_authenticated else None, email
         )
 
+        service_obj = None
+        if service_id_raw.isascii() and service_id_raw.isdigit() and len(service_id_raw) <= 19 and 0 < int(service_id_raw) < 2 ** 63:
+            service_obj = services.filter(pk=int(service_id_raw)).first()
+        invalid_email = False
+        if email:
+            try:
+                validate_email(email)
+            except ValidationError:
+                invalid_email = True
+        nonce = None
+        if submission_token:
+            try:
+                nonce = signing.loads(submission_token, salt=SERVICE_SUBMISSION_SALT, max_age=3600)
+                if not isinstance(nonce, str) or len(nonce) != 32:
+                    raise signing.BadSignature("invalid_nonce")
+            except signing.BadSignature:
+                error_message = "Phiên gửi yêu cầu đã hết hạn hoặc không hợp lệ. Vui lòng tải lại biểu mẫu."
+                # Render a new valid form nonce while retaining entered fields;
+                # submitting the refreshed form must not loop on an expired one.
+                # Discard an invalid form nonce; this is not a password or credential.
+                submission_token = ""  # nosec B105
+
         if not customer_name or not phone or not description:
             error_message = "Vui lòng nhập đầy đủ Họ tên, Số điện thoại và Mô tả yêu cầu dịch vụ."
-        else:
+        elif not service_obj:
+            error_message = "Vui lòng chọn một gói dịch vụ đang được niêm yết. Dịch vụ đã chọn không hợp lệ hoặc không còn hoạt động."
+        elif invalid_email:
+            error_message = "Địa chỉ email không hợp lệ. Vui lòng kiểm tra lại hoặc để trống nếu chỉ muốn được liên hệ qua điện thoại."
+        if not error_message:
             try:
-                service_obj = None
-                if service_id_raw:
-                    try:
-                        service_obj = Service.objects.filter(
-                            pk=int(service_id_raw),
-                            is_active=True,
-                            workspace__workspace_type=WorkspaceType.SERVICE,
-                        ).first()
-                    except (ValueError, TypeError):
-                        pass
-
-                if not service_obj:
-                    service_obj = Service.objects.filter(
-                        is_active=True,
-                        workspace__workspace_type=WorkspaceType.SERVICE,
-                    ).first()
-
-                service_workspace = service_obj.workspace if service_obj else Workspace.objects.filter(workspace_type="SERVICE").first()
+                service_workspace = service_obj.workspace
+                if request.user.is_authenticated:
+                    principal = f"user:{request.user.pk}"
+                else:
+                    if not request.session.session_key:
+                        request.session.create()
+                    principal = f"session:{request.session.session_key}"
+                material = [principal, str(service_obj.pk), customer_name, email.casefold(), phone,
+                            description, address, preferred_time]
+                if nonce:
+                    material.append(nonce)
+                # Preserve old no-token clients, but every rendered form has a
+                # fresh signed nonce so intentional identical requests are not
+                # collapsed. Existing DB uniqueness arbitrates racing retries.
+                fingerprint = hashlib.sha256(json.dumps(material, ensure_ascii=False).encode("utf-8")).hexdigest()
+                req_num = f"REQ-PUB-{fingerprint[:40].upper()}"
                 service_req = None
                 recipients = []
 
                 if service_obj and service_workspace:
                     with transaction.atomic():
                         from .customer_identity import customer_for_submission
-                        customer_obj = customer_for_submission(
-                            workspace=service_workspace, user=request.user,
-                            name=customer_name, email=email or "", phone=phone,
-                            address=address or "",
-                        )
-
-                        if customer_obj:
-                            req_num = f"REQ-PUB-{uuid.uuid4().hex[:12].upper()}"
+                        service_req = ServiceRequest.objects.filter(
+                            workspace=service_workspace, request_number=req_num,
+                        ).first()
+                        created = False
+                        if service_req is None:
                             req_title = f"Yêu cầu từ {customer_name}: {service_obj.name}"
                             req_desc = (
                                 f"Họ tên khách hàng: {customer_name}\n"
@@ -403,29 +433,35 @@ def public_service_request_view(request):
                                 f"Nội dung yêu cầu:\n{description}"
                             )
 
-                            service_req = ServiceRequest.objects.create(
-                                workspace=service_workspace,
-                                request_number=req_num,
-                                customer=customer_obj,
-                                service=service_obj,
-                                title=req_title,
-                                description=req_desc,
-                                status="OPEN",
-                                priority="MEDIUM",
-                            )
-
-                            transaction.on_commit(lambda s=service_req: dispatch_new_service_request_notification(s))
-                            recipients = submitted_recipients
-                            delivery_results = [
-                                send_service_request_confirmation_email(
-                                    service_req,
-                                    recipient_email=recipient,
-                                    user=request.user if request.user.is_authenticated else None,
-                                    deduplication_key=f"service:{service_req.pk}:{recipient}",
-                                    defer_delivery=True,
+                            try:
+                                # Roll back the guest customer as well if a
+                                # concurrent retry wins the unique request key.
+                                with transaction.atomic():
+                                    customer_obj = customer_for_submission(
+                                        workspace=service_workspace, user=request.user,
+                                        name=customer_name, email=email, phone=phone, address=address,
+                                    )
+                                    service_req = ServiceRequest.objects.create(
+                                        workspace=service_workspace, request_number=req_num,
+                                        customer=customer_obj, service=service_obj,
+                                        title=req_title, description=req_desc, status="OPEN", priority="MEDIUM",
+                                    )
+                                    created = True
+                            except IntegrityError:
+                                service_req = ServiceRequest.objects.get(
+                                    workspace=service_workspace, request_number=req_num,
                                 )
-                                for recipient in recipients
-                            ]
+                        if created:
+                            transaction.on_commit(lambda s=service_req: dispatch_new_service_request_notification(s))
+                        recipients = submitted_recipients
+                        delivery_results = [
+                            send_service_request_confirmation_email(
+                                service_req, recipient_email=recipient,
+                                user=request.user if request.user.is_authenticated else None,
+                                deduplication_key=f"service:{service_req.pk}:{recipient}", defer_delivery=True,
+                            )
+                            for recipient in recipients
+                        ]
 
                     if service_req:
                         result_ids = [result.public_id for result in delivery_results]
@@ -433,11 +469,18 @@ def public_service_request_view(request):
                             public_id__in=result_ids, status=CustomerEmailDelivery.Status.FAILED
                         ).exists()
                         success_message = "Yêu cầu dịch vụ của quý khách đã được tiếp nhận thành công! Đội ngũ kỹ thuật viên XYZ IT Services sẽ liên hệ lại trong thời gian sớm nhất."
+                        request.session["public_service_receipt"] = {
+                            "success_message": success_message, "email_warning": email_warning,
+                        }
+                        return redirect("public_service_request")
                     else:
                         error_message = "Không thể ghi nhận yêu cầu lúc này. Vui lòng thử lại sau."
             except Exception:
                 logger.exception("Unable to create public service request")
                 error_message = "Không thể ghi nhận yêu cầu lúc này. Vui lòng thử lại sau."
+
+    if not submission_token:
+        submission_token = signing.dumps(uuid.uuid4().hex, salt=SERVICE_SUBMISSION_SALT)
 
     context = {
         "page_title": "Yêu cầu dịch vụ IT | XYZ IT Technical Services",
@@ -447,6 +490,9 @@ def public_service_request_view(request):
         "success_message": success_message,
         "error_message": error_message,
         "email_warning": email_warning,
+        "submission_token": submission_token,
+        "form_data": form_data,
+        "description_value": request.POST.get("description", "") if request.method == "POST" else request.GET.get("description", ""),
         "active_nav": "service_request",
     }
     return render(request, "public/service_request.html", context)
@@ -547,7 +593,7 @@ def public_contact_view(request):
             email_warning = not recipients or CustomerEmailDelivery.objects.filter(
                 public_id__in=result_ids, status=CustomerEmailDelivery.Status.FAILED
             ).exists()
-            success_message = "Cảm ơn quý khách đã gửi tin nhắn liên hệ thành công! Bộ phận chăm sóc khách hàng sẽ phản hồi trong 24 giờ làm việc."
+            success_message = "Cảm ơn quý khách đã gửi tin nhắn liên hệ thành công! Tin nhắn đã được ghi nhận. Bộ phận chăm sóc khách hàng sẽ liên hệ để xác nhận nội dung và thời gian hỗ trợ phù hợp."
         else:
             error_message = "Vui lòng nhập đầy đủ họ tên, thông tin liên hệ và nội dung cần hỗ trợ."
 

@@ -107,7 +107,7 @@ def handle_installment_procedure(q_lower):
     keywords = [
         "thủ tục trả góp", "trả góp qua cccd", "căn cước", "hồ sơ trả góp", "home credit",
         "fe credit", "hd saison", "duyệt hồ sơ", "trả trước bao nhiêu", "trả góp 0%",
-        "trả góp thẻ tín dụng", "lãi suất trả góp", "hướng dẫn trả góp", "mua góp"
+        "trả góp thẻ tín dụng", "lãi suất trả góp", "hướng dẫn trả góp", "mua góp", "trả góp"
     ]
     if not contains_keywords(q_lower, keywords):
         return None
@@ -178,7 +178,7 @@ def handle_b2b_corporate_quotation(q_lower):
         "dự án công ty", "chính sách b2b", "cung cấp số lượng lớn"
     ]
     is_quotation_request = contains_keywords(q_lower, ["báo giá"]) and contains_keywords(
-        q_lower, ["công ty", "dự án", "số lượng", "b2b", "hợp đồng", "pháp nhân", "sỉ", "đối tác"])
+        q_lower, ["công ty", "doanh nghiệp", "dự án", "số lượng", "b2b", "hợp đồng", "pháp nhân", "sỉ", "đối tác"])
     if not (contains_keywords(q_lower, b2b_direct_keywords) or is_quotation_request):
         return None
 
@@ -361,7 +361,7 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
         "sản phẩm", "laptop", "máy tính", "chuột", "phím", "thiết bị", "mua",
         "giá", "hardware", "cấu hình", "tư vấn", "dell", "ram", "ssd", "core",
         "văn phòng", "đồ họa", "render", "thiết kế", "lập trình", "dev", "coder",
-        "game", "gaming", "doanh nhân", "mỏng nhẹ"
+        "game", "gaming", "doanh nhân", "mỏng nhẹ", "cat6", "cat5", "cáp mạng", "dây mạng", "ugreen"
     ]
     if not contains_keywords(q_lower, product_keywords):
         return None
@@ -371,6 +371,29 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
         deleted_at__isnull=True,
         workspace__workspace_type=WorkspaceType.RETAIL,
     ).select_related("category")
+
+    # Explicit product types are constraints, not optional ranking terms. A
+    # cheap mouse is not an answer to a laptop budget, and an Ethernet cable is
+    # a catalogue item rather than a network-repair service.
+    type_terms = (
+        (("laptop", "máy tính xách tay"), ("laptop", "máy tính xách tay")),
+        (("chuột", "mouse"), ("chuột", "mouse")),
+        (("bàn phím", "keyboard"), ("bàn phím", "keyboard")),
+        (("cat6",), ("cat6",)),
+        (("cat5",), ("cat5",)),
+        (("cáp mạng", "dây mạng"), ("cáp mạng", "dây mạng")),
+        (("màn hình", "monitor"), ("màn hình", "monitor")),
+    )
+    for query_terms, catalog_terms in type_terms:
+        if contains_keywords(q_lower, query_terms):
+            type_filter = Q()
+            for term in catalog_terms:
+                type_filter |= Q(name__icontains=term) | Q(category__name__icontains=term)
+            products = products.filter(type_filter)
+            break
+    for brand in ("dell", "lenovo", "asus", "acer", "hp", "apple", "ugreen", "logitech"):
+        if contains_keywords(q_lower, (brand,)):
+            products = products.filter(Q(name__icontains=brand) | Q(sku__icontains=brand))
 
     # Only explicit upper budgets are interpreted. Do not infer budgets from
     # RAM capacities, model numbers or an ambiguous price range.
@@ -429,15 +452,16 @@ def handle_laptop_and_product_consulting(user_query, q_lower):
 
     # Search products from database matching query or categories
     prod_matches = []
-    keywords = [w for w in user_query.split() if len(w) >= 2]
+    ignored = {"toi", "muon", "can", "tim", "mua", "cho", "co", "nao", "duoi", "trieu", "tr", "gia", "tu", "van", "va", "san", "pham", "khong", "qua", "toi", "da"}
+    keywords = [w for w in user_query.split() if len(w) >= 2 and normalize_question(w) not in ignored and not w.isdigit()]
     q_filter = Q()
     for kw in keywords:
         q_filter |= Q(name__icontains=kw) | Q(description__icontains=kw) | Q(sku__icontains=kw) | Q(category__name__icontains=kw)
 
     if q_filter:
-        prod_matches = list(products.filter(q_filter)[:4])
+        prod_matches = list(products.filter(q_filter).order_by("unit_price", "pk")[:4])
     if not prod_matches:
-        prod_matches = list(products[:4])
+        prod_matches = list(products.order_by("unit_price", "pk")[:4])
 
     if prod_matches:
         advice_lines.append("🌟 **Các sản phẩm đang được niêm yết (tồn kho cần xác nhận):**")
@@ -500,10 +524,36 @@ def process_alphatech_query(request, user_query):
             "suggestions": ["Xem sản phẩm", "Chi nhánh gần nhất"],
         }
 
+    # Address all policy topics in a compound question. These handlers use only
+    # source-reviewed public guidance, not academic/internal SOP promises.
+    policy_results = []
+    for handler in (handle_installment_procedure, handle_privacy_and_data_security,
+                    handle_warranty_and_doa, handle_shipping_payment_vat,
+                    handle_authenticity_and_cocq, handle_return_and_refund,
+                    handle_trade_in_upgrade):
+        result = handler(q_lower)
+        if result:
+            # Installment already explains its own terms; avoid adding a VAT
+            # paragraph for a question solely about installments.
+            if handler is handle_shipping_payment_vat and policy_results and not contains_keywords(q_lower, ("vat", "hóa đơn", "giao hàng", "thanh toán", "ship", "vận chuyển")):
+                continue
+            policy_results.append(result)
+    if len(policy_results) > 1:
+        suggestions = list(dict.fromkeys(s for result in policy_results for s in result["suggestions"]))[:4]
+        return {"reply": "\n\n".join(result["reply"] for result in policy_results), "suggestions": suggestions}
+
     from .assistant_help import answer_public_help
     res = answer_public_help(q_lower, contains_keywords)
     if res:
         return res
+
+    if contains_keywords(q_lower, ("mua hàng như thế nào", "đặt mua như thế nào", "hướng dẫn mua hàng", "mua sản phẩm thế nào", "mua hàng ra sao")):
+        return answer_public_help("cách đặt hàng", contains_keywords)
+
+    if not policy_results and contains_keywords(q_lower, ("laptop", "máy tính xách tay", "cat6", "cat5", "cáp mạng", "dây mạng", "ugreen")) and not contains_keywords(q_lower, ("sự cố", "rớt mạng", "sửa chữa", "bảo trì", "cài đặt", "khẩn cấp", "hỏng", "lỗi")):
+        result = handle_laptop_and_product_consulting(user_query, q_lower)
+        if result:
+            return result
 
     # 2. Authenticity, CO/CQ, Serial check
     res = handle_authenticity_and_cocq(q_lower)

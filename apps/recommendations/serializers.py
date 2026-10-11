@@ -11,6 +11,11 @@ class RecommendationSerializer(serializers.ModelSerializer):
     recommendation_type_display = serializers.CharField(source="get_recommendation_type_display", read_only=True)
     priority_display = serializers.CharField(source="get_priority_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    review_state = serializers.SerializerMethodField()
+
+    def get_review_state(self, obj):
+        from .services import recommendation_review_state
+        return recommendation_review_state(obj)
 
     class Meta:
         model = Recommendation
@@ -34,6 +39,7 @@ class RecommendationSerializer(serializers.ModelSerializer):
             "created_by_name",
             "expires_at",
             "created_at",
+            "review_state",
         ]
         read_only_fields = [
             "id", "workspace", "created_by", "created_at",

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {validPoint, distanceKm, inRadius, googleURL, shortestReturned, chooseRoute, accuracyMessage, stepText} = require('../static/public/js/branch-finder.js');
+const {validPoint, distanceKm, inRadius, googleURL, shortestReturned, chooseRoute, accuracyMessage, acceptableDevicePosition, stepText} = require('../static/public/js/branch-finder.js');
 test('coordinates: zero allowed, absent/non-finite/out-of-range rejected', () => {
   assert.ok(validPoint({lat:0,lng:0}));
   for (const p of [{lat:null,lng:1},{lat:NaN,lng:1},{lat:91,lng:1},{lat:1,lng:181},{lat:'10',lng:106}]) assert.ok(!validPoint(p));
@@ -48,6 +48,44 @@ test('coarse or unknown GPS accuracy is never represented as precise', () => {
   assert.match(accuracyMessage(2500),/chỉ gần đúng/);
   assert.match(accuracyMessage(undefined),/chưa cung cấp sai số/);
   assert.match(accuracyMessage(20),/20 m/);
+});
+test('device coordinates are rejected before routing when accuracy is absent or exceeds 100m', () => {
+  for (const accuracy of [undefined, null, -1, NaN, Infinity, 101, 2500]) {
+    assert.equal(Boolean(acceptableDevicePosition({latitude: 10, longitude: 106, accuracy})), false);
+  }
+  assert.equal(acceptableDevicePosition({latitude: 10, longitude: 106, accuracy: 100}), true);
+  assert.equal(acceptableDevicePosition({latitude: 10, longitude: 106, accuracy: 0}), true);
+  assert.equal(acceptableDevicePosition({latitude: 91, longitude: 106, accuracy: 10}), false);
+});
+test('actual GPS callback never places a coarse/unknown origin or contacts a routing provider', () => {
+  const fs = require('node:fs');
+  const vm = require('node:vm');
+  const source = fs.readFileSync(require.resolve('../static/public/js/branch-finder.js'), 'utf8');
+  for (const accuracy of [undefined, 500, NaN]) {
+    const elements = new Map();
+    const element = id => {
+      if (!elements.has(id)) elements.set(id, {textContent: id === 'bf-data' ? '[]' : '', value: '1', checked: false,
+        disabled: false, hidden: true, listeners: {}, classList: {toggle() {}}, replaceChildren() {},
+        setAttribute() {}, addEventListener(type, callback) { this.listeners[type] = callback; }});
+      return elements.get(id);
+    };
+    const map = {setView() { return this; }, on() { return this; }};
+    let markerCalls = 0, providerCalls = 0;
+    const context = {console, URLSearchParams, AbortController,
+      document: {getElementById: element, querySelectorAll: () => []},
+      window: {isSecureContext: true},
+      navigator: {geolocation: {getCurrentPosition(success) { success({coords: {latitude: 10, longitude: 106, accuracy}}); }}},
+      L: {map: () => map, marker: () => { markerCalls++; throw Error('must not place inaccurate marker'); },
+        tileLayer: () => ({on() { return this; }, addTo() { return this; }})},
+      fetch: () => { providerCalls++; throw Error('must not route inaccurate position'); }};
+    vm.runInNewContext(source, context);
+    element('bf-locate').listeners.click();
+    assert.equal(markerCalls, 0);
+    assert.equal(providerCalls, 0);
+    assert.equal(element('bf-origin').textContent, '');
+    assert.equal(element('bf-locate').disabled, false);
+    assert.match(element('bf-status').textContent, /Không thể lấy vị trí chính xác/);
+  }
 });
 test('OSM steps are translated to Vietnamese without inventing a street', () => {
   assert.equal(stepText({maneuver:{type:'turn',modifier:'right'},name:'Nguyễn Huệ',distance:52}), 'Rẽ phải · Nguyễn Huệ · 52 m');

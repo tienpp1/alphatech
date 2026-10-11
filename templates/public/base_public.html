@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -552,7 +553,7 @@
         }
     </style>
     <!-- Master Public Pages Design System -->
-    <link rel="stylesheet" href="/static/css/public_pages.css">
+    <link rel="stylesheet" href="{% static 'css/public_pages.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -730,6 +731,11 @@
 
     <!-- Main Content Body -->
     <main class="pub-main">
+        {% if active_nav == 'cart' %}
+        <div class="copilot-inline-bar">
+            <button type="button" class="copilot-inline-launcher" id="copilot-launcher" onclick="toggleCopilot()" aria-controls="copilot-chat-modal" aria-expanded="false">Hỏi trợ lý AlphaTech về cách đặt hàng</button>
+        </div>
+        {% endif %}
         {% block content %}{% endblock %}
     </main>
 
@@ -866,22 +872,24 @@
     <!-- ==========================================
          FLOATING CYBER AI ALPHATECH WIDGET
          ========================================== -->
-    <div class="copilot-launcher" id="copilot-launcher" onclick="toggleCopilot()" aria-label="Mở trợ lý AI AlphaTech">
-        <div class="copilot-badge-hint">
+    {% if active_nav != 'cart' %}
+    <button type="button" class="copilot-launcher" id="copilot-launcher" onclick="toggleCopilot()" aria-label="Mở trợ lý AI AlphaTech" aria-controls="copilot-chat-modal" aria-expanded="false">
+        <span class="copilot-badge-hint">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             <span>Hỏi AI AlphaTech</span>
-        </div>
-        <div class="copilot-orb">
-            <div class="copilot-ring"></div>
+        </span>
+        <span class="copilot-orb">
+            <span class="copilot-ring"></span>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
                 <path d="M12 12 2.1 10.5"></path>
                 <path d="M12 12V2.1"></path>
             </svg>
-        </div>
-    </div>
+        </span>
+    </button>
+    {% endif %}
 
-    <div class="copilot-chat-modal" id="copilot-chat-modal" role="dialog" aria-modal="true" aria-label="Khung trò chuyện AI AlphaTech">
+    <div class="copilot-chat-modal" id="copilot-chat-modal" role="dialog" aria-modal="false" aria-label="Khung trò chuyện AI AlphaTech">
         <div class="copilot-chat-header">
             <div class="copilot-chat-identity">
                 <div class="copilot-chat-avatar">
@@ -1118,11 +1126,17 @@
         var modal = document.getElementById('copilot-chat-modal');
         if (!modal) return;
         modal.classList.toggle('active');
+        var launcher = document.getElementById('copilot-launcher');
+        if (launcher) launcher.setAttribute('aria-expanded', String(modal.classList.contains('active')));
         if (modal.classList.contains('active')) {
             var input = document.getElementById('copilot-input');
             if (input) input.focus();
-        }
+        } else if (launcher) launcher.focus();
     }
+    document.addEventListener('keydown', function(event) {
+        var modal = document.getElementById('copilot-chat-modal');
+        if (event.key === 'Escape' && modal && modal.classList.contains('active')) toggleCopilot();
+    });
 
     function parseSimpleMarkdown(text) {
         var escaped = text

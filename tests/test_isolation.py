@@ -4,6 +4,7 @@ Verifies that client-supplied X-Workspace-ID headers and session states cannot b
 """
 
 from django.test import TestCase, Client, RequestFactory
+from django.apps.registry import Apps
 from django.db import models
 from rest_framework import status
 from rest_framework.views import APIView
@@ -29,6 +30,9 @@ class DummyTenantEntity(WorkspaceScopedModel):
 
     class Meta:
         app_label = "workspaces"
+        # Keep this synthetic model out of the application's migration state.
+        # Its table is created/deleted only by this isolated test harness.
+        apps = Apps()
 
 
 class SecureTenantProtectedAPIView(APIView):

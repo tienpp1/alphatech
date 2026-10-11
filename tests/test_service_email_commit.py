@@ -15,7 +15,7 @@ class ServiceEmailCommitTests(TransactionTestCase):
             response = self.client.post("/yeu-cau-dich-vu/", {
                 "customer_name": "Test", "phone": "0900000000", "email": "test@example.com",
                 "service_id": service.pk, "description": "Test inquiry",
-            })
+            }, follow=True)
         self.assertContains(response, "tiếp nhận thành công")
         self.assertTrue(response.context["email_warning"])
         inquiry = ServiceRequest.objects.get()

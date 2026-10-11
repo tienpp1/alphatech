@@ -253,6 +253,8 @@
                 </div>
 
                 <div class="rec-body">
+                    <p><strong>{{ rec.created_at|date:"d/m/Y H:i T" }}</strong> · {{ rec.review_state.label }}{% if rec.review_state.period_end %} · Kỳ đến {{ rec.review_state.period_end }}{% endif %}</p>
+                    <p>{% if rec.review_state.actionable %}Hành động có contract: <code>{{ rec.proposed_action }}</code>; chấp thuận sẽ qua cổng phê duyệt, không tự thực thi.{% else %}Chỉ tham khảo — không có action contract; ghi nhận không tạo phê duyệt hoặc thay đổi nghiệp vụ.{% endif %}</p>
                     <div class="rec-section">
                         <div class="rec-section-title">WHAT (Đề xuất hành động)</div>
                         <div>{{ rec.explanation.what|default:"N/A" }}</div>
@@ -265,9 +267,7 @@
 
                     <div class="rec-section" style="border-left-color: #f59e0b;">
                         <div class="rec-section-title">EVIDENCE (Bằng chứng số liệu / GIS)</div>
-                        <div style="font-family: monospace; font-size: 0.75rem; color: #cbd5e1;">
-                            {{ rec.explanation.evidence|default:rec.supporting_data }}
-                        </div>
+                        <pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:0.8rem;color:#cbd5e1;">{{ rec.evidence_display }}</pre>
                     </div>
 
                     <div class="rec-section" style="border-left-color: #10b981;">
@@ -283,10 +283,10 @@
             </div>
             {% endif %}
 
-            {% if rec.status == 'PENDING' and can_manage %}
+            {% if rec.status == 'PENDING' and can_manage and not rec.review_state.stale %}
             <div class="rec-actions">
                 <button class="btn-reject" data-rec-id="{{ rec.id }}" onclick="decideRec(this.dataset.recId, 'reject')">✕ Từ chối</button>
-                <button class="btn-accept" data-rec-id="{{ rec.id }}" onclick="decideRec(this.dataset.recId, 'accept')">✓ Chấp thuận</button>
+                <button class="btn-accept" data-rec-id="{{ rec.id }}" onclick="decideRec(this.dataset.recId, 'accept')">{% if rec.review_state.actionable %}✓ Chấp thuận qua phê duyệt{% else %}✓ Ghi nhận đề xuất tham khảo{% endif %}</button>
             </div>
             {% endif %}
         </div>

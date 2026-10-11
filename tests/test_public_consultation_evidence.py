@@ -73,6 +73,8 @@ class PublicConsultationEvidenceTests(SimpleTestCase):
         product = SimpleNamespace(id=9, name='Laptop Dell', sku='DELL', category=None, unit_price=18500000, cost_price=14000000)
         with patch.object(ai.Product, 'objects') as manager:
             qs = manager.filter.return_value.select_related.return_value
+            qs.filter.return_value = qs
+            qs.order_by.return_value = qs
             qs.filter.return_value.__getitem__.return_value = [product]
             result = ai.handle_laptop_and_product_consulting('laptop dell', 'laptop dell')['reply']
         self.assertIn('18.500.000₫', result)

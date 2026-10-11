@@ -4,8 +4,54 @@ from apps.approvals.executor import execute_tool
 from apps.approvals.models import ApprovalRequest
 from apps.approvals.registry import ToolValidationError
 from apps.approvals.registry import ToolRegistry
-from apps.recommendations.models import Recommendation, RecommendationStatus
+from apps.recommendations.models import Recommendation, RecommendationStatus, RecommendationType
 from django.utils import timezone
+import datetime
+
+
+def _stockout_evidence_is_current(supporting_data):
+    """Current recorded inventory/history, not a model accuracy certificate."""
+    if not isinstance(supporting_data, dict):
+        return False
+    inventory = supporting_data.get("inventory_assessment")
+    demand = supporting_data.get("demand_assessment")
+    if not isinstance(inventory, dict) or not isinstance(demand, dict):
+        return False
+    if inventory.get("status") != "RECORDED_BALANCE" or inventory.get("verified_record") is not True:
+        return False
+    if demand.get("status") != "CURRENT_HISTORY":
+        return False
+    today = timezone.localdate()
+    for value in (inventory.get("as_of"), demand.get("as_of"), demand.get("latest_observation_date")):
+        try:
+            day = datetime.date.fromisoformat(value)
+        except (TypeError, ValueError):
+            return False
+        if not 0 <= (today - day).days <= 7:
+            return False
+    return True
+
+
+def recommendation_review_state(recommendation):
+    """Assess snapshot age without rewriting historical records on a GET."""
+    now = timezone.now()
+    expired = recommendation.expires_at is not None and recommendation.expires_at <= now
+    outdated = recommendation.created_at < now - datetime.timedelta(days=7)
+    supporting_data = recommendation.supporting_data if isinstance(recommendation.supporting_data, dict) else {}
+    period_end = supporting_data.get("period_end")
+    if period_end:
+        try:
+            day = datetime.date.fromisoformat(period_end)
+            outdated = outdated or day < timezone.localdate() - datetime.timedelta(days=7) or day > timezone.localdate()
+        except (TypeError, ValueError):
+            outdated = True
+    unverified_stockout = recommendation.recommendation_type == RecommendationType.RETAIL_STOCKOUT_RISK and not _stockout_evidence_is_current(recommendation.supporting_data)
+    return {"stale": expired or outdated or unverified_stockout,
+            "label": "Tồn kho/nhu cầu cũ hoặc chưa xác minh — cần đánh giá lại; không đủ căn cứ chấp thuận" if unverified_stockout else
+            "Hết hạn / snapshot cũ — cần đánh giá lại" if expired or outdated else "Snapshot tại thời điểm tạo; cần đối chiếu trước khi quyết định",
+            "period_end": period_end,
+            "stockout_evidence_current": not unverified_stockout if recommendation.recommendation_type == RecommendationType.RETAIL_STOCKOUT_RISK else None,
+            "actionable": bool(recommendation.proposed_action)}
 
 
 @transaction.atomic
@@ -18,10 +64,8 @@ def accept_recommendation(recommendation: Recommendation, user, decision_reason:
             f"Recommendation #{recommendation.pk} is in status '{recommendation.status}' and cannot be accepted."
         )
 
-    if recommendation.expires_at and recommendation.expires_at <= timezone.now():
-        recommendation.status = RecommendationStatus.EXPIRED
-        recommendation.save(update_fields=["status"])
-        raise ToolValidationError(f"Recommendation #{recommendation.pk} has expired.")
+    if recommendation_review_state(recommendation)["stale"]:
+        raise ToolValidationError(f"Recommendation #{recommendation.pk} has expired or its snapshot is stale; evaluate again.")
 
     if recommendation.proposed_action:
         tool_def = ToolRegistry.get(recommendation.proposed_action)

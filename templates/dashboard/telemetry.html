@@ -6,13 +6,13 @@
 <!-- Telemetry Hero Header -->
 <div class="dashboard-hero" style="margin-bottom: 2rem;">
     <div class="hero-badge badge-success">
-        <span class="pulse-dot"></span> LIVE SYSTEM TELEMETRY · ENTERPRISE OBSERVABILITY
+        <span class="pulse-dot"></span> DATABASE SNAPSHOT · CHƯA ĐO CHẤT LƯỢNG AI
     </div>
     <h1 class="hero-title" style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #f8fafc, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
         Bảng Giám sát Hiệu năng Mô hình AI & Hạ tầng Không gian GIS
     </h1>
     <p class="hero-subtitle" style="max-width: 900px; color: #94a3b8; font-size: 1.05rem;">
-        Hệ thống đo lường sức khỏe kỹ thuật theo thời gian thực (Telemetry Studio): Giám sát trạng thái kết nối CSDL không gian PostGIS, độ trễ suy luận của các mô hình dự báo XGBoost, thời gian tìm kiếm vector của pgvector RAG, và cơ chế an toàn phân quyền.
+        Snapshot khi mở trang: kiểm tra phiên bản PostGIS, đếm cấu hình/lượt huấn luyện và tài liệu theo workspace được phép. Đây không phải benchmark suy luận XGBoost, tìm kiếm RAG hoặc chứng nhận tuân thủ.
     </p>
 </div>
 
@@ -23,7 +23,7 @@
         <div>
             <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Tần suất Đo lường</div>
             <div style="font-size: 1.05rem; font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 6px;">
-                <span class="pulse-dot" style="background: #10b981;"></span> Thời gian thực (Zero Polling Overhead)
+                Snapshot {{ snapshot_at|date:"d/m/Y H:i:s T" }} — tải lại trang để cập nhật
             </div>
         </div>
     </div>
@@ -49,10 +49,10 @@
                 </div>
                 <div>
                     <span style="font-size: 0.75rem; color: #38bdf8; text-transform: uppercase; font-weight: 700;">Hạ tầng Không gian Số</span>
-                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">PostGIS 3.4 & Spatial Engine</h3>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">PostGIS & Spatial Engine</h3>
                 </div>
             </div>
-            <span class="badge bg-success" style="font-size: 0.75rem;">CONNECTED</span>
+            <span class="badge" style="font-size: 0.75rem;">{% if spatial.connected %}VERSION QUERY OK{% else %}CHƯA XÁC MINH{% endif %}</span>
         </div>
 
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
@@ -97,7 +97,7 @@
                     <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">XGBoost Time-Series Engine</h3>
                 </div>
             </div>
-            <span class="badge bg-primary" style="font-size: 0.75rem;">OPTIMAL</span>
+            <span class="badge" style="font-size: 0.75rem;">CHƯA ĐÁNH GIÁ CHẤT LƯỢNG</span>
         </div>
 
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
@@ -118,7 +118,7 @@
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
                 <div style="font-size: 1.35rem; font-weight: 800; color: #a855f7;">{{ ml.models_configured }}</div>
-                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Mô hình Đang hoạt động</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Cấu hình mô hình (chưa kiểm artifact)</div>
             </div>
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
                 <div style="font-size: 1.35rem; font-weight: 800; color: #a855f7;">{{ ml.runs_completed }}</div>
@@ -139,13 +139,13 @@
                     <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">Grounded RAG & pgvector</h3>
                 </div>
             </div>
-            <span class="badge bg-success" style="font-size: 0.75rem;">INDEXED</span>
+            <span class="badge" style="font-size: 0.75rem;">{{ rag.chunks_indexed }} ĐOẠN ĐƯỢC LƯU</span>
         </div>
 
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
                 <span style="color: #94a3b8;">Vector Engine:</span>
-                <strong style="color: #f8fafc;">pgvector (768 chiều Cosine)</strong>
+                <strong style="color: #f8fafc;">{{ rag.vector_engine }} ({{ rag.embedding_dimensions }} chiều cấu hình)</strong>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
                 <span style="color: #94a3b8;">Thời gian đếm đoạn tài liệu (không phải tìm kiếm):</span>
@@ -168,7 +168,7 @@
             </div>
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 0.75rem; text-align: center;">
                 <div style="font-size: 1.35rem; font-weight: 800; color: #10b981;">{{ rag.chunks_indexed }}</div>
-                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Chunks Đã nhúng</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Đoạn được lưu (chưa chứng nhận semantic)</div>
             </div>
         </div>
     </div>
@@ -185,13 +185,13 @@
                     <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0;">Human-in-the-loop & RBAC</h3>
                 </div>
             </div>
-            <span class="badge bg-warning" style="font-size: 0.75rem;">ENFORCED</span>
+            <span class="badge" style="font-size: 0.75rem;">CONTRACT / COUNTS</span>
         </div>
 
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
                 <span style="color: #94a3b8;">Cơ chế Kiểm soát Con người:</span>
-                <strong style="color: #10b981;">100% Tuân thủ (Zero auto-mutation)</strong>
+                <strong style="color: #cbd5e1;">{{ governance.measurement }}</strong>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
                 <span style="color: #94a3b8;">Workspace Isolation:</span>
@@ -199,7 +199,7 @@
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
                 <span style="color: #94a3b8;">Nhật ký Kiểm toán (Audit):</span>
-                <strong style="color: #38bdf8;">Bất biến (Append-only storage)</strong>
+                <strong style="color: #38bdf8;">Append-only theo contract; chưa đo tuân thủ ở trang này</strong>
             </div>
         </div>
 
@@ -224,15 +224,15 @@
 <!-- Interactive Live Ping Telemetry Console -->
 <div class="card glass-card" style="border-radius: 16px; padding: 1.75rem; margin-bottom: 2rem;">
     <h4 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
-        <span>🔍</span> Kiểm tra Đo đạc Độ trễ Trực tiếp (Live Latency Benchmark Ping)
+        <span>🔍</span> Kiểm tra HTTP health (không phải benchmark AI/GIS)
     </h4>
     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">
-        Bấm nút bên dưới để gửi gói tin kiểm thử thời gian thực đến PostGIS và động cơ AI, hiển thị độ phản hồi thực tế của máy chủ.
+        Nút chỉ gọi /api/health/ và đo thời gian HTTP từ trình duyệt. Không chạy spatial query, retrieval, LLM hoặc suy luận XGBoost. Runtime Django {{ django_version }}; {{ ml.framework }}.
     </p>
 
     <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1.25rem;">
         <button type="button" id="btn-ping-spatial" onclick="runPingTest('spatial')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
-            🌐 Ping PostGIS Spatial Query
+            🌐 Kiểm tra HTTP health (hạ tầng)
         </button>
         <button type="button" id="btn-ping-rag" onclick="runPingTest('rag')" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
             📚 Kiểm tra HTTP health (RAG)
@@ -267,7 +267,7 @@ function runPingTest(type) {
         })
         .then(data => {
             const elapsed = Math.round(performance.now() - t0);
-            const detail = 'Chỉ đo HTTP /api/health/. Chưa thực hiện suy luận XGBoost hoặc tìm kiếm vector.';
+            const detail = 'Chỉ đo HTTP /api/health/. Chưa thực hiện spatial query, suy luận XGBoost hoặc tìm kiếm vector.';
 
             const line1 = document.createElement('div');
             line1.style.color = '#10b981';

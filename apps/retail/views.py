@@ -738,7 +738,12 @@ class TopProductsAPIView(APIView):
     permission_classes = [IsWorkspaceMember]
 
     def get(self, request):
-        limit = int(request.query_params.get("limit", 10))
+        try:
+            limit = int(request.query_params.get("limit", 10))
+            if not 1 <= limit <= 100:
+                raise ValueError
+        except (TypeError, ValueError):
+            return Response({"success": False, "data": None, "error": "limit phải là số nguyên từ 1 đến 100."}, status=400)
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 

@@ -1702,3 +1702,27 @@ sau sửa hai cách hỏi, không phải holdout mù hoặc chất lượng LLM 
 Chi tiết lỗi trung gian và test: AI_CONTEXT_BATCH_2_2026_10_09.md.
 Nhóm cuối 189 tests/104.870s OK; check 0 issues, migration drift No changes detected.
 Không paid API, production rollout hoặc thay đổi sổ 97.
+
+## Sửa phát hiện live audit — 11/10/2026
+
+Phạm vi F01–F36 độc lập với sổ 97: canonical order transition/stock release trong
+approval, scoped exact lookups, malformed-input 400, service POST dedup/PRG,
+history API với race/timeout/XSS guards và internal roster/HTML denial. GIS grid
+đếm tọa độ thật; revenue COMPLETED/current-cost estimate, category/chi tiêu đầy
+đủ, chứng chỉ/COGS/SLA chưa xác minh không được thay bằng số giả. Snapshot/R²/
+baseline, recommendation stale/advisory và telemetry được trình bày đúng bằng
+chứng; status_distribution dịch vụ có tất cả trạng thái.
+
+Chủ dự án chọn deterministic/no-key, forecast lịch sử và ảnh AI có disclosure,
+không giả ảnh thật từng SKU hoặc tạo giao dịch giả để nâng điểm. Neon stock
+preflight read-only đủ44×3, không âm/thiếu; Render đã lưu strict fulfillment,
+chờ deploy kích hoạt. Local .env ignored cũng strict; không schema/data reset.
+
+Nhóm tích hợp150/150 OK129.782s, JS23/23 OK475.7684ms; các lượt public/RAG/
+forecast/governance và lỗi trung gian lưu tại AUDIT_REPAIR_RESULTS_2026_10_11.md.
+Test dùng DB disposable riêng, không suy ra email inbox/liveLLM/production UAT.
+Full worktree1361/1361 OK295.775s; export Git index1349/1349 OK378.022s,
+không thay nguồn/index trong lượt. Chênh12 test untracked có sẵn thuộc phần khác,
+không tự stage. Hai lượt dùng hasher nhanh chỉ ở process DB test disposable;
+không đổi hasher runtime. Bandit scopeCI0 findings; scan839 file0 known secrets.
+Push/deploy/CI commit mới đang chuẩn bị; kết quả live ghi riêng, không sửa sổ97.

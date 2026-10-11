@@ -70,7 +70,7 @@ class CustomerAccountIdentityTests(TestCase):
         response = self.client.post("/yeu-cau-dich-vu/", {
             "customer_name": "Owner", "phone": "0900000000", "email": "different@example.com",
             "service_id": service.pk, "description": "Test inquiry",
-        })
+        }, follow=True)
         self.assertContains(response, "tiếp nhận thành công")
         request = ServiceRequest.objects.get()
         self.assertEqual(request.workspace_id, self.other.pk)
@@ -87,7 +87,7 @@ class CustomerAccountIdentityTests(TestCase):
         response = self.client.post("/yeu-cau-dich-vu/", {
             "customer_name": "Owner", "phone": "0900000000", "email": self.user.email,
             "service_id": service.pk, "description": "Guest inquiry",
-        })
+        }, follow=True)
         self.assertContains(response, "tiếp nhận thành công")
         request = ServiceRequest.objects.get()
         self.assertEqual(request.customer.workspace_id, self.other.pk)

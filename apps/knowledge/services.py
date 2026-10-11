@@ -264,24 +264,87 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
     """
     from apps.approvals.executor import execute_tool as execute_controlled_tool
     q = query.lower()
+    # Questions about a procedure/scenario are not authorization to create an
+    # operational proposal. Apply this before every mutation branch.
+    is_inquiry = "?" in q or any(w in q for w in [
+        "khi nào", "khi nao", "quy định", "quy dinh", "quy trình", "quy trinh",
+        "hướng dẫn", "huong dan", "thế nào", "the nao", "ra sao", "là gì", "la gi",
+        "có nên", "co nen", "được không", "duoc khong", "nếu ", "neu ",
+        "giả sử", "gia su", "mô phỏng", "mo phong", "what if",
+    ])
+    if is_inquiry:
+        return None
+
+    def explicit_entity(model, label, *, query_text=None, category=None):
+        from apps.knowledge.retrieval import _normalize_vietnamese_text
+        text = _normalize_vietnamese_text(query_text or query)
+        matches = []
+        for entity in model.objects.for_workspace(workspace).all():
+            names = [getattr(entity, name, "") for name in ("name", "code", "sku", "full_name")]
+            normalized = [_normalize_vietnamese_text(str(name)) for name in names if name]
+            if any(re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", text) for name in normalized):
+                matches.append(entity)
+            elif category and getattr(entity, "category_id", None):
+                category_name = _normalize_vietnamese_text(entity.category.name)
+                if category_name == category and re.search(r"\b" + re.escape(category) + r"\b", text):
+                    matches.append(entity)
+            elif label == "chi nhánh":
+                short_names = [re.sub(r"^(?:chi nhanh|branch)\s+", "", name) for name in normalized]
+                if any(name and re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", text) for name in short_names):
+                    matches.append(entity)
+        if len(matches) != 1:
+            raise ValueError(f"Cần xác định duy nhất {label}; không tự chọn bản ghi đầu tiên.")
+        return matches[0]
+
+    def explicit_quantity():
+        quantities = re.findall(r"(?<![\w.,])([+-]?\d+(?:[.,]\d+)?)\s*(?:chiếc|chiec|cái|cai|đơn vị|don vi|sp|sản phẩm|laptop)(?!\w)", q)
+        if len(quantities) != 1 or not quantities[0].isdigit() or int(quantities[0]) <= 0:
+            raise ValueError("Cần số lượng rõ ràng và lớn hơn 0.")
+        return int(quantities[0])
+
+    def explicit_integer_id(labels):
+        # Read the whole labeled token before validating it: #12abc, #12.5
+        # and #12_other must never become a different entity, namely #12.
+        tokens = re.findall(r"(?<!\w)(?:" + labels + r")(?!\w)\s*#?\s*([+-]?\d[^\s]*)", q)
+        values = []
+        for token in tokens:
+            token = token.rstrip(".,;:)]}")
+            if not token.isdigit() or int(token) <= 0:
+                raise ValueError("Mã bản ghi phải là số nguyên dương đầy đủ; không tự cắt mã hoặc suy diễn mã khác.")
+            values.append(int(token))
+        if len(set(values)) > 1:
+            raise ValueError("Có nhiều mã bản ghi khác nhau; cần chỉ định duy nhất một bản ghi.")
+        return values[0] if values else None
+
+    def explicit_vnd_amount(raw_price):
+        if not (raw_price.isdigit() or re.fullmatch(r"[1-9]\d{0,2}(?:([.,])\d{3})(?:\1\d{3})*", raw_price)):
+            raise ValueError("Đơn giá cần là số VND nguyên, ví dụ 12500000 hoặc 12.500.000; không tự suy diễn dấu thập phân.")
+        value = int(raw_price.replace(",", "").replace(".", ""))
+        if value <= 0:
+            raise ValueError("Đơn giá phải lớn hơn 0.")
+        return value
 
     # 1. Dispatch technician to ticket
     if any(k in q for k in ["phân công", "phan cong", "giao việc", "giao viec", "điều động", "dieu dong", "assign", "dispatch"]):
         if any(k in q for k in ["ticket", "phiếu", "phieu", "yêu cầu", "yeu cau", "request"]):
-            m_ticket = re.search(r"(?:ticket|phiếu|phieu|yêu cầu|yeu cau|request)\s*#?\s*(\d+)", q)
-            m_emp = re.search(r"(?:kỹ thuật viên|ky thuat vien|nhân viên|nhan vien|technician|employee|staff)\s*#?\s*(\d+)", q)
+            ticket_id = explicit_integer_id("ticket|phiếu|phieu|yêu cầu|yeu cau|request")
+            employee_id = explicit_integer_id("kỹ thuật viên|ky thuat vien|nhân viên|nhan vien|technician|employee|staff")
             emp_id = None
-            if m_emp:
-                emp_id = int(m_emp.group(1))
+            if employee_id is not None:
+                emp_id = employee_id
             else:
                 from apps.service_ops.models import Employee
-                for emp in Employee.objects.for_workspace(workspace).filter(is_active=True):
-                    if emp.code.lower() in q or emp.full_name.lower() in q:
-                        emp_id = emp.id
-                        break
+                from apps.knowledge.retrieval import _normalize_vietnamese_text
+                normalized_query = _normalize_vietnamese_text(query)
+                candidates = [emp.id for emp in Employee.objects.for_workspace(workspace).filter(is_active=True)
+                              if any(value and re.search(r"(?<!\w)" + re.escape(_normalize_vietnamese_text(value)) + r"(?!\w)", normalized_query)
+                                     for value in (emp.code, emp.full_name))]
+                if len(candidates) == 1:
+                    emp_id = candidates[0]
+                elif len(candidates) > 1:
+                    raise ValueError("Có nhiều nhân viên phù hợp; cần chỉ định mã nhân viên.")
 
-            if m_ticket and emp_id:
-                ticket_id = int(m_ticket.group(1))
+            if ticket_id is not None and emp_id is not None:
                 return execute_controlled_tool(
                     name="dispatch_technician",
                     workspace=workspace,
@@ -293,14 +356,20 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
     # 2. Update order status
     if any(k in q for k in ["cập nhật", "cap nhat", "chuyển trạng thái", "chuyen trang thai", "update status", "update order"]):
         if any(k in q for k in ["đơn hàng", "don hang", "order"]):
-            m_order = re.search(r"(?:đơn hàng|don hang|order)\s*#?\s*(\d+)", q)
+            order_id = explicit_integer_id("đơn hàng|don hang|order")
+            status_names = "pending|confirmed|processing|shipped|completed|cancelled"
+            statuses = re.findall(r"(?<!\w)(?:" + status_names + r")(?!\w)", q)
+            destinations = re.findall(r"(?<!\w)(?:(?:sang|thành|thanh|đến|den|to)(?!\w)|=)\s*(" + status_names + r")(?!\w)", q)
             status_match = None
-            for s in ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED"]:
-                if s.lower() in q:
-                    status_match = s
-                    break
-            if m_order and status_match:
-                order_id = int(m_order.group(1))
+            if destinations:
+                if len(set(destinations)) != 1 or statuses[-1] != destinations[-1]:
+                    raise ValueError("Trạng thái đích chưa rõ ràng; cần chỉ định một trạng thái đích duy nhất.")
+                status_match = destinations[-1].upper()
+            elif len(set(statuses)) == 1:
+                status_match = statuses[0].upper()
+            elif len(set(statuses)) > 1:
+                raise ValueError("Có nhiều trạng thái được nhắc đến; cần nói rõ chuyển sang trạng thái nào.")
+            if order_id is not None and status_match:
                 return execute_controlled_tool(
                     name="update_order_status",
                     workspace=workspace,
@@ -311,15 +380,14 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
 
     # 3. Adjust product price
     if any(k in q for k in ["điều chỉnh giá", "dieu chinh gia", "cập nhật giá", "cap nhat gia", "đổi giá", "doi gia", "adjust price"]):
-        m_prod = re.search(r"(?:sản phẩm|san pham|product)\s*#?\s*(\d+)", q)
-        m_price = re.search(r"(?:thành|sang|to|=)\s*([\d\.,]+)", q)
+        product_id = explicit_integer_id("sản phẩm|san pham|product")
+        m_price = re.search(r"(?:thành|sang|to|=)\s*([+-]?[\d\.,]+)", q)
         if not m_price:
-            m_price = re.search(r"(\d[\d\.,]*)\s*(?:vnd|đồng|dong|d)", q)
-        if m_prod and m_price:
+            m_price = re.search(r"(?<![\w.,])([+-]?\d[\d\.,]*)\s*(?:vnd|đồng|dong|d)(?!\w)", q)
+        if product_id is not None and m_price:
             try:
-                prod_id = int(m_prod.group(1))
-                clean_price_str = m_price.group(1).replace(",", "").replace(".", "")
-                new_price = float(clean_price_str)
+                prod_id = product_id
+                new_price = explicit_vnd_amount(m_price.group(1))
                 if new_price > 0:
                     return execute_controlled_tool(
                         name="adjust_product_price",
@@ -334,11 +402,13 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
 
     # 4. Schedule task
     if any(k in q for k in ["lập lịch", "lap lich", "tạo nhiệm vụ", "tao nhiem vu", "schedule task"]):
+        ticket_id = explicit_integer_id("ticket|phiếu|phieu|yêu cầu|yeu cau|request")
+        if ticket_id is None:
+            raise ValueError("Lập lịch cần chỉ định mã phiếu yêu cầu; không tự chọn phiếu đầu tiên.")
         m_title = re.search(r"['\"]([^'\"]+)['\"]", query)
         title = m_title.group(1) if m_title else "Nhiệm vụ điều phối từ Trợ lý AI"
-        m_emp = re.search(r"(?:kỹ thuật viên|nhân viên|technician|employee)\s*#?\s*(\d+)", q)
-        emp_id = int(m_emp.group(1)) if m_emp else None
-        params = {"title": title}
+        emp_id = explicit_integer_id("kỹ thuật viên|ky thuat vien|nhân viên|nhan vien|technician|employee|staff")
+        params = {"title": title, "ticket_id": ticket_id}
         if emp_id:
             params["employee_id"] = emp_id
         return execute_controlled_tool(
@@ -353,20 +423,17 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
     if any(k in q for k in ["tạo phiếu nhập", "tao phieu nhap", "phiếu nhập kho", "phieu nhap kho", "đề xuất tạo phiếu nhập", "de xuat tao phieu nhap", "nhập thêm", "nhap them"]):
         try:
             from apps.retail.models import Supplier, Branch, Product
-            supplier = Supplier.objects.for_workspace(workspace).first()
-            branch = Branch.objects.for_workspace(workspace).first()
-            product = None
-            for p in Product.objects.for_workspace(workspace).filter(is_active=True):
-                p_name_lower = p.name.lower()
-                if p_name_lower in q or p.sku.lower() in q or ("dell" in q and "dell" in p_name_lower) or ("inspiron" in q and "inspiron" in p_name_lower):
-                    product = p
-                    break
-            if not product:
-                product = Product.objects.for_workspace(workspace).first()
-
-            m_qty = re.search(r"(\d+)\s*(?:chiếc|chiec|cái|cai|đơn vị|don vi|sp|sản phẩm|laptop)", q)
-            quantity = int(m_qty.group(1)) if m_qty else 20
-            unit_cost = float(product.cost_price) if (product and product.cost_price) else 15000000.0
+            supplier = explicit_entity(Supplier, "nhà cung cấp")
+            branch = explicit_entity(Branch, "chi nhánh")
+            product = explicit_entity(Product, "sản phẩm", category="laptop")
+            quantity = explicit_quantity()
+            price = re.search(r"(?:đơn giá|don gia|unit cost)\s*([+-]?[\d.,]+)", q)
+            if not price:
+                raise ValueError("Cần đơn giá nhập rõ ràng; giá vốn hiện tại không thay thế báo giá nhà cung cấp.")
+            raw_price = price.group(1)
+            # Only whole VND amounts or unambiguous thousand-grouping are
+            # supported here. Never silently turn "12.5" into 125 VND.
+            unit_cost = explicit_vnd_amount(raw_price)
 
             if supplier and branch and product:
                 params = {
@@ -403,13 +470,14 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
     if explicit_transfer_action and any(w in q for w in ["điều chuyển", "dieu chuyen", "chuyển hàng", "chuyen hang"]):
         try:
             from apps.retail.models import Branch, Product
-            branches = list(Branch.objects.for_workspace(workspace))
-            product = Product.objects.for_workspace(workspace).filter(name__icontains="laptop").first() or Product.objects.for_workspace(workspace).first()
-            if len(branches) >= 2 and product:
-                src_branch = branches[1]
-                dest_branch = branches[0]
-                m_qty = re.search(r"(\d+)\s*(?:chiếc|chiec|cái|cai|máy|sp|sản phẩm|laptop)", q)
-                quantity = int(m_qty.group(1)) if m_qty else 2
+            direction = re.search(r"(?:từ|tu)\s+(.+?)\s+(?:sang|đến|den)\s+(.+)", q)
+            if not direction:
+                raise ValueError("Cần chi nhánh nguồn và đích rõ ràng.")
+            src_branch = explicit_entity(Branch, "chi nhánh", query_text=direction.group(1))
+            dest_branch = explicit_entity(Branch, "chi nhánh", query_text=direction.group(2))
+            product = explicit_entity(Product, "sản phẩm", category="laptop")
+            if src_branch and dest_branch and product:
+                quantity = explicit_quantity()
                 return execute_controlled_tool(
                     name="create_stock_transfer",
                     workspace=workspace,
@@ -430,14 +498,13 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
     if any(w in q for w in ["hạ giá", "ha gia", "xả kho", "xa kho", "giảm giá", "giam gia"]):
         try:
             from apps.retail.models import Product
-            product = Product.objects.for_workspace(workspace).filter(name__icontains="laptop").first() or Product.objects.for_workspace(workspace).first()
+            product = explicit_entity(Product, "sản phẩm", category="laptop")
             if product and product.unit_price:
-                m_pct = re.search(r"(\d+)\s*%", q)
-                discount_pct = float(m_pct.group(1)) if m_pct else 5.0
+                percentages = re.findall(r"(?<![\w.,])([+-]?\d+(?:[.,]\d+)?)\s*%", q)
+                if len(percentages) != 1 or not percentages[0].isdigit() or not 0 < int(percentages[0]) < 100:
+                    raise ValueError("Cần tỷ lệ giảm giá rõ ràng trong khoảng 0 đến 100%.")
+                discount_pct = int(percentages[0])
                 new_price = round(float(product.unit_price) * (1.0 - discount_pct / 100.0), -4)
-                cost = float(product.cost_price or 0.0)
-                if cost > 0 and new_price < cost * 1.03:
-                    new_price = round(cost * 1.05, -4)
                 return execute_controlled_tool(
                     name="adjust_product_price",
                     workspace=workspace,
@@ -452,44 +519,15 @@ def detect_and_handle_mutation_request(query: str, workspace: Workspace, user: U
             logger.warning('MUTATION_REQUEST_FAILED')
             raise
 
-    is_inquiry = any(w in q for w in ["khi nào", "khi nao", "quy định", "quy dinh", "thế nào", "the nao", "ra sao", "là gì", "la gi", "áp dụng thế nào"])
-
     # 7. DOA Replacement & Warranty Proposal (Phase 3 SOP)
     if not is_inquiry and any(w in q for w in ["lập đề xuất đổi mới", "lap de xuat doi moi", "tạo đề xuất đổi mới", "tao de xuat doi moi", "đề xuất đổi mới doa", "de xuat doi moi doa"]):
-        try:
-            from apps.retail.models import Order, OrderStatus
-            order = Order.objects.for_workspace(workspace).filter(status__in=[OrderStatus.COMPLETED, OrderStatus.CONFIRMED]).order_by("-id").first()
-            if not order:
-                order = Order.objects.for_workspace(workspace).order_by("-id").first()
-            if order:
-                return execute_controlled_tool(
-                    name="update_order_status",
-                    workspace=workspace,
-                    user=user,
-                    parameters={"order_id": order.id, "new_status": OrderStatus.CONFIRMED},
-                    reason=f"Yêu cầu tiếp nhận thẩm định đổi mới sản phẩm DOA trong 72 giờ từ Trợ lý AI: '{query}'"
-                )
-        except Exception:
-            logger.warning('MUTATION_REQUEST_FAILED')
-            raise
+        # A replacement is not an order status reset. No return/replacement
+        # transaction contract exists here; never repurpose an arbitrary order.
+        raise ValueError("Đổi mới cần kiểm tra phiếu và quy trình nghiệp vụ riêng; chưa có action contract an toàn.")
 
     # 8. Emergency Technician Backup Dispatch (Tier 2 SLA Escalation)
     if not is_inquiry and any(w in q for w in ["lập đề xuất điều động chi viện", "lap de xuat dieu dong chi vien", "lập đề xuất chi viện", "lap de xuat chi vien", "tạo đề xuất chi viện", "tao de xuat chi vien", "đề xuất chi viện", "de xuat chi vien", "điều động chi viện"]):
-        try:
-            from apps.service_ops.models import ServiceRequest, Employee
-            req = ServiceRequest.objects.for_workspace(workspace).order_by("-id").first()
-            emp = Employee.objects.for_workspace(workspace).filter(is_active=True).first()
-            if req and emp:
-                return execute_controlled_tool(
-                    name="dispatch_technician",
-                    workspace=workspace,
-                    user=user,
-                    parameters={"ticket_id": req.id, "employee_id": emp.id},
-                    reason=f"Yêu cầu điều động kỹ sư chi viện khẩn cấp hiện trường theo ma trận leo thang SLA: '{query}'"
-                )
-        except Exception:
-            logger.warning('MUTATION_REQUEST_FAILED')
-            raise
+        raise ValueError("Cần chỉ định phiếu yêu cầu và nhân viên; không tự chọn dữ liệu gần nhất.")
 
     return None
 
@@ -533,12 +571,20 @@ def _numeric_source_disagreements(chunks):
     groups = {}
     number_pattern = r"(?<!\w)\d+(?:[.,]\d+)?(?!\w)"
     for chunk in chunks[:3]:
-        for sentence in re.split(r"(?<=[.!?])\s+|\n", chunk['content']):
+        # List ordinals and reference numbers are navigation, not quantities.
+        content = re.sub(r"(?m)^\s*\d+[.)]\s+", "", chunk['content'])
+        scope = (str(chunk.get('heading') or '').casefold().strip(),
+                 chunk.get('effective_from'), chunk.get('effective_to'))
+        for sentence in re.split(r"(?<=[.!?])\s+|\n", content):
             sentence = ' '.join(sentence.casefold().strip(' .!?').split())
             numbers = re.findall(number_pattern, sentence)
             if len(numbers) != 1:
                 continue
-            key = re.sub(number_pattern, '<number>', sentence)
+            # Require an explicit measurement unit. Pure ordinals/IDs are not
+            # evidence of a disagreement about the same operational quantity.
+            if not re.search(number_pattern + r"\s*(?:%|(?:tháng|thang|ngày|ngay|giờ|gio|phút|phut|năm|nam|vnd|đồng|dong|km|mét|met|chiếc|chiec|đơn|don|ticket)\b)", sentence):
+                continue
+            key = (scope, re.sub(number_pattern, '<number>', sentence))
             groups.setdefault(key, set()).add(numbers[0])
     return [sorted(values) for values in groups.values() if len(values) > 1]
 
@@ -566,12 +612,15 @@ def generate_grounded_answer(
 
     # Build Citation List from retrieved chunks
     for ch in chunks:
+        authority = ch.get("source_authority") or {}
         sources.append({
             "document_title": ch["document_title"],
             "page_number": ch.get("page_number"),
             "chunk_id": ch["chunk_id"],
             "similarity": ch["similarity"],
             "heading": ch.get("heading"),
+            "source_authority": authority,
+            "public_publication_approved": authority.get("public_publication_approved") is True,
         })
 
     # Prepare Context Prompt Blocks
@@ -590,7 +639,8 @@ def generate_grounded_answer(
             page_info = f", Trang {ch['page_number']}" if ch.get("page_number") else ""
             heading_info = f", Mục: {ch['heading']}" if ch.get("heading") else ""
             context_blocks.append(
-                f"[Tài liệu: {ch['document_title']}{page_info}{heading_info}]\n{ch['content']}"
+                f"[Tài liệu: {ch['document_title']}{page_info}{heading_info}; "
+                f"Nguồn: {ch.get('source_authority') or {'status': 'UNVERIFIED'}}]\n{ch['content']}"
             )
 
     full_context = "\n\n".join(context_blocks)
@@ -672,6 +722,10 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                     f"Về vận hành dịch vụ, hiện có {td.get('total_tickets')} phiếu yêu cầu ({td.get('open_tickets')} đang xử lý, "
                     f"{td.get('overdue_sla_tickets')} quá hạn SLA)."
                 )
+                if td.get("status_distribution") is not None:
+                    answer_parts.append("Phân bố theo từng trạng thái: " + "; ".join(
+                        f"{status}: {count}" for status, count in td["status_distribution"].items()
+                    ) + ".")
             elif tname == "get_technician_workload_summary":
                 answer_parts.append(
                     f"Đội ngũ kỹ thuật viên gồm {td.get('total_technicians')} nhân sự ({td.get('available_technicians')} đang sẵn sàng, "
@@ -681,6 +735,7 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                 recs = td.get("recommendations", [])
                 if recs:
                     for top in recs[:2]:
+                        state = top.get("review_state") or {}
                         expl = top.get("explanation", {})
                         ev = expl.get("evidence", {})
                         ev_str = ", ".join(f"{k}: {v}" for k, v in ev.items() if not isinstance(v, (dict, list)))
@@ -691,6 +746,10 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                             f"- Bằng chứng dữ liệu (Evidence): {ev_str or str(ev)}\n"
                             f"- Tác động kỳ vọng: {expl.get('expected_effect', '')}"
                         )
+                        if state.get("stale"):
+                            answer_parts.append("⚠️ Khuyến nghị này đã cũ/hết hạn hoặc dùng snapshot cũ; cần đánh giá lại, không dùng như đề xuất hiện tại.")
+                        if not top.get("proposed_action"):
+                            answer_parts.append("Chỉ là advisory tham khảo; chưa có action contract để tự thực thi.")
             elif tname == "query_nearby_technicians":
                 cands = td.get("candidates", [])
                 if cands:
@@ -702,11 +761,13 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                         sub_info = f" (Điểm khoảng cách: {sub.get('distance_score')}, Tải công việc: {sub.get('workload_score')}, Kỹ năng: {sub.get('skill_score')})"
                     answer_parts.append(
                         f"📍 Đề xuất phân công kỹ thuật viên (Phân tích GIS & Thuật toán Chấm điểm Đa tiêu chí):\n"
-                        f"- Kỹ thuật viên tối ưu: {top.get('name')} ({top.get('code')}){score_info}{sub_info}\n"
+                        f"- Ứng viên đứng đầu theo dữ liệu đã lưu: {top.get('name')} ({top.get('code')}){score_info}{sub_info}\n"
                         f"- Khoảng cách địa lý: {top.get('distance_km')} km\n"
                         f"- Số công việc đang xử lý: {top.get('active_tasks')} công việc\n"
-                        f"- Bằng chứng: Điểm số tính toán minh bạch từ công thức chuẩn hóa w_dist=0.4, w_workload=0.4, w_skill=0.2."
+                        f"- Bằng chứng chấm điểm: {top.get('score_basis', 'Chưa ghi nhận công thức')}; chuyên môn phù hợp chưa được xác minh."
                     )
+                else:
+                    answer_parts.append(td.get("message") or "Chưa tìm thấy kỹ thuật viên trong phạm vi và dữ liệu vị trí hiện có.")
             elif tname == "get_top_selling_products":
                 rankings = td.get("rankings", [])
                 cat_label = td.get("category_filter", "all")
@@ -756,30 +817,43 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
             elif tname == "get_stockout_risk_summary":
                 at_risk = td.get("products_at_risk", [])
                 total_tracked = td.get("total_tracked", 0)
-                out_cnt = td.get("out_of_stock_count", 0)
+                out_cnt = td.get("verified_out_of_stock_count", 0)
                 high_cnt = td.get("high_risk_count", 0)
                 med_cnt = td.get("medium_risk_count", 0)
+                unassessed = td.get("unassessed_demand_count", 0)
+                inventory_unknown = td.get("inventory_unverified_count", 0)
                 cat_filter = td.get("category_filter", "Tất cả")
                 cat_str = f" danh mục '{cat_filter}'" if cat_filter and cat_filter != "Tất cả danh mục" else ""
 
                 if at_risk:
                     lines = [
-                        f"⚠️ **Cảnh báo tồn kho & Dự báo nguy cơ hết hàng{cat_str}**:",
+                        f"⚠️ **Rà soát tồn kho theo heuristic lịch sử{cat_str}**:",
+                        "Các ngày hết hàng và lượng nhập là kịch bản theo nhu cầu lịch sử, không phải dự báo XGBoost đã kiểm chứng; chưa tự thực hiện nhập hàng.",
                         f"- Tổng số sản phẩm theo dõi: {total_tracked} | 🔴 Hết hàng: {out_cnt} | 🟠 Nguy cơ cao (< 7 ngày): {high_cnt} | 🟡 Nguy cơ trung bình (7-10 ngày): {med_cnt}\n",
                         "| Sản phẩm | Tồn kho | Nhu cầu dự báo | Dự kiến hết | Thời gian nhập | Đề xuất nhập thêm |",
                         "|---|---|---|---|---|---|",
                     ]
                     for p in at_risk[:6]:
                         icon = "🔴" if p["risk_level"] == "OUT_OF_STOCK" else ("🟠" if p["risk_level"] == "HIGH" else "🟡")
-                        days_str = "Hết hàng" if p["risk_level"] == "OUT_OF_STOCK" else f"{p['days_to_stockout']} ngày"
+                        inventory = p.get("inventory_assessment") or {}
+                        demand = p.get("demand_assessment") or {}
+                        days_str = "Chưa xác minh tồn" if inventory.get("verified_record") is False else "Hết hàng" if p["risk_level"] == "OUT_OF_STOCK" else "Ước tính lịch sử" if demand.get("status") and demand["status"] != "CURRENT_HISTORY" else f"{p['days_to_stockout']} ngày"
                         lines.append(
                             f"| {icon} **{p['product_name']}** | {p['current_stock']} {p['unit']} | {p['predicted_daily_demand']}/ngày | {days_str} | {p['lead_time_days']} ngày | **+{p['suggested_reorder_quantity']} {p['unit']}** |"
                         )
+                        if p.get("demand_assessment", {}).get("message"):
+                            lines.append(f"Nguồn nhu cầu của {p['product_name']}: {p['demand_assessment']['message']}")
+                        if p.get("inventory_assessment", {}).get("message"):
+                            lines.append(f"Căn cứ tồn kho của {p['product_name']}: {p['inventory_assessment']['message']}")
                     answer_parts.append("\n".join(lines))
                 else:
                     answer_parts.append(
-                        f"✅ Tồn kho toàn bộ sản phẩm{cat_str} đang ở mức an toàn. Không có sản phẩm nào có nguy cơ hết hàng trong 10 ngày tới."
+                        f"Chưa ghi nhận sản phẩm{cat_str} vượt ngưỡng cảnh báo của heuristic lịch sử; không đủ căn cứ khẳng định tồn kho an toàn trong 10 ngày tới."
                     )
+                if unassessed:
+                    answer_parts.append(f"Có {unassessed} sản phẩm chưa đủ dữ liệu nhu cầu gần hiện tại. Không dùng kết quả này như bảo đảm an toàn tồn kho.")
+                if inventory_unknown:
+                    answer_parts.append(f"Có {inventory_unknown} sản phẩm chưa có số dư tồn kho hợp lệ; thiếu dòng tồn không có nghĩa đã hết hàng.")
             elif tname == "get_stock_balance_summary":
                 balances = td.get("balances", [])
                 total_units = td.get("total_stock_units", 0)
@@ -906,7 +980,7 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                 if td.get("customer_found"):
                     lines = [
                         f"🛍️ **Lịch sử mua hàng của khách hàng {td.get('customer_name')}** (`{td.get('customer_code')}` - Phân khúc: {td.get('customer_segment')}):",
-                        f"- Tổng chi tiêu tích lũy: **{td.get('total_spent_formatted')}** ({td.get('order_count')} đơn hàng)",
+                        f"- Chi tiêu từ đơn hoàn thành: **{td.get('total_spent_formatted')}**; tổng hồ sơ {td.get('order_count')} đơn (chi tiết tối đa 10 đơn).",
                         f"- Danh mục sản phẩm đã mua: {', '.join(td.get('purchased_products_summary', []))}\n",
                     ]
                     orders = td.get("orders", [])
@@ -985,7 +1059,8 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                 clusters = td.get("clusters", [])
                 lines = [
                     f"🗺️ **Phân tích mật độ phân bố sự cố theo khu vực (GIS Spatial Clusters)**:",
-                    f"- Tổng số phiếu đang mở: **{td.get('total_active_tickets')}** | Khu vực tập trung cao nhất (Hotspot): **{td.get('hotspot_region')}**\n",
+                    f"- Tổng số phiếu đang mở: **{td.get('total_active_tickets')}** | Ô có nhiều phiếu định vị nhất: **{td.get('hotspot_region') or 'Chưa có dữ liệu vị trí'}**\n",
+                    f"- Phương pháp: {td.get('method', 'Chưa ghi nhận')}; chưa định vị: {td.get('unlocated_ticket_count', 'Chưa ghi nhận')}. Không phải phân cụm học máy.\n",
                     "| Khu vực địa lý | Số lượng ticket | Mật độ | Đánh giá & Khuyến nghị |",
                     "|---|---|---|---|",
                 ]
@@ -995,18 +1070,36 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
 
             elif tname == "get_forecast":
                 fc = td.get("forecast", [])
+                snapshot = td.get("snapshot") or {}
+                quality = td.get("quality") or {}
+                for warning in (snapshot.get("message"), quality.get("message"), quality.get("r2_warning")):
+                    if warning:
+                        answer_parts.append(warning)
                 if fc:
                     answer_parts.append(
-                        f"Dự báo XGBoost 14 ngày tới cho chỉ số {td.get('target_type')}: "
-                        f"Giá trị dự báo trung bình {fc[0].get('predicted')} (khoảng dự báo 95%: {fc[0].get('lower')} - {fc[0].get('upper')})."
+                        f"Dự báo lưu trong hệ thống cho chỉ số {td.get('target_type')} ({len(fc)} điểm): "
+                        f"điểm đầu {fc[0].get('date', 'Chưa ghi nhận ngày')}, giá trị {fc[0].get('predicted')}. "
+                        f"Biên ước tính dựa trên sai số: {fc[0].get('lower')} - {fc[0].get('upper')}; không phải khoảng tin cậy 95% đã hiệu chuẩn."
                     )
+                else:
+                    answer_parts.append("Chưa có điểm dự báo lưu cho chỉ số được hỏi.")
 
             elif tname == "get_category_profit_margins":
+                category_filter = td.get("category_filter", "Tất cả danh mục")
+                if td.get("category_match_status") in {"NOT_FOUND", "AMBIGUOUS"}:
+                    reason = "không tìm thấy" if td["category_match_status"] == "NOT_FOUND" else "chưa xác định duy nhất"
+                    answer_parts.append(
+                        f"Danh mục **{category_filter}** {reason} trong workspace hiện tại. "
+                        "Vui lòng cung cấp mã danh mục chính xác; không dùng số liệu của danh mục khác để thay thế."
+                    )
+                    continue
                 cats = td.get("category_breakdown") or td.get("categories", [])
                 lines = [
-                    f"💰 **Phân tích Biên lợi nhuận gộp danh mục (Profit Margins & COGS)**:",
+                    f"💰 **Phân tích Biên lợi nhuận danh mục — ước tính theo giá vốn hiện tại**:",
+                    f"- Phạm vi: **{category_filter}**",
                     f"- Tổng doanh thu: **{td.get('total_revenue_formatted') or td.get('total_revenue')}** | Tổng giá vốn: **{td.get('total_estimated_cogs_formatted') or td.get('total_estimated_cost')}**",
-                    f"- Lợi nhuận gộp toàn hệ thống: **{td.get('total_gross_profit_formatted') or td.get('total_gross_profit')}** (Biên LN gộp bình quân: **{td.get('overall_gross_margin_pct')}%**)\n",
+                    f"- Lợi nhuận ước tính: **{td.get('total_gross_profit_formatted') or 'Chưa đủ giá vốn'}** (biên ước tính: {td.get('overall_gross_margin_pct') if td.get('overall_gross_margin_pct') is not None else 'Chưa đủ dữ liệu'})\n",
+                    "Chưa xác minh COGS lịch sử. Giá vốn hiện tại không phải chứng từ chi phí từng giao dịch; doanh số dòng hàng có thể khác tổng đơn do thuế/giảm giá.",
                     "| Danh mục | Doanh thu | Lợi nhuận gộp | Biên LN | Mục tiêu | Đánh giá |",
                     "|---|---|---|---|---|---|",
                 ]
@@ -1014,9 +1107,11 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                     category_name = c.get("category") or c.get("category_name") or c.get("category_key")
                     revenue = c.get("revenue_formatted") or c.get("revenue")
                     gross_profit = c.get("gross_profit_formatted") or c.get("gross_profit")
+                    margin = c.get('gross_margin_pct')
+                    margin_text = f"{margin}%" if margin is not None else "Chưa đủ giá vốn"
                     lines.append(
                         f"| **{category_name}** | {revenue} | {gross_profit} | "
-                        f"**{c.get('gross_margin_pct', 0)}%** | {c.get('target_margin_pct', 0)}% | {c.get('status', '')} |"
+                        f"**{margin_text}** | Chưa xác nhận | {c.get('status', '')} |"
                     )
                 if td.get("alerts"):
                     lines.append("\n⚠️ **Cảnh báo chiến lược chi phí & biên lợi nhuận**:")
@@ -1057,8 +1152,8 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                         source_surplus = o.get("source_surplus", o.get("source_stock_before", 0))
                         destination_deficit = o.get("destination_deficit", o.get("destination_stock_before", 0))
                         qty = o.get("recommended_transfer_quantity", o.get("recommended_transfer_qty", 0))
-                        shipping = o.get("estimated_shipping_fee", o.get("estimated_transport_cost_vnd", ""))
-                        sla = o.get("dispatch_sla", o.get("delivery_sla_hours", ""))
+                        shipping = o.get("estimated_shipping_fee", o.get("estimated_transport_cost_vnd")) or "Chưa có báo giá"
+                        sla = o.get("dispatch_sla", o.get("delivery_sla_hours")) or "Chưa có cam kết"
                         lines.append(
                             f"| `{sku}` | **{o.get('product_name', '')}** | {o.get('source_branch', '')} (Dư {source_surplus}) | "
                             f"{o.get('destination_branch', '')} (Thiếu {destination_deficit}) | **{qty}** {o.get('unit', 'chiếc')} | "
@@ -1070,18 +1165,20 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
 
             elif tname == "get_technician_safety_compliance":
                 lines = [
-                    f"👷 **Kiểm tra tuân thủ an toàn lao động & Định mức tải kỹ thuật viên**:",
+                    f"👷 **Dữ liệu tải kỹ thuật viên — chưa xác nhận tuân thủ pháp lý**:",
                     f"- Tổng số nhân sự: **{td.get('total_technicians')}** | Cảnh báo vi phạm/quá tải: **{td.get('compliance_alerts_count')}**\n",
                     "| Kỹ thuật viên | Trạng thái | Tải việc | Giờ OT tháng | Ca đêm | Chứng chỉ an toàn | Đánh giá |",
                     "|---|---|---|---|---|---|---|",
                 ]
                 techs = td.get("technicians_compliance", [])
                 for t in techs:
-                    night_str = "Hỗ trợ 150%" if t.get("night_shift_allowance_eligible") else "Không"
-                    cert_str = ", ".join(t.get("safety_certifications", []))
+                    night_str = "Chưa có dữ liệu chính sách/ca đêm"
+                    cert_str = ", ".join(t.get("safety_certifications") or []) or "Chưa có chứng chỉ đã xác minh"
+                    overtime = t.get('estimated_monthly_overtime_hours')
+                    overtime_text = f"{overtime}h" if overtime is not None else "Chưa có chấm công OT"
                     lines.append(
                         f"| **{t['name']}** (`{t['code']}`) | {t['availability']} | {t['workload_score']}/100 | "
-                        f"{t['estimated_monthly_overtime_hours']}h | {night_str} | {cert_str} | {t['compliance_flag']} |"
+                        f"{overtime_text} | {night_str} | {cert_str} | {t['compliance_flag']} |"
                     )
                 if td.get("compliance_guidelines"):
                     lines.append("\n📋 **Quy định an toàn & Tiêu chuẩn vận hành**:")
@@ -1093,6 +1190,12 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
 
     # 2. Extract grounded text from relevant chunks
     if chunks:
+        if any((ch.get('source_authority') or {}).get('public_publication_approved') is not True for ch in chunks):
+            answer_parts.append(
+                "Các trích đoạn dưới đây chưa có bằng chứng phê duyệt công bố thương mại. "
+                "Tài liệu học thuật/nguồn chưa xác minh chỉ để tham khảo, không xác nhận "
+                "cam kết bảo hành, VAT, SLA hay chứng nhận. Cần người có thẩm quyền xác nhận trước khi áp dụng."
+            )
         disagreements = _numeric_source_disagreements(chunks)
         if disagreements:
             values = '; '.join('/'.join(group) for group in disagreements)
@@ -1280,11 +1383,17 @@ def answer_grounded_query(
     # -----------------------------------------------------------------------
     from apps.knowledge.intent_router import classify_business_intent, BusinessIntent
     intent_result = classify_business_intent(clean_message, workspace, conversation_context=conv_context)
-    if intent_result.get("allow_document_retrieval", True):
+    # A pure data question must not acquire unrelated SOP/policy paragraphs
+    # merely because hash embeddings share common business vocabulary.
+    needs_context = not intent_result.get("tools") or _matches_any_keyword(
+        ["quy trình", "chính sách", "quy định", "sop", "tài liệu", "hướng dẫn",
+         "thế nào", "làm sao", "như thế nào", "vì sao", "tại sao",
+         "có nghĩa", "được tính", "thiếu", "điều kiện"], clean_message)
+    if intent_result.get("allow_document_retrieval", True) and needs_context:
         retrieved_chunks = search_relevant_chunks(workspace, clean_message, metadata=retrieval_observation)
     else:
         retrieved_chunks = []
-        retrieval_observation['scope_reason'] = intent_result['scope_reason']
+        retrieval_observation['scope_reason'] = intent_result.get('scope_reason') or 'STRUCTURED_DATA_ONLY'
 
     # Handle AMBIGUOUS intent: return clarification question immediately.
     if intent_result.get("intent") == BusinessIntent.AMBIGUOUS:

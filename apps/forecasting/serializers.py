@@ -42,6 +42,16 @@ class ForecastRunSerializer(serializers.ModelSerializer):
     target_type_display = serializers.CharField(source="get_target_type_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     config_name = serializers.CharField(source="model_config.name", read_only=True)
+    quality_assessment = serializers.SerializerMethodField()
+    snapshot_assessment = serializers.SerializerMethodField()
+
+    def get_quality_assessment(self, obj):
+        from .diagnostics import assess_model_quality
+        return assess_model_quality(obj.model_metrics, obj.baseline_metrics)
+
+    def get_snapshot_assessment(self, obj):
+        from .diagnostics import assess_snapshot
+        return assess_snapshot(obj.dataset_period_end, granularity=obj.model_config.granularity)
 
     class Meta:
         model = ForecastRun
@@ -70,6 +80,7 @@ class ForecastRunSerializer(serializers.ModelSerializer):
             "cancel_requested",
             "error_message",
             "created_at",
+            "quality_assessment", "snapshot_assessment",
         ]
         read_only_fields = fields
 
@@ -100,3 +111,11 @@ class TrainForecastRequestSerializer(serializers.Serializer):
     max_depth = serializers.IntegerField(required=False, min_value=1, max_value=10)
     learning_rate = serializers.FloatField(required=False, min_value=0.001, max_value=1.0)
     test_size = serializers.FloatField(required=False, min_value=0.05, max_value=0.5)
+
+
+class ForecastChartQuerySerializer(serializers.Serializer):
+    history_days = serializers.IntegerField(default=60, min_value=1, max_value=3660)
+    horizon_days = serializers.IntegerField(default=90, min_value=1, max_value=90)
+    product_id = serializers.IntegerField(required=False, min_value=1)
+    category_id = serializers.IntegerField(required=False, min_value=1)
+    branch_id = serializers.IntegerField(required=False, min_value=1)

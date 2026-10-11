@@ -106,6 +106,8 @@ def validate_action_contract(tool_def: ToolDefinition, workspace: Workspace, par
         if employee_id is not None and not Employee.objects.for_workspace(workspace).filter(id=employee_id).exists():
             raise ToolValidationError("Employee must belong to the active workspace.")
         ticket_id = parameters.get("ticket_id")
+        if name == "schedule_task" and ticket_id is None:
+            raise ToolValidationError("schedule_task requires an explicit service request ticket_id.")
         if ticket_id is not None and not ServiceRequest.objects.for_workspace(workspace).filter(id=ticket_id).exists():
             raise ToolValidationError("Service request must belong to the active workspace.")
     elif name == "update_order_status":
@@ -179,7 +181,7 @@ def handle_get_order_summary(workspace: Workspace, user: User, params: Dict[str,
     pending = qs.filter(status__in=[OrderStatus.PENDING, OrderStatus.CONFIRMED]).count()
     cancelled = qs.filter(status=OrderStatus.CANCELLED).count()
 
-    total_val = float(qs.exclude(status=OrderStatus.CANCELLED).aggregate(s=Sum("total_amount"))["s"] or 0.0)
+    total_val = float(qs.filter(status=OrderStatus.COMPLETED).aggregate(s=Sum("total_amount"))["s"] or 0.0)
 
     return {
         "workspace": workspace.code,
@@ -188,6 +190,8 @@ def handle_get_order_summary(workspace: Workspace, user: User, params: Dict[str,
         "pending_orders": pending,
         "cancelled_orders": cancelled,
         "total_valid_revenue_vnd": total_val,
+        "revenue_basis": "Tổng total_amount của đơn COMPLETED; không phải dòng tiền đã đối soát.",
+        "order_pipeline_total_vnd": float(qs.exclude(status=OrderStatus.CANCELLED).aggregate(s=Sum("total_amount"))["s"] or 0.0),
     }
 
 
@@ -204,20 +208,43 @@ def handle_get_technician_workload(workspace: Workspace, user: User, params: Dic
 def handle_query_nearby_technicians(workspace: Workspace, user: User, params: Dict[str, Any]) -> Dict[str, Any]:
     from apps.gis.services import find_nearby_technicians
     from apps.recommendations.scoring import calculate_technician_score
+    from apps.service_ops.models import Employee, ServiceRequest
+    import math
+
     ticket_id = params.get("ticket_id")
     radius_km = float(params.get("radius_km", 25.0))
+    if not math.isfinite(radius_km) or not 0 < radius_km <= 200:
+        raise ToolValidationError("Bán kính phải lớn hơn 0 và không vượt quá 200 km.")
+    ticket = ServiceRequest.objects.for_workspace(workspace).filter(pk=ticket_id).first()
+    if not ticket:
+        raise ToolValidationError("Không tìm thấy phiếu dịch vụ trong workspace hiện tại.")
+    if not ticket.location and (ticket.latitude is None or ticket.longitude is None):
+        return {
+            "workspace": workspace.code, "service_request_id": ticket.pk,
+            "origin_coordinates": None, "radius_km": radius_km,
+            "candidates_count": 0, "candidates": [], "data_quality": "NO_TICKET_LOCATION",
+            "message": "Phiếu dịch vụ chưa có tọa độ; không tự dùng vị trí mặc định để tìm kỹ thuật viên.",
+        }
     res = find_nearby_technicians(workspace, service_request_id=ticket_id, radius_km=radius_km)
     candidates = res.get("candidates", [])
+    availability = dict(Employee.objects.for_workspace(workspace).filter(pk__in=[candidate["id"] for candidate in candidates]).values_list("pk", "is_available"))
     for c in candidates:
         sc = calculate_technician_score(
             distance_km=c.get("distance_km", 0.0),
             active_tasks=c.get("active_tasks", 0),
-            has_matching_skill=True,
-            is_available=True,
+            has_matching_skill=False,
+            is_available=availability.get(c["id"], False),
             hourly_labor_rate=c.get("hourly_labor_rate"),
+            weight_dist=0.5, weight_workload=0.5, weight_skill=0,
         )
+        # No required-skill contract is stored on Service: do not award a
+        # fabricated skill match. Rank measured distance/load and availability.
+        sc["subscores"]["skill_score"] = None
         c["total_score"] = sc["score"]
         c["subscores"] = sc["subscores"]
+        c["is_available"] = availability.get(c["id"], False)
+        c["skill_match_verified"] = False
+        c["score_basis"] = "0.5×distance_score + 0.5×workload_score, gated by recorded availability; skill compatibility not verified"
     candidates.sort(key=lambda x: x.get("total_score", 0.0), reverse=True)
     res["candidates"] = candidates
     return res
@@ -304,6 +331,8 @@ def handle_dispatch_technician(workspace: Workspace, user: User, params: Dict[st
 
 def handle_update_order_status(workspace: Workspace, user: User, params: Dict[str, Any]) -> Dict[str, Any]:
     from apps.retail.models import Order, OrderStatus
+    from apps.retail.services import transition_order_status
+    from django.core.exceptions import ValidationError
 
     order_id = params.get("order_id")
     new_status = params.get("new_status")
@@ -311,20 +340,18 @@ def handle_update_order_status(workspace: Workspace, user: User, params: Dict[st
     if new_status not in [c[0] for c in OrderStatus.choices]:
         raise ToolValidationError(f"Invalid order status '{new_status}'. Allowed: {[c[0] for c in OrderStatus.choices]}")
 
-    order = Order.objects.for_workspace(workspace).filter(id=order_id).first()
-    if not order:
-        raise ToolValidationError(f"Order ID #{order_id} not found in active workspace.")
-
-    # Business state machine validation
-    if order.status == OrderStatus.CANCELLED and new_status != OrderStatus.CANCELLED:
-        raise ToolValidationError(f"Đơn hàng #{order_id} đã bị HỦY (CANCELLED) và không thể chuyển sang trạng thái '{new_status}'.")
-    if order.status == OrderStatus.COMPLETED and new_status in [OrderStatus.PENDING, OrderStatus.CONFIRMED]:
-        raise ToolValidationError(f"Đơn hàng #{order_id} đã HOÀN THÀNH (COMPLETED) và không thể hoàn tác về trạng thái '{new_status}'.")
-
     with transaction.atomic():
+        order = Order.objects.for_workspace(workspace).select_for_update().filter(id=order_id).first()
+        if not order:
+            raise ToolValidationError(f"Order ID #{order_id} not found in active workspace.")
         old_status = order.status
-        order.status = new_status
-        order.save(update_fields=["status", "updated_at"])
+        try:
+            # Approval authorizes the operation, never a different state machine.
+            # Reuse the same locked transition, stock release and domain audit as
+            # the retail UI/API. A failure rolls back the entire approval action.
+            order = transition_order_status(order, new_status, user)
+        except ValidationError as exc:
+            raise ToolValidationError(" ".join(exc.messages)) from None
 
     return {
         "status": "SUCCESS",
@@ -348,9 +375,11 @@ def handle_schedule_task(workspace: Workspace, user: User, params: Dict[str, Any
         if not emp:
             raise ToolValidationError(f"Employee ID #{employee_id} not found in workspace.")
 
-    req = ServiceRequest.objects.for_workspace(workspace).filter(id=ticket_id).first() if ticket_id else ServiceRequest.objects.for_workspace(workspace).first()
+    if ticket_id is None or not isinstance(ticket_id, int) or isinstance(ticket_id, bool):
+        raise ToolValidationError("An explicit integer ticket_id is required to schedule a task.")
+    req = ServiceRequest.objects.for_workspace(workspace).filter(id=ticket_id).first()
     if not req:
-        raise ToolValidationError("No ServiceRequest available in workspace to bind task.")
+        raise ToolValidationError("ServiceRequest not found in the active workspace; no default ticket is selected.")
 
     task = Task.objects.create(
         service_request=req,
@@ -495,14 +524,14 @@ ToolRegistry.register(ToolDefinition(
     classification="READ",
     risk_level="LOW",
     required_permission="service_ops.view_employee",
-    input_schema={"type": "object", "properties": {"ticket_id": {"type": "integer"}, "radius_km": {"type": "number"}}},
+    input_schema={"type": "object", "properties": {"ticket_id": {"type": "integer"}, "radius_km": {"type": "number"}}, "required": ["ticket_id"]},
     output_schema={"type": "object"},
     handler=handle_query_nearby_technicians,
 ))
 
 ToolRegistry.register(ToolDefinition(
     name="get_forecast",
-    description="Truy vấn kết quả dự báo 14 ngày tới từ XGBoost ML Engine",
+    description="Truy vấn các điểm dự báo đã lưu, ngày dự báo và chất lượng mô hình; không tự giả định số ngày hoặc độ tin cậy",
     classification="READ",
     risk_level="LOW",
     required_permission="forecasting.view_forecast",
@@ -551,7 +580,7 @@ ToolRegistry.register(ToolDefinition(
     classification="MUTATION",
     risk_level="MEDIUM",
     required_permission="service_ops.add_servicetask",
-    input_schema={"type": "object", "properties": {"title": {"type": "string"}, "employee_id": {"type": "integer"}}, "required": ["title"]},
+    input_schema={"type": "object", "properties": {"title": {"type": "string"}, "employee_id": {"type": "integer"}, "ticket_id": {"type": "integer"}}, "required": ["title", "ticket_id"]},
     output_schema={"type": "object"},
     handler=handle_schedule_task,
 ))
@@ -905,7 +934,7 @@ ToolRegistry.register(ToolDefinition(
     description="Khuyến nghị điều chuyển tồn kho cân đối giữa các chi nhánh",
     classification="READ",
     risk_level="LOW",
-    required_permission="retail.view_stock",
+    required_permission="retail.view_product",
     input_schema={"type": "object", "properties": {}},
     output_schema={"type": "object"},
     handler=handle_get_inter_branch_transfer_recommendations,
@@ -913,10 +942,10 @@ ToolRegistry.register(ToolDefinition(
 
 ToolRegistry.register(ToolDefinition(
     name="get_technician_safety_compliance",
-    description="Đánh giá ma trận chứng chỉ, định mức tải và tuân thủ an toàn giờ làm thêm",
+    description="Rà soát kỹ năng, tải việc và giờ công đã ghi nhận; không xác nhận chứng chỉ hoặc tuân thủ lao động khi thiếu bằng chứng",
     classification="READ",
     risk_level="LOW",
-    required_permission="service.view_technician",
+    required_permission="service.view_employee",
     input_schema={"type": "object", "properties": {}},
     output_schema={"type": "object"},
     handler=handle_get_technician_safety_compliance,

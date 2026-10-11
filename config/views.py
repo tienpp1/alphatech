@@ -545,8 +545,7 @@ def export_report_csv_view(request):
 def system_telemetry_ui_view(request):
     """
     Enterprise AI & GIS Telemetry Studio (GET /noibo/telemetry/).
-    Provides real-time observability over PostGIS spatial connections,
-    XGBoost model inference latency, pgvector Knowledge Base metrics, and RBAC posture.
+    Provides a read-time database snapshot, not model latency or compliance certification.
     """
     from apps.workspaces.models import WorkspaceMembership
     from apps.notifications.services import get_user_authorized_workspaces
@@ -560,6 +559,7 @@ def system_telemetry_ui_view(request):
 
     # 1. PostGIS Connection & Spatial Table Metrics
     postgis_version = "Chưa xác minh phiên bản PostGIS"
+    postgis_connected = False
     db_engine = connection.settings_dict.get("ENGINE", "")
     raw_db_name = connection.settings_dict.get("NAME", "")
     safe_db_name = os.path.basename(str(raw_db_name)) if raw_db_name else "N/A"
@@ -569,6 +569,7 @@ def system_telemetry_ui_view(request):
             row = cursor.fetchone()
             if row:
                 postgis_version = row[0][:80]
+                postgis_connected = True
     except (DatabaseError, OperationalError, ProgrammingError):
         logger.warning("POSTGIS_VERSION_CHECK_FAILED")
 
@@ -583,6 +584,7 @@ def system_telemetry_ui_view(request):
         branches_cnt, customers_cnt, technicians_cnt = 0, 0, 0
 
     spatial_stats = {
+        "connected": postgis_connected,
         "engine": db_engine,
         "database": safe_db_name,
         "postgis_version": postgis_version,
@@ -603,8 +605,11 @@ def system_telemetry_ui_view(request):
         logger.warning("FORECAST_METRICS_QUERY_FAILED")
         trained_runs_count, models_configured_cnt, xgb_bench_latency = 0, 0, 0.0
 
+    import django
+    import xgboost
+    from django.conf import settings
     ml_stats = {
-        "framework": "XGBoost Regressor v2.0 (Scikit-Learn API)",
+        "framework": f"XGBoost {xgboost.__version__} (Scikit-Learn API)",
         "models_configured": models_configured_cnt,
         "runs_completed": trained_runs_count,
         "count_query_latency_ms": xgb_bench_latency,
@@ -625,8 +630,8 @@ def system_telemetry_ui_view(request):
         total_chunks, kb_cnt, doc_cnt, rag_bench_latency = 0, 0, 0, 0.0
 
     rag_stats = {
-        "vector_engine": "PostgreSQL pgvector (Cosine Distance <->)",
-        "embedding_dimensions": 768,
+        "vector_engine": "PostgreSQL pgvector (Cosine Distance)",
+        "embedding_dimensions": DocumentChunk._meta.get_field("embedding").dimensions or settings.EMBEDDING_DIMENSION,
         "knowledge_bases": kb_cnt,
         "documents_ingested": doc_cnt,
         "chunks_indexed": total_chunks,
@@ -646,13 +651,15 @@ def system_telemetry_ui_view(request):
         approvals_cnt, audit_cnt = 0, 0
 
     governance_stats = {
-        "hitl_enforced": True,
+        "measurement": "Chưa đo tỷ lệ tuân thủ trong phiên này; contract mutation yêu cầu phê duyệt.",
         "approval_requests_count": approvals_cnt,
         "audit_logs_count": audit_cnt,
         "workspaces_active": authorized_workspaces.count(),
     }
 
     context = {
+        "snapshot_at": timezone.localtime(timezone.now()),
+        "django_version": django.get_version(),
         "active_tab": "telemetry",
         "spatial": spatial_stats,
         "ml": ml_stats,

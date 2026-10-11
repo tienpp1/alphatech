@@ -753,10 +753,15 @@ def retail_stockout_risk_view(request):
 
     branch_id = request.GET.get("branch_id")
     category = request.GET.get("category")
+    if branch_id:
+        from django.http import HttpResponseBadRequest
+        if not branch_id.isascii() or not branch_id.isdigit() or len(branch_id) > 19 or not 0 < int(branch_id) <= 9223372036854775807:
+            return HttpResponseBadRequest("Mã chi nhánh phải là số nguyên dương.")
+        branch_id = int(branch_id)
 
     stockout_data = get_stockout_risk_dashboard_data(
         workspace=workspace,
-        branch_id=int(branch_id) if branch_id else None,
+        branch_id=branch_id or None,
         category_code=category,
         limit=100,
     )
@@ -768,7 +773,7 @@ def retail_stockout_risk_view(request):
         "stockout_data": stockout_data,
         "branches": branches,
         "categories": categories,
-        "selected_branch": int(branch_id) if branch_id else None,
+        "selected_branch": branch_id or None,
         "selected_category": category or "",
         "active_tab": "retail_goods_receiving",
     }

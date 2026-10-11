@@ -15,7 +15,8 @@ def verify_chat_access(user, workspace: Workspace) -> bool:
     """
     Ensures user is an authenticated internal staff member with active membership in the workspace.
     """
-    if not user.is_authenticated:
+    from apps.accounts.internal_access import has_internal_role
+    if not has_internal_role(user) or not workspace.is_active:
         return False
     if user.is_superuser:
         return True
@@ -24,6 +25,7 @@ def verify_chat_access(user, workspace: Workspace) -> bool:
         user=user,
         workspace=workspace,
         is_active=True,
+        role__name__in=("ADMIN", "MANAGER", "EMPLOYEE"),
     ).exists()
 
 
@@ -85,7 +87,11 @@ def get_workspace_colleagues(workspace: Workspace) -> List[dict]:
     Returns the list of active team members in this workspace with their roles.
     """
     memberships = (
-        WorkspaceMembership.objects.filter(workspace=workspace, is_active=True)
+        WorkspaceMembership.objects.filter(workspace=workspace, is_active=True,
+            user__is_active=True, workspace__is_active=True,
+            role__name__in=("ADMIN", "MANAGER", "EMPLOYEE"))
+        .exclude(user__social_identities__provider="GOOGLE")
+        .distinct()
         .select_related("user", "role")
         .order_by("role__name", "user__username")
     )

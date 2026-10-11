@@ -256,8 +256,13 @@ def bulletin_create_api(request):
             body = json.loads(request.body.decode("utf-8"))
         else:
             body = request.POST
-    except Exception:
-        body = request.POST
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"error": "Dữ liệu không hợp lệ."}, status=400)
+
+    if not hasattr(body, "get") or any(
+        not isinstance(body.get(key, ""), str) for key in ("title", "content", "priority")
+    ):
+        return JsonResponse({"error": "Dữ liệu bản tin phải là đối tượng với nội dung văn bản."}, status=400)
 
     ws_id = body.get("workspace_id")
     title = body.get("title", "").strip()
@@ -266,6 +271,11 @@ def bulletin_create_api(request):
 
     if not title or not content:
         return JsonResponse({"error": "Thiếu thông tin title hoặc content."}, status=400)
+
+    from apps.notifications.bulletin_forms import BulletinEditForm
+    form = BulletinEditForm({"title": title, "content": content, "priority": priority})
+    if not form.is_valid():
+        return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
     target_ws = resolve_collaboration_workspace(request, body)
 
@@ -347,8 +357,11 @@ def team_chat_send_api(request):
             body = json.loads(request.body.decode("utf-8"))
         else:
             body = request.POST
-    except Exception:
-        body = request.POST
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"error": "Dữ liệu không hợp lệ."}, status=400)
+
+    if not hasattr(body, "get") or not isinstance(body.get("message", ""), str):
+        return JsonResponse({"error": "Dữ liệu tin nhắn phải là đối tượng với nội dung văn bản."}, status=400)
 
     ws_id = body.get("workspace_id")
     message_text = body.get("message", "").strip()

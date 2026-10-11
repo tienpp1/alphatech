@@ -55,8 +55,8 @@ class EnterpriseQnABenchmarkTestCase(TestCase):
         perms = []
         for codename, module in [
             ("ai.chat", "ai"), ("retail.view_order", "retail"),
-            ("retail.view_customer", "retail"), ("retail.view_stock", "retail"),
-            ("service.view_technician", "service_ops"), ("service.view_request", "service_ops"),
+            ("retail.view_customer", "retail"), ("retail.view_product", "retail"),
+            ("service.view_employee", "service_ops"), ("service.view_request", "service_ops"),
             ("retail.manage_product", "retail"), ("retail.manage_stock", "retail"),
         ]:
             perm, _ = Permission.objects.get_or_create(codename=codename, defaults={"name": codename, "module": module})
@@ -312,7 +312,12 @@ class EnterpriseQnABenchmarkTestCase(TestCase):
         self.assertEqual(res["total_technicians"], 2)
         tech_data = {t["name"]: t for t in res["technicians_compliance"]}
         self.assertIn("Trần Văn Kỹ Thuật", tech_data)
-        self.assertIn("An toàn điện", tech_data["Trần Văn Kỹ Thuật"]["safety_certifications"])
+        technician = tech_data["Trần Văn Kỹ Thuật"]
+        self.assertIn("An toàn điện", technician["recorded_skills"])
+        self.assertEqual(technician["safety_certifications"], [])
+        self.assertFalse(technician["certifications_verified"])
+        self.assertIsNone(technician["ot_compliant"])
+        self.assertIsNone(technician["night_shift_allowance_eligible"])
 
     # -------------------------------------------------------------------------
     # Controlled Mutations: Zero Direct DB Write & Approval Request Creation

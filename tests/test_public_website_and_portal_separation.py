@@ -315,7 +315,7 @@ class PublicWebsiteAndPortalSeparationTestCase(TestCase):
             "description": "Cần cài đặt hệ điều hành và thiết lập phân quyền bảo mật cho 10 máy trạm mới.",
         }
 
-        response = self.client.post("/yeu-cau-dich-vu/", post_data)
+        response = self.client.post("/yeu-cau-dich-vu/", post_data, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "tiếp nhận thành công")
 

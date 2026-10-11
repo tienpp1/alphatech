@@ -41,7 +41,7 @@ def get_sales_summary(workspace: Workspace, user: User, **kwargs) -> Dict[str, A
     completed_orders = qs.filter(status=OrderStatus.COMPLETED).count()
     pending_orders = qs.filter(status__in=[OrderStatus.PENDING, OrderStatus.CONFIRMED]).count()
 
-    valid_orders = qs.exclude(status=OrderStatus.CANCELLED)
+    valid_orders = qs.filter(status=OrderStatus.COMPLETED)
     agg = valid_orders.aggregate(
         total_rev=Sum("total_amount"),
         avg_rev=Avg("total_amount"),
@@ -55,6 +55,9 @@ def get_sales_summary(workspace: Workspace, user: User, **kwargs) -> Dict[str, A
         "workspace": workspace.code,
         "total_revenue": f"{total_revenue:,.0f} VND",
         "total_revenue_raw": float(total_revenue),
+        "revenue_statuses": [OrderStatus.COMPLETED],
+        "revenue_basis": "Tổng total_amount của đơn COMPLETED; không phải dòng tiền đã đối soát.",
+        "order_pipeline_total_raw": float(qs.exclude(status=OrderStatus.CANCELLED).aggregate(s=Sum("total_amount"))["s"] or 0),
         "total_orders": total_orders,
         "completed_orders": completed_orders,
         "pending_orders": pending_orders,
@@ -122,8 +125,8 @@ def get_top_selling_products(workspace: Workspace, user: User, **kwargs) -> Dict
     time_label = kwargs.get("time_label", "toàn thời gian")
 
     items_qs = OrderItem.objects.filter(
-        order__workspace=workspace
-    ).exclude(order__status=OrderStatus.CANCELLED)
+        order__workspace=workspace, order__status=OrderStatus.COMPLETED,
+    )
 
     if category_code:
         items_qs = items_qs.filter(product__category__code__icontains=category_code)
@@ -163,6 +166,7 @@ def get_top_selling_products(workspace: Workspace, user: User, **kwargs) -> Dict
         "category_filter": category_code or "all",
         "metric": metric,
         "ranking_metric_name": "Số lượng bán ra (units)" if metric == "quantity_sold" else "Doanh thu (VND)",
+        "revenue_basis": "OrderItem.subtotal của đơn COMPLETED (sau chiết khấu dòng).",
         "time_range": time_label,
         "results_count": len(ranking_list),
         "rankings": ranking_list,
@@ -190,7 +194,8 @@ def get_top_customers(workspace: Workspace, user: User, **kwargs) -> Dict[str, A
         items_qs = OrderItem.objects.filter(
             order__workspace=workspace,
             product__category__code__icontains=category,
-        ).exclude(order__status=OrderStatus.CANCELLED)
+            order__status=OrderStatus.COMPLETED,
+        )
 
         if start_date:
             items_qs = items_qs.filter(order__order_date__gte=start_date)
@@ -220,7 +225,7 @@ def get_top_customers(workspace: Workspace, user: User, **kwargs) -> Dict[str, A
                 "total_spend_formatted": f"{float(c['total_spend'] or 0.0):,.0f} VND",
             })
     else:
-        orders_qs = Order.objects.for_workspace(workspace).exclude(status=OrderStatus.CANCELLED)
+        orders_qs = Order.objects.for_workspace(workspace).filter(status=OrderStatus.COMPLETED)
         if start_date:
             orders_qs = orders_qs.filter(order_date__gte=start_date)
         if end_date:
@@ -252,6 +257,7 @@ def get_top_customers(workspace: Workspace, user: User, **kwargs) -> Dict[str, A
     return {
         "tool": "get_top_customers",
         "workspace": workspace.code,
+        "revenue_basis": "Chỉ đơn COMPLETED; theo danh mục dùng subtotal dòng, toàn đơn dùng total_amount.",
         "category_filter": category or "Tất cả danh mục",
         "branch_filter": branch or "Tất cả chi nhánh",
         "time_range": time_label,
@@ -276,7 +282,7 @@ def get_branch_sales_analytics(workspace: Workspace, user: User, **kwargs) -> Di
     time_label = kwargs.get("time_label", "toàn thời gian")
     sort_order = kwargs.get("sort_order", "DESC")
 
-    orders_qs = Order.objects.for_workspace(workspace).exclude(status=OrderStatus.CANCELLED)
+    orders_qs = Order.objects.for_workspace(workspace).filter(status=OrderStatus.COMPLETED)
     if start_date:
         orders_qs = orders_qs.filter(order_date__gte=start_date)
     if end_date:
@@ -307,6 +313,7 @@ def get_branch_sales_analytics(workspace: Workspace, user: User, **kwargs) -> Di
     return {
         "tool": "get_branch_sales_analytics",
         "workspace": workspace.code,
+        "revenue_basis": "Tổng total_amount của đơn COMPLETED.",
         "time_range": time_label,
         "sort_order": sort_order,
         "branches": results,
@@ -423,6 +430,14 @@ def get_service_ticket_summary(workspace: Workspace, user: User, **kwargs) -> Di
         sr_qs.values("priority")
         .annotate(count=Count("id"))
     )
+    status_distribution = {value: 0 for value in ServiceRequestStatus.values}
+    # Use exactly the same filtered workspace queryset as total_tickets. Keep
+    # zero-valued choices visible, and retain any legacy unexpected status as
+    # an explicit count instead of silently losing tickets from the sum.
+    status_distribution.update({
+        row["status"]: row["count"]
+        for row in sr_qs.order_by().values("status").annotate(count=Count("id"))
+    })
 
     # Detailed list if filter requested
     detail_list = []
@@ -458,6 +473,7 @@ def get_service_ticket_summary(workspace: Workspace, user: User, **kwargs) -> Di
         "overdue_sla_tickets": overdue_tickets_count,
         "at_risk_sla_tickets": at_risk_qs.count(),
         "priority_distribution": {p["priority"]: p["count"] for p in priority_breakdown},
+        "status_distribution": status_distribution,
         "tickets": detail_list,
     }
 
@@ -525,6 +541,9 @@ def get_stockout_risk_summary(workspace: Workspace, user: User, **kwargs) -> Dic
         "high_risk_count": dashboard_data["high_risk_count"],
         "medium_risk_count": dashboard_data["medium_risk_count"],
         "low_risk_count": dashboard_data["low_risk_count"],
+        "unassessed_demand_count": dashboard_data["unassessed_demand_count"],
+        "inventory_unverified_count": dashboard_data["inventory_unverified_count"],
+        "verified_out_of_stock_count": dashboard_data["verified_out_of_stock_count"],
         "total_tracked": dashboard_data["total_products_tracked"],
         "products_at_risk": dashboard_data["products_at_risk"][:limit],
     }
@@ -603,7 +622,7 @@ def compare_entities_analytics(workspace: Workspace, user: User, **kwargs) -> Di
             branch_qs = branch_qs.filter(q_filter)
 
         for br in branch_qs:
-            orders = Order.objects.for_workspace(workspace).filter(branch=br).exclude(status=OrderStatus.CANCELLED)
+            orders = Order.objects.for_workspace(workspace).filter(branch=br, status=OrderStatus.COMPLETED)
             if start_date:
                 orders = orders.filter(order_date__gte=start_date)
             if end_date:
@@ -622,7 +641,7 @@ def compare_entities_analytics(workspace: Workspace, user: User, **kwargs) -> Di
             })
     else:
         # Product or Brand comparison
-        items_qs = OrderItem.objects.filter(order__workspace=workspace).exclude(order__status=OrderStatus.CANCELLED)
+        items_qs = OrderItem.objects.filter(order__workspace=workspace, order__status=OrderStatus.COMPLETED)
         if start_date:
             items_qs = items_qs.filter(order__order_date__gte=start_date)
         if end_date:
@@ -685,6 +704,7 @@ def compare_entities_analytics(workspace: Workspace, user: User, **kwargs) -> Di
     return {
         "tool": "compare_entities_analytics",
         "workspace": workspace.code,
+        "revenue_basis": "Chỉ đơn COMPLETED; chi nhánh dùng total_amount, sản phẩm dùng subtotal dòng.",
         "entity_type": entity_type,
         "metric": metric,
         "metric_label": "Doanh thu (VND)" if metric == "revenue" else "Số lượng bán ra (units)",
@@ -711,10 +731,10 @@ def get_sales_trend_analytics(workspace: Workspace, user: User, **kwargs) -> Dic
     category = kwargs.get("category")
     branch = kwargs.get("branch") or kwargs.get("branch_name")
     period_days = int(kwargs.get("period_days", 30))
-    today = timezone.now().date()
+    today = timezone.localdate()
 
     # Current period: [today - period_days + 1, today]
-    curr_start = today - timedelta(days=period_days)
+    curr_start = today - timedelta(days=period_days - 1)
     curr_end = today
 
     # Previous period: [curr_start - period_days, curr_start - 1]
@@ -725,7 +745,8 @@ def get_sales_trend_analytics(workspace: Workspace, user: User, **kwargs) -> Dic
         items_qs = OrderItem.objects.filter(
             order__workspace=workspace,
             product__category__code__icontains=category,
-        ).exclude(order__status=OrderStatus.CANCELLED)
+            order__status=OrderStatus.COMPLETED,
+        )
 
         if branch:
             items_qs = items_qs.filter(Q(order__branch__name__icontains=branch) | Q(order__branch__code__icontains=branch))
@@ -733,7 +754,7 @@ def get_sales_trend_analytics(workspace: Workspace, user: User, **kwargs) -> Dic
         curr_agg = items_qs.filter(order__order_date__range=(curr_start, curr_end)).aggregate(r=Sum("subtotal"), q=Sum("quantity"))
         prev_agg = items_qs.filter(order__order_date__range=(prev_start, prev_end)).aggregate(r=Sum("subtotal"), q=Sum("quantity"))
     else:
-        orders_qs = Order.objects.for_workspace(workspace).exclude(status=OrderStatus.CANCELLED)
+        orders_qs = Order.objects.for_workspace(workspace).filter(status=OrderStatus.COMPLETED)
         if branch:
             orders_qs = orders_qs.filter(Q(branch__name__icontains=branch) | Q(branch__code__icontains=branch))
 
@@ -772,6 +793,7 @@ def get_sales_trend_analytics(workspace: Workspace, user: User, **kwargs) -> Dic
     return {
         "tool": "get_sales_trend_analytics",
         "workspace": workspace.code,
+        "revenue_basis": "Chỉ đơn COMPLETED theo order_date; theo danh mục dùng subtotal dòng, toàn đơn dùng total_amount.",
         "category_filter": category or "Toàn bộ sản phẩm",
         "period_days": period_days,
         "current_period": f"{curr_start} đến {curr_end}",
@@ -900,37 +922,52 @@ def get_customer_order_history(workspace: Workspace, user: User, **kwargs) -> Di
     if not (_check_perm(user, workspace, "retail.view_customer") or _check_perm(user, workspace, "retail.view_order")):
         raise ToolPermissionDenied("User lacks permission to access customer purchase history.")
 
-    from apps.retail.models import Customer, Order, OrderItem
+    from apps.retail.models import Customer, Order, OrderItem, OrderStatus
 
-    cust_query = kwargs.get("customer_name") or kwargs.get("customer_code") or kwargs.get("customer_id")
-    customer = None
-    if cust_query:
-        cust_qs = Customer.objects.for_workspace(workspace)
-        if isinstance(cust_query, int) or (isinstance(cust_query, str) and cust_query.isdigit()):
-            customer = cust_qs.filter(id=int(cust_query)).first()
-        if not customer:
-            customer = cust_qs.filter(
-                Q(code__iexact=str(cust_query)) |
-                Q(name__icontains=str(cust_query)) |
-                Q(phone__icontains=str(cust_query))
-            ).first()
-
-    if not customer:
-        # Fallback: get top customer with orders
-        customer = Customer.objects.for_workspace(workspace).first()
-        if not customer:
-            return {
-                "tool": "get_customer_order_history",
-                "workspace": workspace.code,
-                "customer_found": False,
-                "message": "Không tìm thấy thông tin khách hàng trong hệ thống.",
-            }
-
-    orders = Order.objects.for_workspace(workspace).filter(customer=customer).prefetch_related("items__product").order_by("-order_date")[:10]
-    total_spent = float(orders.aggregate(s=Sum("total_amount"))["s"] or 0.0)
+    cust_qs = Customer.objects.for_workspace(workspace)
+    customer_id = kwargs.get("customer_id")
+    customer_code = str(kwargs.get("customer_code") or "").strip()
+    customer_name = str(kwargs.get("customer_name") or "").strip()
+    if customer_id is not None:
+        if isinstance(customer_id, bool) or not str(customer_id).isdigit():
+            matches = []
+        else:
+            matches = list(cust_qs.filter(pk=int(customer_id))[:2])
+    elif customer_code:
+        matches = list(cust_qs.filter(code__iexact=customer_code)[:2])
+    elif customer_name:
+        # Prefer an exact identity; a fuzzy match is usable only when unique.
+        matches = list(cust_qs.filter(
+            Q(code__iexact=customer_name) | Q(name__iexact=customer_name) | Q(phone=customer_name)
+        )[:2])
+        if not matches:
+            matches = list(cust_qs.filter(
+                Q(name__icontains=customer_name) | Q(phone__icontains=customer_name)
+            )[:2])
+    else:
+        return {
+            "tool": "get_customer_order_history", "workspace": workspace.code,
+            "customer_found": False, "error_code": "CUSTOMER_REQUIRED",
+            "message": "Vui lòng cung cấp mã hoặc tên khách hàng cụ thể để tra cứu; không tự chọn khách hàng khác.",
+        }
+    if len(matches) != 1:
+        ambiguous = len(matches) > 1
+        return {
+            "tool": "get_customer_order_history", "workspace": workspace.code,
+            "customer_found": False,
+            "error_code": "CUSTOMER_AMBIGUOUS" if ambiguous else "CUSTOMER_NOT_FOUND",
+            "message": "Có nhiều khách hàng phù hợp. Vui lòng cung cấp mã khách hàng chính xác." if ambiguous else "Không tìm thấy khách hàng phù hợp trong workspace hiện tại.",
+        }
+    customer = matches[0]
+    all_orders = Order.objects.for_workspace(workspace).filter(customer=customer)
+    completed = all_orders.filter(status=OrderStatus.COMPLETED)
+    total_spent = float(completed.aggregate(s=Sum("total_amount"))["s"] or 0.0)
+    orders = all_orders.prefetch_related("items__product").order_by("-order_date", "-id")[:10]
 
     order_records = []
-    all_purchased_products = set()
+    all_purchased_products = list(OrderItem.objects.filter(
+        order__in=completed, product__workspace=workspace,
+    ).values_list("product__name", flat=True).order_by("product__name").distinct())
     for o in orders:
         items_list = []
         for it in o.items.all():
@@ -941,7 +978,6 @@ def get_customer_order_history(workspace: Workspace, user: User, **kwargs) -> Di
                 "unit_price_formatted": f"{float(it.unit_price):,.0f} VND",
                 "subtotal_formatted": f"{float(it.subtotal):,.0f} VND",
             })
-            all_purchased_products.add(it.product.name)
 
         order_records.append({
             "order_number": o.order_number,
@@ -960,8 +996,13 @@ def get_customer_order_history(workspace: Workspace, user: User, **kwargs) -> Di
         "customer_code": customer.code,
         "customer_segment": customer.customer_segment,
         "total_spent_formatted": f"{total_spent:,.0f} VND",
-        "order_count": len(order_records),
-        "purchased_products_summary": list(all_purchased_products),
+        "total_spent_raw": total_spent,
+        "spending_basis": "Chỉ đơn COMPLETED, trên toàn bộ lịch sử; chưa đối soát thanh toán.",
+        "order_count": all_orders.count(),
+        "completed_order_count": completed.count(),
+        "displayed_order_count": len(order_records),
+        "detail_limit": 10,
+        "purchased_products_summary": all_purchased_products,
         "orders": order_records,
     }
 
@@ -985,18 +1026,19 @@ def get_technician_skills_summary(workspace: Workspace, user: User, **kwargs) ->
 
     results = []
     for emp in techs_qs.order_by("current_workload_score"):
-        emp_skills = [s.upper() for s in (emp.skills or [])]
+        recorded_skills = [skill for skill in emp.skills if isinstance(skill, str)] if isinstance(emp.skills, list) else []
+        emp_skills = [skill.upper() for skill in recorded_skills]
         # Skill matching: check exact or substring
         match = True
         if skill_query:
-            match = any(skill_query in s for s in emp_skills) or (skill_query in emp.full_name.upper())
+            match = any(skill_query in skill for skill in emp_skills)
 
         if match:
             results.append({
                 "employee_id": emp.id,
                 "code": emp.code,
                 "full_name": emp.full_name,
-                "skills": emp.skills or [],
+                "skills": recorded_skills,
                 "is_available": emp.is_available,
                 "availability_label": "Sẵn sàng (Rảnh)" if emp.is_available else "Đang bận",
                 "workload_score": round(emp.current_workload_score, 1),
@@ -1168,7 +1210,7 @@ def simulate_what_if_scenario(workspace: Workspace, user: User, **kwargs) -> Dic
         # Default: REVENUE_CHANGE
         if not _check_perm(user, workspace, "retail.view_order"):
             raise ToolPermissionDenied("User lacks permission to run retail revenue simulation.")
-        orders_qs = Order.objects.for_workspace(workspace).exclude(status=OrderStatus.CANCELLED)
+        orders_qs = Order.objects.for_workspace(workspace).filter(status=OrderStatus.COMPLETED)
         actual_rev = float(orders_qs.aggregate(s=Sum("total_amount"))["s"] or 0.0)
         simulated_rev = actual_rev * (1.0 + change_pct / 100.0)
         diff_rev = simulated_rev - actual_rev
@@ -1260,129 +1302,173 @@ def get_spatial_ticket_clusters(workspace: Workspace, user: User, **kwargs) -> D
         raise ToolPermissionDenied("User lacks permission to access spatial ticket clusters.")
 
     from apps.service_ops.models import ServiceRequest, ServiceRequestStatus
+    from django.contrib.gis.db.models.functions import SnapToGrid, Transform
+    from django.contrib.gis.geos import Polygon
 
     open_tickets = ServiceRequest.objects.for_workspace(workspace).filter(
         status__in=[ServiceRequestStatus.OPEN, ServiceRequestStatus.ASSIGNED, ServiceRequestStatus.IN_PROGRESS]
-    ).select_related("customer")
+    )
 
     total_open = open_tickets.count()
-    clusters = [
-        {"region_name": "Khu vực Trung tâm (Quận 1 / Quận 3)", "ticket_count": max(1, int(total_open * 0.6)), "density": "CAO (Hotspot)", "status": "Cần tăng cường kỹ thuật viên"},
-        {"region_name": "Khu vực Phía Tây (Tân Phú / Bình Tân)", "ticket_count": int(total_open * 0.3), "density": "TRUNG BÌNH", "status": "Bình thường"},
-        {"region_name": "Khu vực Phía Nam (Quận 7)", "ticket_count": int(total_open * 0.1), "density": "THẤP", "status": "Ổn định"},
-    ]
+    # A reproducible, measured spatial histogram, not invented administrative
+    # districts or a density-learning algorithm. PostGIS groups real locations
+    # into a fixed 1000-metre Web-Mercator grid. Projection distortion means
+    # these are map cells, not a certified one-square-kilometre ground area.
+    envelope = Polygon.from_bbox((-180, -85, 180, 85))
+    envelope.srid = 4326
+    located = open_tickets.filter(location__isnull=False, location__within=envelope)
+    located_count = located.count()
+    cells = located.annotate(cell=SnapToGrid(Transform("location", 3857), 1000)).values("cell").annotate(ticket_count=Count("id"))
+    clusters = []
+    for row in cells:
+        center = row["cell"].clone()
+        center.transform(4326)
+        clusters.append({
+            "region_name": f"Ô bản đồ gần {center.y:.4f}, {center.x:.4f}",
+            "ticket_count": row["ticket_count"],
+            "latitude": round(center.y, 4), "longitude": round(center.x, 4),
+            "density": f"{row['ticket_count']} phiếu trong ô bản đồ 1.000 m",
+            "status": "Số lượng từ tọa độ đã lưu; cần rà soát trước khi điều phối.",
+        })
+    clusters.sort(key=lambda cell: (-cell["ticket_count"], cell["latitude"], cell["longitude"]))
 
     return {
         "tool": "get_spatial_ticket_clusters",
         "workspace": workspace.code,
         "total_active_tickets": total_open,
-        "hotspot_region": "Khu vực Trung tâm (Quận 1 / Quận 3)",
+        "located_ticket_count": located_count,
+        "unlocated_ticket_count": total_open - located_count,
+        "hotspot_region": clusters[0]["region_name"] if clusters else None,
+        "method": "WEB_MERCATOR_GRID_1000M",
+        "data_quality": "MEASURED_LOCATIONS" if located_count else "NO_VALID_LOCATION",
+        "limitations": "Chỉ dùng ServiceRequest.location hợp lệ. Phiếu thiếu tọa độ không được gán vùng; ô bản đồ không phải ranh giới quận hoặc phân cụm thống kê.",
         "clusters": clusters,
     }
 
 
 def get_category_profit_margins(workspace: Workspace, user: User, **kwargs) -> Dict[str, Any]:
     """
-    Computes aggregated revenue, cost of goods sold, and gross profit margin by category.
-    Cross-checks against SOP-FIN-RET-2026 margin thresholds.
+    Group completed-order merchandise subtotals by exact category identity.
+    Current catalog costs are estimates, never historical COGS snapshots.
     Requires 'retail.view_order' permission.
     """
     if not _check_perm(user, workspace, "retail.view_order"):
         raise ToolPermissionDenied("User lacks 'retail.view_order' permission to access margin telemetry.")
 
-    from apps.retail.models import OrderItem, Product, Category
+    from apps.retail.models import Order, OrderItem, OrderStatus, Category
 
     items = OrderItem.objects.filter(
-        order__workspace=workspace
-    ).exclude(order__status="CANCELLED").select_related("product", "product__category")
+        order__workspace=workspace, order__status=OrderStatus.COMPLETED,
+        product__workspace=workspace, product__category__workspace=workspace,
+    ).select_related("product", "product__category")
+
+    category_filter = str(kwargs.get("category") or "").strip()
+    category_match_status = "UNFILTERED"
+    selected_category_id = None
+    if category_filter:
+        from apps.knowledge.retrieval import _normalize_vietnamese_text
+        category_key = _normalize_vietnamese_text(category_filter)
+        if category_filter.isdigit():
+            matches = list(Category.objects.for_workspace(workspace).filter(pk=int(category_filter)))
+        else:
+            matches = [category for category in Category.objects.for_workspace(workspace)
+                       if category_key in {_normalize_vietnamese_text(category.code), _normalize_vietnamese_text(category.name)}]
+        if len(matches) == 1:
+            selected_category_id = matches[0].pk
+            category_match_status = "EXACT_MATCH"
+            items = items.filter(product__category_id=selected_category_id)
+        else:
+            category_match_status = "AMBIGUOUS" if matches else "NOT_FOUND"
+            items = items.none()
 
     cat_stats = {}
-    sop_thresholds = {
-        "laptop": {"target": 12.0, "threshold": 8.0, "name": "Laptop & Máy Tính"},
-        "components": {"target": 22.0, "threshold": 15.0, "name": "Linh Kiện (CPU, RAM, SSD)"},
-        "networking": {"target": 35.0, "threshold": 25.0, "name": "Thiết Bị Mạng & Viễn Thông"},
-        "accessories": {"target": 40.0, "threshold": 30.0, "name": "Phụ Kiện (Chuột, Phím, Tai nghe)"},
-    }
-
     total_revenue_all = Decimal("0.00")
     total_cost_all = Decimal("0.00")
+    missing_cost_item_count = 0
 
     for it in items:
         prod = it.product
-        cat = prod.category if prod else None
-        cat_code = cat.code.lower() if cat else "other"
+        cat = prod.category
+        line_rev = it.subtotal
+        # Zero is the catalog default, not a verified historical free cost.
+        has_cost = prod.cost_price is not None and prod.cost_price > 0
+        line_cost = prod.cost_price * it.quantity if has_cost else Decimal("0.00")
 
-        matched_key = "other"
-        for k in ["laptop", "components", "networking", "accessories"]:
-            if k in cat_code:
-                matched_key = k
-                break
-
-        line_rev = it.price * it.quantity
-        line_cost = (prod.cost_price * it.quantity) if (prod and prod.cost_price) else (line_rev * Decimal("0.80"))
-
-        if matched_key not in cat_stats:
-            cat_stats[matched_key] = {
-                "category_name": sop_thresholds.get(matched_key, {}).get("name", cat.name if cat else "Khác"),
+        if cat.pk not in cat_stats:
+            cat_stats[cat.pk] = {
+                "category_key": cat.code, "category_id": cat.pk,
+                "category_name": cat.name,
                 "revenue": Decimal("0.00"),
                 "cost": Decimal("0.00"),
                 "items_sold": 0,
+                "missing_cost_item_count": 0,
             }
-        cat_stats[matched_key]["revenue"] += line_rev
-        cat_stats[matched_key]["cost"] += line_cost
-        cat_stats[matched_key]["items_sold"] += it.quantity
+        cat_stats[cat.pk]["revenue"] += line_rev
+        cat_stats[cat.pk]["cost"] += line_cost
+        cat_stats[cat.pk]["items_sold"] += it.quantity
+        if not has_cost:
+            cat_stats[cat.pk]["missing_cost_item_count"] += 1
+            missing_cost_item_count += 1
 
         total_revenue_all += line_rev
         total_cost_all += line_cost
 
     breakdown = []
-    for k, v in cat_stats.items():
+    for v in sorted(cat_stats.values(), key=lambda row: (row["category_name"], row["category_id"])):
         rev = v["revenue"]
-        cost = v["cost"]
-        profit = rev - cost
-        margin_pct = float((profit / rev * 100).quantize(Decimal("0.1"))) if rev > 0 else 0.0
-
-        sop = sop_thresholds.get(k, {"target": 15.0, "threshold": 10.0})
-        target_margin = sop["target"]
-        min_threshold = sop["threshold"]
-
-        if margin_pct < min_threshold:
-            status = "CRITICAL_ALERT"
-            action = "Cảnh báo biên lợi nhuận thấp hơn ngưỡng an toàn! Cần đàm phán lại giá nhập hoặc dừng khuyến mãi."
-        elif margin_pct < target_margin:
-            status = "MARGIN_PRESSURE"
-            action = "Biên lợi nhuận dưới mục tiêu đề ra, cần tối ưu chiết khấu và chi phí vận hành."
-        else:
-            status = "HEALTHY"
-            action = "Biên lợi nhuận đạt hoặc vượt định mức chuẩn SOP 2026."
+        cost = None if v["missing_cost_item_count"] else v["cost"]
+        profit = rev - cost if cost is not None else None
+        margin_pct = float((profit / rev * 100).quantize(Decimal("0.1"))) if profit is not None and rev > 0 else None
 
         breakdown.append({
-            "category_key": k,
+            "category_key": v["category_key"],
+            "category_id": v["category_id"],
             "category_name": v["category_name"],
             "revenue": f"{rev:,.0f} VND",
             "revenue_raw": float(rev),
-            "estimated_cost": f"{cost:,.0f} VND",
-            "gross_profit": f"{profit:,.0f} VND",
+            "estimated_cost": f"{cost:,.0f} VND (giá vốn danh mục hiện tại)" if cost is not None else "Chưa đủ dữ liệu giá vốn",
+            "estimated_cost_raw": float(cost) if cost is not None else None,
+            "gross_profit": f"{profit:,.0f} VND (ước tính)" if profit is not None else "Chưa đủ dữ liệu",
             "gross_margin_pct": margin_pct,
-            "target_margin_pct": target_margin,
-            "min_threshold_pct": min_threshold,
-            "status": status,
+            "target_margin_pct": None,
+            "min_threshold_pct": None,
+            "status": "INSUFFICIENT_COST_DATA" if cost is None else "CURRENT_COST_ESTIMATE",
             "items_sold": v["items_sold"],
-            "action_guidance": action,
+            "missing_cost_item_count": v["missing_cost_item_count"],
+            "action_guidance": "Đối soát giá vốn tại thời điểm bán và ngưỡng đã phê duyệt trước khi quyết định; không tự áp dụng SOP demo.",
         })
 
-    overall_profit = total_revenue_all - total_cost_all
-    overall_margin_pct = float((overall_profit / total_revenue_all * 100).quantize(Decimal("0.1"))) if total_revenue_all > 0 else 0.0
+    overall_profit = total_revenue_all - total_cost_all if not missing_cost_item_count else None
+    overall_margin_pct = float((overall_profit / total_revenue_all * 100).quantize(Decimal("0.1"))) if overall_profit is not None and total_revenue_all > 0 else None
+    cost_label = f"{total_cost_all:,.0f} VND (ước tính giá vốn hiện tại)" if not missing_cost_item_count else "Chưa đủ dữ liệu giá vốn"
+    profit_label = f"{overall_profit:,.0f} VND (ước tính)" if overall_profit is not None else "Chưa đủ dữ liệu"
+    # A category subset cannot be reconciled against full order totals when an
+    # order includes other categories, taxes or order-level discounts.
+    completed_order_total = None if category_filter else (
+        Order.objects.for_workspace(workspace).filter(status=OrderStatus.COMPLETED).aggregate(s=Sum("total_amount"))["s"] or Decimal("0.00")
+    )
 
     return {
         "tool": "get_category_profit_margins",
         "workspace": workspace.code,
+        "category_filter": category_filter or "Tất cả danh mục",
+        "category_id": selected_category_id,
+        "category_match_status": category_match_status,
         "total_revenue": f"{total_revenue_all:,.0f} VND",
-        "total_estimated_cost": f"{total_cost_all:,.0f} VND",
-        "total_gross_profit": f"{overall_profit:,.0f} VND",
+        "total_estimated_cost": cost_label,
+        "total_gross_profit": profit_label,
         "total_revenue_formatted": f"{total_revenue_all:,.0f} VND",
-        "total_estimated_cogs_formatted": f"{total_cost_all:,.0f} VND",
-        "total_gross_profit_formatted": f"{overall_profit:,.0f} VND",
+        "total_estimated_cogs_formatted": cost_label,
+        "total_gross_profit_formatted": profit_label,
+        "total_revenue_raw": float(total_revenue_all),
+        "revenue_basis": "Tổng OrderItem.subtotal (sau chiết khấu dòng) của đơn COMPLETED; khác total_amount của đơn khi có thuế/chiết khấu/phụ phí.",
+        "completed_order_total_raw": float(completed_order_total) if completed_order_total is not None else None,
+        "order_to_items_delta_raw": float(completed_order_total - total_revenue_all) if completed_order_total is not None else None,
+        "order_reconciliation_scope": "UNAVAILABLE_FOR_CATEGORY_SUBSET" if category_filter else "WORKSPACE_COMPLETED_ORDERS",
+        "historical_cogs_verified": False,
+        "cost_basis": "Product.cost_price hiện tại; không có snapshot giá vốn tại thời điểm bán. Giá vốn 0/chưa ghi nhận được coi là chưa xác minh.",
+        "missing_cost_item_count": missing_cost_item_count,
+        "approved_margin_policy_available": False,
         "overall_gross_margin_pct": overall_margin_pct,
         "category_breakdown": breakdown,
         # Backward-compatible alias for older assistant consumers.  The
@@ -1395,7 +1481,7 @@ def get_category_profit_margins(workspace: Workspace, user: User, **kwargs) -> D
 def get_customer_churn_risk_summary(workspace: Workspace, user: User, **kwargs) -> Dict[str, Any]:
     """
     Identifies VIP and Corporate customers at risk of churn (inactive >= 45 days or with SLA issues).
-    Applies SOP-CRM-RET-2026 retention guidelines.
+    Heuristic screening only; does not publish unapproved retention benefits.
     Requires 'retail.view_customer' permission.
     """
     if not _check_perm(user, workspace, "retail.view_customer"):
@@ -1404,7 +1490,6 @@ def get_customer_churn_risk_summary(workspace: Workspace, user: User, **kwargs) 
     from apps.retail.models import Customer, Order
     from apps.service_ops.models import ServiceRequest
     from django.utils import timezone
-    from datetime import timedelta
 
     now = timezone.now()
     threshold_days = kwargs.get("inactivity_days", 45)
@@ -1414,10 +1499,11 @@ def get_customer_churn_risk_summary(workspace: Workspace, user: User, **kwargs) 
     total_at_risk_clv = Decimal("0.00")
 
     for c in customers:
-        last_order = Order.objects.filter(customer=c).exclude(status="CANCELLED").order_by("-created_at").first()
-        days_inactive = (now - last_order.created_at).days if last_order else 999
+        customer_orders = Order.objects.for_workspace(workspace).filter(customer=c, status="COMPLETED")
+        last_order = customer_orders.order_by("-order_date", "-id").first()
+        days_inactive = max(0, (timezone.localdate() - last_order.order_date).days) if last_order else 999
 
-        total_spent = Order.objects.filter(customer=c).exclude(status="CANCELLED").aggregate(s=Sum("total_amount"))["s"] or Decimal("0.00")
+        total_spent = customer_orders.aggregate(s=Sum("total_amount"))["s"] or Decimal("0.00")
         tier = "VIP_PLATINUM" if total_spent >= Decimal("50000000") else ("GOLD" if total_spent >= Decimal("20000000") else "SILVER")
 
         # ServiceRequest no longer stores a denormalized is_sla_breached flag.
@@ -1425,7 +1511,7 @@ def get_customer_churn_risk_summary(workspace: Workspace, user: User, **kwargs) 
         # churn analytics cannot silently rely on a removed/stale column.
         terminal_statuses = ["RESOLVED", "CLOSED", "CANCELLED"]
         has_sla_issue = ServiceRequest.objects.filter(
-            customer=c,
+            workspace=workspace, customer=c,
             resolution_deadline_at__isnull=False,
             resolution_deadline_at__lt=now,
         ).exclude(status__in=terminal_statuses).exists()
@@ -1436,12 +1522,17 @@ def get_customer_churn_risk_summary(workspace: Workspace, user: User, **kwargs) 
                 "customer_id": c.id,
                 "customer_name": c.full_name or c.code,
                 "customer_code": c.code,
+                "name": c.full_name or c.code, "code": c.code,
+                "segment": c.customer_segment,
                 "tier": tier,
                 "total_clv": f"{total_spent:,.0f} VND",
                 "total_clv_raw": float(total_spent),
                 "days_since_last_order": days_inactive if days_inactive != 999 else "Chưa có đơn",
                 "sla_breach_detected": has_sla_issue,
-                "retention_action": "Kích hoạt Quy trình Service Recovery: Cấp voucher 500,000 VND và bảo hành mở rộng 3 tháng." if tier == "VIP_PLATINUM" else "Gửi email chăm sóc khách hàng và ưu đãi giảm giá 5%."
+                "total_spend_formatted": f"{total_spent:,.0f} VND",
+                "sla_status": "Có phiếu đang quá hạn giải quyết" if has_sla_issue else "Không phát hiện phiếu đang quá hạn",
+                "retention_action": "Rà soát lịch sử và liên hệ chăm sóc; chỉ đề xuất ưu đãi sau khi chính sách được phê duyệt.",
+                "recommended_action": "Rà soát lịch sử và liên hệ chăm sóc; không tự cấp voucher hoặc tăng bảo hành.",
             })
             total_at_risk_clv += total_spent
 
@@ -1449,6 +1540,8 @@ def get_customer_churn_risk_summary(workspace: Workspace, user: User, **kwargs) 
         "tool": "get_customer_churn_risk_summary",
         "workspace": workspace.code,
         "inactivity_threshold_days": threshold_days,
+        "total_customers_evaluated": customers.count(),
+        "assessment_basis": "Sàng lọc theo quy tắc (đơn COMPLETED/order_date và hạn giải quyết đã lưu); không phải mô hình churn đã được hiệu chuẩn.",
         "total_at_risk_customers": len(at_risk_list),
         "total_revenue_at_risk": f"{total_at_risk_clv:,.0f} VND",
         "total_revenue_at_risk_raw": float(total_at_risk_clv),
@@ -1461,11 +1554,11 @@ def get_customer_churn_risk_summary(workspace: Workspace, user: User, **kwargs) 
 def get_inter_branch_transfer_recommendations(workspace: Workspace, user: User, **kwargs) -> Dict[str, Any]:
     """
     Identifies stock imbalances between branches and suggests optimal rebalancing transfer lots.
-    Enforces SOP-LOG-TRF-2026 logistics costing and minimum lot rules.
-    Requires 'retail.view_stock' permission.
+    Uses an explicitly advisory stock heuristic, not approved logistics costs.
+    Requires 'retail.view_product' permission.
     """
-    if not _check_perm(user, workspace, "retail.view_stock"):
-        raise ToolPermissionDenied("User lacks 'retail.view_stock' permission to access stock transfer analytics.")
+    if not _check_perm(user, workspace, "retail.view_product"):
+        raise ToolPermissionDenied("User lacks 'retail.view_product' permission to access stock transfer analytics.")
 
     from apps.retail.models import Branch, Product, StockBalance
 
@@ -1479,34 +1572,37 @@ def get_inter_branch_transfer_recommendations(workspace: Workspace, user: User, 
         }
 
     recommendations = []
+    missing_balance_count = 0
     products = Product.objects.for_workspace(workspace).filter(is_active=True)
 
     for p in products:
-        balances = {sb.branch_id: sb.quantity_on_hand for sb in StockBalance.objects.filter(product=p, branch__in=branches)}
+        balances = {sb.branch_id: sb.quantity_on_hand for sb in StockBalance.objects.for_workspace(workspace).filter(product=p, branch__in=branches)}
+        missing_balance_count += len(branches) - len(balances)
         for b_src in branches:
-            qty_src = balances.get(b_src.id, 0)
+            if b_src.id not in balances:
+                continue
+            qty_src = balances[b_src.id]
             if qty_src >= 15:
                 for b_dest in branches:
-                    if b_dest.id != b_src.id:
-                        qty_dest = balances.get(b_dest.id, 0)
+                    if b_dest.id != b_src.id and b_dest.id in balances:
+                        qty_dest = balances[b_dest.id]
                         if qty_dest <= 3:
                             transfer_qty = min(qty_src - 8, 10)
                             if transfer_qty >= 2:
-                                is_express = ("quận 1" in b_src.name.lower() or "q1" in b_src.code.lower()) and ("bình thạnh" in b_dest.name.lower() or "bt" in b_dest.code.lower())
-                                cost = 80000 if is_express else 150000
-                                sla_hours = 2.0 if is_express else 4.0
                                 recommendations.append({
                                     "product_id": p.id,
                                     "product_name": p.name,
                                     "sku": p.sku,
                                     "source_branch": b_src.name,
+                                    "source_branch_id": b_src.pk,
                                     "source_stock_before": qty_src,
                                     "destination_branch": b_dest.name,
+                                    "destination_branch_id": b_dest.pk,
                                     "destination_stock_before": qty_dest,
                                     "recommended_transfer_qty": transfer_qty,
-                                    "estimated_transport_cost_vnd": cost,
-                                    "delivery_sla_hours": sla_hours,
-                                    "economic_justification": f"Đảm bảo quy mô lô tối thiểu (>= 2 chiếc), cước phí {cost:,.0f} VND/chuyến hỏa tốc {sla_hours}h.",
+                                    "estimated_transport_cost_vnd": None,
+                                    "delivery_sla_hours": None,
+                                    "economic_justification": "Tồn kho đã lưu gợi ý cần cân đối. Chưa có báo giá vận chuyển/SLA được duyệt; cần xác nhận trước khi lập điều chuyển.",
                                 })
 
     return {
@@ -1514,6 +1610,10 @@ def get_inter_branch_transfer_recommendations(workspace: Workspace, user: User, 
         "workspace": workspace.code,
         "total_imbalances_found": len(recommendations),
         "total_transfer_opportunities": len(recommendations),
+        "missing_balance_count": missing_balance_count,
+        "assessment_basis": "ADVISORY_STOCK_HEURISTIC",
+        "heuristic_parameters": {"source_min": 15, "destination_max": 3, "source_retained": 8, "lot_min": 2, "lot_max": 10},
+        "transport_policy_verified": False,
         "recommendations": recommendations[:5],
         # Additive aliases retained for clients built against the earlier
         # benchmark vocabulary.  `recommendations` remains canonical.
@@ -1529,61 +1629,65 @@ def get_inter_branch_transfer_recommendations(workspace: Workspace, user: User, 
 
 def get_technician_safety_compliance(workspace: Workspace, user: User, **kwargs) -> Dict[str, Any]:
     """
-    Evaluates field technician certification matrix, active task load, and overtime limit compliance.
-    Enforces SOP-OPS-ENG-2026 labor regulations and ISO 27001 data privacy protocols.
-    Requires 'service.view_technician' permission.
+    Reports recorded skills, task load and logged labor without certifying
+    legal, qualification, allowance or overtime facts absent from the database.
+    Requires 'service.view_employee' permission.
     """
-    if not _check_perm(user, workspace, "service.view_technician"):
-        raise ToolPermissionDenied("User lacks 'service.view_technician' permission to access compliance data.")
+    if not _check_perm(user, workspace, "service.view_employee"):
+        raise ToolPermissionDenied("User lacks 'service.view_employee' permission to access compliance data.")
 
-    from apps.service_ops.models import Employee, Task, TaskStatus
+    from apps.service_ops.models import Employee, LaborEntry, Task, TaskStatus
+    from django.utils import timezone
 
     techs = Employee.objects.for_workspace(workspace).filter(is_active=True)
     compliance_report = []
-
-    cert_mapping = {
-        "Vũ Hoàng Nam": ["CCNA", "CompTIA Server+", "CompTIA A+"],
-        "Nguyễn Thanh Sơn": ["CCNA", "FOA Fiber Optic", "Network Admin"],
-        "Đặng Thùy Linh": ["IPC-A-610", "Dell Certified DCSE", "Laptop Hardware"],
-        "Ngô Minh Khang": ["CompTIA Server+", "PostgreSQL Admin", "RHCSA Linux"],
-        "Bùi Văn Tài": ["CompTIA A+", "Desktop Repair", "Printer Repair"],
+    now = timezone.localtime()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    logged_labor = {
+        row["employee_id"]: row
+        for row in LaborEntry.objects.filter(
+            task__service_request__workspace=workspace, employee__workspace=workspace,
+            started_at__gte=month_start, started_at__lte=now,
+        ).values("employee_id").annotate(minutes=Sum("duration_minutes"), entry_count=Count("id"))
     }
 
     for t in techs:
         active_tasks_count = Task.objects.filter(
             assigned_to=t,
+            service_request__workspace=workspace,
             status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
         ).count()
 
-        if t.skills and isinstance(t.skills, list):
-            certs = list(t.skills)
-        else:
-            certs = cert_mapping.get(t.full_name, ["CompTIA A+"])
-
-        is_overloaded = active_tasks_count > 3
-        estimated_ot_hours = round(active_tasks_count * 6.5, 1)
-        ot_compliant = estimated_ot_hours <= 40.0
+        skills = [skill for skill in t.skills if isinstance(skill, str)] if isinstance(t.skills, list) else []
+        labor = logged_labor.get(t.pk, {})
 
         compliance_report.append({
             "employee_id": t.id,
             "name": t.full_name,
             "full_name": t.full_name,
             "code": t.code,
-            "availability": "Sẵn sàng" if getattr(t, "is_available", True) else "Bận",
+            "availability": "Sẵn sàng" if t.is_available else "Bận",
             "active_tasks_count": active_tasks_count,
-            "workload_score": int(getattr(t, "current_workload_score", 0.0)) or active_tasks_count * 25,
-            "is_overloaded": is_overloaded,
-            "safety_certifications": certs,
-            "certifications": certs,
-            "estimated_monthly_overtime_hours": estimated_ot_hours,
-            "monthly_estimated_ot_hours": estimated_ot_hours,
-            "night_shift_allowance_eligible": True,
-            "compliance_flag": "QUÁ TẢI" if is_overloaded else ("CẢNH BÁO OT" if not ot_compliant else "TUÂN THỦ"),
-            "ot_compliant": ot_compliant,
-            "night_shift_multiplier": 1.5,
-            "server_room_allowance_vnd": 200000,
-            "iso_27001_nda_required": True,
-            "status": "OVERLOADED" if is_overloaded else ("OT_LIMIT_WARNING" if not ot_compliant else "ELIGIBLE"),
+            "workload_score": t.current_workload_score,
+            "is_overloaded": None,
+            "recorded_skills": skills,
+            # The schema has skill labels, not certificate evidence. An empty
+            # list with an explicit unverified flag avoids asserting either
+            # possession or absence of real-world qualifications.
+            "safety_certifications": [],
+            "certifications": [],
+            "certifications_verified": False,
+            "recorded_monthly_labor_hours": round((labor.get("minutes") or 0) / 60.0, 2),
+            "recorded_labor_entry_count": labor.get("entry_count", 0),
+            "estimated_monthly_overtime_hours": None,
+            "monthly_estimated_ot_hours": None,
+            "night_shift_allowance_eligible": None,
+            "compliance_flag": "CHƯA ĐỦ BẰNG CHỨNG ĐÁNH GIÁ",
+            "ot_compliant": None,
+            "night_shift_multiplier": None,
+            "server_room_allowance_vnd": None,
+            "iso_27001_nda_required": None,
+            "status": "NOT_VERIFIED",
         })
 
     return {
@@ -1593,13 +1697,16 @@ def get_technician_safety_compliance(workspace: Workspace, user: User, **kwargs)
         "technicians_evaluated": len(compliance_report),
         "technicians_compliance": compliance_report,
         "compliance_report": compliance_report,
-        "compliance_alerts_count": sum(1 for c in compliance_report if c["status"] != "ELIGIBLE"),
-        "max_concurrent_tasks_allowed": 3,
-        "max_monthly_ot_hours_allowed": 40.0,
+        "compliance_alerts_count": 0,
+        "unverified_technician_count": len(compliance_report),
+        "compliance_verified": False,
+        "month": month_start.strftime("%Y-%m"),
+        "max_concurrent_tasks_allowed": None,
+        "max_monthly_ot_hours_allowed": None,
         "compliance_guidelines": [
-            "Định mức làm thêm giờ: Tối đa 40 giờ/tháng theo Bộ luật Lao động.",
-            "Phụ cấp ca đêm (22h - 6h): Tính 150% đơn giá lương chuẩn.",
-            "Yêu cầu tuân thủ chứng chỉ an toàn lao động và bảo mật ISO 27001 khi vào Data Center.",
+            "Kỹ năng là thông tin đã lưu trong hồ sơ, không phải chứng chỉ đã xác minh.",
+            "Giờ công là tổng LaborEntry đã ghi nhận trong tháng, không phải giờ làm thêm; thiếu chấm công không chứng minh không làm việc.",
+            "Chưa có lịch làm việc chuẩn, chứng chỉ còn hiệu lực hoặc chính sách phụ cấp đã phê duyệt để kết luận tuân thủ, ca đêm hay ISO.",
         ],
     }
 

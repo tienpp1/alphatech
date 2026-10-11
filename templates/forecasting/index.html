@@ -328,7 +328,7 @@
     <div class="studio-header">
         <div class="studio-title">
             <h1>📈 Dự báo &amp; Phân tích Xu hướng (Predictive Analytics)</h1>
-            <p>Động cơ dự báo chuỗi thời gian XGBoost với kiểm định thời gian thực và đối sánh đường cơ sở Naive.</p>
+            <p>XGBoost với kiểm thử lịch sử và đối sánh Naive/MA7. Hoàn tất huấn luyện không đồng nghĩa chất lượng đã đạt.</p>
         </div>
         <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
             <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; background: rgba(255,255,255,0.08);">← Bảng điều khiển</a>
@@ -347,6 +347,24 @@
         </div>
     </div>
 
+    {% if selected_target == 'RETAIL_PRODUCT_DEMAND' %}
+    <form method="get" class="card-panel" style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <input type="hidden" name="target" value="{{ selected_target }}">
+        <label>SKU/sản phẩm<select name="product_id" class="form-control"><option value="">Tất cả sản phẩm</option>{% for product in products %}<option value="{{ product.id }}" {% if selected_dimensions.product_id == product.id %}selected{% endif %}>{{ product.sku }} — {{ product.name }}</option>{% endfor %}</select></label>
+        <label>Danh mục<select name="category_id" class="form-control"><option value="">Tất cả danh mục</option>{% for category in categories %}<option value="{{ category.id }}" {% if selected_dimensions.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
+        <label>Chi nhánh<select name="branch_id" class="form-control"><option value="">Toàn workspace</option>{% for branch in branches %}<option value="{{ branch.id }}" {% if selected_dimensions.branch_id == branch.id %}selected{% endif %}>{{ branch.name }}</option>{% endfor %}</select></label>
+        <button class="btn-primary" type="submit">Xem dự báo theo bộ lọc</button>
+    </form>
+    {% endif %}
+    {% if chart_data.error %}<p role="alert" class="disclaimer-box">{{ chart_data.error }}</p>{% endif %}
+    {% if chart_data.snapshot %}
+    <div class="disclaimer-box" role="status" style="margin-bottom:1rem;">
+        <strong>{{ chart_data.snapshot.status }}:</strong> {{ chart_data.snapshot.message }}
+        {% if chart_data.snapshot.period_end %} Ngày cuối dữ liệu: {{ chart_data.snapshot.period_end }}; đánh giá đến {{ chart_data.snapshot.as_of }} ({{ chart_data.snapshot.age_days }} ngày).{% endif %}
+        <br>{{ chart_data.quality.message }} {{ chart_data.quality.r2_warning }}
+        {% if chart_data.quality.comparisons.mae.best_baseline %}<br>Baseline tốt nhất theo MAE: {{ chart_data.quality.comparisons.mae.best_baseline }} ({{ chart_data.quality.comparisons.mae.baseline_value|floatformat:2 }}).{% endif %}
+    </div>
+    {% endif %}
     <!-- KPI Summary Row -->
     <div class="kpi-grid">
         <div class="kpi-card">
@@ -370,7 +388,7 @@
                 {% endif %}
             </div>
             <div class="kpi-sub">
-                Đường cơ sở Naive: {{ chart_data.baseline_metrics.naive_mae|default:"—"|floatformat:2 }}
+                Đường cơ sở Naive: {% if chart_data.baseline_metrics.naive_mae is not None %}{{ chart_data.baseline_metrics.naive_mae|floatformat:2 }}{% else %}—{% endif %}
             </div>
         </div>
 
@@ -384,7 +402,7 @@
                 {% endif %}
             </div>
             <div class="kpi-sub">
-                Đường cơ sở: {{ chart_data.baseline_metrics.naive_mape|default:"—"|floatformat:1 }}%
+                Đường cơ sở: {% if chart_data.baseline_metrics.naive_mape is not None %}{{ chart_data.baseline_metrics.naive_mape|floatformat:1 }}%{% else %}—{% endif %}
             </div>
         </div>
 
@@ -392,15 +410,15 @@
             <div class="kpi-label">Cải thiện so với Cơ sở</div>
             <div class="kpi-val">
                 {% if chart_data.metrics.mae_improvement_pct is not None %}
-                    <span class="kpi-badge-gain">
-                        +{{ chart_data.metrics.mae_improvement_pct|floatformat:1 }}% Giảm MAE
+                    <span class="{% if chart_data.metrics.mae_improvement_pct > 0 %}kpi-badge-gain{% endif %}" {% if chart_data.metrics.mae_improvement_pct < 0 %}style="color:#fca5a5;font-size:1rem"{% endif %}>
+                        {{ chart_data.metrics.mae_improvement_pct|floatformat:1 }}% {% if chart_data.metrics.mae_improvement_pct < 0 %}MAE xấu đi{% elif chart_data.metrics.mae_improvement_pct > 0 %}Giảm MAE{% else %}Không thay đổi MAE{% endif %}
                     </span>
                 {% else %}
                     <span style="color: #94a3b8; font-size: 1rem;">Chờ huấn luyện</span>
                 {% endif %}
             </div>
             <div class="kpi-sub">
-                Cải thiện RMSE: +{{ chart_data.metrics.rmse_improvement_pct|default:"0.0"|floatformat:1 }}%
+                Thay đổi RMSE (dương = tốt hơn): {% if chart_data.metrics.rmse_improvement_pct is not None %}{{ chart_data.metrics.rmse_improvement_pct|floatformat:1 }}%{% else %}—{% endif %}
             </div>
         </div>
     </div>
@@ -411,7 +429,7 @@
         <div class="card-panel">
             <div class="panel-header">
                 <div class="panel-title">
-                    <span>📊 Dự báo Chuỗi Thời gian (Lịch sử + Tương lai 14 Ngày)</span>
+                    <span>📊 Chuỗi thời gian — {{ chart_data.forecast_point_count|default:0 }} điểm dự báo{% if chart_data.forecast_start %} ({{ chart_data.forecast_start }} → {{ chart_data.forecast_end }}){% endif %}</span>
                 </div>
                 <div style="font-size: 0.8rem; color: #94a3b8;">
                     Không gian làm việc: <strong>{{ active_workspace.code }}</strong>
@@ -482,7 +500,7 @@
                         <td><strong>{{ run.model_metrics.mae|default:"—" }}</strong></td>
                         <td>{{ run.model_metrics.mape|default:"—" }}%</td>
                         <td>{{ run.baseline_metrics.naive_mae|default:"—" }}</td>
-                        <td>{{ run.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ run.created_at|date:"d/m/Y H:i T" }}</td>
                     </tr>
                     {% empty %}
                     <tr>
@@ -530,7 +548,7 @@
                     <input type="number" id="modalLR" class="form-control" value="0.05" step="0.01" min="0.01" max="1.0">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Tầm dự báo (Ngày)</label>
+                    <label class="form-label">Tầm dự báo (số điểm theo kỳ ngày/tuần của cấu hình)</label>
                     <input type="number" id="modalHorizon" class="form-control" value="14" min="1" max="60">
                 </div>
             </div>
@@ -736,6 +754,7 @@ async function submitTraining(event) {
         learning_rate: parseFloat(document.getElementById("modalLR").value),
         horizon_days: parseInt(document.getElementById("modalHorizon").value),
         is_async: false,
+        dimensions: chartPayload.dimensions || {},
     };
 
     try {
@@ -749,12 +768,12 @@ async function submitTraining(event) {
         });
 
         const res = await response.json();
-        if (res.success) {
+        if (res.success && res.data && res.data.status === 'COMPLETED') {
             alertBox.style.display = "block";
             alertBox.style.background = "rgba(16, 185, 129, 0.15)";
             alertBox.style.color = "#10b981";
             alertBox.style.border = "1px solid rgba(16, 185, 129, 0.3)";
-            alertBox.innerHTML = `✅ Huấn luyện hoàn tất! Lượt chạy #${res.data.id} - Đang tải lại...`;
+            alertBox.textContent = `Huấn luyện hoàn tất (chưa chứng nhận chất lượng). Lượt chạy #${res.data.id}. ${res.data.snapshot_assessment?.message || ''} ${res.data.quality_assessment?.message || ''} Đang tải lại...`;
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -763,7 +782,7 @@ async function submitTraining(event) {
             alertBox.style.background = "rgba(239, 68, 68, 0.15)";
             alertBox.style.color = "#ef4444";
             alertBox.style.border = "1px solid rgba(239, 68, 68, 0.3)";
-            alertBox.innerHTML = `❌ Lỗi: ${res.error || "Huấn luyện thất bại."}`;
+            alertBox.textContent = `Lỗi: ${res.error || "Lượt chạy chưa hoàn tất hoặc huấn luyện thất bại. Xem lịch sử lượt chạy để kiểm tra."}`;
             btn.disabled = false;
             btn.innerHTML = "🚀 Bắt đầu Huấn luyện";
         }

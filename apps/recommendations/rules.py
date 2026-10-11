@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 from decimal import Decimal
 import datetime
 from django.utils import timezone
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Max
 
 from apps.workspaces.models import Workspace, WorkspaceType
 from apps.recommendations.models import (
@@ -27,59 +27,65 @@ def evaluate_retail_recommendations(workspace: Workspace) -> List[Recommendation
     if workspace.workspace_type != WorkspaceType.RETAIL:
         return []
 
-    from apps.retail.models import Order, OrderStatus, Branch
-    from apps.forecasting.models import ForecastRun, ForecastResult, TargetType
+    from apps.retail.models import Order, OrderStatus
 
     created_recs = []
 
-    # Rule 1: Declining Branch Revenue Check (Forecast or Recent Performance)
-    # Check latest forecast run for RETAIL_REVENUE
-    forecast_run = (
-        ForecastRun.objects.for_workspace(workspace)
-        .filter(target_type=TargetType.RETAIL_REVENUE, status="COMPLETED")
-        .order_by("-created_at")
-        .first()
-    )
-
-    recent_7d = timezone.now() - datetime.timedelta(days=7)
-    recent_orders = Order.objects.for_workspace(workspace).filter(
-        created_at__gte=recent_7d
-    ).exclude(status=OrderStatus.CANCELLED)
+    today = timezone.localdate()
+    recent_start = today - datetime.timedelta(days=6)
+    previous_start = recent_start - datetime.timedelta(days=7)
+    all_orders = Order.objects.for_workspace(workspace).exclude(status=OrderStatus.CANCELLED)
+    latest_order_date = all_orders.aggregate(last=Max("order_date"))["last"]
+    # An old imported snapshot is not evidence of a current business decline.
+    if latest_order_date and (latest_order_date < today - datetime.timedelta(days=7) or latest_order_date > today):
+        return evaluate_retail_stockout_recommendations(workspace)
+    recent_orders = all_orders.filter(order_date__gte=recent_start, order_date__lte=today)
 
     agg = recent_orders.aggregate(s=Sum("total_amount"), c=Count("id"))
-    recent_rev = float(agg["s"] or 0.0)
+    recent_rev = float(recent_orders.filter(status=OrderStatus.COMPLETED).aggregate(s=Sum("total_amount"))["s"] or 0)
+    previous_rev = float(all_orders.filter(status=OrderStatus.COMPLETED, order_date__gte=previous_start,
+                                          order_date__lt=recent_start).aggregate(s=Sum("total_amount"))["s"] or 0)
     order_count = int(agg["c"] or 0)
 
-    # If forecast indicates MAE improvement over baseline or low revenue
-    if recent_rev < 100000000.0 or (forecast_run and forecast_run.model_metrics.get("mae_improvement_pct", 0) > 10.0):
+    period = {"period_start": recent_start.isoformat(), "period_end": today.isoformat(),
+              "latest_order_date": latest_order_date.isoformat() if latest_order_date else None,
+              "revenue_definition": "completed_order_total_amount", "scope": "workspace",
+              "data_status": "CURRENT_SNAPSHOT" if latest_order_date else "NO_DATA"}
+    expiry = timezone.now() + datetime.timedelta(days=7)
+    # Forecast error improvement says nothing about the direction of revenue.
+    # A decline requires a measured comparison with the previous equal period.
+    if previous_rev > 0 and recent_rev < previous_rev * 0.9:
         # Check if active recommendation already exists to avoid duplicates
         existing = Recommendation.objects.for_workspace(workspace).filter(
             recommendation_type=RecommendationType.RETAIL_DECLINING_REVENUE,
             status=RecommendationStatus.PENDING,
+            supporting_data__period_end=today.isoformat(),
         ).first()
 
         if not existing:
             rec = Recommendation.objects.create(
                 workspace=workspace,
                 recommendation_type=RecommendationType.RETAIL_DECLINING_REVENUE,
-                title="Đề xuất xem xét khuyến mãi cho chi nhánh doanh thu sụt giảm",
+                title="Rà soát doanh thu đã hoàn tất của workspace giảm so với kỳ trước",
                 priority=RecommendationPriority.HIGH,
                 status=RecommendationStatus.PENDING,
                 explanation={
-                    "what": "Xem xét triển khai chương trình khuyến mãi kích cầu hoặc tối ưu kênh bán lẻ lẻ tại chi nhánh.",
-                    "why": f"Tổng doanh thu 7 ngày gần nhất đạt {recent_rev:,.0f} VND, thấp hơn ngưỡng kỳ vọng 100,000,000 VND.",
+                    "what": "Rà soát nguyên nhân trước khi quyết định chương trình bán hàng; đây là đề xuất tham khảo.",
+                    "why": f"Doanh thu đơn COMPLETED của 7 ngày đạt {recent_rev:,.0f} VND so với {previous_rev:,.0f} VND của 7 ngày trước, giảm trên 10%.",
                     "evidence": {
                         "recent_7d_revenue_vnd": recent_rev,
                         "recent_7d_order_count": order_count,
-                        "forecast_run_id": forecast_run.id if forecast_run else None,
-                        "forecast_mae_improvement_pct": forecast_run.model_metrics.get("mae_improvement_pct") if forecast_run else None,
+                        "previous_7d_completed_revenue_vnd": previous_rev,
+                        **period,
                     },
-                    "expected_effect": "Kích cầu mua sắm, khôi phục doanh thu chi nhánh và nâng cao tỷ lệ chuyển đổi đơn hàng."
+                    "expected_effect": "Hỗ trợ đánh giá tình hình; chưa cam kết cải thiện doanh thu."
                 },
                 supporting_data={
                     "recent_7d_revenue_vnd": recent_rev,
-                    "threshold_vnd": 100000000.0,
+                    "previous_7d_completed_revenue_vnd": previous_rev,
+                    **period,
                 },
+                expires_at=expiry,
                 source_references=[f"workspace:{workspace.code}"]
             )
             created_recs.append(rec)
@@ -89,25 +95,28 @@ def evaluate_retail_recommendations(workspace: Workspace) -> List[Recommendation
         existing = Recommendation.objects.for_workspace(workspace).filter(
             recommendation_type=RecommendationType.RETAIL_LOW_ORDER_VOLUME,
             status=RecommendationStatus.PENDING,
+            supporting_data__period_end=today.isoformat(),
         ).first()
 
         if not existing:
             rec = Recommendation.objects.create(
                 workspace=workspace,
                 recommendation_type=RecommendationType.RETAIL_LOW_ORDER_VOLUME,
-                title="Cảnh báo số lượng đơn hàng bán lẻ thấp",
+                title="Cảnh báo số lượng đơn hàng bán lẻ thấp" if latest_order_date else "Chưa có dữ liệu đơn hàng để đánh giá vận hành",
                 priority=RecommendationPriority.MEDIUM,
                 status=RecommendationStatus.PENDING,
                 explanation={
-                    "what": "Rà soát hoạt động tiếp thị và tiếp cận khách hàng thân thiết.",
-                    "why": f"Số lượng đơn hàng 7 ngày qua đạt {order_count} đơn, thấp hơn ngưỡng cảnh báo 10 đơn.",
+                    "what": "Rà soát hoạt động tiếp thị và tiếp cận khách hàng thân thiết." if latest_order_date else "Đối chiếu nguồn và bổ sung dữ liệu nghiệp vụ trước khi đánh giá.",
+                    "why": f"Số đơn không hủy trong kỳ nghiệp vụ 7 ngày là {order_count}; ngưỡng tham khảo 10 đơn." if latest_order_date else "Chưa có đơn không hủy trong workspace; không thể kết luận hoạt động thực tế sụt giảm.",
                     "evidence": {
                         "order_count_7d": order_count,
                         "threshold": 10,
+                        **period,
                     },
-                    "expected_effect": "Tăng tần suất đặt hàng và số lượng giao dịch phát sinh."
+                    "expected_effect": "Hỗ trợ xem xét số lượng giao dịch; chưa cam kết tăng trưởng." if latest_order_date else "Có đủ dữ liệu kiểm chứng thay vì suy diễn tình hình kinh doanh."
                 },
-                supporting_data={"order_count_7d": order_count},
+                supporting_data={"order_count_7d": order_count, **period},
+                expires_at=expiry,
                 source_references=[f"workspace:{workspace.code}"]
             )
             created_recs.append(rec)
@@ -117,13 +126,14 @@ def evaluate_retail_recommendations(workspace: Workspace) -> List[Recommendation
         existing = Recommendation.objects.for_workspace(workspace).filter(
             recommendation_type=RecommendationType.RETAIL_HIGH_PERFORMING,
             status=RecommendationStatus.PENDING,
+            supporting_data__period_end=today.isoformat(),
         ).first()
 
         if not existing:
             rec = Recommendation.objects.create(
                 workspace=workspace,
                 recommendation_type=RecommendationType.RETAIL_HIGH_PERFORMING,
-                title="Đề xuất nhân rộng quy chuẩn vận hành từ chi nhánh đạt doanh số cao",
+                title="Rà soát thực hành bán hàng của workspace có doanh thu hoàn tất cao",
                 priority=RecommendationPriority.LOW,
                 status=RecommendationStatus.PENDING,
                 explanation={
@@ -135,7 +145,8 @@ def evaluate_retail_recommendations(workspace: Workspace) -> List[Recommendation
                     },
                     "expected_effect": "Tối ưu hóa quy trình bán hàng cho các chi nhánh khác."
                 },
-                supporting_data={"recent_7d_revenue_vnd": recent_rev},
+                supporting_data={"recent_7d_revenue_vnd": recent_rev, **period},
+                expires_at=expiry,
                 source_references=[f"workspace:{workspace.code}"]
             )
             created_recs.append(rec)
@@ -160,10 +171,23 @@ def evaluate_retail_stockout_recommendations(workspace: Workspace) -> List[Recom
     created_recs = []
     dashboard_data = get_stockout_risk_dashboard_data(workspace, limit=15)
     products_at_risk = dashboard_data.get("products_at_risk", [])
+    now = timezone.now()
+    evaluated_on = timezone.localdate().isoformat()
 
     for prod_info in products_at_risk:
         if prod_info["risk_level"] not in ("OUT_OF_STOCK", "HIGH"):
             continue
+        inventory = prod_info.get("inventory_assessment") or {}
+        demand = prod_info.get("demand_assessment") or {}
+        if not isinstance(inventory, dict):
+            inventory = {}
+        if not isinstance(demand, dict):
+            demand = {}
+        if inventory.get("status") in ("MISSING_BALANCE", "NEGATIVE_BALANCE") or prod_info["current_stock"] < 0:
+            # Missing/invalid balances cannot justify an urgent stockout claim.
+            continue
+        from apps.recommendations.services import _stockout_evidence_is_current
+        current_evidence = _stockout_evidence_is_current(prod_info)
 
         prod_id = prod_info["product_id"]
         source_ref = f"product:{prod_id}"
@@ -173,6 +197,8 @@ def evaluate_retail_stockout_recommendations(workspace: Workspace) -> List[Recom
             recommendation_type=RecommendationType.RETAIL_STOCKOUT_RISK,
             status=RecommendationStatus.PENDING,
             source_references__contains=[source_ref],
+            supporting_data__evaluated_on=evaluated_on,
+            expires_at__gt=now,
         ).first()
 
         if existing:
@@ -184,19 +210,25 @@ def evaluate_retail_stockout_recommendations(workspace: Workspace) -> List[Recom
         days_left = prod_info["days_to_stockout"]
         lead_time = prod_info["lead_time_days"]
         suggested_qty = prod_info["suggested_reorder_quantity"]
-        prio = RecommendationPriority.CRITICAL if prod_info["risk_level"] == "OUT_OF_STOCK" else RecommendationPriority.HIGH
+        recorded_zero = inventory.get("verified_record") is True and inventory.get("status") == "RECORDED_BALANCE" and curr_stock == 0
+        prio = (RecommendationPriority.CRITICAL if recorded_zero else RecommendationPriority.HIGH) if current_evidence else RecommendationPriority.MEDIUM
+        assumptions = f"Tham số kịch bản: thời gian nhập {lead_time} ngày, đệm an toàn {prod_info['safety_buffer_days']} ngày; chưa có cam kết nhà cung cấp đã được xác minh."
 
-        if prod_info["risk_level"] == "OUT_OF_STOCK":
-            what_text = f"Đề xuất nhập thêm khẩn cấp sản phẩm {p_name} (đề xuất: {suggested_qty} {prod_info['unit']})."
-            why_text = f"Sản phẩm hiện tại đã hết hàng (tồn kho: 0 {prod_info['unit']}) trong khi nhu cầu dự báo đạt {pred_demand} {prod_info['unit']}/ngày và thời gian giao hàng là {lead_time} ngày."
+        if not current_evidence:
+            what_text = f"Rà soát tồn kho và xác minh nhu cầu sản phẩm {p_name} trước khi quyết định nhập; đề xuất tham khảo chưa đủ căn cứ chấp thuận."
+            stock_text = f"Số dư tồn kho đã ghi nhận bằng 0 {prod_info['unit']}. " if recorded_zero else "Chưa đủ bằng chứng tồn kho/nhu cầu hiện hành. "
+            why_text = stock_text + f"Nhu cầu heuristic {pred_demand} {prod_info['unit']}/ngày chỉ là ước tính lịch sử/kịch bản, không phải dự báo XGBoost đã kiểm chứng. " + str(demand.get("message") or "Nguồn/độ mới chưa được xác minh.") + " " + assumptions
+        elif prod_info["risk_level"] == "OUT_OF_STOCK":
+            what_text = f"Rà soát phương án nhập sản phẩm {p_name} (lượng tham khảo: {suggested_qty} {prod_info['unit']}); chưa tự thực hiện nghiệp vụ."
+            why_text = f"Số dư tồn kho đã ghi nhận bằng 0 {prod_info['unit']}; nhu cầu heuristic từ giao dịch hoàn tất đạt {pred_demand} {prod_info['unit']}/ngày, không phải dự báo XGBoost đã kiểm chứng. " + assumptions
         else:
-            what_text = f"Đề xuất tạo đơn nhập hàng {p_name} (số lượng đề xuất: {suggested_qty} {prod_info['unit']})."
-            why_text = f"Dự báo nhu cầu {pred_demand} {prod_info['unit']}/ngày nhưng tồn hiện tại chỉ còn {curr_stock} {prod_info['unit']} (dự kiến hết hàng trong {days_left} ngày), trong khi thời gian nhập hàng trung bình là {lead_time} ngày."
+            what_text = f"Rà soát phương án nhập {p_name} (lượng tham khảo: {suggested_qty} {prod_info['unit']}); chỉ lập nghiệp vụ sau khi xác nhận điều kiện."
+            why_text = f"Nhu cầu heuristic {pred_demand} {prod_info['unit']}/ngày và số dư tồn đã lưu {curr_stock} {prod_info['unit']} cho kịch bản cạn tồn sau {days_left} ngày; không bảo đảm ngày hết hàng hoặc chất lượng XGBoost. " + assumptions
 
         rec = Recommendation.objects.create(
             workspace=workspace,
             recommendation_type=RecommendationType.RETAIL_STOCKOUT_RISK,
-            title=f"Cảnh báo nguy cơ hết hàng: {p_name}",
+            title=f"Cảnh báo nguy cơ hết hàng: {p_name}" if current_evidence else f"Rà soát dữ liệu tồn kho/nhu cầu: {p_name}",
             priority=prio,
             status=RecommendationStatus.PENDING,
             explanation={
@@ -214,10 +246,16 @@ def evaluate_retail_stockout_recommendations(workspace: Workspace) -> List[Recom
                     "safety_buffer_days": prod_info["safety_buffer_days"],
                     "suggested_reorder_quantity": suggested_qty,
                     "risk_level": prod_info["risk_level"],
+                    "inventory_assessment": inventory,
+                    "demand_assessment": demand,
+                    "evaluated_on": evaluated_on,
+                    "current_evidence": current_evidence,
+                    "assumptions": assumptions,
                 },
-                "expected_effect": "Giảm nguy cơ gián đoạn bán hàng, đảm bảo cung ứng sản phẩm liên tục và duy trì doanh thu bán lẻ.",
+                "expected_effect": "Hỗ trợ quyết định sau khi đối chiếu nguồn; không cam kết ngày hết hàng, cung ứng hoặc doanh thu.",
             },
-            supporting_data=prod_info,
+            supporting_data={**prod_info, "evaluated_on": evaluated_on},
+            expires_at=now + datetime.timedelta(days=1),
             source_references=[source_ref],
         )
         created_recs.append(rec)

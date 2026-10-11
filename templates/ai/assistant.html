@@ -9,7 +9,7 @@
         <p class="page-subtitle">Tra cứu tài liệu nội bộ và số liệu vận hành. Đối chiếu nguồn dẫn trước khi ra quyết định.</p>
     </div>
     <div class="header-actions">
-        <span class="badge badge-success">● Grounded RAG & Telemetry Thời gian thực</span>
+        <span class="badge">Tra cứu có nguồn · Chế độ tạo câu trả lời hiển thị theo từng lượt</span>
         <a href="/noibo/knowledge/" class="btn btn-secondary">📚 Quản lý Tài liệu</a>
     </div>
 </div>
@@ -23,7 +23,7 @@
         <div class="sidebar-section-title">Lịch sử hội thoại</div>
         <ul class="session-list" id="session-list">
             {% for s in sessions %}
-            <li class="session-item {% if forloop.first %}active{% endif %}" data-session-id="{{ s.id }}">
+            <li class="session-item" role="button" tabindex="0" aria-label="Mở hội thoại {{ s.title }}" data-session-id="{{ s.id }}">
                 <span class="session-icon">💬</span>
                 <span class="session-title">{{ s.title|truncatechars:28 }}</span>
             </li>
@@ -58,7 +58,7 @@
                             <button class="chip" data-query="Kỹ thuật viên nào phù hợp nhất với ticket này theo khoảng cách GIS và chuyên môn?">👨‍💻 Gợi ý kỹ thuật viên GIS</button>
                             {% else %}
                             <button class="chip" data-query="Sản phẩm laptop nào đang có nguy cơ cháy hàng tại chi nhánh Quận 1?">💻 Laptop nguy cơ cháy hàng</button>
-                            <button class="chip" data-query="Quy chuẩn đổi mới sản phẩm lỗi ban đầu DOA trong 72 giờ và chính sách bảo hành RMA?">🛡️ Đổi mới DOA 72h & RMA</button>
+                            <button class="chip" data-query="Tài liệu nội bộ có quy định nào về đổi trả DOA và bảo hành RMA? Đã có bằng chứng phê duyệt công bố chưa?">🛡️ Tra cứu đổi trả & bảo hành</button>
                             {% endif %}
                         </div>
                     </div>
@@ -290,7 +290,13 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    let currentSessionId = document.querySelector(".session-item.active")?.dataset.sessionId || null;
+    // Start in a new conversation, never silently submit to invisible history.
+    let currentSessionId = null;
+    let historyController = null;
+    let historyRevision = 0;
+    let sending = false;
+    let loadingHistory = false;
+    const workspaceId = "{{ active_workspace.id|escapejs }}";
     const chatMessages = document.getElementById("chat-messages");
     const chatForm = document.getElementById("chat-form");
     const chatInput = document.getElementById("chat-input");
@@ -298,6 +304,66 @@ document.addEventListener("DOMContentLoaded", function() {
     const btnText = document.getElementById("btn-text");
     const btnSpinner = document.getElementById("btn-spinner");
     const citationsBody = document.getElementById("citations-body");
+
+    async function loadHistory(item) {
+        if (sending) return;
+        const revision = ++historyRevision;
+        historyController?.abort();
+        historyController = new AbortController();
+        const controller = historyController;
+        loadingHistory = true;
+        btnSend.disabled = true;
+        chatMessages.setAttribute("aria-busy", "true");
+        const notice = document.createElement("p");
+        notice.setAttribute("role", "status");
+        notice.textContent = "Đang tải hội thoại…";
+        chatMessages.appendChild(notice);
+        const timer = setTimeout(() => controller.abort(), 15000);
+        try {
+            const response = await fetch(`/api/v1/ai/sessions/${item.dataset.sessionId}/messages/`, {
+                headers: {"X-Workspace-ID": workspaceId}, signal: controller.signal
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success || !Array.isArray(result.data?.messages)) throw new Error("HISTORY_UNAVAILABLE");
+            if (revision !== historyRevision) return;
+            chatMessages.replaceChildren();
+            result.data.messages.forEach(message => {
+                const role = String(message.role || "").toLowerCase();
+                // SYSTEM messages are grounding context, not customer-facing history.
+                if (role !== "user" && role !== "assistant") return;
+                appendMessage(role, role === "user" ? "👤" : "🤖", message.content);
+            });
+            const last = [...result.data.messages].reverse().find(message =>
+                String(message.role || "").toLowerCase() === "assistant");
+            renderCitations(last?.sources || [], last?.tools_used || []);
+            currentSessionId = result.data.session_id;
+            document.querySelectorAll(".session-item").forEach(s => {
+                s.classList.toggle("active", s === item);
+                s.setAttribute("aria-pressed", String(s === item));
+            });
+        } catch (error) {
+            if (revision === historyRevision) {
+                notice.textContent = "Chưa tải được hội thoại. Vui lòng chọn lại để thử; nội dung hiện tại được giữ nguyên.";
+            }
+        } finally {
+            clearTimeout(timer);
+            if (revision === historyRevision) {
+                loadingHistory = false;
+                btnSend.disabled = false;
+                chatMessages.removeAttribute("aria-busy");
+                if (notice.textContent === "Đang tải hội thoại…") notice.remove();
+            }
+        }
+    }
+    document.querySelectorAll(".session-item").forEach(item => {
+        item.setAttribute("aria-pressed", "false");
+        item.addEventListener("click", () => loadHistory(item));
+        item.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault(); loadHistory(item);
+            }
+        });
+    });
 
     // Click suggestion chips
     document.querySelectorAll(".chip").forEach(chip => {
@@ -309,8 +375,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // New Chat Button
     document.getElementById("btn-new-chat").addEventListener("click", () => {
+        if (sending) return;
+        ++historyRevision;
+        historyController?.abort();
+        loadingHistory = false;
+        btnSend.disabled = false;
+        chatMessages.removeAttribute("aria-busy");
         currentSessionId = null;
-        document.querySelectorAll(".session-item").forEach(s => s.classList.remove("active"));
+        document.querySelectorAll(".session-item").forEach(s => {s.classList.remove("active"); s.setAttribute("aria-pressed", "false");});
         chatMessages.innerHTML = `
             <div class="message-row assistant">
                 <div class="message-avatar">🤖</div>
@@ -328,7 +400,8 @@ document.addEventListener("DOMContentLoaded", function() {
     chatForm.addEventListener("submit", async function(e) {
         e.preventDefault();
         const text = chatInput.value.trim();
-        if (!text) return;
+        if (!text || sending || loadingHistory) return;
+        sending = true;
 
         // Append User Message
         appendMessage("user", "👤", text);
@@ -346,6 +419,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 headers: {
                     "Content-Type": "application/json",
                     "X-CSRFToken": csrfToken || "",
+                    "X-Workspace-ID": workspaceId,
                 },
                 body: JSON.stringify({
                     message: text,
@@ -379,8 +453,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 appendMessage("assistant", "⚠️", resData.error?.message || "Đã xảy ra lỗi khi kết nối với trợ lý.");
             }
         } catch (err) {
-            appendMessage("assistant", "⚠️", "Không thể kết nối đến máy chủ AI: " + err.message);
+            appendMessage("assistant", "⚠️", "Không thể kết nối đến máy chủ AI. Vui lòng thử lại.");
+            if (!chatInput.value) chatInput.value = text;
         } finally {
+            sending = false;
             btnSend.disabled = false;
             btnText.style.display = "inline-block";
             btnSpinner.style.display = "none";
@@ -425,13 +501,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (sources && sources.length > 0) {
             sources.forEach((s, idx) => {
-                const pageText = s.page_number ? ` • Trang ${s.page_number}` : "";
+                const pageText = s.page_number ? ` • Trang ${escapeHtml(s.page_number)}` : "";
                 const simScore = Math.round(s.similarity * 100);
                 html += `
                     <div class="citation-card">
-                        <span class="citation-badge">Khớp ${simScore}%</span>
+                        <span class="citation-badge">Điểm truy xuất ${simScore}% · Không phải độ chính xác</span>
                         <div style="font-weight: 600; color: var(--text-color);">${escapeHtml(s.document_title)}</div>
-                        <div class="text-muted" style="font-size: 0.75rem; margin-top: 0.2rem;">Đoạn trích #${s.chunk_id}${pageText}</div>
+                        <div class="text-muted" style="font-size: 0.75rem; margin-top: 0.2rem;">Đoạn trích #${escapeHtml(s.chunk_id)}${pageText}</div>
                     </div>
                 `;
             });

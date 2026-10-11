@@ -473,3 +473,31 @@ Forecast async contract (2026-10-01): `FORECAST_ASYNC_ENABLED` defaults to DEBUG
 Production must explicitly enable it only with an operated worker; disabled
 async requests are rejected before creating configs/jobs. Render Free remains
 synchronous-only by owner decision; no paid worker provisioned.
+
+## Live-audit behavioral corrections — 2026-10-11
+
+Order approval uses the same canonical state transitions, locks, stock release
+and domain audit as UI/API. AI selectors never substitute the first customer,
+product, employee, category or ticket for an explicit missing/ambiguous target.
+Scheduling requires a ticket; parsing partial IDs/prices is rejected. Service
+inquiry dedup reuses request_number uniqueness/atomic writes and PRG, no new model.
+
+Revenue means COMPLETED order totals; item revenue/current cost estimates are
+separate from historically reconciled COGS. Personnel skills are not verified
+certifications. GIS summaries are declared1km PostGIS grid counts, not invented
+regions/ML clusters. Stockout missing/negative balances and unassessed demand
+are unknown, not safe stock. Service summaries include full status counts.
+Legacy policy chunks default UNVERIFIED; citations do not establish commercial
+publication approval. Numeric conflict guards are conservative, not full semantic
+entailment. Source/provider provenance and deterministic/no-key remain explicit.
+
+Forecast/recommendation metadata distinguishes historical/stale snapshots,
+metric-specific baseline results, R² warnings and advisory vs executable actions.
+Telemetry displays snapshot/runtime queries and HTTP health, not fabricated
+accuracy/compliance/inference measurements. Assistant history is owner/workspace
+scoped, with race/timeout handling and escaped source metadata.
+
+Owner-approved scope: Render Free/no live LLM, historical academic data, labeled
+AI illustration when real ProductImage missing, strict HOME_DELIVERY activation
+after stock preflight and deploy. No transaction fabrication, schema/migration
+change, data reset or97-ledger change. See AUDIT_REPAIR_RESULTS_2026_10_11.md.

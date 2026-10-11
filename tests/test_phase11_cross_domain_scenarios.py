@@ -170,10 +170,15 @@ class Phase11CrossDomainScenarioTests(TestCase):
             created_by=self.manager_user,
         )
 
+        # This scenario verifies CURRENT operational propagation. Fixed August
+        # dates eventually become stale and must not bypass freshness guards;
+        # historical-snapshot behavior is covered by dedicated regressions.
+        csv_day_one = timezone.localdate() - timedelta(days=2)
+        csv_day_two = timezone.localdate() - timedelta(days=1)
         csv_content = (
             "so_hd,ma_kh,ngay,tien\n"
-            "ORD-P11-001,CUST-CANON-01,2026-08-20,50000000\n"
-            "ORD-P11-002,CUST-CANON-01,2026-08-21,25000000\n"
+            f"ORD-P11-001,CUST-CANON-01,{csv_day_one.isoformat()},50000000\n"
+            f"ORD-P11-002,CUST-CANON-01,{csv_day_two.isoformat()},25000000\n"
         ).encode("utf-8")
 
         import_job = execute_import_job(
@@ -218,6 +223,8 @@ class Phase11CrossDomainScenarioTests(TestCase):
             ord_obj.status = OrderStatus.COMPLETED
             ord_obj.save(update_fields=["branch", "status"])
         self.assertEqual(orders[0].total_amount, Decimal("50000000"))
+        self.assertEqual(orders[0].order_date, csv_day_one)
+        self.assertEqual(orders[1].order_date, csv_day_two)
 
         # Step 4: Verify GIS Branch Analytics reflects network
         branch_geojson = get_retail_branches_geojson(workspace=self.retail_ws)
@@ -240,6 +247,7 @@ class Phase11CrossDomainScenarioTests(TestCase):
         self.assertIn("what", pending_rec.explanation)
         self.assertIn("why", pending_rec.explanation)
         self.assertIn("evidence", pending_rec.explanation)
+        self.assertEqual(pending_rec.supporting_data["period_end"], timezone.localdate().isoformat())
 
         # Step 7: Grounded AI Query reads retail telemetry & recommendations
         answer_result = answer_grounded_query(

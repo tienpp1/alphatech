@@ -1541,3 +1541,15 @@ INTEGRITY, kiểm tra 22 cạnh ERD với Django model cùng ranh giới sơ đ�
 nhất giữa gửi, polling và tải lại. Lần full 1207 test đầu ngày 09/10 có 1 failure
 do danh mục này thiếu hai tên trên; không phải lỗi chức năng hoặc test bị skip.
 Kết quả chạy lại được ghi riêng trong báo cáo chốt 09/10, không sửa log lần lỗi.
+
+### Bổ sung inventory audit 11/10/2026 — không thay sổ 97
+
+- `test_ai_history_audit.py` — lịch sử trợ lý theo owner/workspace/RBAC.
+- `test_audit_governance_tools_regressions.py` — canonical approval, lookup, grid và số liệu tool.
+- `test_forecast_recommendation_audit_repairs.py` — đối sánh, freshness, nhãn telemetry và action contract.
+- `test_live_audit_rag_collaboration.py` — grounding, authority, parser, collaboration và check/drift.
+- `test_public_audit_repairs.py` — dữ liệu form, dedup, ảnh minh họa/static và layout checkout.
+- `test_stockout_source_freshness.py` — missing/negative inventory, nguồn lịch sử và recommendation evidence gate.
+
+Đây là danh mục source, không tự chứng nhận PASS. Kết quả thực thi, kể cả lỗi
+trung gian/full suite, ghi riêng tại AUDIT_REPAIR_RESULTS_2026_10_11.md.

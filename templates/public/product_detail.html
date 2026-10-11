@@ -1,4 +1,5 @@
 {% extends "public/base_public.html" %}
+{% load static %}
 
 {% block title %}{{ product.name }} | ABC Tech Store{% endblock %}
 
@@ -51,18 +52,10 @@
                 {% if product.primary_image and product.primary_image.image %}
                 <img id="main-product-img" src="{{ product.primary_image.image.url }}" alt="{{ product.name }}" style="width: 100%; height: 100%; object-fit: contain; padding: 1.5rem; transition: all 0.25s ease;">
                 {% else %}
-                <div style="text-align: center; padding: 2.5rem;">
-                    <div style="width: 72px; height: 72px; border-radius: 18px; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--pub-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                            <line x1="8" y1="21" x2="16" y2="21"></line>
-                            <line x1="12" y1="17" x2="12" y2="21"></line>
-                        </svg>
-                    </div>
-                    <span style="font-size: 0.85rem; font-weight: 700; color: var(--pub-primary); background: var(--pub-primary-light); padding: 4px 12px; border-radius: 9999px;">
-                        {{ product.category.name|default:"Thiết bị công nghệ" }}
-                    </span>
-                </div>
+                <figure class="product-ai-illustration product-ai-illustration-detail">
+                    <img src="{% static 'public/images/technology-illustration-ai-v1.png' %}" decoding="async" alt="Ảnh minh họa AI về nhóm thiết bị công nghệ — không phải ảnh thực tế của {{ product.name }}">
+                    <figcaption>Ảnh minh họa AI — không phải ảnh sản phẩm thực tế.<br><span>Chưa có ảnh sản phẩm. Vui lòng đối chiếu đúng mã hàng trước khi mua.</span></figcaption>
+                </figure>
                 {% endif %}
             </div>
 

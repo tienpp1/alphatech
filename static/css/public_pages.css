@@ -38,12 +38,12 @@
     gap: 8px;
     font-family: var(--pub-mono-font, 'JetBrains Mono', monospace);
     font-size: 0.78rem;
-    color: #94A3B8;
+    color: #CBD5E1;
     margin-bottom: 0.75rem;
 }
 
 .page-breadcrumb a {
-    color: #94A3B8;
+    color: #CBD5E1;
     text-decoration: none;
     transition: color 0.15s ease;
 }
@@ -92,6 +92,14 @@
     margin: 0 0 0.5rem;
     line-height: 1.25;
 }
+
+/* Legacy template names share the same dark-hero text roles. The decorative
+   grid must remain empty; actual text belongs in page-hero-container. */
+.page-hero-title { color: #FFFFFF; margin: 0 0 .5rem; }
+.page-hero-subtitle { color: #CBD5E1; margin: 0; }
+.page-hero-banner .page-domain-tag.retail { background: #152742; color: #93C5FD; }
+.page-hero-banner .page-domain-tag.services { background: #12333F; color: #67E8F9; }
+.page-hero-banner .page-domain-tag.general { background: #12352D; color: #6EE7B7; }
 
 .page-subtitle-main {
     font-size: 1.02rem;
@@ -234,6 +242,42 @@
     gap: 6px;
     font-size: 0.76rem;
     font-family: var(--pub-mono-font, 'JetBrains Mono', monospace);
+}
+
+/* Generic illustration must never be mistaken for the photographed SKU. */
+.product-ai-illustration {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: #F8FAFC;
+}
+.product-ai-illustration img {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    object-fit: contain;
+}
+.product-ai-illustration figcaption {
+    flex-shrink: 0;
+    padding: 6px 9px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: #334155;
+    background: #F1F5F9;
+    text-align: center;
+    font-weight: 600;
+}
+.product-ai-illustration figcaption span {
+    font-weight: 400;
+}
+.product-ai-illustration-detail figcaption {
+    padding: 12px;
+    font-size: 0.88rem;
+}
+.pub-product-card:hover .product-ai-illustration img {
+    transform: none;
 }
 
 .pub-sku-label {
@@ -759,6 +803,9 @@
     background: transparent;
     padding: 0;
 }
+.copilot-inline-bar { max-width: 1280px; margin: 0 auto; padding: .75rem 1.5rem; text-align: right; }
+.copilot-inline-launcher { min-height: 44px; padding: .5rem .9rem; border: 1px solid #CBD5E1; border-radius: 8px; background: #EFF6FF; color: #1D4ED8; font: inherit; font-size: .85rem; cursor: pointer; }
+.copilot-launcher:focus-visible, .copilot-inline-launcher:focus-visible { outline: 3px solid #38BDF8; outline-offset: 4px; }
 
 .copilot-orb {
     width: 58px;
@@ -897,6 +944,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
 }
 
 .copilot-chat-close:hover {
@@ -966,6 +1015,12 @@
     background: rgba(56, 189, 248, 0.2);
     border-color: #38BDF8;
     color: #FFFFFF;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .copilot-ring, .copilot-badge-hint, .copilot-chat-modal { animation: none; }
+    .copilot-orb { transition: none; }
+    .copilot-launcher:hover .copilot-orb { transform: none; }
 }
 
 .copilot-typing {
@@ -1329,21 +1384,38 @@
    ========================================================================== */
 .checkout-grid-layout {
     display: grid;
-    grid-template-columns: 1.8fr 1.2fr;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
     gap: 2.5rem;
     align-items: start;
 }
 
+/* Native form controls and flex-card text may have intrinsic widths larger
+   than a phone column. Let these specific children shrink, without clipping. */
+.checkout-grid-layout > *,
+.checkout-form-grid-2 > *,
+.checkout-delivery-switcher > * {
+    min-width: 0;
+}
+.checkout-grid-layout .pub-form-control,
+.checkout-grid-layout .pub-select-custom {
+    min-width: 0;
+    max-width: 100%;
+}
+.checkout-delivery-card > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .checkout-form-grid-2 {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
     margin-bottom: 1.25rem;
 }
 
 .checkout-delivery-switcher {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 1.5rem;
 }
@@ -1370,7 +1442,7 @@
 
 @media (max-width: 991px) {
     .checkout-grid-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         gap: 1.75rem;
     }
 
@@ -1384,7 +1456,7 @@
     .checkout-form-grid-2,
     .checkout-delivery-switcher,
     .service-form-grid-2 {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: minmax(0, 1fr) !important;
         gap: 0.85rem !important;
     }
 

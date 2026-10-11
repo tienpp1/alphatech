@@ -1,4 +1,5 @@
 {% extends "public/base_public.html" %}
+{% load static %}
 
 {% block title %}Sản phẩm công nghệ chính hãng | ABC Tech Store{% endblock %}
 
@@ -94,14 +95,10 @@
                     {% if p.primary_image and p.primary_image.image %}
                     <img src="{{ p.primary_image.image.url }}" alt="{{ p.name }}">
                     {% else %}
-                    <div class="product-thumb-placeholder">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                            <line x1="8" y1="21" x2="16" y2="21"></line>
-                            <line x1="12" y1="17" x2="12" y2="21"></line>
-                        </svg>
-                        <span>ABC TECH HARDWARE</span>
-                    </div>
+                    <figure class="product-ai-illustration">
+                        <img src="{% static 'public/images/technology-illustration-ai-v1.png' %}" loading="lazy" decoding="async" alt="Ảnh minh họa AI về nhóm thiết bị công nghệ — không phải ảnh thực tế của {{ p.name }}">
+                        <figcaption>Ảnh minh họa AI — không phải ảnh sản phẩm thực tế.<br><span>Chưa có ảnh sản phẩm.</span></figcaption>
+                    </figure>
                     {% endif %}
 
                 </div>
@@ -110,9 +107,9 @@
                     <span style="font-size: 0.76rem; font-weight: 700; color: var(--pub-primary); background: var(--pub-primary-light); padding: 3px 8px; border-radius: 6px;">
                         {{ p.category.name|default:"Công nghệ" }}
                     </span>
-                    <span style="font-family: var(--pub-mono-font); font-size: 0.74rem; color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                        <svg width="8" height="8" viewBox="0 0 8 8" fill="#10B981" aria-hidden="true"><circle cx="4" cy="4" r="4"/></svg>
-                        Còn hàng
+                    <span style="font-family: var(--pub-mono-font); font-size: 0.74rem; color: #047857; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="#047857" aria-hidden="true"><circle cx="4" cy="4" r="4"/></svg>
+                        Tồn kho cần xác nhận
                     </span>
                 </div>
 
@@ -127,7 +124,7 @@
                 </div>
 
                 <p style="font-size: 0.88rem; color: var(--pub-text-muted); margin-bottom: 1rem; line-height: 1.5;">
-                    {{ p.description|default:"Thiết bị công nghệ chính hãng với chất lượng đảm bảo và bảo hành chu đáo."|truncatechars:90 }}
+                    {{ p.description|default:"Xem thông số và liên hệ để xác nhận điều kiện áp dụng cho đúng mã hàng."|truncatechars:90 }}
                 </p>
             </div>
 

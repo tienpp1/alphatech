@@ -12,6 +12,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--workspace', required=True, help='Workspace code, not a default database fallback.')
+        parser.add_argument('--strict', action='store_true', help='Exit non-zero for incomplete/invalid configured stock; never changes the policy.')
 
     def handle(self, *args, **options):
         workspace = Workspace.objects.filter(code=options['workspace'], is_active=True,
@@ -36,3 +37,5 @@ class Command(BaseCommand):
         report['data_complete'] = bool(products) and all(
             b['active_branch_found'] and not b['missing_pairs'] and not b['negative_stock'] for b in report['branches'])
         self.stdout.write(json.dumps(report, ensure_ascii=False))
+        if options['strict'] and not report['data_complete']:
+            raise CommandError('Configured fulfillment inventory is incomplete or invalid; policy was not changed.')

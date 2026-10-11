@@ -76,4 +76,7 @@ class InternalAccessMiddleware:
             if request.path == "/noibo/" and not is_public_only_session(request.user, request.session):
                 from django.shortcuts import redirect
                 return redirect("/tai-khoan/?notice=customer_only")
+            if not request.path.startswith("/api/") and "text/html" in request.headers.get("Accept", ""):
+                from django.shortcuts import render
+                return render(request, "accounts/internal_denied.html", status=403)
             return JsonResponse({"detail": "Cổng nội bộ chỉ dành cho ADMIN, MANAGER và EMPLOYEE đăng nhập bằng mật khẩu."}, status=403)

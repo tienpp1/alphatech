@@ -5,6 +5,8 @@ services:
     buildCommand: bash build.sh
     startCommand: gunicorn config.wsgi:application
     envVars:
+      - key: HOME_DELIVERY_FULFILLMENT_POLICY
+        value: strict
       - key: DEBUG
         value: "False"
       - key: DJANGO_SETTINGS_MODULE

@@ -22,6 +22,7 @@ from apps.forecasting.serializers import (
     ForecastRunSerializer,
     ForecastResultSerializer,
     TrainForecastRequestSerializer,
+    ForecastChartQuerySerializer,
 )
 from apps.forecasting.services import (
     execute_training_job,
@@ -260,15 +261,18 @@ class ForecastChartDataAPIView(APIView):
             return api_response(error="Permission denied", status_code=status.HTTP_403_FORBIDDEN)
 
         target_type = request.query_params.get("target_type")
-        history_days = int(request.query_params.get("history_days", 60))
-        horizon_days = int(request.query_params.get("horizon_days", 14))
+        query = ForecastChartQuerySerializer(data=request.query_params)
+        if not query.is_valid():
+            return api_response(error=query.errors, status_code=status.HTTP_400_BAD_REQUEST)
+        values = query.validated_data
 
         try:
             data = get_forecast_chart_data(
                 workspace=ws,
                 target_type=target_type,
-                history_days=history_days,
-                horizon_days=horizon_days,
+                history_days=values["history_days"],
+                horizon_days=values["horizon_days"],
+                dimensions={key: values[key] for key in ("product_id", "category_id", "branch_id") if key in values},
             )
             return api_response(data=data)
         except Exception as e:

@@ -5,6 +5,7 @@ Web UI Views for Predictive Analytics & Forecasting Dashboard.
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
+from apps.forecasting.serializers import ForecastChartQuerySerializer
 
 from apps.workspaces.services import resolve_authorized_ui_workspace
 from apps.accounts.services import has_workspace_permission
@@ -60,9 +61,22 @@ def forecasting_dashboard_view(request: HttpRequest) -> HttpResponse:
     configs = ForecastModelConfig.objects.for_workspace(workspace).filter(target_type=selected_target)
     runs = ForecastRun.objects.for_workspace(workspace).select_related("model_config").filter(target_type=selected_target).order_by("-created_at")[:10]
 
+    query = ForecastChartQuerySerializer(data={key: value for key, value in request.GET.items() if value != ""})
+    query.is_valid()
+    dimensions = {key: query.validated_data[key] for key in ("product_id", "category_id", "branch_id")
+                  if key in query.validated_data} if not query.errors else {}
+    products, categories, branches = [], [], []
+    if selected_target == TargetType.RETAIL_PRODUCT_DEMAND:
+        from apps.retail.models import Product, Category, Branch
+        products = Product.objects.for_workspace(workspace).filter(is_active=True, deleted_at__isnull=True).order_by("name")
+        categories = Category.objects.for_workspace(workspace).order_by("name")
+        branches = Branch.objects.for_workspace(workspace).order_by("name")
     # Chart data
     try:
-        chart_data = get_forecast_chart_data(workspace, target_type=selected_target)
+        if query.errors:
+            raise ValueError("Bộ lọc không hợp lệ: các mã phải là số nguyên dương.")
+        chart_data = get_forecast_chart_data(workspace, target_type=selected_target, horizon_days=90,
+                                           dimensions=dimensions)
     except Exception as e:
         chart_data = {
             "error": str(e),
@@ -83,5 +97,7 @@ def forecasting_dashboard_view(request: HttpRequest) -> HttpResponse:
         "runs": runs,
         "chart_data": chart_data,
         "can_manage": can_manage,
+        "products": products, "categories": categories, "branches": branches,
+        "selected_dimensions": dimensions,
     }
     return render(request, "forecasting/index.html", context)

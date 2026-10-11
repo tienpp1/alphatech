@@ -338,6 +338,7 @@ class InternalNotificationsTestCase(TestCase):
                     "service_id": str(self.service.id),
                     "description": "Cần kiểm tra hệ thống máy chủ bị quá tải nhiệt.",
                 },
+                follow=True,
             )
         self.assertEqual(resp.status_code, 200)
 

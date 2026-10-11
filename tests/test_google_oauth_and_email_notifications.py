@@ -394,7 +394,7 @@ class GoogleOAuthAndEmailNotificationsTestCase(TestCase):
             "preferred_time": "Trong ngày",
         }
         with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.post("/yeu-cau-dich-vu/", payload)
+            response = self.client.post("/yeu-cau-dich-vu/", payload, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn("tiếp nhận thành công", response.content.decode("utf-8").lower())
 
@@ -412,7 +412,7 @@ class GoogleOAuthAndEmailNotificationsTestCase(TestCase):
             response = self.client.post("/yeu-cau-dich-vu/", {
                 "customer_name": "Khách", "email": "service-form@example.com", "phone": "0909123456",
                 "service_id": str(self.service.id), "description": "Máy chủ cần kiểm tra.",
-            })
+            }, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual({tuple(message.to) for message in mail.outbox}, {
             ("existing_customer@gmail.com",), ("service-form@example.com",),

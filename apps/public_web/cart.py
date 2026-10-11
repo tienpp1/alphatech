@@ -205,6 +205,10 @@ class ShoppingCart:
         - STORE_PICKUP: 0 VND
         - HOME_DELIVERY: 30,000 VND (0 VND if subtotal >= 5,000,000 VND)
         """
+        # A stale or empty cart is not a shipment, even when a caller supplies
+        # a subtotal. get_items() also removes deleted/inactive references.
+        if not self.get_items():
+            return Decimal("0.00")
         if delivery_method == "STORE_PICKUP":
             return Decimal("0.00")
         if subtotal is None:

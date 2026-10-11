@@ -9,7 +9,8 @@ from decimal import Decimal
 from typing import Dict, Any, List, Optional, Tuple
 import pandas as pd
 import numpy as np
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Min, Max, Count, Q
+from django.http import Http404
 from django.utils import timezone
 
 from apps.workspaces.models import Workspace
@@ -25,6 +26,44 @@ from apps.retail.models import (
 
 DEFAULT_LEAD_TIME_DAYS = 7
 DEFAULT_SAFETY_BUFFER_DAYS = 3
+DEMAND_HISTORY_MAX_AGE_DAYS = 7
+
+
+def _inventory_assessment(quantity, record_count=None, has_negative_balance=False):
+    """A missing row is unknown inventory, never proof of zero on hand."""
+    status = "NEGATIVE_BALANCE" if quantity < 0 or has_negative_balance else (
+        "SUPPLIED_ESTIMATE" if record_count is None else
+        "MISSING_BALANCE" if record_count == 0 else "RECORDED_BALANCE")
+    return {
+        "status": status,
+        "verified_record": status == "RECORDED_BALANCE",
+        "source_record_count": record_count,
+        "observed_quantity": int(quantity),
+        "as_of": timezone.localdate().isoformat(),
+        "message": "Chưa ghi nhận tồn kho; giá trị 0 dùng trong phép tính không chứng minh đã hết hàng." if status == "MISSING_BALANCE" else
+        "Có số dư tồn kho âm; cần đối soát, không dùng làm kết luận vận hành." if status == "NEGATIVE_BALANCE" else
+        "Tồn kho đầu vào là giá trị giả định/chưa đối chiếu bản ghi; chỉ dùng cho kịch bản tham khảo." if status == "SUPPLIED_ESTIMATE" else
+        "Theo số dư tồn kho đã lưu; không phải kết quả kiểm kê thực địa hoặc xác nhận đầy đủ mọi chi nhánh.",
+    }
+
+
+def _demand_assessment(method, today, first_date=None, last_date=None):
+    """Provenance for a heuristic estimate, not a trained XGBoost forecast."""
+    age = (today - last_date).days if last_date else None
+    status = "NO_DATA" if last_date is None else "STALE_HISTORY" if age > DEMAND_HISTORY_MAX_AGE_DAYS else "CURRENT_HISTORY"
+    return {
+        "method": method,
+        "status": status,
+        "as_of": today.isoformat(),
+        "first_observation_date": first_date.isoformat() if first_date else None,
+        "latest_observation_date": last_date.isoformat() if last_date else None,
+        "age_days": age,
+        "max_age_days": DEMAND_HISTORY_MAX_AGE_DAYS,
+        "operationally_validated": False,
+        "message": "Chưa có giao dịch hoàn tất để ước tính nhu cầu; không thể kết luận tồn kho an toàn." if status == "NO_DATA" else
+        "Ước tính từ lịch sử đã cũ; không phải dự báo XGBoost cho vận hành hiện tại." if status == "STALE_HISTORY" else
+        "Ước tính heuristic từ lượng bán đã ghi nhận, không phải kết quả mô hình XGBoost đã được đánh giá.",
+    }
 
 
 def get_product_historical_timeseries(
@@ -37,13 +76,14 @@ def get_product_historical_timeseries(
     Extracts daily sales quantity for a specific product and optional branch
     over the last N days. Reindexes into a continuous date series.
     """
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_date = today - datetime.timedelta(days=days)
 
     qs = OrderItem.objects.filter(
         order__workspace=workspace,
         order__status=OrderStatus.COMPLETED,
         product_id=product_id,
+        product__workspace=workspace,
         order__order_date__gte=start_date,
         order__order_date__lte=today,
     )
@@ -64,6 +104,7 @@ def get_product_historical_timeseries(
     series_data = [data.get(d.date(), 0.0) for d in idx]
 
     df = pd.DataFrame({"target": series_data}, index=idx)
+    df.attrs["observation_dates"] = sorted(day for day, quantity in data.items() if quantity > 0)
     return df
 
 
@@ -72,21 +113,25 @@ def predict_product_daily_demand(
     product: Product,
     branch: Optional[Branch] = None,
     historical_daily_data: Optional[Dict[datetime.date, float]] = None,
+    assessment_out: Optional[Dict[str, Any]] = None,
 ) -> float:
     """
     Computes forecasted product-level daily demand using historical sales time-series.
     Employs shifted rolling means and lag features to prevent future data leakage.
     Returns expected daily units sold (float).
     """
+    today = timezone.localdate()
     if historical_daily_data is not None:
-        today = timezone.now().date()
         start_date = today - datetime.timedelta(days=60)
         idx = pd.date_range(start=start_date, end=today, freq="D")
         series_data = [historical_daily_data.get(d.date(), 0.0) for d in idx]
         df = pd.DataFrame({"target": series_data}, index=idx)
+        observation_dates = sorted(day for day, quantity in historical_daily_data.items()
+                                   if start_date <= day <= today and quantity > 0)
     else:
         branch_id = branch.id if branch else None
         df = get_product_historical_timeseries(workspace, product.id, branch_id=branch_id, days=60)
+        observation_dates = df.attrs.get("observation_dates", [])
 
     if df.empty or df["target"].sum() == 0:
         # Fallback to general product order items if recent window is empty
@@ -94,21 +139,29 @@ def predict_product_daily_demand(
             order__workspace=workspace,
             order__status=OrderStatus.COMPLETED,
             product=product,
+            product__workspace=workspace,
+            order__order_date__lte=today,
         )
         if branch:
             all_time_items = all_time_items.filter(order__branch=branch)
 
-        total_qty = all_time_items.aggregate(t=Sum("quantity"))["t"] or 0
+        history = all_time_items.aggregate(t=Sum("quantity"), first=Min("order__order_date"), last=Max("order__order_date"))
+        total_qty = history["t"] or 0
+        if assessment_out is not None:
+            assessment_out.update(_demand_assessment(
+                "ALL_TIME_AVERAGE_HEURISTIC" if total_qty > 0 else "NO_OBSERVATIONS",
+                today, history["first"], history["last"],
+            ))
         if total_qty > 0:
-            first_order = Order.objects.filter(
-                workspace=workspace,
-                status=OrderStatus.COMPLETED,
-                items__product=product,
-            ).order_by("order_date").first()
-            if first_order:
-                span_days = max(1, (timezone.now().date() - first_order.order_date).days)
+            if history["first"]:
+                span_days = max(1, (today - history["first"]).days)
                 return round(float(total_qty) / span_days, 2)
         return 0.0
+
+    if assessment_out is not None:
+        assessment_out.update(_demand_assessment("WEIGHTED_LAG_HEURISTIC", today,
+                                               observation_dates[0] if observation_dates else None,
+                                               observation_dates[-1] if observation_dates else None))
 
     target = df["target"]
     # Rolling 7-day and 14-day mean shifted by 1 to prevent leakage
@@ -136,6 +189,7 @@ def evaluate_product_stockout_risk(
     safety_buffer_days: int = DEFAULT_SAFETY_BUFFER_DAYS,
     current_stock: Optional[int] = None,
     historical_daily_data: Optional[Dict[datetime.date, float]] = None,
+    inventory_assessment: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Evaluates deterministic stockout risk for a given product and branch.
@@ -152,7 +206,7 @@ def evaluate_product_stockout_risk(
         * LOW: days_to_stockout > lead_time_days + safety_buffer_days
     - suggested_reorder_quantity = max(0, ceil(predicted_daily_demand * (lead_time_days + safety_buffer_days) - current_stock))
     """
-    today = timezone.now().date()
+    today = timezone.localdate()
 
     # 1. Fetch current stock balance
     if branch:
@@ -165,6 +219,7 @@ def evaluate_product_stockout_risk(
                 product=product,
             ).first()
             current_stock = stock_obj.quantity_on_hand if stock_obj else 0
+            inventory_assessment = _inventory_assessment(current_stock, 1 if stock_obj else 0)
     else:
         branch_name = "Tất cả chi nhánh"
         branch_code = "ALL"
@@ -172,12 +227,18 @@ def evaluate_product_stockout_risk(
             agg = StockBalance.objects.filter(
                 workspace=workspace,
                 product=product,
-            ).aggregate(total=Sum("quantity_on_hand"))
+            ).aggregate(total=Sum("quantity_on_hand"), records=Count("id"),
+                        negative=Count("id", filter=Q(quantity_on_hand__lt=0)))
             current_stock = agg["total"] or 0
+            inventory_assessment = _inventory_assessment(current_stock, agg["records"], bool(agg["negative"]))
+    if inventory_assessment is None:
+        inventory_assessment = _inventory_assessment(current_stock)
 
     # 2. Predicted Demand
+    demand_assessment = {}
     predicted_daily_demand = predict_product_daily_demand(
-        workspace, product, branch, historical_daily_data=historical_daily_data
+        workspace, product, branch, historical_daily_data=historical_daily_data,
+        assessment_out=demand_assessment,
     )
 
     # 3. Determine Days to Stockout & Risk Level
@@ -220,6 +281,16 @@ def evaluate_product_stockout_risk(
     raw_reorder = (predicted_daily_demand * target_coverage_days) - float(current_stock)
     suggested_reorder_qty = max(0, math.ceil(raw_reorder))
 
+    # Retain numerical scenario results, but never label absent/old demand as safety.
+    if current_stock > 0 and demand_assessment.get("status") != "CURRENT_HISTORY":
+        risk_label_vi = "Chưa đủ dữ liệu nhu cầu" if demand_assessment.get("status") == "NO_DATA" else "Ước tính từ lịch sử cũ"
+        risk_badge = "badge-warning"
+        risk_color = "#facc15"
+    if inventory_assessment["status"] in ("MISSING_BALANCE", "NEGATIVE_BALANCE"):
+        risk_label_vi = "Chưa ghi nhận tồn kho" if inventory_assessment["status"] == "MISSING_BALANCE" else "Tồn kho âm — cần đối soát"
+        risk_badge = "badge-warning"
+        risk_color = "#facc15"
+
     return {
         "product_id": product.id,
         "product_sku": product.sku,
@@ -232,7 +303,11 @@ def evaluate_product_stockout_risk(
         "branch_name": branch_name,
         "branch_code": branch_code,
         "current_stock": int(current_stock),
+        "inventory_assessment": inventory_assessment,
+        "risk_level_is_operational": inventory_assessment["verified_record"] and (
+            current_stock == 0 or demand_assessment.get("status") == "CURRENT_HISTORY"),
         "predicted_daily_demand": float(predicted_daily_demand),
+        "demand_assessment": demand_assessment,
         "days_to_stockout": float(days_to_stockout),
         "expected_stockout_date": expected_stockout_date.strftime("%Y-%m-%d") if expected_stockout_date else "Không xác định",
         "lead_time_days": lead_time_days,
@@ -256,8 +331,13 @@ def get_stockout_risk_dashboard_data(
     Returns KPI totals, risk counts, and sorted products at risk.
     """
     branch = None
-    if branch_id:
-        branch = Branch.objects.for_workspace(workspace).filter(id=branch_id).first()
+    if branch_id is not None and branch_id != "":
+        branch_text = str(branch_id)
+        if isinstance(branch_id, bool) or not branch_text.isascii() or not branch_text.isdigit() or len(branch_text) > 19 or not 0 < int(branch_text) <= 9223372036854775807:
+            raise ValueError("Mã chi nhánh phải là số nguyên dương.")
+        branch = Branch.objects.for_workspace(workspace).filter(id=int(branch_id)).first()
+        if branch is None:
+            raise Http404("Không tìm thấy chi nhánh trong workspace.")
 
     products_qs = (
         Product.objects.for_workspace(workspace)
@@ -272,20 +352,27 @@ def get_stockout_risk_dashboard_data(
     if branch:
         stock_qs = StockBalance.objects.filter(workspace=workspace, branch=branch)
         stock_map = {sb.product_id: sb.quantity_on_hand for sb in stock_qs}
+        inventory_map = {product_id: _inventory_assessment(quantity, 1)
+                         for product_id, quantity in stock_map.items()}
     else:
         stock_agg = (
             StockBalance.objects.filter(workspace=workspace)
             .values("product_id")
-            .annotate(total=Sum("quantity_on_hand"))
+            .annotate(total=Sum("quantity_on_hand"), records=Count("id"),
+                      negative=Count("id", filter=Q(quantity_on_hand__lt=0)))
         )
-        stock_map = {item["product_id"]: (item["total"] or 0) for item in stock_agg}
+        stock_rows = list(stock_agg)
+        stock_map = {item["product_id"]: (item["total"] or 0) for item in stock_rows}
+        inventory_map = {item["product_id"]: _inventory_assessment(item["total"] or 0,
+                         item["records"], bool(item["negative"])) for item in stock_rows}
 
     # Bulk pre-aggregate daily sales for all products over the last 60 days
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_date = today - datetime.timedelta(days=60)
     items_qs = OrderItem.objects.filter(
         order__workspace=workspace,
         order__status=OrderStatus.COMPLETED,
+        product__workspace=workspace,
         order__order_date__gte=start_date,
         order__order_date__lte=today,
     )
@@ -316,6 +403,7 @@ def get_stockout_risk_dashboard_data(
             branch=branch,
             current_stock=c_stock,
             historical_daily_data=h_data,
+            inventory_assessment=inventory_map.get(prod.id, _inventory_assessment(c_stock, 0)),
         )
         all_analyses.append(analysis)
 
@@ -345,6 +433,9 @@ def get_stockout_risk_dashboard_data(
         "high_risk_count": high_risk_count,
         "medium_risk_count": medium_risk_count,
         "low_risk_count": low_risk_count,
+        "unassessed_demand_count": sum(p["demand_assessment"]["status"] != "CURRENT_HISTORY" for p in all_analyses),
+        "inventory_unverified_count": sum(not p["inventory_assessment"]["verified_record"] for p in all_analyses),
+        "verified_out_of_stock_count": sum(p["risk_level"] == "OUT_OF_STOCK" and p["inventory_assessment"]["verified_record"] for p in all_analyses),
         "at_risk_count": out_of_stock_count + high_risk_count + medium_risk_count,
         "products_at_risk": products_at_risk[:limit],
         "all_products": all_analyses[:limit],

@@ -15,13 +15,14 @@
     return valid.sort((a, b) => preference === 'duration' ? a.duration - b.duration : a.distance - b.distance)[0];
   };
   const accuracyMessage = accuracy => !Number.isFinite(accuracy) || accuracy < 0 ? 'Thiết bị chưa cung cấp sai số; hãy kiểm tra chấm vị trí trước khi dẫn đường.' : accuracy > 100 ? `Vị trí chỉ gần đúng (sai số khoảng ${Math.round(accuracy)} m). Hãy bật định vị chính xác trên điện thoại, thử ngoài trời hoặc kéo chấm xanh tới đúng vị trí.` : `Sai số thiết bị báo khoảng ${Math.round(accuracy)} m. Hãy kiểm tra chấm xanh trước khi đi.`;
+  const acceptableDevicePosition = coords => coords && validPoint({lat: coords.latitude, lng: coords.longitude}) && Number.isFinite(coords.accuracy) && coords.accuracy >= 0 && coords.accuracy <= 100;
   function stepText(step) {
     const m = step.maneuver || {};
     const turn = {left: 'Rẽ trái', right: 'Rẽ phải', 'slight left': 'Chếch trái', 'slight right': 'Chếch phải', 'sharp left': 'Rẽ gắt trái', 'sharp right': 'Rẽ gắt phải', uturn: 'Quay đầu', straight: 'Đi thẳng'};
     let action = m.type === 'depart' ? 'Xuất phát' : m.type === 'arrive' ? 'Đến điểm đích' : ['roundabout', 'rotary'].includes(m.type) ? 'Qua vòng xuyến' + (m.exit ? `, lối ra ${m.exit}` : '') : turn[m.modifier] || 'Tiếp tục';
     return action + (step.name ? ` · ${step.name}` : '') + (Number.isFinite(step.distance) && step.distance > 0 ? ` · ${Math.round(step.distance)} m` : '');
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = {validPoint, distanceKm, inRadius, googleURL, shortestReturned, chooseRoute, accuracyMessage, stepText};
+  if (typeof module !== 'undefined' && module.exports) module.exports = {validPoint, distanceKm, inRadius, googleURL, shortestReturned, chooseRoute, accuracyMessage, acceptableDevicePosition, stepText};
   if (typeof document === 'undefined') return;
   const $ = id => document.getElementById(id);
   if (!$('bf-map')) return;
@@ -153,6 +154,13 @@
     $('bf-locate').disabled = true; status('Đang xin quyền lấy vị trí. Hãy cho phép trong thông báo của trình duyệt.');
     navigator.geolocation.getCurrentPosition(position => {
       if (current !== locatingVersion) return;
+      if (!acceptableDevicePosition(position.coords)) {
+        $('bf-locate').disabled = false;
+        $('bf-accuracy').hidden = false;
+        $('bf-accuracy').textContent = accuracyMessage(position.coords.accuracy);
+        status('Không thể lấy vị trí chính xác. Tọa độ này không được dùng để tìm cửa hàng hoặc gửi tới dịch vụ dẫn đường. Hãy thử GPS ngoài trời, nhập địa điểm hoặc chọn điểm chính xác trên bản đồ.' + (origin ? ' Điểm xuất phát đã chọn trước đó được giữ nguyên.' : ''));
+        return;
+      }
       setOrigin({lat: position.coords.latitude, lng: position.coords.longitude}, 'Vị trí thiết bị', position.coords.accuracy);
     }, error => {
       if (current !== locatingVersion) return;

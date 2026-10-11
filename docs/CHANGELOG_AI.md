@@ -1172,3 +1172,24 @@ Replace chat interval with bounded single-flight polling, visible error states,
 safe draft retention and no automatic POST replay. Add scoped bulletin feed
 polling without page reload/editor loss. Render untrusted strings as text.
 No schema, role, customer boundary or 97-ledger changes; not deployed yet.
+
+## 2026-10-11 — Live-audit bounded repair
+
+Approval order mutations reuse the canonical locked state machine and stock
+reservation release. Explicit scoped selectors reject missing/ambiguous entities,
+partial numeric tokens and undefined scheduling targets. Customer totals use
+all completed orders; category margins use canonical categories/current costs,
+never invented historical COGS. Spatial summaries count real located tickets in
+a declared1km grid; personnel safety outputs no longer invent certifications.
+
+Malformed forecast/public/collaboration input is validated; service inquiry
+deduplicates transactionally using existing request_number and follows PRG.
+Assistant history loads scoped records with timeout/race/escaping guards.
+Freshness/baseline/R²/recommendation and snapshot/health telemetry labels are
+evidence-based. Stockout distinguishes missing/negative balances from verified0.
+Public-only Google identities remain denied; roster and denial page match policy.
+
+Owner retains deterministic RAG and historical academic forecasts, approves
+labeled AI illustration and strict home fulfillment after read-only stock
+preflight. No paid provider, new schema, business-data reset or97-ledger changes.
+See AUDIT_REPAIR_RESULTS_2026_10_11.md for tests, rollout and unresolved UAT gates.
