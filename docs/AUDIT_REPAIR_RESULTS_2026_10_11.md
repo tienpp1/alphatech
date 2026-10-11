@@ -39,7 +39,7 @@ trên production. “Giảm rủi ro” không nghĩa vấn đề chất lượn
 | F15 | Chi tiêu/tổng lịch sử lấy toàn bộ đơn COMPLETED; 10 dòng là sample chi tiết, không cộng CANCELLED như tiền đã chi. |
 | F16 | Margin theo Category thật; lọc ID/code/name chính xác, unknown/ambiguous trả rỗng và yêu cầu làm rõ. Không nhóm “other” dưới tên category đầu tiên. |
 | F17 | Revenue COMPLETED tách pipeline; margin là doanh số dòng hàng và current-cost estimate. COGS lịch sử chưa có, bỏ fallback 80% và target SOP giả. Category subset không được đối soát với tổng đơn toàn workspace. |
-| F18 | Contract-supported recommendation → approval → reviewer tách biệt → execution/audit được test local. Advisory không tự mutation; stock reorder/workload chưa có contract vẫn không map. |
+| F18 | Contract-supported recommendation → approval → execution/audit được test local. Non-superuser bị chặn tự duyệt; superuser vẫn có ngoại lệ tường minh trong executor, không phải four-eyes tuyệt đối. Advisory không tự mutation; stock reorder/workload chưa có contract vẫn không map. |
 | F19 | Lịch sử gọi API scope owner/workspace/RBAC, phục hồi USER/ASSISTANT và nguồn/tool. New chat reset session; timeout/race giữ trạng thái/draft. Escape metadata citation chống HTML injection. |
 | F20 | Horizon/điểm hiển thị theo run thật, thêm lựa chọn SKU/category/branch. Không mặc định 14 ngày. |
 | F21 | Cải thiện/xấu đi đúng dấu/màu; baseline comparison không lấy COMPLETED làm chất lượng. |
@@ -57,7 +57,7 @@ trên production. “Giảm rủi ro” không nghĩa vấn đề chất lượn
 | F33 | Roster/dịch vụ chat chỉ active internal-eligible; loại Google-linked/VIEWER/inactive, không sửa grant của họ. |
 | F34 | Hero không còn bọc nội dung trong layer trang trí inert; contrast/launcher inline ở giỏ/checkout, recommendation dễ đọc; grid checkout có min-width/minmax bảo vệ mobile. Không phải chứng nhận WCAG toàn trang. |
 | F35 | Chỉ trả skills/labor/availability ghi nhận, chứng chỉ/tuân thủ chưa xác minh; bỏ suy diễn theo tên, OT×6.5, ca đêm/ISO/bồi hoàn giả. |
-| F36 | Preflight strict read-only và test reservation/concurrency. Render lưu HOME_DELIVERY_FULFILLMENT_POLICY=strict; cần deploy và UAT strict checkout hiện hành. |
+| F36 | Preflight strict read-only và test reservation/concurrency. Render lưu HOME_DELIVERY_FULFILLMENT_POLICY=strict và release898e0fb đã LIVE; chưa có UAT đặt/hủy đơn strict trên bản mới. |
 
 Follow-up hữu hạn: stockout phân biệt MISSING_BALANCE/NEGATIVE_BALANCE với
 RECORDED_BALANCE=0; counter verified_out_of_stock/inventory_unverified/demand
@@ -107,6 +107,7 @@ Các lượt chồng lặp, **không cộng thành số test duy nhất**:
 | live_audit_20261011/discovery_isolation_regressions.log | 13/13 OK, 37.512s; registry model test riêng, migration drift trước/sau discovery đều {}. |
 | acceptance_verification/20261011T142548Z/django.log và result.json | 1361/1361 OK, 295.775s; fingerprint 752 file nguồn không đổi, exit 0, DB test tự hủy. |
 | repair_release_snapshot_tests_v2_20261011.log và repair_release_snapshot_result_v2_20261011.json | 1349/1349 OK, 378.022s; export Git index không có .env/untracked files; index không đổi trong lượt, DB test tự hủy. |
+| audit_repair_release_document_guards_20261011.log | 11/11 OK, 2.595s; current claims và test manifest sau cập nhật bằng chứng phát hành, không là nghiệm thu khoa học. |
 
 Lệnh chính (Python là .venv-acceptance/Scripts/python.exe):
 
@@ -176,7 +177,7 @@ Viewport390×844: document scrollWidth375, form x24→351.2, grid327.2px;
 không tràn ngang, control/summary/inline launcher đọc được. Lưu checkout-mobile.png,
 checkout-mobile-viewport.png và catalog-desktop.png mới. Không submit đơn.
 Fixture kết thúc OK731.399s và tự hủy đúng DB test riêng; viewport đã reset.
-Full-suite local đã PASS như trên; rollout/CI sẽ được ghi sau, chưa suy ra live UAT.
+Full-suite local đã PASS như trên; rollout/CI đã xác nhận ở phần dưới, chưa suy ra live UAT toàn bộ.
 
 Ảnh tạo qua imagegen: static/public/images/technology-illustration-ai-v1.png,
 1.658.922 byte, nhóm laptop/monitor/router/tower không brand. Prompt tóm tắt đầy
@@ -184,6 +185,40 @@ Full-suite local đã PASS như trên; rollout/CI sẽ được ghi sau, chưa s
 laptop, monitor, router and desktop tower, light neutral background, no text,
 logos, specifications, certification or claims representing a real SKU.”
 Không dùng ảnh AI để khẳng định thông số/mẫu hàng, không tạo ProductImage giả.
+
+## Phát hành và smoke test production — 11/10/2026
+
+- Đã push `main` commit `898e0fb1b6372a13e04d9b714812f848fa103710`.
+- GitHub Actions run38148786353 **completed/success**, đúng SHA trên; job114497648046
+  cùng36 bước đều success. URL: https://github.com/tienpp1/alphatech/actions/runs/38148786353.
+  Bằng chứng xác thực: output/audit_repair_ci_20261011.json, UTC14:58:52.
+  Đây là workflow focused regressions/security/coverage đã cấu hình, không phải
+  tuyên bố GitHub đã chạy full1349/1361 hoặc xác nhận inbox/liveLLM.
+- Render service `srv-dafrcr5g1s2s73frbl1g`, deploy `dep-db5q72ajnfac73bc0l8g`
+  **live** cùng SHA; không đổi gói Free hoặc tạo worker/paid service. Có cấu hình
+  strict và không có LLM/Gemini key theo kiểm tra redacted sau phát hành.
+- POST deploy với commitId ban đầu trả500, không được báo thành công. Sau kiểm
+  `origin/main` đúng SHA, POST deploy HEAD mới nhất trả201 và đi đến live;
+  không suy đoán nguyên nhân provider500. Hai receipt lỗi/thành công đều giữ.
+- Production HTTP: `/`, catalogue, dịch vụ, chi nhánh, giới thiệu, liên hệ, hai
+  trang login và `/health/` trả200. Anonymous `/noibo/` chuyển đến internal login.
+  Catalogue có disclosure AI; CSS và PNG trả200, SHA-256 khớp asset local.
+  Public Copilot câu Cat6 trả200/có reply đúng nhóm; message kiểu array trả400.
+  Log: output/audit_repair_production_http_20261011.json.
+- Browser production với phiên khách hàng hiện có: 12 ảnh đầu tải đầy đủ1254px,
+  caption/alt không giả ảnh thật; khách hàng Google thấy trang từ chối nội bộ
+  tiếng Việt. Screenshots: production-catalogue.png, production-google-denial.png
+  trong output/audit_repair_20261011_browser.
+- Responsive production chưa được xác nhận: yêu cầu viewport390×844 trong lượt
+  này vẫn quan sát1280×720, nên ảnh attempted-viewport-not-applied.png không là
+  bằng chứng mobile PASS. Viewport đã reset; kết quả mobile local v5 ở trên vẫn
+  là local fixture, không được đổi nhãn thành UAT thiết bị production.
+
+Không tạo đơn/ticket/contact, thay tồn kho hoặc gửi email giao dịch trong smoke
+test sau deploy. Strict checkout/approval/recommendation mutation, email hai inbox
+và GPS thiết bị cần lượt UAT có kiểm soát trên bản này. Receipt release/config:
+output/audit_repair_release_status_20261011.json và
+output/audit_repair_render_config_after_live_20261011.json.
 
 ## Các giới hạn chưa được sửa bằng việc làm test xanh
 

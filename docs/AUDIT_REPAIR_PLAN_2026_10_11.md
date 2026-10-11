@@ -34,7 +34,8 @@ F02: chủ dự án chọn DETERMINISTIC / NO_API_KEY, không bật Gemini live 
 semantic embedding trả phí. F10–F11: giữ dữ liệu lịch sử học thuật, công khai
 R² âm/kém baseline; không tạo giao dịch giả để nâng điểm. F25: chủ dự án cho
 phép ảnh AI; dùng một minh họa nhóm thiết bị có disclosure, không giả làm ảnh
-chụp thật cho 44 SKU. F36: strict đã được lưu trên Render, chỉ có hiệu lực sau
-deploy. Test tự động/browser local không thay thế UAT trên thiết bị production.
+chụp thật cho 44 SKU. F36: strict đã được lưu trên Render, release898e0fb đã LIVE
+ngày11/10; chưa có UAT đặt/hủy đơn strict trên bản mới. Test tự động/browser local
+không thay thế UAT trên thiết bị production.
 
 Kết quả và giới hạn: AUDIT_REPAIR_RESULTS_2026_10_11.md. Không sửa sổ 97.

@@ -1716,7 +1716,7 @@ chứng; status_distribution dịch vụ có tất cả trạng thái.
 Chủ dự án chọn deterministic/no-key, forecast lịch sử và ảnh AI có disclosure,
 không giả ảnh thật từng SKU hoặc tạo giao dịch giả để nâng điểm. Neon stock
 preflight read-only đủ44×3, không âm/thiếu; Render đã lưu strict fulfillment,
-chờ deploy kích hoạt. Local .env ignored cũng strict; không schema/data reset.
+release898e0fb đã LIVE. Local .env ignored cũng strict; không schema/data reset.
 
 Nhóm tích hợp150/150 OK129.782s, JS23/23 OK475.7684ms; các lượt public/RAG/
 forecast/governance và lỗi trung gian lưu tại AUDIT_REPAIR_RESULTS_2026_10_11.md.
@@ -1725,4 +1725,16 @@ Full worktree1361/1361 OK295.775s; export Git index1349/1349 OK378.022s,
 không thay nguồn/index trong lượt. Chênh12 test untracked có sẵn thuộc phần khác,
 không tự stage. Hai lượt dùng hasher nhanh chỉ ở process DB test disposable;
 không đổi hasher runtime. Bandit scopeCI0 findings; scan839 file0 known secrets.
-Push/deploy/CI commit mới đang chuẩn bị; kết quả live ghi riêng, không sửa sổ97.
+Push/deploy/CI commit mới đã xác nhận; kết quả live ghi dưới đây, không sửa sổ97.
+
+Phát hành: main898e0fb1b6372a13e04d9b714812f848fa103710; CI38148786353
+completed/success đúngSHA, Render dep-db5q72ajnfac73bc0l8g live, vẫn Free.
+POST deploy commitId đầu500 giữ receipt; fallback HEAD sau đối chiếu remote
+trả201 và live, không suy đoán nguyên nhân500. Redacted config sau live: strict,
+không LLM/Gemini key. HTTP public/health200, anonymous internal redirect; CSS/PNG
+khớp hash local, Copilot Cat6 200 và array sai400. Browser thấy disclosure AI
+và trang chặn khách Google tiếng Việt. Không tạo đơn/email trong smoke sau deploy.
+UAT strict checkout/approval/recommendation mutation, email hai inbox/GPS thật
+trên bản mới chưa được xác nhận. Mobile production chưa xác nhận vì override
+viewport không áp dụng; mobile v5 PASS ở trên chỉ là local. Xem báo cáo sửa audit
+và output/audit_repair_ci_20261011.json; CI focused không là full-suite GitHub.
