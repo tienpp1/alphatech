@@ -85,3 +85,29 @@ Bandit scopeCI0findings/0errors, scan843files0knownsecrets (không chứng minh 
 Sau fulltest chỉ bổ sung receipt và bỏ blanklineEOF ở2testfile, không đổi
 runtime/testassertions. diffcheck lỗi whitespace trước sửa được giữ, không skip.
 CI/deploy/UAT của source mới còn chờ và sẽ ghi riêng bên dưới.
+
+## Phát hành và browser production
+
+Source c6ef58cfc5cf8ec297097972874513027a20b0a1 đã push main. GitHub Actions
+38196214508/job114639316420 completed/success, 36 bước thành công (receipt
+audit_followup_ci_20261012.json, 02:41:43 UTC). Render Free deploy
+dep-db64ecp42hec73as5770 LIVE đúng SHA, không mở dịch vụ trả phí.
+Đây là CI các nhóm được workflow chọn, không gọi là full-suite trên GitHub.
+
+Browser sau reload production: HOME_DELIVERY tổng125000; STORE_PICKUP phí0,
+tổng95000, address không required và branch required. Đổi lại HOME_DELIVERY
+phí30000, tổng125000. Có ảnh checkout-pickup-after.png, checkout-test-ready.png
+trong output/audit_followup_20261012_browser. Form TEST chưa submit khi ghi
+đoạn này; không suy ra stock/email/approval từ việc chuẩn bị form.
+
+Radius trên origin công khai: 1km thấy1/3, 10km thấy3/3; tuyến OSRM tới Quận1
+1,1km và bước tiếng Việt, không traffic/GPS thật. Mobile375 không tràn ngang
+control nhưng phát hiện title header chồng cart (title.right232,75 > cart.left
+155,31). Sửa tối thiểu text min-width0/logo flex-shrink0, thêm1 regression;
+layout/policy13/13OK0.630s không tạoDB. Chưa coi source regression là đo hình
+học sau deploy; full1385 nêu trên thuộc source trước follow-up CSS/test này.
+
+Chủ dự án trả lời GPS thiết bị **chưa thử**, xin hỏi lại khi rảnh. Giữ cổng này
+mở, không gán PASS hoặc yêu cầu tọa độ riêng tư. Email2inbox/TESTapproval cũng
+chưa có kết quả mới; checkout cuối cần người dùng xác nhận điều khoản tại thời
+điểm đặt. Không thay đổi sổ97.

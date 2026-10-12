@@ -21,6 +21,13 @@ from apps.workspaces.models import Workspace
 
 
 class PublicCheckoutLayoutContractTests(SimpleTestCase):
+    def test_header_brand_text_shrinks_without_compressing_logo_or_overlapping_cart(self):
+        # Source regression; actual mobile geometry is measured in browser QA.
+        template = (Path(settings.BASE_DIR) / "templates/public/base_public.html").read_text(encoding="utf-8")
+        self.assertRegex(template, r"\.pub-brand-text\s*\{[^}]*min-width:\s*0;")
+        self.assertRegex(template, r"\.pub-brand-logo\s*\{[^}]*flex-shrink:\s*0;")
+        self.assertRegex(template, r"\.pub-brand-title\s*\{[^}]*text-overflow:\s*ellipsis;")
+
     def test_public_stylesheet_uses_configured_static_storage(self):
         template = (Path(settings.BASE_DIR) / "templates/public/base_public.html").read_text(encoding="utf-8")
         self.assertIn("{% load static %}", template)
