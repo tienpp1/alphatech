@@ -137,6 +137,7 @@ def get_historical_timeseries(
                 "missing_period_count": 0,
                 "missing_period_policy": "zero_fill_daily_gap",
                 "source_frequency": granularity,
+                "observed_period_dates": [],
             }
         )
         return empty
@@ -152,9 +153,12 @@ def get_historical_timeseries(
 
     df = pd.DataFrame({"target": series_data}, index=full_idx)
 
+    observed = pd.Series(1, index=pd.DatetimeIndex(sorted(data)), dtype=int)
     if granularity == Granularity.WEEKLY:
         # Resample to Monday-based weekly totals
         df = df.resample("W-MON").sum()
+        observed = observed.resample("W-MON").sum()
+        observed = observed[observed > 0]
 
     df.attrs.update(
         {
@@ -162,6 +166,9 @@ def get_historical_timeseries(
             "missing_period_count": missing_period_count,
             "missing_period_policy": "zero_fill_daily_gap",
             "source_frequency": granularity,
+            # Source presence is separate from the unchanged zero-filled values.
+            # Weekly source presence does not certify completeness of every day.
+            "observed_period_dates": [day.date().isoformat() for day in observed.index],
         }
     )
 

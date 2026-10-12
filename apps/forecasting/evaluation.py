@@ -162,19 +162,23 @@ def generate_moving_average_baseline_predictions(
 def compare_model_against_baseline(
     model_metrics: Dict[str, float],
     baseline_metrics: Dict[str, float],
-) -> Dict[str, float]:
+) -> Dict[str, Optional[float]]:
     """
     Calculates percentage improvement of model metrics compared to naive baseline.
     Positive value indicates model outperforms baseline (e.g. +25.4% lower MAE).
     """
+    from .academic_reporting import measured
+
     comp = {}
     for metric_name in ["mae", "rmse", "mape"]:
-        base_val = baseline_metrics.get(metric_name) or baseline_metrics.get(f"naive_{metric_name}", 0.0)
-        mod_val = model_metrics.get(metric_name, 0.0)
-        if base_val and base_val > 0:
+        base_val = measured(baseline_metrics.get(metric_name) if metric_name in baseline_metrics
+                            else baseline_metrics.get(f"naive_{metric_name}"))
+        mod_val = measured(model_metrics.get(metric_name))
+        if base_val is not None and base_val > 0 and mod_val is not None:
             # Reduction in error is positive improvement
             improvement = ((base_val - mod_val) / base_val) * 100.0
-            comp[f"{metric_name}_improvement_pct"] = round(improvement, 2)
+            comp[f"{metric_name}_improvement_pct"] = round(improvement, 2) if np.isfinite(improvement) else None
         else:
-            comp[f"{metric_name}_improvement_pct"] = 0.0
+            # Undefined/missing comparison is not measured equality or a gain.
+            comp[f"{metric_name}_improvement_pct"] = None
     return comp

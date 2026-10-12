@@ -414,7 +414,7 @@
                         {{ chart_data.metrics.mae_improvement_pct|floatformat:1 }}% {% if chart_data.metrics.mae_improvement_pct < 0 %}MAE xấu đi{% elif chart_data.metrics.mae_improvement_pct > 0 %}Giảm MAE{% else %}Không thay đổi MAE{% endif %}
                     </span>
                 {% else %}
-                    <span style="color: #94a3b8; font-size: 1rem;">Chờ huấn luyện</span>
+                    <span style="color: #94a3b8; font-size: 1rem;">Chưa đủ số liệu đối sánh</span>
                 {% endif %}
             </div>
             <div class="kpi-sub">

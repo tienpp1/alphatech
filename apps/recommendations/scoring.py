@@ -79,6 +79,6 @@ def calculate_technician_score(
         },
         "hourly_labor_rate": float(hourly_labor_rate) if hourly_labor_rate is not None else None,
         "sla_urgency_factor": sla_urgency_factor,
-        "formula": "Score = 0.4*max(0, 100 - dist*10) + 0.4*max(0, 100 - tasks*20) + 0.2*(100 if skill else 50)"
+        "formula": f"Score = {weight_dist}*max(0, 100 - dist*10) + {weight_workload}*max(0, 100 - tasks*20) + {weight_skill}*(100 if skill else 50)"
     }
 

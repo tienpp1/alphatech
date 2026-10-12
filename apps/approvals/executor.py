@@ -12,6 +12,7 @@ from django.core.exceptions import PermissionDenied
 from apps.workspaces.models import Workspace
 from apps.accounts.models import User
 from apps.accounts.services import has_workspace_permission
+from apps.accounts.internal_access import is_public_only_session
 from apps.audit.services import log_audit_event
 from apps.approvals.models import ApprovalRequest, ApprovalStatus, RiskLevel
 from apps.approvals.registry import (
@@ -24,7 +25,11 @@ from apps.approvals.registry import (
 
 
 def _check_user_tool_permission(user: User, workspace: Workspace, perm_codename: str) -> bool:
-    if not user or not user.is_authenticated:
+    if not user or not user.is_authenticated or not user.is_active:
+        return False
+    # Service callers must obey the same identity boundary as HTTP middleware.
+    # The superuser exemption is only for active non-Google internal identities.
+    if is_public_only_session(user, {}):
         return False
     if user.is_superuser:
         return True

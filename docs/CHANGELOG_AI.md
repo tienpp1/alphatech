@@ -1193,3 +1193,17 @@ Owner retains deterministic RAG and historical academic forecasts, approves
 labeled AI illustration and strict home fulfillment after read-only stock
 preflight. No paid provider, new schema, business-data reset or97-ledger changes.
 See AUDIT_REPAIR_RESULTS_2026_10_11.md for tests, rollout and unresolved UAT gates.
+
+## 2026-10-12 — Audit follow-up behavioral corrections
+
+Approval service enforces active/non-Google identity before explicit superuser
+exemption. Invalid repeated orderUI transitions return safe400, preserving403/404.
+Recommendation rejection is serialized with acceptance and cannot replace terminal
+decisions. Service rules use recorded SLA deadlines/availability and explicitly
+unverified skills, no default origin or delivery guarantee.
+Forecast comparisons remain null when unmeasured/undefined; saved cadence governs
+chart/monitor, and monitoring separates source periods from imputed zeros.
+Contact validates form email before persistence and preserves safe form errors.
+Checkout refreshes server totals per method with pending/error/retry/race guards,
+and rejects coarse/invalid/stale GPS without persisting location. No schema,
+business-data reset, paid infrastructure or97-ledger changes.

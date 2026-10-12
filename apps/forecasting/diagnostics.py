@@ -1,11 +1,22 @@
 """Read-only assessments: successful execution is not a quality certificate."""
 import datetime
 import math
+from numbers import Real
 
 from django.utils import timezone
 
 
+def get_run_granularity(run):
+    """Prefer the training snapshot over a subsequently edited configuration."""
+    parameters = run.job_parameters if isinstance(run.job_parameters, dict) else {}
+    provenance = parameters.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+    return provenance.get("granularity", run.model_config.granularity)
+
+
 def _number(value):
+    if isinstance(value, bool) or not isinstance(value, Real):
+        return None
     try:
         number = float(value)
     except (TypeError, ValueError):

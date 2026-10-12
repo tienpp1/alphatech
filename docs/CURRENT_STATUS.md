@@ -1738,3 +1738,21 @@ UAT strict checkout/approval/recommendation mutation, email hai inbox/GPS thật
 trên bản mới chưa được xác nhận. Mobile production chưa xác nhận vì override
 viewport không áp dụng; mobile v5 PASS ở trên chỉ là local. Xem báo cáo sửa audit
 và output/audit_repair_ci_20261011.json; CI focused không là full-suite GitHub.
+
+## Audit follow-up — 12/10/2026 (không thay sổ97)
+
+Contact validation trướcghi; serviceapproval identitygate; orderUI400 thay500;
+recommendation reject lockedterminal; forecast cadence/provenance/observedactuals;
+serviceadvice deadlineSLA/availability thật, không skill/city/SLA giả. Checkout
+totalserver sau đổi nhận với retry/raceguard; GPSaccuracy/staleclear/hint reset.
+Nhóm tích hợp111/111OK157.505s; governance96/96OK270.159s, forecast114/114OK43.959s.
+Các lượt chồng lặp không cộng dồn. Nguồn chuẩn bị fullindex/CI/deploy; không dùng
+test11/10 cho code12/10. Production cũ tái hiện pickup vẫn cộngshipping30000;
+chưa tạoOrder hoặc giữ tồn. Nominatim publicplace/OSRMnearest3branches có kết quả
+thật, chưa GPSthiết bị. Chủ dự án đồng ý kiểm2inbox/GPS. Chi tiết:
+AUDIT_FOLLOWUP_RESULTS_2026_10_12.md; ledger97 và database nghiệp vụ giữ nguyên.
+
+Nguồn index1385/1385OK292.829s (không12test untracked), JS33/33OK657.2144ms;
+BanditCI0finding/error và scan843files0knownsecrets, compileall đạt. MD5 chỉ
+testprocess, strict runtime giữ nguyên; saufull chỉ receipt/whitespace2testfile,
+không runtime/testassertions. CI/deploy/UAT mới chờ xác nhận, không giả100%.

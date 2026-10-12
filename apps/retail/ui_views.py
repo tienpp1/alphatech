@@ -521,25 +521,39 @@ def retail_order_detail_view(request, pk):
         pk=pk,
     )
 
+    error_message = None
     if request.method == "POST":
         if not has_workspace_permission(request.user, workspace, "retail.manage_order"):
             raise PermissionDenied("Missing workspace permission: retail.manage_order")
-        action = request.POST.get("action")
-        if action == "confirm":
-            transition_order_status(order, OrderStatus.CONFIRMED, request.user)
-        elif action == "complete":
-            transition_order_status(order, OrderStatus.COMPLETED, request.user)
-        elif action == "cancel":
-            transition_order_status(order, OrderStatus.CANCELLED, request.user)
-        return redirect(f"{_retail_url_prefix(request)}/orders/{order.pk}/")
+        target_status = {
+            "confirm": OrderStatus.CONFIRMED,
+            "complete": OrderStatus.COMPLETED,
+            "cancel": OrderStatus.CANCELLED,
+        }.get(request.POST.get("action"))
+        try:
+            if target_status is None:
+                raise ValidationError("Unknown order action.")
+            transition_order_status(order, target_status, request.user)
+        except ValidationError:
+            # State/stock validation must not become HTTP 500 or expose raw
+            # diagnostics. The canonical service has rolled back its writes.
+            order.refresh_from_db()
+            error_message = (
+                "Không thể cập nhật trạng thái đơn hàng. Đơn có thể đã được xử lý "
+                "hoặc dữ liệu tồn kho chưa đầy đủ. Vui lòng kiểm tra trạng thái "
+                "hiện tại và liên hệ quản trị viên nếu cần."
+            )
+        else:
+            return redirect(f"{_retail_url_prefix(request)}/orders/{order.pk}/")
 
     context = {
         "order": order,
         "items": order.items.all(),
         "active_tab": "retail_orders",
         "can_manage": request.user.is_superuser or has_workspace_permission(request.user, workspace, "retail.manage_order"),
+        "error_message": error_message,
     }
-    return render(request, "retail/order_detail.html", context)
+    return render(request, "retail/order_detail.html", context, status=400 if error_message else 200)
 
 
 @login_required

@@ -561,7 +561,15 @@ def public_contact_view(request):
         recipients = resolve_customer_recipients(
             request.user if request.user.is_authenticated else None, email
         )
-        if name and (phone or email) and message_body:
+        invalid_email = False
+        if email:
+            try:
+                validate_email(email)
+            except ValidationError:
+                invalid_email = True
+        if invalid_email:
+            error_message = "Địa chỉ email không hợp lệ. Vui lòng kiểm tra lại hoặc để trống nếu muốn được liên hệ qua điện thoại."
+        elif name and (phone or email) and message_body:
             retail_ws = Workspace.objects.filter(workspace_type=WorkspaceType.RETAIL).first() or Workspace.objects.first()
             submission_material = "|".join((
                 str(request.user.pk) if request.user.is_authenticated else "guest",
@@ -602,6 +610,9 @@ def public_contact_view(request):
         "success_message": success_message,
         "error_message": error_message,
         "email_warning": email_warning,
+        "form_data": {
+            "name": name, "phone": phone, "email": email, "message": message_body,
+        } if request.method == "POST" and error_message else {},
         "active_nav": "contact",
     }
     return render(request, "public/contact.html", context)

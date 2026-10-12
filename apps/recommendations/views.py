@@ -16,7 +16,7 @@ from apps.audit.services import log_audit_event
 from apps.recommendations.models import Recommendation, RecommendationStatus
 from apps.recommendations.serializers import RecommendationSerializer, RecommendationDecisionSerializer
 from apps.recommendations.rules import evaluate_retail_recommendations, evaluate_service_recommendations
-from apps.recommendations.services import accept_recommendation
+from apps.recommendations.services import accept_recommendation, reject_recommendation
 from apps.approvals.registry import ToolException
 
 
@@ -126,8 +126,10 @@ class RecommendationRejectAPIView(APIView):
         serializer = RecommendationDecisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        rec.status = RecommendationStatus.REJECTED
-        rec.save()
+        try:
+            rec = reject_recommendation(rec)
+        except ToolException as exc:
+            return api_response(error=str(exc), status_code=status.HTTP_400_BAD_REQUEST)
 
         log_audit_event(
             user=request.user,

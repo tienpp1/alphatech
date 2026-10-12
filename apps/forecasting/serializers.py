@@ -50,8 +50,8 @@ class ForecastRunSerializer(serializers.ModelSerializer):
         return assess_model_quality(obj.model_metrics, obj.baseline_metrics)
 
     def get_snapshot_assessment(self, obj):
-        from .diagnostics import assess_snapshot
-        return assess_snapshot(obj.dataset_period_end, granularity=obj.model_config.granularity)
+        from .diagnostics import assess_snapshot, get_run_granularity
+        return assess_snapshot(obj.dataset_period_end, granularity=get_run_granularity(obj))
 
     class Meta:
         model = ForecastRun

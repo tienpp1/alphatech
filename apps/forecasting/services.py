@@ -24,7 +24,7 @@ from apps.forecasting.models import (
 from apps.forecasting.selectors import get_historical_timeseries
 from apps.forecasting.training import train_forecast_model, validate_target_for_workspace
 from apps.audit.services import log_audit_event
-from apps.forecasting.diagnostics import assess_model_quality, assess_snapshot
+from apps.forecasting.diagnostics import assess_model_quality, assess_snapshot, get_run_granularity
 
 
 logger = logging.getLogger(__name__)
@@ -140,21 +140,9 @@ def get_forecast_chart_data(
 
     validate_target_for_workspace(workspace, target_type)
 
-    # 1. Historical actuals
+    # Resolve the saved run before choosing actuals: weekly predictions must
+    # never be plotted against daily values or a subsequently edited config.
     dimensions = dimensions or {}
-    cutoff_date = timezone.localdate() - datetime.timedelta(days=history_days)
-    ts_df = get_historical_timeseries(workspace, target_type, start_date=cutoff_date, dimensions=dimensions)
-    if ts_df.empty:
-        # Fallback to available historical sequence if data is from another date range
-        ts_df = get_historical_timeseries(workspace, target_type, dimensions=dimensions)
-
-
-    historical_points = [
-        {"date": d.strftime("%Y-%m-%d"), "value": round(float(v), 2)}
-        for d, v in zip(ts_df.index, ts_df["target"])
-    ] if not ts_df.empty else []
-
-    # 2. Latest completed run and its forecast results
     latest_run = (
         ForecastRun.objects.for_workspace(workspace)
         .filter(target_type=target_type, status=RunStatus.COMPLETED)
@@ -162,7 +150,24 @@ def get_forecast_chart_data(
         .order_by("-created_at")
         .first()
     )
+    granularity = get_run_granularity(latest_run) if latest_run else Granularity.DAILY
+    cutoff_date = timezone.localdate() - datetime.timedelta(days=history_days)
+    if granularity == Granularity.WEEKLY:
+        # W-MON periods are Tuesday through Monday. Include the complete first
+        # week, rather than undercounting it when the cutoff is mid-period.
+        cutoff_date -= datetime.timedelta(days=(cutoff_date.weekday() - 1) % 7)
+    ts_df = get_historical_timeseries(workspace, target_type, start_date=cutoff_date,
+                                     dimensions=dimensions, granularity=granularity)
+    if ts_df.empty:
+        # The dates stay historical; this fallback does not refresh the source.
+        ts_df = get_historical_timeseries(workspace, target_type, dimensions=dimensions,
+                                         granularity=granularity)
+    historical_points = [
+        {"date": d.strftime("%Y-%m-%d"), "value": round(float(v), 2)}
+        for d, v in zip(ts_df.index, ts_df["target"])
+    ] if not ts_df.empty else []
 
+    # Latest completed run and its stored forecast results.
     forecast_points = []
     model_metrics = {}
     baseline_metrics = {}
@@ -192,13 +197,14 @@ def get_forecast_chart_data(
 
     snapshot = assess_snapshot(latest_run.dataset_period_end if latest_run else None,
                                [datetime.date.fromisoformat(point["date"]) for point in forecast_points],
-                               latest_run.model_config.granularity if latest_run else "DAILY")
+                               granularity)
     return {
         "workspace_code": workspace.code,
         "target_type": target_type,
         "run_id": latest_run.id if latest_run else None,
         "run_date": timezone.localtime(latest_run.created_at).strftime("%d/%m/%Y %H:%M %Z") if latest_run else None,
         "dimensions": dimensions,
+        "granularity": granularity,
         "forecast_point_count": len(forecast_points),
         "forecast_start": forecast_points[0]["date"] if forecast_points else None,
         "forecast_end": forecast_points[-1]["date"] if forecast_points else None,

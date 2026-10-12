@@ -55,6 +55,21 @@ def recommendation_review_state(recommendation):
 
 
 @transaction.atomic
+def reject_recommendation(recommendation: Recommendation):
+    """Serialize rejection with acceptance; terminal decisions are immutable."""
+    recommendation = Recommendation.objects.select_for_update().get(pk=recommendation.pk)
+    if recommendation.status == RecommendationStatus.REJECTED:
+        return recommendation
+    if recommendation.status != RecommendationStatus.PENDING:
+        raise ToolValidationError(
+            "Chỉ có thể từ chối khuyến nghị đang chờ xem xét; quyết định đã chốt không được ghi đè."
+        )
+    recommendation.status = RecommendationStatus.REJECTED
+    recommendation.save(update_fields=["status"])
+    return recommendation
+
+
+@transaction.atomic
 def accept_recommendation(recommendation: Recommendation, user, decision_reason: str = ""):
     recommendation = Recommendation.objects.select_for_update().get(pk=recommendation.pk)
     if recommendation.status == RecommendationStatus.ACCEPTED:

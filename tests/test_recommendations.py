@@ -3,8 +3,11 @@ Test suite for Business Recommendations Engine (Phase 10).
 """
 
 from decimal import Decimal
+import datetime
 from unittest.mock import patch
 from django.test import TestCase
+from django.utils import timezone
+from django.contrib.gis.geos import Point
 from rest_framework.test import APIClient
 from rest_framework import status
 
@@ -13,6 +16,8 @@ from apps.workspaces.models import Workspace, WorkspaceType, WorkspaceMembership
 from apps.recommendations.models import Recommendation, RecommendationType, RecommendationStatus, RecommendationPriority
 from apps.recommendations.scoring import calculate_technician_score
 from apps.recommendations.rules import evaluate_retail_recommendations, evaluate_service_recommendations
+from apps.recommendations.services import reject_recommendation
+from apps.approvals.registry import ToolValidationError
 from apps.approvals.models import ApprovalRequest, ApprovalStatus
 from apps.approvals.registry import ToolRegistry
 from apps.audit.models import AuditLog
@@ -123,6 +128,91 @@ class RecommendationEngineTests(TestCase):
         # Empty service workspace creates no recs by default
         self.assertEqual(len(recs), 0)
 
+    def test_service_unknown_deadlines_are_advisory_not_measured_sla_risk(self):
+        self.ticket.priority = "HIGH"
+        self.ticket.save(update_fields=["priority"])
+        with patch("apps.gis.services.find_nearby_technicians") as nearby:
+            rows = evaluate_service_recommendations(self.workspace_service)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].priority, "MEDIUM")
+        self.assertEqual(rows[0].supporting_data["sla"]["overall_status"], "UNKNOWN")
+        self.assertIn("không chứng minh vi phạm", rows[0].explanation["why"])
+        self.assertNotIn("Đảm bảo tuân thủ", rows[0].explanation["expected_effect"])
+        self.assertIsNotNone(rows[0].expires_at)
+        nearby.assert_not_called()
+
+    def test_high_priority_old_ticket_with_on_time_deadlines_is_not_sla_breach(self):
+        now = timezone.now()
+        ServiceRequest.objects.filter(pk=self.ticket.pk).update(
+            created_at=now - datetime.timedelta(hours=14), priority="HIGH",
+            response_deadline_at=now + datetime.timedelta(days=2),
+            resolution_deadline_at=now + datetime.timedelta(days=3),
+        )
+        self.assertEqual(evaluate_service_recommendations(self.workspace_service), [])
+
+    def test_actual_breached_deadline_precedes_unknown_age_heuristic(self):
+        now = timezone.now()
+        self.ticket.priority = "HIGH"
+        self.ticket.save(update_fields=["priority"])
+        urgent = ServiceRequest.objects.create(
+            workspace=self.workspace_service, customer=self.customer, service=self.service,
+            request_number="ACTUAL-SLA", title="Deadline evidence", priority="MEDIUM",
+            response_deadline_at=now - datetime.timedelta(minutes=5),
+            resolution_deadline_at=now + datetime.timedelta(hours=20),
+        )
+        ServiceRequest.objects.filter(pk=urgent.pk).update(created_at=now - datetime.timedelta(hours=1))
+        row = evaluate_service_recommendations(self.workspace_service)[0]
+        self.assertEqual(row.supporting_data["ticket_id"], urgent.pk)
+        self.assertEqual(row.supporting_data["sla"]["overall_status"], "BREACHED")
+        self.assertEqual(row.priority, "CRITICAL")
+        self.assertIsNotNone(row.explanation["evidence"]["response_deadline_at"])
+
+    def test_service_candidates_use_recorded_availability_not_invented_skills(self):
+        self.ticket.priority = "HIGH"
+        self.ticket.location = Point(105.8542, 21.0285, srid=4326)
+        self.ticket.save(update_fields=["priority", "location"])
+        self.employee.current_location = self.ticket.location
+        self.employee.is_available = False
+        self.employee.skills = ["SERVER"]
+        self.employee.save(update_fields=["current_location", "is_available", "skills"])
+        available = Employee.objects.create(workspace=self.workspace_service, code="AVAILABLE",
+                                            full_name="Available unknown skill", skills=[],
+                                            current_location=Point(105.8552, 21.0285, srid=4326))
+        rows = evaluate_service_recommendations(self.workspace_service)
+        dispatch = next(row for row in rows if row.recommendation_type == RecommendationType.SERVICE_NEARBY_TECHNICIAN)
+        top = dispatch.explanation["evidence"]["top_candidate"]
+        self.assertEqual(top["technician_id"], available.pk)
+        self.assertTrue(top["is_available"])
+        self.assertFalse(top["skill_match_verified"])
+        self.assertEqual(top["recorded_skills"], [])
+        self.assertIsNone(top["score_breakdown"]["skill_score"])
+        self.assertEqual(dispatch.explanation["evidence"]["ranked_candidates_count"], 1)
+        self.assertIn("0.5", dispatch.explanation["evidence"]["scoring_formula"])
+        self.assertEqual(dispatch.proposed_action, "dispatch_technician")
+        self.assertFalse(ApprovalRequest.objects.exists())
+
+    def test_candidate_generation_is_not_blocked_by_existing_sla_advice(self):
+        self.ticket.priority = "HIGH"
+        self.ticket.save(update_fields=["priority"])
+        first = evaluate_service_recommendations(self.workspace_service)
+        self.assertEqual(len(first), 1)
+        self.ticket.location = Point(105.8542, 21.0285, srid=4326)
+        self.ticket.save(update_fields=["location"])
+        self.employee.current_location = self.ticket.location
+        self.employee.save(update_fields=["current_location"])
+        later = evaluate_service_recommendations(self.workspace_service)
+        self.assertEqual(len(later), 1)
+        self.assertEqual(later[0].recommendation_type, RecommendationType.SERVICE_NEARBY_TECHNICIAN)
+        self.assertEqual(evaluate_service_recommendations(self.workspace_service), [])
+
+    def test_inactive_employee_is_not_reported_as_current_overload(self):
+        self.employee.is_active = False
+        self.employee.save(update_fields=["is_active"])
+        for number in range(3):
+            Task.objects.create(service_request=self.ticket, assigned_to=self.employee,
+                                title=f"Inactive task {number}", status="IN_PROGRESS")
+        self.assertEqual(evaluate_service_recommendations(self.workspace_service), [])
+
     def test_recommendation_accept_api(self):
         """Verify accepting a recommendation updates status to ACCEPTED."""
         rec = Recommendation.objects.create(
@@ -166,6 +256,64 @@ class RecommendationEngineTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         rec.refresh_from_db()
         self.assertEqual(rec.status, RecommendationStatus.REJECTED)
+
+    def test_reject_does_not_overwrite_accepted_controlled_approval(self):
+        rec = Recommendation.objects.create(
+            workspace=self.workspace_service, recommendation_type=RecommendationType.SERVICE_NEARBY_TECHNICIAN,
+            title="Controlled dispatch", proposed_action="dispatch_technician",
+            proposed_parameters={"ticket_id": self.ticket.pk, "employee_id": self.employee.pk},
+        )
+        self.client.force_authenticate(user=self.user_manager)
+        headers = {"HTTP_X_WORKSPACE_ID": str(self.workspace_service.pk)}
+        accepted = self.client.post(f"/api/v1/recommendations/{rec.pk}/accept/", {}, format="json", **headers)
+        self.assertEqual(accepted.status_code, 200)
+        rec.refresh_from_db()
+        approval_id = rec.approval_request_id
+        self.assertIsNotNone(approval_id)
+        refused = self.client.post(f"/api/v1/recommendations/{rec.pk}/reject/", {}, format="json", **headers)
+        self.assertEqual(refused.status_code, 400)
+        rec.refresh_from_db()
+        self.assertEqual(rec.status, RecommendationStatus.ACCEPTED)
+        self.assertEqual(rec.approval_request_id, approval_id)
+        self.assertEqual(ApprovalRequest.objects.get(pk=approval_id).status, ApprovalStatus.PENDING)
+        self.assertFalse(AuditLog.objects.filter(action="RECOMMENDATION_REJECTED", entity_id=str(rec.pk)).exists())
+
+    def test_rejection_reloads_locked_state_and_is_idempotent(self):
+        rec = Recommendation.objects.create(workspace=self.workspace_retail, title="Pending loaded snapshot",
+                                            recommendation_type=RecommendationType.RETAIL_LOW_ORDER_VOLUME)
+        Recommendation.objects.filter(pk=rec.pk).update(status=RecommendationStatus.ACCEPTED)
+        with self.assertRaises(ToolValidationError):
+            reject_recommendation(rec)
+        rec.refresh_from_db()
+        self.assertEqual(rec.status, RecommendationStatus.ACCEPTED)
+        Recommendation.objects.filter(pk=rec.pk).update(status=RecommendationStatus.PENDING)
+        rejected = reject_recommendation(rec)
+        self.assertEqual(rejected.status, RecommendationStatus.REJECTED)
+        self.assertEqual(reject_recommendation(rec).status, RecommendationStatus.REJECTED)
+        with self.assertRaises(ToolValidationError):
+            from apps.recommendations.services import accept_recommendation
+            accept_recommendation(rejected, self.user_manager)
+
+    def test_expired_terminal_recommendation_cannot_be_rewritten_as_rejected(self):
+        rec = Recommendation.objects.create(workspace=self.workspace_retail, title="Expired terminal",
+                                            recommendation_type=RecommendationType.RETAIL_LOW_ORDER_VOLUME,
+                                            status=RecommendationStatus.EXPIRED)
+        self.client.force_authenticate(user=self.user_manager)
+        response = self.client.post(f"/api/v1/recommendations/{rec.pk}/reject/", {}, format="json",
+                                    HTTP_X_WORKSPACE_ID=str(self.workspace_retail.pk))
+        self.assertEqual(response.status_code, 400)
+        rec.refresh_from_db()
+        self.assertEqual(rec.status, RecommendationStatus.EXPIRED)
+
+    def test_reject_preserves_workspace_isolation(self):
+        rec = Recommendation.objects.create(workspace=self.workspace_service, title="Other workspace",
+                                            recommendation_type=RecommendationType.SERVICE_TICKET_SPIKE)
+        self.client.force_authenticate(user=self.user_manager)
+        response = self.client.post(f"/api/v1/recommendations/{rec.pk}/reject/", {}, format="json",
+                                    HTTP_X_WORKSPACE_ID=str(self.workspace_retail.pk))
+        self.assertEqual(response.status_code, 404)
+        rec.refresh_from_db()
+        self.assertEqual(rec.status, RecommendationStatus.PENDING)
 
     def test_actionable_recommendation_acceptance_creates_one_approval(self):
         rec = Recommendation.objects.create(

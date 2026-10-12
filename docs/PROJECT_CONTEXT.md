@@ -501,3 +501,15 @@ Owner-approved scope: Render Free/no live LLM, historical academic data, labeled
 AI illustration when real ProductImage missing, strict HOME_DELIVERY activation
 after stock preflight and deploy. No transaction fabrication, schema/migration
 change, data reset or97-ledger change. See AUDIT_REPAIR_RESULTS_2026_10_11.md.
+
+## Audit follow-up contracts — 2026-10-12
+
+The approval service itself denies inactive/Google-linked callers before the
+existing active non-Google superuser bypass, not merely at the HTTP boundary.
+Recommendation accept/reject serialize terminal decisions. Service advice uses
+stored deadline/availability evidence; unknown skills/SLA remain unverified.
+Forecast monitoring scores source-record periods, not daily imputed zeros or
+the incomplete current day, and chart/monitor prefer saved run cadence.
+Checkout method changes refresh totals from the existing server cart API and
+hold submission on unknown totals; GPS requires reported accuracy0–100m and
+clears stale callbacks/coordinates. No schema or97-ledger change.

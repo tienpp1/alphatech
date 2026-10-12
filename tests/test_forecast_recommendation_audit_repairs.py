@@ -1,9 +1,12 @@
 """Regression evidence for truthful forecasts, rules and telemetry (isolated DB)."""
 import datetime
+import io
+import json
 from decimal import Decimal
 from unittest.mock import patch
 
 from django.test import TestCase, SimpleTestCase
+from django.core.management import call_command
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -13,6 +16,8 @@ from apps.retail.models import Customer, Order, Category, Product
 from apps.forecasting.models import ForecastModelConfig, ForecastRun, ForecastResult, TargetType
 from apps.forecasting.diagnostics import assess_model_quality, assess_snapshot
 from apps.forecasting.services import get_forecast_chart_data
+from apps.forecasting.evaluation import compare_model_against_baseline
+from apps.forecasting.management.commands.forecast_monitor import monitor_run
 from apps.recommendations.models import Recommendation, RecommendationType
 from apps.recommendations.rules import evaluate_retail_recommendations
 from apps.recommendations.services import recommendation_review_state, accept_recommendation
@@ -32,6 +37,12 @@ class ForecastDiagnosticTests(SimpleTestCase):
     def test_missing_or_nonfinite_metrics_are_unassessed(self):
         self.assertEqual(assess_model_quality({"mae": float("nan")}, {})["status"], "UNASSESSED")
 
+    def test_boolean_or_numeric_string_is_not_a_measured_quality_metric(self):
+        for invalid in (False, "0"):
+            with self.subTest(value=invalid):
+                self.assertEqual(assess_model_quality({"mae": invalid, "rmse": invalid},
+                                                     {"naive_mae": 10, "naive_rmse": 10})["status"], "UNASSESSED")
+
     def test_metric_specific_winners_do_not_become_general_superiority(self):
         result = assess_model_quality({"mae": 9, "rmse": 15, "r2": 0.1},
                                      {"naive_mae": 10, "naive_rmse": 10,
@@ -50,6 +61,26 @@ class ForecastDiagnosticTests(SimpleTestCase):
         today = timezone.localdate()
         self.assertEqual(assess_snapshot(today - datetime.timedelta(days=30))["status"], "STALE")
         self.assertEqual(assess_snapshot(today + datetime.timedelta(days=1))["status"], "FUTURE_DATA")
+
+    def test_zero_or_missing_baseline_is_not_measured_equality_or_improvement(self):
+        compared = compare_model_against_baseline({"mae": 1}, {"mae": 0, "naive_mae": 10})
+        self.assertIsNone(compared["mae_improvement_pct"])
+        self.assertIsNone(compared["rmse_improvement_pct"])
+        self.assertIsNone(compared["mape_improvement_pct"])
+        self.assertIsNone(compare_model_against_baseline({}, {"naive_mae": 10})["mae_improvement_pct"])
+
+    def test_invalid_comparison_values_do_not_become_numeric_gains(self):
+        for invalid in (True, "2", -1, float("nan"), float("inf"), None):
+            with self.subTest(value=invalid):
+                self.assertIsNone(compare_model_against_baseline({"mae": invalid}, {"naive_mae": 10})["mae_improvement_pct"])
+                self.assertIsNone(compare_model_against_baseline({"mae": 2}, {"naive_mae": invalid})["mae_improvement_pct"])
+
+    def test_valid_comparison_keeps_direction_zero_and_original_metrics(self):
+        model, baseline = {"mae": 0, "rmse": 12, "mape": 10}, {"mae": 5, "rmse": 10, "mape": 10}
+        self.assertEqual(compare_model_against_baseline(model, baseline),
+                         {"mae_improvement_pct": 100, "rmse_improvement_pct": -20, "mape_improvement_pct": 0})
+        self.assertEqual(model, {"mae": 0, "rmse": 12, "mape": 10})
+        self.assertEqual(baseline, {"mae": 5, "rmse": 10, "mape": 10})
 
 
 class ForecastRuleRepairTests(TestCase):
@@ -177,3 +208,106 @@ class ForecastRuleRepairTests(TestCase):
             self.assertNotContains(response, unsupported)
         self.assertContains(response, "DATABASE SNAPSHOT")
         self.assertContains(response, "không phải benchmark AI/GIS")
+
+    def test_chart_weekly_actuals_follow_saved_run_granularity(self):
+        self.order("weekly-a", datetime.date(2026, 1, 2), "20")
+        self.order("weekly-b", datetime.date(2026, 1, 3), "30")
+        run = ForecastRun.objects.create(
+            workspace=self.workspace, model_config=self.config, target_type=TargetType.RETAIL_REVENUE,
+            status="COMPLETED", dataset_period_end=datetime.date(2026, 1, 5),
+            job_parameters={"dimensions": {}, "provenance": {"granularity": "WEEKLY"}},
+            model_metrics={"mae": 12, "r2": -2},
+        )
+        ForecastResult.objects.create(workspace=self.workspace, forecast_run=run, target_type=run.target_type,
+                                      forecast_date=datetime.date(2026, 1, 12), predicted_value=55)
+        # Current config is DAILY; it must not rewrite a prior WEEKLY run's units.
+        result = get_forecast_chart_data(self.workspace)
+        self.assertEqual(result["granularity"], "WEEKLY")
+        self.assertEqual(result["historical"], [{"date": "2026-01-05", "value": 50}])
+        self.assertEqual(result["forecast"][0]["date"], "2026-01-12")
+        self.assertEqual(result["metrics"]["r2"], -2)
+        run.refresh_from_db()
+        self.assertEqual(run.model_metrics, {"mae": 12, "r2": -2})
+
+    def test_weekly_chart_cutoff_does_not_silently_drop_first_week_days(self):
+        self.order("first-week-tue", datetime.date(2026, 1, 6), "20")
+        self.order("first-week-thu", datetime.date(2026, 1, 8), "30")
+        ForecastRun.objects.create(workspace=self.workspace, model_config=self.config,
+                                   target_type=TargetType.RETAIL_REVENUE, status="COMPLETED",
+                                   job_parameters={"provenance": {"granularity": "WEEKLY"}})
+        with patch("apps.forecasting.services.timezone.localdate", return_value=datetime.date(2026, 1, 10)):
+            result = get_forecast_chart_data(self.workspace, history_days=2)
+        self.assertEqual(result["historical"], [{"date": "2026-01-12", "value": 50}])
+
+    def test_monitor_excludes_imputed_and_future_days_but_keeps_observed_zero(self):
+        self.order("observed", datetime.date(2026, 1, 1), "10")
+        self.order("observed-zero", datetime.date(2026, 1, 3), "0")
+        self.order("future", datetime.date(2026, 1, 5), "50")
+        run = ForecastRun.objects.create(workspace=self.workspace, model_config=self.config,
+                                         target_type=TargetType.RETAIL_REVENUE, status="COMPLETED",
+                                         model_metrics={"mae": "invalid", "r2": -1})
+        for day, predicted in ((1, 10), (2, 999), (3, 5), (4, 8), (5, 55)):
+            ForecastResult.objects.create(workspace=self.workspace, forecast_run=run, target_type=run.target_type,
+                                          forecast_date=datetime.date(2026, 1, day), predicted_value=predicted)
+        report = monitor_run(run, datetime.date(2026, 1, 4))
+        self.assertEqual(report["matched_actuals"], 2)
+        self.assertEqual(report["realized_mae"], 2.5)
+        self.assertEqual(report["imputed_forecast_points_excluded"], 1)
+        self.assertEqual(report["source_observation_count"], 2)
+        self.assertIsNone(report["holdout_mae"])
+        self.assertIsNone(report["drift_warning"])
+        run.refresh_from_db()
+        self.assertEqual(run.model_metrics, {"mae": "invalid", "r2": -1})
+
+    def test_monitor_zero_holdout_does_not_invent_relative_drift_threshold(self):
+        run = ForecastRun.objects.create(workspace=self.workspace, model_config=self.config,
+                                         target_type=TargetType.RETAIL_REVENUE, status="COMPLETED",
+                                         model_metrics={"mae": 0, "r2": -2})
+        for day in range(1, 8):
+            date = datetime.date(2026, 1, day)
+            self.order(f"zero-{day}", date, "0")
+            ForecastResult.objects.create(workspace=self.workspace, forecast_run=run, target_type=run.target_type,
+                                          forecast_date=date, predicted_value=1)
+        report = monitor_run(run, datetime.date(2026, 1, 8))
+        self.assertEqual(report["matched_actuals"], 7)
+        self.assertEqual(report["realized_mae"], 1)
+        self.assertEqual(report["holdout_mae"], 0)
+        self.assertIsNone(report["drift_warning"])
+
+    def test_monitor_weekly_snapshot_and_utc_midnight_use_local_business_dates(self):
+        self.order("week-1", datetime.date(2026, 1, 2), "20")
+        self.order("week-2", datetime.date(2026, 1, 3), "30")
+        run = ForecastRun.objects.create(
+            workspace=self.workspace, model_config=self.config, target_type=TargetType.RETAIL_REVENUE,
+            status="COMPLETED", dataset_period_end=datetime.date(2026, 1, 5),
+            job_parameters={"provenance": {"granularity": "WEEKLY", "dimensions": {}}},
+            model_metrics={"mae": 2},
+        )
+        ForecastResult.objects.create(workspace=self.workspace, forecast_run=run, target_type=run.target_type,
+                                      forecast_date=datetime.date(2026, 1, 5), predicted_value=55)
+        stream = io.StringIO()
+        # UTC 05/01 22:00 is already 06/01 in the active +07 business timezone.
+        with timezone.override("Asia/Ho_Chi_Minh"), patch("django.utils.timezone.now", return_value=datetime.datetime(2026, 1, 5, 22, tzinfo=datetime.timezone.utc)):
+            call_command("forecast_monitor", stdout=stream)
+        report = json.loads(stream.getvalue())[0]
+        self.assertEqual(report["as_of"], "2026-01-06")
+        self.assertEqual(report["series_granularity"], "WEEKLY")
+        self.assertEqual(report["granularity_source"], "saved_provenance")
+        self.assertEqual(report["matched_actuals"], 1)
+        self.assertEqual(report["realized_mae"], 5)
+        self.assertIn("not verified daily completeness", report["note"])
+
+    def test_monitor_invalid_legacy_context_does_not_hide_other_runs(self):
+        ForecastRun.objects.create(workspace=self.workspace, model_config=self.config,
+                                   target_type=TargetType.RETAIL_REVENUE, status="COMPLETED",
+                                   job_parameters={"dimensions": "not-a-dict"})
+        valid = ForecastRun.objects.create(workspace=self.workspace, model_config=self.config,
+                                           target_type=TargetType.RETAIL_REVENUE, status="COMPLETED")
+        stream = io.StringIO()
+        call_command("forecast_monitor", stdout=stream)
+        reports = json.loads(stream.getvalue())
+        self.assertEqual(len(reports), 2)
+        self.assertIn(valid.pk, [report["run_id"] for report in reports])
+        invalid = next(report for report in reports if "error_code" in report)
+        self.assertEqual(invalid["error_code"], "INVALID_SERIES_CONTEXT")
+        self.assertEqual(invalid["assessment_status"], "UNASSESSED")

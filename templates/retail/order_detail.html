@@ -43,6 +43,11 @@
 {% endblock %}
 
 {% block content %}
+{% if error_message %}
+<div class="card" role="alert" tabindex="-1" autofocus style="border-color: #ef4444;">
+    {{ error_message }}
+</div>
+{% endif %}
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
     <div>
         <a href="/noibo/retail/orders/" id="btn-back-orders" style="color: #6366f1; text-decoration: none; font-size: 0.875rem;">← Quay lại Danh sách Đơn hàng</a>

@@ -173,7 +173,7 @@
                                    class="pub-form-control">
                             <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
                                 <button type="button" class="pub-btn-secondary" id="btn-use-delivery-location" style="padding:8px 12px; font-size:0.82rem;">Dùng vị trí hiện tại</button>
-                                <span id="delivery-location-status" style="font-size:0.78rem; color:var(--pub-text-muted);">Vị trí chỉ dùng để chọn kho gần hơn và không lưu vào hồ sơ.</span>
+                                <span id="delivery-location-status" role="status" aria-live="polite" style="font-size:0.78rem; color:var(--pub-text-muted);">Vị trí chỉ hỗ trợ phân bổ kho trong lần đặt này và không lưu vào hồ sơ.</span>
                             </div>
                             <input type="hidden" name="delivery_latitude" id="delivery-latitude">
                             <input type="hidden" name="delivery_longitude" id="delivery-longitude">
@@ -311,6 +311,10 @@
                 </div>
 
                 <!-- Place Order Button -->
+                <div style="margin-bottom:1rem; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <span id="checkout-summary-status" role="status" aria-live="polite" aria-atomic="true" style="font-size:0.85rem; color:var(--pub-text-muted);"></span>
+                    <button type="button" id="checkout-summary-retry" class="pub-btn-secondary" hidden>Thử lại tổng tiền</button>
+                </div>
                 <button type="submit" class="pub-btn-primary" id="btn-place-order" style="width: 100%; justify-content: center; padding: 14px; font-size: 1.05rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     <span>Đặt mua đơn hàng</span>
@@ -325,13 +329,71 @@
 </div>
 
 <script>
-function setDeliveryMethod(method) {
+var checkoutSummaryVersion = 0;
+var checkoutSummaryController;
+var checkoutLocationVersion = 0;
+function clearCheckoutLocation() {
+    document.getElementById('delivery-latitude').value = '';
+    document.getElementById('delivery-longitude').value = '';
+}
+async function refreshCheckoutSummary(method) {
+    var current = ++checkoutSummaryVersion;
+    if (checkoutSummaryController) checkoutSummaryController.abort();
+    var controller = new AbortController();
+    checkoutSummaryController = controller;
+    var placeButton = document.getElementById('btn-place-order');
+    var status = document.getElementById('checkout-summary-status');
+    var retry = document.getElementById('checkout-summary-retry');
+    var shipping = document.getElementById('summary-shipping-fee');
+    var total = document.getElementById('summary-grand-total');
+    placeButton.disabled = true;
+    retry.hidden = true;
+    status.textContent = 'Đang cập nhật tổng tiền theo cách nhận hàng…';
+    shipping.textContent = 'Đang cập nhật…';
+    total.textContent = 'Đang cập nhật…';
+    var timeout = setTimeout(function () { controller.abort(); }, 10000);
+    try {
+        var response = await fetch("{% url 'public_cart_json' %}?delivery_method=" + encodeURIComponent(method),
+            {credentials: 'same-origin', headers: {'Accept': 'application/json'}, signal: controller.signal});
+        if (!response.ok) throw new Error('summary_unavailable');
+        var data = await response.json();
+        if (current !== checkoutSummaryVersion) return;
+        if (!Number.isFinite(data.shipping_fee) || data.shipping_fee < 0 ||
+                !Number.isFinite(data.total_amount) || data.total_amount < data.shipping_fee ||
+                typeof data.formatted_shipping_fee !== 'string' || typeof data.formatted_total_amount !== 'string') {
+            throw new Error('invalid_summary');
+        }
+        shipping.textContent = data.formatted_shipping_fee;
+        shipping.classList.remove('shipping-free', 'shipping-standard');
+        shipping.classList.add(data.shipping_fee === 0 ? 'shipping-free' : 'shipping-standard');
+        total.textContent = data.formatted_total_amount;
+        status.textContent = 'Đã cập nhật tổng tiền từ hệ thống.';
+        placeButton.disabled = false;
+    } catch (_) {
+        if (current !== checkoutSummaryVersion) return;
+        shipping.textContent = 'Chưa xác nhận';
+        total.textContent = 'Chưa xác nhận';
+        status.textContent = 'Chưa cập nhật được tổng tiền. Hãy thử lại hoặc tải lại trang trước khi đặt hàng.';
+        retry.hidden = false;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+function setDeliveryMethod(method, refreshSummary) {
+    if (method !== 'HOME_DELIVERY' && method !== 'STORE_PICKUP') return;
     var homeDiv = document.getElementById('home-delivery-fields');
     var storeDiv = document.getElementById('store-pickup-fields');
     var addressInput = document.getElementById('address');
     var branchSelect = document.getElementById('branch_id');
     var labelHome = document.getElementById('label-home-delivery');
     var labelStore = document.getElementById('label-store-pickup');
+    document.querySelectorAll('input[name="delivery_method"]').forEach(function (radio) {
+        radio.checked = radio.value === method;
+    });
+    checkoutLocationVersion++;
+    clearCheckoutLocation();
+    document.getElementById('btn-use-delivery-location').disabled = false;
+    document.getElementById('delivery-location-status').textContent = 'Vị trí chỉ hỗ trợ phân bổ kho trong lần đặt này và không lưu vào hồ sơ.';
 
     if (method === 'HOME_DELIVERY') {
         if (homeDiv) homeDiv.style.display = 'block';
@@ -360,25 +422,47 @@ function setDeliveryMethod(method) {
             labelStore.style.background = '#EFF6FF';
         }
     }
+    if (refreshSummary !== false) refreshCheckoutSummary(method);
 }
 
 (function () {
     var button = document.getElementById('btn-use-delivery-location');
     var status = document.getElementById('delivery-location-status');
+    var selected = document.querySelector('input[name="delivery_method"]:checked');
+    if (selected) setDeliveryMethod(selected.value, false);
+    document.getElementById('checkout-summary-retry').addEventListener('click', function () {
+        var method = document.querySelector('input[name="delivery_method"]:checked');
+        if (method) refreshCheckoutSummary(method.value);
+    });
     if (!button) return;
     button.addEventListener('click', function () {
+        var current = ++checkoutLocationVersion;
+        clearCheckoutLocation();
         if (!navigator.geolocation) {
             if (status) status.textContent = 'Thiết bị không hỗ trợ lấy vị trí. Bạn có thể nhập địa chỉ.';
             return;
         }
+        button.disabled = true;
         if (status) status.textContent = 'Đang xin quyền vị trí…';
         navigator.geolocation.getCurrentPosition(function (position) {
-            document.getElementById('delivery-latitude').value = position.coords.latitude.toFixed(6);
-            document.getElementById('delivery-longitude').value = position.coords.longitude.toFixed(6);
-            if (status) status.textContent = 'Đã nhận vị trí cho lần đặt hàng này.';
+            if (current !== checkoutLocationVersion) return;
+            button.disabled = false;
+            var coords = position && position.coords;
+            if (!coords || !Number.isFinite(coords.latitude) || Math.abs(coords.latitude) > 90 ||
+                    !Number.isFinite(coords.longitude) || Math.abs(coords.longitude) > 180 ||
+                    !Number.isFinite(coords.accuracy) || coords.accuracy < 0 || coords.accuracy > 100) {
+                if (status) status.textContent = 'Không thể lấy vị trí chính xác. Bạn có thể nhập địa chỉ hoặc thử lại ngoài trời.';
+                return;
+            }
+            document.getElementById('delivery-latitude').value = coords.latitude.toFixed(6);
+            document.getElementById('delivery-longitude').value = coords.longitude.toFixed(6);
+            if (status) status.textContent = 'Đã nhận vị trí cho lần đặt này (sai số thiết bị báo khoảng ' + Math.round(coords.accuracy) + ' m).';
         }, function () {
+            if (current !== checkoutLocationVersion) return;
+            button.disabled = false;
+            clearCheckoutLocation();
             if (status) status.textContent = 'Không lấy được vị trí. Bạn có thể tiếp tục bằng địa chỉ.';
-        }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 });
+        }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
     });
 })();
 </script>

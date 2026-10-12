@@ -10,6 +10,7 @@ from apps.retail.services import rollback_stock_transfer
 from apps.audit.models import AuditLog
 from apps.retail.models import Customer, Order
 from apps.service_ops.models import Service, ServiceRequest, Employee
+from apps.public_web.models import SocialIdentity
 from django.utils import timezone
 
 
@@ -48,6 +49,48 @@ class ApprovalStateIntegrityTests(TestCase):
         outsider = User.objects.create_user(username="outsider", email="outsider@example.com")
         with self.assertRaises(ToolPermissionDenied):
             process_approval_decision(request, outsider, "APPROVED")
+
+    def test_superuser_exemption_does_not_admit_inactive_or_google_proposals(self):
+        inactive = User.objects.create_superuser(
+            username="inactive-approval-admin", email="inactive-approval@example.test",
+            password=None, is_active=False,
+        )
+        google = User.objects.create_superuser(
+            username="google-approval-admin", email="google-approval@example.test", password=None,
+        )
+        SocialIdentity.objects.create(
+            user=google, provider="GOOGLE", subject="approval-google-subject",
+            provider_email=google.email,
+        )
+        for actor in (inactive, google):
+            with self.subTest(actor=actor.username):
+                with self.assertRaises(ToolPermissionDenied):
+                    execute_tool("create_promotion_request", self.ws, actor, self.params)
+        self.assertFalse(ApprovalRequest.objects.exists())
+        self.assertFalse(AuditLog.objects.filter(action="APPROVAL_CREATED").exists())
+
+    def test_superuser_exemption_does_not_admit_inactive_or_google_reviewers(self):
+        request = self.propose()
+        inactive = User.objects.create_superuser(
+            username="inactive-review-admin", email="inactive-review@example.test",
+            password=None, is_active=False,
+        )
+        google = User.objects.create_superuser(
+            username="google-review-admin", email="google-review@example.test", password=None,
+        )
+        SocialIdentity.objects.create(
+            user=google, provider="GOOGLE", subject="review-google-subject",
+            provider_email=google.email,
+        )
+        for actor in (inactive, google):
+            with self.subTest(actor=actor.username):
+                with self.assertRaises(ToolPermissionDenied):
+                    process_approval_decision(request, actor, "APPROVED")
+        request.refresh_from_db()
+        self.assertEqual(request.status, "PENDING")
+        self.assertIsNone(request.executed_at)
+        self.assertIsNone(request.reviewer_id)
+        self.assertFalse(AuditLog.objects.filter(action="MUTATION_EXECUTED").exists())
 
     def test_mutation_contract_rejects_unscoped_entity_before_approval(self):
         with self.assertRaises(ToolValidationError):

@@ -116,7 +116,7 @@
                 {% endif %}
 
                 {% if error_message %}
-                <div style="background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;padding:14px 16px;border-radius:10px;margin-bottom:1.5rem;">
+                <div role="alert" style="background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;padding:14px 16px;border-radius:10px;margin-bottom:1.5rem;">
                     {{ error_message }}
                 </div>
                 {% endif %}
@@ -130,7 +130,7 @@
                                 Họ và tên <span style="color: #EF4444;">*</span>
                             </label>
                             <input type="text" id="name" name="name" required placeholder="Nguyễn Văn An"
-                                   value="{% if request.user.is_authenticated %}{{ request.user.first_name|default:request.user.username }}{% endif %}"
+                                   value="{% if form_data %}{{ form_data.name }}{% elif request.user.is_authenticated %}{{ request.user.first_name|default:request.user.username }}{% endif %}"
                                    class="pub-form-control">
                         </div>
                         <div class="pub-form-group" style="margin-bottom: 0;">
@@ -138,6 +138,7 @@
                                 Số điện thoại <span style="color: #EF4444;">*</span>
                             </label>
                             <input type="tel" id="phone" name="phone" required placeholder="0901234567"
+                                   value="{{ form_data.phone }}"
                                    class="pub-form-control">
                         </div>
                     </div>
@@ -147,7 +148,7 @@
                             Địa chỉ Email
                         </label>
                         <input type="email" id="email" name="email" placeholder="an.nguyen@example.com"
-                               value="{% if request.user.is_authenticated %}{{ request.user.email }}{% endif %}"
+                               value="{% if form_data %}{{ form_data.email }}{% elif request.user.is_authenticated %}{{ request.user.email }}{% endif %}"
                                class="pub-form-control">
                     </div>
 
@@ -156,7 +157,7 @@
                             Nội dung cần hỗ trợ <span style="color: #EF4444;">*</span>
                         </label>
                         <textarea id="message" name="message" rows="5" required placeholder="Quý khách vui lòng nhập câu hỏi, góp ý hoặc nội dung cần tư vấn tại đây..."
-                                  class="pub-form-control" style="resize: vertical;"></textarea>
+                                  class="pub-form-control" style="resize: vertical;">{{ form_data.message }}</textarea>
                     </div>
 
                     <button type="submit" class="pub-btn-primary" style="width: 100%; justify-content: center; padding: 13px; font-size: 0.95rem; font-weight: 700;">

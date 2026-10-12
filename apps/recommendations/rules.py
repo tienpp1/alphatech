@@ -7,6 +7,7 @@ Does NOT use LLM or non-deterministic inference to evaluate rules.
 from typing import List, Dict, Any, Optional
 from decimal import Decimal
 import datetime
+import math
 from django.utils import timezone
 from django.db.models import Sum, Count, Q, Max
 
@@ -271,6 +272,7 @@ def evaluate_service_recommendations(workspace: Workspace) -> List[Recommendatio
         return []
 
     from apps.service_ops.models import ServiceRequest, ServiceRequestStatus, Employee, Task, TaskStatus
+    from apps.service_ops.sla_engine import calculate_sla_status, SLAComplianceStatus
     from apps.gis.services import find_nearby_technicians
 
     created_recs = []
@@ -278,114 +280,179 @@ def evaluate_service_recommendations(workspace: Workspace) -> List[Recommendatio
     # Rule 1: SLA At-Risk Ticket Check
     now = timezone.now()
     cutoff_12h = now - datetime.timedelta(hours=12)
-    target_ticket = (
+    tickets = (
         ServiceRequest.objects.for_workspace(workspace)
         .filter(
             status__in=[ServiceRequestStatus.OPEN, ServiceRequestStatus.ASSIGNED, ServiceRequestStatus.IN_PROGRESS]
         )
-        .filter(Q(created_at__lte=cutoff_12h) | Q(priority="HIGH"))
-        .select_related("customer")
-        .first()
+        .filter(created_at__lte=now)
+        .select_related("customer", "service")
+        .order_by("created_at", "pk")
     )
+    target_ticket, sla_info, unknown_candidate = None, None, None
+    for ticket in tickets.iterator():
+        assessment = calculate_sla_status(ticket, reference_time=now)
+        statuses = (assessment["response_status"], assessment["resolution_status"])
+        if any(value in (SLAComplianceStatus.BREACHED, SLAComplianceStatus.AT_RISK) for value in statuses):
+            target_ticket, sla_info = ticket, assessment
+            break
+        if (unknown_candidate is None and assessment["overall_status"] == SLAComplianceStatus.UNKNOWN
+                and (ticket.created_at <= cutoff_12h or ticket.priority in ("HIGH", "CRITICAL"))):
+            unknown_candidate = (ticket, assessment)
+    if target_ticket is None and unknown_candidate is not None:
+        target_ticket, sla_info = unknown_candidate
+    expiry = now + datetime.timedelta(days=1)
 
     if target_ticket:
+        known_risk = any(value in (SLAComplianceStatus.BREACHED, SLAComplianceStatus.AT_RISK)
+                         for value in (sla_info["response_status"], sla_info["resolution_status"]))
         existing = Recommendation.objects.for_workspace(workspace).filter(
             recommendation_type=RecommendationType.SERVICE_SLA_AT_RISK,
             status=RecommendationStatus.PENDING,
-            source_references__contains=[f"ticket:{target_ticket.id}"]
+            source_references__contains=[f"ticket:{target_ticket.id}"],
+            expires_at__gt=now,
         ).first()
 
         if not existing:
             rec = Recommendation.objects.create(
                 workspace=workspace,
                 recommendation_type=RecommendationType.SERVICE_SLA_AT_RISK,
-                title=f"Cảnh báo rủi ro vi phạm SLA cho yêu cầu dịch vụ #{getattr(target_ticket, 'request_number', target_ticket.id)}",
-                priority=RecommendationPriority.CRITICAL if target_ticket.priority == "HIGH" else RecommendationPriority.HIGH,
+                title=("Cảnh báo thời hạn SLA đã ghi nhận" if known_risk else "Rà soát yêu cầu — thời hạn SLA chưa đủ dữ liệu") + f" #{target_ticket.request_number}",
+                priority=(RecommendationPriority.CRITICAL if sla_info["overall_status"] == SLAComplianceStatus.BREACHED
+                          else RecommendationPriority.HIGH) if known_risk else RecommendationPriority.MEDIUM,
                 status=RecommendationStatus.PENDING,
                 explanation={
                     "what": f"Ưu tiên phân công hoặc điều phối nhân sự xử lý khẩn cấp yêu cầu #{getattr(target_ticket, 'request_number', target_ticket.id)}.",
-                    "why": f"Yêu cầu dịch vụ đang ở trạng thái '{target_ticket.get_status_display()}' với mức độ ưu tiên '{target_ticket.get_priority_display()}'.",
+                    "why": (f"Trạng thái SLA theo thời hạn đã lưu: {sla_info['overall_status']}; phản hồi: {sla_info['response_status']}; xử lý: {sla_info['resolution_status']}. "
+                            + ("Có thành phần sắp đến hạn/quá hạn theo bộ tính SLA; không chứng nhận tuân thủ hợp đồng." if known_risk else
+                               "Thiếu thời hạn SLA; tuổi yêu cầu hoặc độ ưu tiên chỉ là tiêu chí rà soát, không chứng minh vi phạm SLA.")),
                     "evidence": {
                         "ticket_id": target_ticket.id,
                         "ticket_code": getattr(target_ticket, "request_number", str(target_ticket.id)),
                         "priority": target_ticket.priority,
                         "hours_open": round((now - target_ticket.created_at).total_seconds() / 3600.0, 1),
+                        "sla": sla_info,
+                        "response_deadline_at": target_ticket.response_deadline_at.isoformat() if target_ticket.response_deadline_at else None,
+                        "resolution_deadline_at": target_ticket.resolution_deadline_at.isoformat() if target_ticket.resolution_deadline_at else None,
+                        "evaluated_at": now.isoformat(),
                     },
-                    "expected_effect": "Đảm bảo tuân thủ cam kết SLA, tránh vi phạm hợp đồng và nâng cao độ hài lòng của khách hàng."
+                    "expected_effect": "Hỗ trợ người quản lý rà soát ưu tiên và thời hạn; chưa đo hiệu quả hoặc bảo đảm SLA."
                 },
                 supporting_data={
                     "ticket_id": target_ticket.id,
                     "customer_name": target_ticket.customer.name if target_ticket.customer else "N/A",
+                    "sla": sla_info,
+                    "evaluated_at": now.isoformat(),
                 },
-                source_references=[f"ticket:{target_ticket.id}"]
+                source_references=[f"ticket:{target_ticket.id}"],
+                expires_at=expiry,
             )
             created_recs.append(rec)
 
-            # Rule 4: GIS Nearby Technician Candidate Scoring Recommendation for this ticket
+        # Candidate generation is independent of SLA-advice deduplication, but
+        # requires a recorded ticket origin; never use GIS's default city origin.
+        existing_gis = Recommendation.objects.for_workspace(workspace).filter(
+            recommendation_type=RecommendationType.SERVICE_NEARBY_TECHNICIAN,
+            status=RecommendationStatus.PENDING, expires_at__gt=now,
+            source_references__contains=[f"ticket:{target_ticket.id}"],
+        ).exists()
+        origin_lon = target_ticket.location.x if target_ticket.location is not None else target_ticket.longitude
+        origin_lat = target_ticket.location.y if target_ticket.location is not None else target_ticket.latitude
+        has_origin = (origin_lon is not None and origin_lat is not None and
+                      math.isfinite(float(origin_lon)) and math.isfinite(float(origin_lat)) and
+                      -180 <= float(origin_lon) <= 180 and -90 <= float(origin_lat) <= 90)
+        if has_origin and not existing_gis:
             gis_results = find_nearby_technicians(workspace, service_request_id=target_ticket.id, radius_km=25.0)
             candidates = gis_results.get("candidates", [])
             if candidates:
+                eligible = Employee.objects.for_workspace(workspace).filter(
+                    pk__in=[candidate["id"] for candidate in candidates], is_active=True, is_available=True,
+                ).annotate(task_cnt=Count("assigned_tasks", filter=Q(
+                    assigned_tasks__service_request__workspace=workspace,
+                    assigned_tasks__status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS],
+                )))
+                records = {employee.pk: employee for employee in eligible}
                 scored_candidates = []
                 for c in candidates:
+                    employee = records.get(c["id"])
+                    if employee is None:
+                        continue
+                    skills = employee.skills if isinstance(employee.skills, list) else []
                     sc = calculate_technician_score(
                         distance_km=c["distance_km"],
-                        active_tasks=c["active_tasks"],
-                        has_matching_skill=True,
+                        active_tasks=employee.task_cnt,
+                        has_matching_skill=False,
+                        is_available=employee.is_available,
+                        weight_dist=0.5, weight_workload=0.5, weight_skill=0,
                     )
+                    # Service has no required-skill contract. Recorded skills
+                    # are evidence to review, not verified task compatibility.
+                    sc["subscores"]["skill_score"] = None
                     scored_candidates.append({
                         "technician_id": c["id"],
                         "name": c["name"],
                         "code": c["code"],
                         "distance_km": c["distance_km"],
-                        "active_tasks": c["active_tasks"],
+                        "active_tasks": employee.task_cnt,
+                        "is_available": employee.is_available,
+                        "recorded_skills": skills,
+                        "skill_match_verified": False,
+                        "skill_match_status": "UNVERIFIED",
                         "total_score": sc["score"],
                         "score_breakdown": sc["subscores"],
                     })
                 
-                scored_candidates.sort(key=lambda x: x["total_score"], reverse=True)
-                top_candidate = scored_candidates[0]
+                scored_candidates.sort(key=lambda x: (-x["total_score"], x["technician_id"]))
+                top_candidate = scored_candidates[0] if scored_candidates else None
 
-                rec_gis = Recommendation.objects.create(
-                    workspace=workspace,
-                    recommendation_type=RecommendationType.SERVICE_NEARBY_TECHNICIAN,
-                    title=f"Đề xuất phân công Kỹ thuật viên {top_candidate['name']} cho ticket #{getattr(target_ticket, 'request_number', target_ticket.id)}",
-                    priority=RecommendationPriority.HIGH,
-                    status=RecommendationStatus.PENDING,
-                    explanation={
-                        "what": f"Điều động Kỹ thuật viên {top_candidate['name']} ({top_candidate['code']}) tiếp nhận xử lý yêu cầu #{getattr(target_ticket, 'request_number', target_ticket.id)}.",
-                        "why": f"Kỹ thuật viên có điểm đánh giá tối ưu {top_candidate['total_score']}/100 dựa trên khoảng cách địa lý ({top_candidate['distance_km']} km) và số công việc hiện tại ({top_candidate['active_tasks']} công việc).",
-                        "evidence": {
-                            "ticket_id": target_ticket.id,
-                            "top_candidate": top_candidate,
-                            "ranked_candidates_count": len(scored_candidates),
-                            "scoring_formula": "0.4 * max(0, 100 - dist*10) + 0.4 * max(0, 100 - tasks*20) + 0.2 * skill_score"
+                if top_candidate:
+                    rec_gis = Recommendation.objects.create(
+                        workspace=workspace,
+                        recommendation_type=RecommendationType.SERVICE_NEARBY_TECHNICIAN,
+                        title=f"Đề xuất phân công Kỹ thuật viên {top_candidate['name']} cho ticket #{getattr(target_ticket, 'request_number', target_ticket.id)}",
+                        priority=RecommendationPriority.HIGH,
+                        status=RecommendationStatus.PENDING,
+                        explanation={
+                            "what": f"Điều động Kỹ thuật viên {top_candidate['name']} ({top_candidate['code']}) tiếp nhận xử lý yêu cầu #{getattr(target_ticket, 'request_number', target_ticket.id)}.",
+                            "why": f"Ứng viên có điểm heuristic cao nhất trong danh sách có tọa độ và đang khả dụng: {top_candidate['total_score']}/100; khoảng cách địa lý {top_candidate['distance_km']} km, {top_candidate['active_tasks']} công việc đang hoạt động. Kỹ năng được liệt kê đúng bản ghi nhưng chưa xác minh phù hợp ticket; không xác nhận chứng chỉ/năng lực hoặc thời gian đi đường.",
+                            "evidence": {
+                                "ticket_id": target_ticket.id,
+                                "top_candidate": top_candidate,
+                                "ranked_candidates_count": len(scored_candidates),
+                                "scoring_formula": "0.5 * max(0, 100 - dist*10) + 0.5 * max(0, 100 - tasks*20); chỉ nhân sự đang khả dụng.",
+                                "skill_scoring_policy": "Không cộng điểm kỹ năng khi chưa có hợp đồng yêu cầu kỹ năng của ticket; không suy diễn theo tên/category.",
+                                "evaluated_at": now.isoformat(),
+                            },
+                            "expected_effect": "Hỗ trợ quản lý đối chiếu ứng viên trước phê duyệt; không tự đặt lịch, bảo đảm SLA hoặc tối ưu tuyến đường."
                         },
-                        "expected_effect": "Tối ưu hóa thời gian di chuyển, cân bằng tải lao động và đảm bảo tiến độ xử lý yêu cầu."
-                    },
-                    supporting_data={
-                        "ticket_id": target_ticket.id,
-                        "recommended_employee_id": top_candidate["technician_id"],
-                        "top_candidates": scored_candidates[:3],
-                    },
-                    source_references=[f"ticket:{target_ticket.id}", f"employee:{top_candidate['technician_id']}"],
-                    proposed_action="dispatch_technician",
-                    proposed_parameters={
-                        "ticket_id": target_ticket.id,
-                        "employee_id": top_candidate["technician_id"],
-                    },
-                )
-                created_recs.append(rec_gis)
+                        supporting_data={
+                            "ticket_id": target_ticket.id,
+                            "recommended_employee_id": top_candidate["technician_id"],
+                            "top_candidates": scored_candidates[:3],
+                            "evaluated_at": now.isoformat(),
+                        },
+                        source_references=[f"ticket:{target_ticket.id}", f"employee:{top_candidate['technician_id']}"],
+                        proposed_action="dispatch_technician",
+                        proposed_parameters={
+                            "ticket_id": target_ticket.id,
+                            "employee_id": top_candidate["technician_id"],
+                        },
+                        expires_at=expiry,
+                    )
+                    created_recs.append(rec_gis)
 
     # Rule 2: Technician Overload Check
-    overloaded = Employee.objects.for_workspace(workspace).annotate(
-        task_cnt=Count("assigned_tasks", filter=Q(assigned_tasks__status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]))
+    overloaded = Employee.objects.for_workspace(workspace).filter(is_active=True).annotate(
+        task_cnt=Count("assigned_tasks", filter=Q(assigned_tasks__service_request__workspace=workspace,
+                                                 assigned_tasks__status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]))
     ).filter(task_cnt__gte=3).first()
 
     if overloaded:
         existing = Recommendation.objects.for_workspace(workspace).filter(
             recommendation_type=RecommendationType.SERVICE_TECHNICIAN_OVERLOAD,
             status=RecommendationStatus.PENDING,
-            source_references__contains=[f"employee:{overloaded.id}"]
+            source_references__contains=[f"employee:{overloaded.id}"],
+            expires_at__gt=now,
         ).first()
 
         if not existing:
@@ -397,17 +464,20 @@ def evaluate_service_recommendations(workspace: Workspace) -> List[Recommendatio
                 status=RecommendationStatus.PENDING,
                 explanation={
                     "what": f"Tái điều phối bớt công việc tồn đọng của Kỹ thuật viên {overloaded.full_name} cho các nhân sự khả dụng khác.",
-                    "why": f"Kỹ thuật viên hiện đang đảm nhận {overloaded.task_cnt} công việc đang xử lý, vượt ngưỡng khuyến nghị 3 công việc.",
+                    "why": f"Nhân sự có {overloaded.task_cnt} công việc đang hoạt động trong workspace, chạm hoặc vượt ngưỡng kịch bản 3; chưa đo công suất hoặc giới hạn tải thực tế.",
                     "evidence": {
                         "employee_id": overloaded.id,
                         "employee_name": overloaded.full_name,
                         "active_task_count": overloaded.task_cnt,
                         "threshold": 3,
+                        "evaluated_at": now.isoformat(),
                     },
-                    "expected_effect": "Giảm áp lực công việc, hạn chế sai sót kỹ thuật và cân bằng khối lượng lao động trong ca."
+                    "expected_effect": "Đề nghị quản lý rà soát tải thực tế; chưa đo hiệu quả và không tự chuyển công việc."
                 },
-                supporting_data={"employee_id": overloaded.id, "active_tasks": overloaded.task_cnt},
-                source_references=[f"employee:{overloaded.id}"]
+                supporting_data={"employee_id": overloaded.id, "active_tasks": overloaded.task_cnt,
+                                 "evaluated_at": now.isoformat(), "threshold_is_scenario_assumption": True},
+                source_references=[f"employee:{overloaded.id}"],
+                expires_at=expiry,
             )
             created_recs.append(rec)
 

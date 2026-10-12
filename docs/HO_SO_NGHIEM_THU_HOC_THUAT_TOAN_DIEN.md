@@ -1553,3 +1553,13 @@ Kết quả chạy lại được ghi riêng trong báo cáo chốt 09/10, khôn
 
 Đây là danh mục source, không tự chứng nhận PASS. Kết quả thực thi, kể cả lỗi
 trung gian/full suite, ghi riêng tại AUDIT_REPAIR_RESULTS_2026_10_11.md.
+
+### Bổ sung inventory audit follow-up 12/10/2026 — không thay sổ97
+
+- `test_order_status_ui_recovery.py` — thao tác trạng thái đơn lặp/sai giữ stock/audit,
+  lỗi tiếng Việt400, ownership404 và RBAC403.
+- `test_public_delivery_reliability.py` — email form sai không ghi contact, giữ form
+  an toàn, từng recipient độc lập, mail lỗi không rollback nghiệp vụ và retry đúng.
+- JavaScript `checkout_controls.test.cjs`, `branch_finder_fallbacks.test.cjs` — tổng
+  server sau đổi nhận hàng, race/retry và callback GPS thực từ source. Đây là test
+  mô phỏng DOM/provider, không tự chứng nhận GPS thiết bị hoặc inbox production.
