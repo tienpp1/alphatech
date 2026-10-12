@@ -217,3 +217,51 @@ test_alphatech_evidence_0a216da4b1184591 tự hủy. Index tree
 repair_release_snapshot_result_priority_final_20261012.json. Sau full chỉ thêm
 receipt tài liệu, không đổi code/testassertions. JavaScript cuối35/35OK913.5612ms.
 Không cộng các lượt1402/1394/1385 có phần chồng lặp thành tổng test khác nhau.
+
+## Chốt kiểm chứng nguồn và UAT — 12/10/2026
+
+Các đoạn “chờ” hoặc “chưa thử” phía trên là biên bản tại từng thời điểm,
+không phải trạng thái cuối. Nguồn ứng dụng cuối đã push lên main là
+`c74643a3f21f788c4beb52928ce1327c99d59665`. Đối chiếu API có xác thực lúc
+04:25:59 UTC: GitHub run [38201850772](https://github.com/tienpp1/alphatech/actions/runs/38201850772)
+completed/success đúng SHA; Render deploy `dep-db65lvd9fdbs73etafmg` LIVE đúng SHA.
+Receipt tạo deploy ban đầu ghi build_in_progress được giữ nguyên; receipt cuối
+`output/audit_followup_release_closure_20261012.json` ghi trạng thái LIVE đã kiểm.
+Render vẫn Free, fulfillment strict, không mở worker hoặc live LLM API.
+
+| Cổng | Kết quả cuối và giới hạn |
+|---|---|
+| Source Django | 1402/1402 OK, 337.335s, không skip; Git-index export credential-free, DB test disposable đã tự hủy. Không bao gồm 12 test untracked có sẵn của phần khác. |
+| JavaScript | 35/35 PASS, 913.5612ms; gồm checkout, branch fallbacks, assistant history và handler priority thật. |
+| GitHub CI | 36/36 bước success đúng c746; gồm check/migration drift, pip-audit, Bandit, coverage và regression workflow. Không gọi là chạy toàn bộ 1402 test trên GitHub. |
+| Đơn TEST | ORD-20261012-B8277C: giữ tồn, manager đề xuất/tự duyệt bị từ chối, admin khác duyệt, replay không thực thi lần hai, đúng chủ đơn thấy animation và ack/reload không lặp. |
+| Cleanup đơn | CANCELLED qua API canonical; tồn SKU SP-NET-006 tại ba chi nhánh trở lại 14/40/16, một audit release qty1; hủy lặp không tăng tồn. |
+| Dịch vụ P3 | Ticket123 trên c746 lưu LOW thật, REQUEST_CREATED audit107 cùng transaction; không SLA/deadline/assignment/task tự sinh. |
+| Cleanup dịch vụ | Ticket122 và123 CANCELLED qua API; ticket123 audit108 OPEN→CANCELLED. Hủy lặp123 HTTP200 giữ closed_at, hai audit và task_count0 nguyên vẹn. |
+| Email | Chủ dự án xác nhận cả hai inbox nhận email đơn TEST, và trả lời “có cả2” trong câu hỏi dịch vụ122/liên hệ2 ở hai inbox. Ticket123 có hai provider records SENT/attempt1, chưa có xác nhận inbox riêng cho cặp thư mới này. |
+| Giao diện | Browser production xác nhận snapshot người nhận đơn, header 375/812 không chồng cart, Nominatim/OSRM/radius với điểm công khai. Fresh GET contact thấy “Tiếp Nhận Trực Tuyến”; ảnh contact-neutral-copy-fresh.png là bằng chứng mới, ảnh contact-neutral-copy.png không được tính PASS. |
+| GPS thiết bị | Chủ dự án báo đã thử trên điện thoại và hoạt động tốt. Chưa cung cấp thiết bị/trình duyệt/thời điểm hoặc kết quả riêng cho phép, từ chối, mất định vị/sai số >100m; không tự điền matrix hay gọi mọi lỗi biên là UAT PASS. |
+
+Chi tiết ticket123 và replay trong `output/strict_uat_20261012/service_snapshot_123.json`,
+`cancel-service_123.json`, `cancel-service-repeat_123.json`; lần replay cuối ghi
+04:15:58 UTC. Hai TEST dịch vụ không phân công kỹ thuật viên; đơn TEST không
+giao hàng/không thanh toán. CONTACT2 giữ lịch sử đúng quy trình; không xóa audit,
+không dùng SQL để sửa balance/trạng thái, không reset database hoặc đổi schema.
+
+Kiểm tra notice với người không sở hữu trong lượt live dùng MANAGER, không phải
+khách hàng thường thứ hai. Test tự động có khách khác; không nâng giới hạn bằng
+chứng này thành UAT hai khách thường. Generated rule/PostGIS→recommendation→
+approval→dispatch/audit/replay đã có regression local, nhưng không gọi đó là
+recommendation tự sinh được nghiệm thu production hoặc chất lượng quyết định AI.
+
+Các việc sửa nguồn, phát hành và TEST có kiểm soát của kế hoạch đợt này đã có
+kết quả cuối. Không còn TEST giữ tồn hoặc task điều phối từ lượt này. Giới hạn
+XGBoost kém baseline/R² âm, deterministic/no-key, storage local và không worker
+production vẫn công khai; không bịa chất lượng AI hay chứng nhận production100%.
+Không thay đổi cấu trúc/tiến độ sổ97; hash vẫn
+`1D532616A6E9C9B780AA47C6EA680793ECBCC7C9F58EE3989D5FAE5F0DAEEC20`.
+
+Biên bản chốt này chỉ thêm tài liệu, không đổi runtime/test assertions sau c746.
+Nguồn đã kiểm thử/phát hành được nhận diện bằng c746, không mượn CI của commit
+ứng dụng để chứng nhận một SHA tài liệu mới. Các thay đổi ngoài nhiệm vụ trong
+worktree được giữ nguyên và không tự đưa vào commit.

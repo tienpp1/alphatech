@@ -1795,3 +1795,17 @@ policy11/11OK0.669s. Nguồn priority cuối chờfullindex/CI/deploy/P3LOW th�
 Priority fullindex1402/1402OK337.335s/noSkip/indexunchanged/DBtest riêng tựhủy,
 JS35/35OK913.5612ms. MD5/compatlegacy chỉtestprocess; productionstrict/no-key
 giữ nguyên. Saufull chỉ receipt; chờđốichiếu CI/deploy SHA và P3LOW mới.
+
+Chốt follow-up 12/10: nguồn c74643a3f21f788c4beb52928ce1327c99d59665 đã push;
+CI38201850772 completed/success 36 bước, RenderFree dep-db65lvd9fdbs73etafmg
+LIVE đúng SHA, đối chiếu API04:25:59 UTC. Full tracked source1402/1402OK337.335s,
+JS35/35PASS913.5612ms; CI chỉ các nhóm workflow, không gán full-suite GitHub.
+Browser ticket123 P3→LOW thật, audit107 REQUEST_CREATED; đã hủy quaAPI/audit108,
+hủy lặp200 giữ closed_at/audit/task0. Ticket122 cũng đã hủy; đơn TEST đã hủy,
+tồn14/40/16 phục hồi một lần. Contact freshGET caption trung tính đã kiểm.
+Chủ dự án xác nhận hai inbox cho ORDER và trả lời cócả2 cho SERVICE122/CONTACT2;
+SERVICE123 chỉ có providerSENT, chưa xác nhận inbox riêng. GPS chủ dự án báo
+điện thoại hoạt động tốt, chưa có thiết bị/thời điểm/matrix lỗi biên, không bịa.
+Generated recommendation chain chỉ local; live nonowner notice là MANAGER, không
+khách thườngB. Giữ XGBoost kém baseline/no-key/LocalStorage/no-worker và sổ97.
+Chi tiết/kết quả lỗi trung gian: AUDIT_FOLLOWUP_RESULTS_2026_10_12.md.
