@@ -129,7 +129,7 @@
             Tiếp nhận yêu cầu hỗ trợ kỹ thuật IT
         </h1>
         <p class="page-subtitle-main" style="margin-left: auto; margin-right: auto;">
-            Hệ thống điều phối kỹ thuật tự động: Chọn dịch vụ, mức độ ưu tiên phản hồi SLA, và cung cấp thông tin liên hệ.
+            Chọn dịch vụ, mô tả mức độ khẩn cấp và cung cấp thông tin liên hệ. Nhân viên sẽ xác nhận thời gian phản hồi và phân công sau khi tiếp nhận.
         </p>
     </div>
 </div>
@@ -188,6 +188,7 @@
             <form method="POST" action="/yeu-cau-dich-vu/" id="service-request-form">
                 {% csrf_token %}
                 <input type="hidden" name="submission_token" value="{{ submission_token }}">
+                <input type="hidden" id="service-priority" name="priority" value="{{ selected_priority|default:'MEDIUM' }}">
 
                 <!-- ================= BƯỚC 1: DỊCH VỤ & MÔ TẢ TRIỆU CHỨNG ================= -->
                 <div class="wizard-pane active" id="wizard-pane-1">
@@ -235,7 +236,7 @@
 
                     <!-- Priority Choice Cards -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                        <div class="priority-card selected" id="pcard-p1" onclick="selectPriority('P1', 15, 'Khẩn cấp')">
+                        <div class="priority-card {% if selected_priority == 'HIGH' %}selected{% endif %}" id="pcard-p1" onclick="selectPriority('P1', 15, 'Khẩn cấp')">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span style="background: #FEF2F2; color: #DC2626; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">P1 • KHẨN CẤP</span>
                                 <span style="font-size: 0.74rem; color: #EF4444; font-weight: 700;">Ví dụ: 15 phút</span>
@@ -244,7 +245,7 @@
                             <div style="font-size: 0.8rem; color: #64748B; line-height: 1.4;">Server ngưng hoạt động, mạng toàn công ty gián đoạn.</div>
                         </div>
 
-                        <div class="priority-card" id="pcard-p2" onclick="selectPriority('P2', 30, 'Tiêu chuẩn')">
+                        <div class="priority-card {% if selected_priority == 'MEDIUM' or not selected_priority %}selected{% endif %}" id="pcard-p2" onclick="selectPriority('P2', 30, 'Tiêu chuẩn')">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span style="background: #EFF6FF; color: #2563EB; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">P2 • TIÊU CHUẨN</span>
                                 <span style="font-size: 0.74rem; color: #2563EB; font-weight: 700;">Ví dụ: 30 phút</span>
@@ -253,7 +254,7 @@
                             <div style="font-size: 0.8rem; color: #64748B; line-height: 1.4;">Hỏng phần cứng máy trạm, lỗi phần mềm kế toán, in ấn.</div>
                         </div>
 
-                        <div class="priority-card" id="pcard-p3" onclick="selectPriority('P3', 120, 'Kế hoạch')">
+                        <div class="priority-card {% if selected_priority == 'LOW' %}selected{% endif %}" id="pcard-p3" onclick="selectPriority('P3', 120, 'Kế hoạch')">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span style="background: #F8FAFC; color: #64748B; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">P3 • KẾ HOẠCH</span>
                                 <span style="font-size: 0.74rem; color: #64748B; font-weight: 700;">Cần xác nhận</span>
@@ -267,12 +268,12 @@
                     <div class="sla-clock-box">
                         <div>
                             <div style="font-size: 0.74rem; color: #38BDF8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">BỘ ĐẾM MINH HỌA — KHÔNG PHẢI SLA THỰC TẾ</div>
-                            <div style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF; margin: 4px 0;" id="sla-display-text">Ưu tiên P1: Ví dụ mô phỏng 15 phút</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF; margin: 4px 0;" id="sla-display-text">{% if selected_priority == 'HIGH' %}Ưu tiên P1: Ví dụ mô phỏng 15 phút{% elif selected_priority == 'LOW' %}Ưu tiên P3: Ví dụ mô phỏng 120 phút{% else %}Ưu tiên P2: Ví dụ mô phỏng 30 phút{% endif %}</div>
                             <div style="font-size: 0.8rem; color: #94A3B8;">Gửi biểu mẫu chưa đồng nghĩa lịch hẹn hoặc kỹ sư đã được phân công.</div>
                         </div>
                         <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 10px 18px; text-align: center;">
                             <div style="font-size: 0.7rem; color: #94A3B8; font-weight: 700;">ĐẾM NGƯỢC MÔ PHỎNG</div>
-                            <div style="font-family: var(--pub-mono-font, monospace); font-size: 1.45rem; font-weight: 800; color: #34D399;" id="sla-countdown-val">14:59</div>
+                            <div style="font-family: var(--pub-mono-font, monospace); font-size: 1.45rem; font-weight: 800; color: #34D399;" id="sla-countdown-val">{% if selected_priority == 'HIGH' %}14:59{% elif selected_priority == 'LOW' %}119:59{% else %}29:59{% endif %}</div>
                         </div>
                     </div>
 
@@ -367,7 +368,7 @@
 {% block extra_js %}
 <script>
 var currentStep = 1;
-var selectedSlaMinutes = 15;
+var selectedSlaMinutes = {% if selected_priority == 'HIGH' %}15{% elif selected_priority == 'LOW' %}120{% else %}30{% endif %};
 var countdownTimer = null;
 
 function proceedToStep(step) {
@@ -428,6 +429,10 @@ function updateWizardUI() {
 }
 
 function selectPriority(level, slaMins, label) {
+    var priorityByLevel = {P1: 'HIGH', P2: 'MEDIUM', P3: 'LOW'};
+    if (!Object.prototype.hasOwnProperty.call(priorityByLevel, level)) return;
+    var priorityInput = document.getElementById('service-priority');
+    if (priorityInput) priorityInput.value = priorityByLevel[level];
     document.querySelectorAll('.priority-card').forEach(c => c.classList.remove('selected'));
     var card = document.getElementById('pcard-' + level.toLowerCase());
     if (card) card.classList.add('selected');

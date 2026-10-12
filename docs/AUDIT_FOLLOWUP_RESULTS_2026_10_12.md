@@ -177,3 +177,43 @@ lấy count discovery worktree làm count test release. MD5 và legacy compatibi
 chỉ process disposable test, runtime strict/no-key không đổi. Snapshot đọc,
 generated recommendation chain và telemetry loading assertions đều trong lượt.
 Sau lượt chỉ thêm receipt tài liệu; không đổi runtime/test assertions.
+
+## Dịch vụ/liên hệ và lỗi mức ưu tiên phát hiện qua UAT
+
+Commit1bb025c810c421a1e77643b9698f776f6886da62: CI38199450934 success36steps,
+RenderFree dep-db654sg473hc73d5jrr0 LIVE. Browser chi tiết TEST sau reload đã
+hiển thị phone/email/address snapshot đúng, không còn dùng hồ sơ trống cũ.
+JS trước bổ sung priority là33/33OK286.932ms; không đổi nhãn thành GPS thật.
+
+Browser gửi SERVICE TEST122 và CONTACT TEST2; mỗi sự kiện có2outbox độc lập
+SENT/attempt1 cho account/form. Chủ dự án trả lời “có cả2” khi được hỏi riêng
+hai loại thư ở hai inbox; ghi là phản hồi human theo nội dung câu hỏi, không tự
+truy cập hộp thư. SQL snapshots dùng readonly và guard user5/workspace/TEST.
+Ticket122 thuộc xyz-service, Customer90 cùng workspace; chưa assigned/task,
+SLA/deadlineNULL (UNKNOWN). Đã hủy ticket122 qua API; audit106 ghi OPEN→CANCELLED,
+closed_at có, hủy lặp200 không thêm audit/task. CONTACT TEST giữ lịch sử, không xóa.
+Browser timeout trước lần gửi SERVICE đầu: query readonly xác nhận chưa có row
+trước khôi phục browser visibility/re-observe và gửi1lần; không replay mù.
+
+UAT chọn P3 nhưng ticket122 vẫnMEDIUM. Đã ghi nhận lỗi thật, không sửa hàng cũ:
+UI gửi HIGH/MEDIUM/LOW qua field priority, P1/HIGH,P2/MEDIUM,P3/LOW, mặc địnhP2.
+Server validate trước ghi/email; thiếu field từ client cũ vẫnMEDIUM. Fingerprint
+MEDIUM giữ byte-for-byte kể cả nonce, nonMEDIUM thêm marker riêng. REQUEST_CREATED
+dùng audit convention hiện có, atomic/new-only, chỉID/status/priority/origin,
+không nội dung liên hệ và không tạo SLA/deadline/task/điều phối tự động.
+Sửa2caption còn sót: tiếp nhận trực tuyến thay hỗ trợ24/7; giới thiệu dịch vụ cần
+nhân viên xác nhận thay tuyên bố điều phối tự động. Không đổi animation/style.
+
+Priority focused53/53OK43.055s; log public_service_priority_20261012_retry.log.
+Lượt trước53FAILED1/45.087s: test mới kỳ vọng1email trong khi policy đúng là2;
+đã sửa test mới thành2 và assert đúng tập account/form, không nới/xóa test cũ.
+ActualinlineJS2/2OK386.7449ms; publicpolicycopy11/11OK0.669s không tạoDB.
+CI thêm testJS mới. Full1394 của1bb phía trên không gán cho nguồn priority/copy
+này; sẽ có fullindex/CI/SHA và P3→LOW live receipt riêng sau freeze.
+
+Nguồn priority cuối đã freeze và đạt **1402/1402 OK337.335s**, khôngskip;
+test_alphatech_evidence_0a216da4b1184591 tự hủy. Index tree
+0f3bc668ad92bcc7063932ff90773601484ecda5 không đổi trong lượt; receipt
+repair_release_snapshot_result_priority_final_20261012.json. Sau full chỉ thêm
+receipt tài liệu, không đổi code/testassertions. JavaScript cuối35/35OK913.5612ms.
+Không cộng các lượt1402/1394/1385 có phần chồng lặp thành tổng test khác nhau.

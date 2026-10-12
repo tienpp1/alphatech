@@ -1781,3 +1781,17 @@ DBdisposable tựhủy, MD5/compatibilitylegacy chỉ process test, runtime vẫ
 Sau lượt chỉ receipt tài liệu. Receipt/tree trong
 output/repair_release_snapshot_result_final_followup_20261012.json; CI/deploy
 source snapshot/telemetry mới sẽ đối chiếu SHA riêng, không mượn d5 PASS.
+
+1bb025c CI38199450934 success/RenderFreeLIVE; browserTEST chi tiết snapshot đúng.
+SERVICE122/CONTACT2 có2outboxSENT mỗi loại, ownerbáo cócả2 khi hỏicả2inbox/2loại.
+SERVICE122 đãCANCELLED quaAPI/audit106, task0/deadlineNULL, hủy lặp khôngauditmới.
+UAT phát hiện P3 không xuốngbackend (cứngMEDIUM). Source sửa priorityfield/mapping,
+validate3enum/defaultMEDIUM, hashMEDIUMlegacy nguyên vẹn, auditREQUEST_CREATED
+atomic/newonly/noPII. Không rewrite122, SLA/task/assignment hoặc97ledger.
+Priority53/53OK43.055s, inlineJS2/2OK386.7449ms; newfixturefail1 trước đó giữlog
+và sửa kỳ vọng recipientđúng2 (không nới test cũ). Copy2caption trung tính,
+policy11/11OK0.669s. Nguồn priority cuối chờfullindex/CI/deploy/P3LOW thật.
+
+Priority fullindex1402/1402OK337.335s/noSkip/indexunchanged/DBtest riêng tựhủy,
+JS35/35OK913.5612ms. MD5/compatlegacy chỉtestprocess; productionstrict/no-key
+giữ nguyên. Saufull chỉ receipt; chờđốichiếu CI/deploy SHA và P3LOW mới.

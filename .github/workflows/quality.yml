@@ -65,7 +65,7 @@ jobs:
       - name: Live audit repair contracts
         run: python manage.py test tests.test_live_audit_rag_collaboration tests.test_ai_history_audit tests.test_audit_governance_tools_regressions tests.test_forecast_recommendation_audit_repairs tests.test_stockout_source_freshness tests.test_public_audit_repairs tests.test_order_status_ui_recovery tests.test_public_delivery_reliability --noinput
       - name: Assistant history and GPS JavaScript regressions
-        run: node --test tests/ai_assistant_history.test.cjs tests/branch_finder.test.cjs tests/branch_finder_fallbacks.test.cjs tests/checkout_controls.test.cjs
+        run: node --test tests/ai_assistant_history.test.cjs tests/branch_finder.test.cjs tests/branch_finder_fallbacks.test.cjs tests/checkout_controls.test.cjs tests/service_request_priority.test.cjs
       - run: python manage.py check
       - run: python manage.py makemigrations --check --dry-run
       - run: python manage.py migrate --noinput

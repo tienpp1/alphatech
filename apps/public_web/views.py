@@ -353,6 +353,7 @@ def public_service_request_view(request):
     email_warning = receipt.get("email_warning", False)
     submission_token = request.POST.get("submission_token", "") if request.method == "POST" else ""
     form_data = request.POST if request.method == "POST" else {}
+    priority = request.POST.get("priority", "MEDIUM").strip() if request.method == "POST" else "MEDIUM"
 
     if request.method == "POST":
         customer_name = request.POST.get("customer_name", "").strip()
@@ -394,6 +395,8 @@ def public_service_request_view(request):
             error_message = "Vui lòng chọn một gói dịch vụ đang được niêm yết. Dịch vụ đã chọn không hợp lệ hoặc không còn hoạt động."
         elif invalid_email:
             error_message = "Địa chỉ email không hợp lệ. Vui lòng kiểm tra lại hoặc để trống nếu chỉ muốn được liên hệ qua điện thoại."
+        elif priority not in ("HIGH", "MEDIUM", "LOW"):
+            error_message = "Mức ưu tiên không hợp lệ. Vui lòng chọn P1, P2 hoặc P3 trong biểu mẫu."
         if not error_message:
             try:
                 service_workspace = service_obj.workspace
@@ -407,6 +410,10 @@ def public_service_request_view(request):
                             description, address, preferred_time]
                 if nonce:
                     material.append(nonce)
+                # Keep the pre-existing MEDIUM key byte-for-byte compatible,
+                # including signed/no-token retries submitted across a release.
+                if priority != "MEDIUM":
+                    material.append(f"priority:{priority}")
                 # Preserve old no-token clients, but every rendered form has a
                 # fresh signed nonce so intentional identical requests are not
                 # collapsed. Existing DB uniqueness arbitrates racing retries.
@@ -444,7 +451,7 @@ def public_service_request_view(request):
                                     service_req = ServiceRequest.objects.create(
                                         workspace=service_workspace, request_number=req_num,
                                         customer=customer_obj, service=service_obj,
-                                        title=req_title, description=req_desc, status="OPEN", priority="MEDIUM",
+                                        title=req_title, description=req_desc, status="OPEN", priority=priority,
                                     )
                                     created = True
                             except IntegrityError:
@@ -452,6 +459,14 @@ def public_service_request_view(request):
                                     workspace=service_workspace, request_number=req_num,
                                 )
                         if created:
+                            log_action(
+                                workspace=service_workspace,
+                                actor_user=request.user if request.user.is_authenticated else None,
+                                action="REQUEST_CREATED", entity_type="ServiceRequest", entity_id=str(service_req.pk),
+                                changes={"request_number": service_req.request_number, "priority": service_req.priority,
+                                         "status": service_req.status, "service_id": service_obj.pk,
+                                         "assigned_employee": None, "origin": "PUBLIC_SERVICE_INQUIRY"},
+                            )
                             transaction.on_commit(lambda s=service_req: dispatch_new_service_request_notification(s))
                         recipients = submitted_recipients
                         delivery_results = [
@@ -492,6 +507,7 @@ def public_service_request_view(request):
         "email_warning": email_warning,
         "submission_token": submission_token,
         "form_data": form_data,
+        "selected_priority": priority if priority in ("HIGH", "MEDIUM", "LOW") else "MEDIUM",
         "description_value": request.POST.get("description", "") if request.method == "POST" else request.GET.get("description", ""),
         "active_nav": "service_request",
     }

@@ -17,12 +17,19 @@ class PublicPolicyCopyTests(SimpleTestCase):
                       "Đã bao gồm VAT", "12-24 tháng", "100% CO/CQ",
                       "1 đổi 1 trong 30 ngày", "99.8%", "10,000+", "2,400+",
                       "15 - 30 phút", "phản hồi trong 24 giờ")
+        prohibited += ("Hỗ Trợ 24/7",)
         for page in ("home", "about", "products", "product_detail", "contact"):
             with self.subTest(page=page):
                 html = render_to_string(f"public/{page}.html", context)
                 self.assertTrue(html.strip())
                 for phrase in prohibited:
                     self.assertNotIn(phrase, html)
+
+    def test_service_inquiry_requires_confirmation_instead_of_automatic_dispatch_claim(self):
+        html = render_to_string("public/service_request.html", {})
+        self.assertNotIn("Hệ thống điều phối kỹ thuật tự động", html)
+        self.assertIn("Nhân viên sẽ xác nhận thời gian phản hồi và phân công sau khi tiếp nhận", html)
+        self.assertIn("không phải cam kết SLA", html)
 
     def test_product_description_is_preserved_not_replaced_by_generic_copy(self):
         html = render_to_string("public/product_detail.html", {"product": SimpleNamespace(

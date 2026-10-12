@@ -1213,3 +1213,9 @@ for recipient/delivery details, with legacy Customer fallback only when the
 snapshot row is absent. No historical data rewrite or ownership change.
 Generated service-rule→controlled approval→dispatch/audit/replay is now covered
 by an actual PostGIS/disposable-fixture regression, not a live quality claim.
+
+Public service inquiry now records the selected HIGH/MEDIUM/LOW priority, with
+P1/P2/P3 mapping and legacy MEDIUM default. MEDIUM fingerprints are unchanged
+across releases; invalid priorities fail before writes. New requests include
+canonical REQUEST_CREATED audit within the same transaction without contact PII.
+No SLA, schedule, automatic dispatch, historical-row rewrite or schema changes.

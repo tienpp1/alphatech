@@ -1,6 +1,7 @@
 """Public audit regressions: real isolated DB; provider sends remain simulated."""
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
+import hashlib
 import json
 from pathlib import Path
 import time
@@ -9,12 +10,14 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.core import signing
 from django.core.management import call_command, CommandError
 from django.db import close_old_connections, connections, connection
 from django.test import Client, SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from apps.public_web import customer_identity
+from apps.audit.models import AuditLog
 from apps.public_web.models import CustomerEmailDelivery, OrderDeliveryAddress
 from apps.retail.models import Category, Customer, Order, Product, ProductImage
 from apps.service_ops.models import Service, ServiceRequest
@@ -146,6 +149,107 @@ class PublicOrderRecipientSnapshotTests(TestCase):
         self.assertEqual(self.order.notes, notes_before)
 
 
+class PublicServicePriorityTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.workspace = Workspace.objects.create(code="priority-service", name="Service", workspace_type="SERVICE")
+        cls.service = Service.objects.create(workspace=cls.workspace, code="TEST", name="TEST support")
+        cls.owner = get_user_model().objects.create_user(username="priority-owner", email="priority-owner@example.test")
+
+    def payload(self, **changes):
+        return {"customer_name": "Khách ưu tiên TEST", "phone": "0999000001", "email": "form-priority@example.test",
+                "service_id": str(self.service.pk), "description": "Mô tả riêng TEST", **changes}
+
+    def old_key(self, data):
+        material = [f"user:{self.owner.pk}", str(self.service.pk), data["customer_name"], data["email"].casefold(),
+                    data["phone"], data["description"], data.get("address", ""), data.get("preferred_time", "")]
+        if data.get("submission_token"):
+            material.append(signing.loads(data["submission_token"], salt="public_web.service_submission.v1", max_age=3600))
+        return "REQ-PUB-" + hashlib.sha256(json.dumps(material, ensure_ascii=False).encode()).hexdigest()[:40].upper()
+
+    def test_rendered_default_is_p2_medium(self):
+        response = self.client.get("/yeu-cau-dich-vu/")
+        self.assertEqual(response.context["selected_priority"], "MEDIUM")
+        self.assertContains(response, 'id="service-priority" name="priority" value="MEDIUM"')
+        self.assertContains(response, 'class="priority-card selected" id="pcard-p2"')
+        self.assertContains(response, "Ưu tiên P2: Ví dụ mô phỏng 30 phút")
+
+    def test_valid_priorities_are_recorded_without_sla_deadline_or_dispatch(self):
+        self.client.force_login(self.owner)
+        for priority in ("HIGH", "MEDIUM", "LOW"):
+            response = self.client.post("/yeu-cau-dich-vu/", self.payload(priority=priority))
+            self.assertEqual(response.status_code, 302)
+            request = ServiceRequest.objects.get(priority=priority)
+            self.assertEqual(request.workspace, self.workspace)
+            self.assertEqual(request.status, "OPEN")
+            self.assertIsNone(request.sla_id)
+            self.assertIsNone(request.assigned_employee_id)
+            self.assertIsNone(request.response_deadline_at)
+            self.assertIsNone(request.resolution_deadline_at)
+            self.assertIsNone(request.scheduled_at)
+            self.assertEqual(request.tasks.count(), 0)
+            audit = AuditLog.objects.get(action="REQUEST_CREATED", entity_id=str(request.pk))
+            self.assertEqual(audit.workspace, self.workspace)
+            self.assertEqual(audit.actor_user, self.owner)
+            self.assertEqual(audit.changes["priority"], priority)
+            metadata = json.dumps(audit.changes)
+            for private in ("Khách ưu tiên TEST", "0999000001", "form-priority@example.test", "Mô tả riêng TEST"):
+                self.assertNotIn(private, metadata)
+        self.assertEqual(ServiceRequest.objects.count(), 3)
+        self.assertFalse(self.owner.workspace_memberships.exists())
+
+    def test_invalid_priority_is_rejected_before_any_record_or_delivery(self):
+        for priority in ("", "CRITICAL", "P3", "low", "1", "<script>"):
+            response = self.client.post("/yeu-cau-dich-vu/", self.payload(priority=priority))
+            self.assertContains(response, "Mức ưu tiên không hợp lệ")
+            self.assertEqual(response.context["selected_priority"], "MEDIUM")
+        self.assertFalse(ServiceRequest.objects.exists())
+        self.assertFalse(Customer.objects.exists())
+        self.assertFalse(CustomerEmailDelivery.objects.exists())
+        self.assertFalse(AuditLog.objects.filter(action="REQUEST_CREATED").exists())
+
+    def test_legacy_missing_and_explicit_medium_keep_identical_pre_release_key(self):
+        self.client.force_login(self.owner)
+        data = self.payload()
+        expected = self.old_key(data)
+        self.client.post("/yeu-cau-dich-vu/", data)
+        self.client.post("/yeu-cau-dich-vu/", {**data, "priority": "MEDIUM"})
+        self.assertEqual(ServiceRequest.objects.get().request_number, expected)
+        self.assertEqual(ServiceRequest.objects.get().priority, "MEDIUM")
+        self.assertEqual(AuditLog.objects.filter(action="REQUEST_CREATED").count(), 1)
+        self.assertEqual(CustomerEmailDelivery.objects.count(), 2)
+        self.assertSetEqual(set(CustomerEmailDelivery.objects.values_list("recipient", flat=True)),
+                            {self.owner.email, data["email"]})
+
+    def test_signed_medium_retry_reuses_pre_release_request_without_retrofit(self):
+        self.client.force_login(self.owner)
+        token = self.client.get("/yeu-cau-dich-vu/").context["submission_token"]
+        data = self.payload(submission_token=token, address="Địa chỉ TEST", preferred_time="2026-10-20T09:00")
+        customer = customer_identity.customer_for_submission(workspace=self.workspace, user=self.owner, name="Old profile")
+        old = ServiceRequest.objects.create(workspace=self.workspace, request_number=self.old_key(data), customer=customer,
+            service=self.service, title="Old persisted title", description="Old persisted description", priority="MEDIUM")
+        before = (old.title, old.description, old.priority, old.updated_at)
+        self.assertEqual(self.client.post("/yeu-cau-dich-vu/", {**data, "priority": "MEDIUM"}).status_code, 302)
+        self.assertEqual(ServiceRequest.objects.count(), 1)
+        old.refresh_from_db()
+        self.assertEqual((old.title, old.description, old.priority, old.updated_at), before)
+        self.assertFalse(AuditLog.objects.filter(action="REQUEST_CREATED").exists())
+
+    def test_audit_failure_rolls_back_request_customer_and_outbox(self):
+        with patch("apps.public_web.views.log_action", side_effect=RuntimeError("TEST audit unavailable")):
+            response = self.client.post("/yeu-cau-dich-vu/", self.payload(priority="LOW"))
+        self.assertContains(response, "Không thể ghi nhận yêu cầu lúc này")
+        self.assertFalse(ServiceRequest.objects.exists())
+        self.assertFalse(Customer.objects.exists())
+        self.assertFalse(CustomerEmailDelivery.objects.exists())
+
+    def test_validation_error_retains_the_valid_priority_selection(self):
+        response = self.client.post("/yeu-cau-dich-vu/", self.payload(priority="LOW", email="bad-email"))
+        self.assertContains(response, 'id="service-priority" name="priority" value="LOW"')
+        self.assertContains(response, 'class="priority-card selected" id="pcard-p3"')
+        self.assertFalse(ServiceRequest.objects.exists())
+
+
 class PublicAuditRepairTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -259,6 +363,7 @@ class PublicAuditRepairTests(TestCase):
         self.assertEqual(ServiceRequest.objects.count(), 1)
         self.assertEqual(Customer.objects.count(), 1)
         self.assertEqual(CustomerEmailDelivery.objects.filter(event_type="SERVICE_REQUEST").count(), 1)
+        self.assertEqual(AuditLog.objects.filter(action="REQUEST_CREATED", entity_type="ServiceRequest").count(), 1)
 
     def test_new_form_nonce_allows_intentional_identical_request(self):
         self.client.post("/yeu-cau-dich-vu/", self.payload(submission_token=self.token()))
@@ -367,3 +472,4 @@ class PublicServiceConcurrencyRepairTests(TransactionTestCase):
         self.assertEqual(ServiceRequest.objects.count(), 1)
         self.assertEqual(Customer.objects.count(), 1)
         self.assertEqual(CustomerEmailDelivery.objects.filter(event_type="SERVICE_REQUEST").count(), 1)
+        self.assertEqual(AuditLog.objects.filter(action="REQUEST_CREATED", entity_type="ServiceRequest").count(), 1)

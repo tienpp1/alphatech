@@ -1563,3 +1563,5 @@ trung gian/full suite, ghi riêng tại AUDIT_REPAIR_RESULTS_2026_10_11.md.
 - JavaScript `checkout_controls.test.cjs`, `branch_finder_fallbacks.test.cjs` — tổng
   server sau đổi nhận hàng, race/retry và callback GPS thực từ source. Đây là test
   mô phỏng DOM/provider, không tự chứng nhận GPS thiết bị hoặc inbox production.
+- `service_request_priority.test.cjs` — thực thi handler inline P1/P2/P3 gửi
+  HIGH/MEDIUM/LOW và từ chối key khác; bộ đếm SLA vẫn chỉ là minh họa.
