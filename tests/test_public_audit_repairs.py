@@ -12,10 +12,11 @@ from django.conf import settings
 from django.core.management import call_command, CommandError
 from django.db import close_old_connections, connections, connection
 from django.test import Client, SimpleTestCase, TestCase, TransactionTestCase, override_settings
+from django.utils import timezone
 
 from apps.public_web import customer_identity
-from apps.public_web.models import CustomerEmailDelivery
-from apps.retail.models import Category, Customer, Product, ProductImage
+from apps.public_web.models import CustomerEmailDelivery, OrderDeliveryAddress
+from apps.retail.models import Category, Customer, Order, Product, ProductImage
 from apps.service_ops.models import Service, ServiceRequest
 from apps.workspaces.models import Workspace
 
@@ -46,6 +47,103 @@ class PublicCheckoutLayoutContractTests(SimpleTestCase):
             "grid-template-columns: minmax(0, 1fr) !important;",
         ):
             self.assertIn(rule, css)
+
+
+class PublicOrderRecipientSnapshotTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.workspace = Workspace.objects.create(code="snapshot-retail", name="Retail", workspace_type="RETAIL")
+        cls.owner = get_user_model().objects.create_user(username="snapshot-owner", email="owner@example.test")
+        cls.other = get_user_model().objects.create_user(username="snapshot-other", email="other@example.test")
+        cls.customer = Customer.objects.create(workspace=cls.workspace, user=cls.owner, code="PROFILE",
+            name="Tên hồ sơ hiện tại", phone="0999000001", email="profile@example.test")
+        cls.order = Order.objects.create(workspace=cls.workspace, customer=cls.customer, created_by=cls.owner,
+            order_number="ORD-SNAPSHOT-TEST", order_date=timezone.localdate(), order_timestamp=timezone.now())
+        cls.snapshot = OrderDeliveryAddress.objects.create(order=cls.order, recipient_name="Người nhận lúc đặt",
+            phone="0888000002", email="delivery@example.test", address_line="12 Đường Giao Nhận",
+            district="Quận Kiểm Thử", city="Thành Phố Kiểm Thử", delivery_method="HOME_DELIVERY")
+        cls.legacy = Order.objects.create(workspace=cls.workspace, customer=cls.customer, created_by=cls.owner,
+            order_number="ORD-LEGACY-TEST", order_date=timezone.localdate(), order_timestamp=timezone.now())
+
+    def paths(self, order=None):
+        number = (order or self.order).order_number
+        return (f"/dat-hang-thanh-cong/{number}/", f"/tai-khoan/don-hang/{number}/")
+
+    def test_both_views_use_snapshot_even_after_customer_profile_changes(self):
+        self.client.force_login(self.owner)
+        Customer.objects.filter(pk=self.customer.pk).update(name="Hồ sơ đã đổi", phone="0777000003", email="changed@example.test")
+        for path in self.paths():
+            response = self.client.get(path)
+            for value in ("Người nhận lúc đặt", "0888000002", "delivery@example.test",
+                          "12 Đường Giao Nhận, Quận Kiểm Thử, Thành Phố Kiểm Thử", "Giao hàng tận nơi"):
+                self.assertContains(response, value)
+            for value in ("Hồ sơ đã đổi", "0777000003", "changed@example.test"):
+                self.assertNotContains(response, value)
+            self.assertEqual(response.context["delivery_address"].pk, self.snapshot.pk)
+
+    def test_blank_snapshot_contact_does_not_fallback_to_customer_fields(self):
+        self.client.force_login(self.owner)
+        OrderDeliveryAddress.objects.filter(pk=self.snapshot.pk).update(phone="", email="", address_line="", district="", city="")
+        for path in self.paths():
+            response = self.client.get(path)
+            self.assertContains(response, "Chưa cung cấp")
+            self.assertNotContains(response, self.customer.phone)
+            self.assertNotContains(response, self.customer.email)
+
+    def test_legacy_order_without_snapshot_preserves_customer_fallback(self):
+        self.client.force_login(self.owner)
+        for path in self.paths(self.legacy):
+            response = self.client.get(path)
+            for value in (self.customer.name, self.customer.phone, self.customer.email):
+                self.assertContains(response, value)
+            self.assertIsNone(response.context["delivery_address"])
+
+    def test_another_authenticated_customer_cannot_read_snapshot(self):
+        self.client.force_login(self.other)
+        for path in self.paths():
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 404)
+            self.assertNotIn(self.snapshot.email, response.content.decode())
+
+    def test_guest_snapshot_is_visible_only_to_owning_browser_session(self):
+        guest = Order.objects.create(workspace=self.workspace, customer=self.customer,
+            order_number="ORD-GUEST-SNAPSHOT", order_date=timezone.localdate(), order_timestamp=timezone.now())
+        OrderDeliveryAddress.objects.create(order=guest, recipient_name="TEST guest recipient", phone="0666000004",
+            email="guest-delivery@example.test", delivery_method="STORE_PICKUP")
+        success, detail = self.paths(guest)
+        self.assertEqual(self.client.get(success).status_code, 404)
+        session = self.client.session
+        session["public_order_success_numbers"] = [guest.order_number]
+        session.save()
+        self.assertContains(self.client.get(success), "guest-delivery@example.test")
+        self.assertContains(self.client.get(success), "Nhận tại chi nhánh")
+        self.assertEqual(Client().get(success).status_code, 404)
+        self.assertEqual(self.client.get(detail).status_code, 302)
+
+    def test_snapshot_content_is_escaped_in_both_views(self):
+        self.client.force_login(self.owner)
+        attack = '<script>alert("unsafe")</script>'
+        OrderDeliveryAddress.objects.filter(pk=self.snapshot.pk).update(recipient_name=attack, address_line=attack)
+        for path in self.paths():
+            response = self.client.get(path)
+            self.assertContains(response, "&lt;script&gt;")
+            self.assertNotContains(response, attack)
+
+    def test_reading_both_views_never_rewrites_profile_snapshot_or_notes(self):
+        self.client.force_login(self.owner)
+        snapshot_before = OrderDeliveryAddress.objects.get(pk=self.snapshot.pk).__dict__.copy()
+        customer_before = Customer.objects.get(pk=self.customer.pk).__dict__.copy()
+        notes_before = self.order.notes
+        for path in self.paths():
+            self.assertEqual(self.client.get(path).status_code, 200)
+        snapshot_after = OrderDeliveryAddress.objects.get(pk=self.snapshot.pk).__dict__.copy()
+        customer_after = Customer.objects.get(pk=self.customer.pk).__dict__.copy()
+        for values in (snapshot_before, snapshot_after, customer_before, customer_after):
+            values.pop("_state")
+        self.assertEqual(snapshot_before, snapshot_after)
+        self.assertEqual(customer_before, customer_after)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.notes, notes_before)
 
 
 class PublicAuditRepairTests(TestCase):

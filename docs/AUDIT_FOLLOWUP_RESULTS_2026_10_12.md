@@ -111,3 +111,69 @@ Chủ dự án trả lời GPS thiết bị **chưa thử**, xin hỏi lại khi
 mở, không gán PASS hoặc yêu cầu tọa độ riêng tư. Email2inbox/TESTapproval cũng
 chưa có kết quả mới; checkout cuối cần người dùng xác nhận điều khoản tại thời
 điểm đặt. Không thay đổi sổ97.
+
+## TEST nghiệp vụ live — 12/10/2026
+
+Sau xác nhận tại thời điểm đặt của chủ dự án, browser gửi đúng1 cáp Cat6
+SP-NET-006, không giao/không thu tiền. Đơn ORD-20261012-B8277C (ID162 trên Neon
+hiện tại, không đồng nhất bản ghi ID162 trong database cũ) tổng125000, PENDING,
+reserved=True; BR-D1 giảm14→13, BR-D7/BR-BT vẫn40/16. Customer/User ownership
+giữ nguyên; OrderDeliveryAddress lưu riêng thông tin người nhận, không sửa hồ sơ.
+
+MANAGER2 tạo ApprovalRequest3 bằng tool update_order_status: HTTP200
+APPROVAL_REQUIRED, đơn vẫnPENDING. Tự review HTTP400 có APPROVAL_PERMISSION_DENIED;
+ADMIN1 là người khác review HTTP200 EXECUTED, đơnCONFIRMED, audit ORDER_CONFIRMED
+và MUTATION_EXECUTED. ReplayHTTP200 idempotent_replay=True, không thêm thực thi
+hoặc trừ tồn. Đây là tool→approval thật, không gán là recommendation tự sinh.
+
+Trong lúc notice24 vẫn chưa đọc: phiên MANAGER không sở hữu đơn không thấy notice,
+ack404, trang success/detail404; anonymous feed401. Đây là live kiểm một danh tính
+nội bộ không sở hữu, không gọi là UAT khách hàng thường thứ hai. Test tự động có
+khách hàng khác; quyền cấp vai trò không làm bỏ ownership ở public endpoint.
+Đúng chủ đơn Google Minh mở tài khoản thấy dialog đúng mã TEST và22 confetti;
+bấm xem thành công, DBread_at ghi03:05:08 UTC, reload dialog đóng/không lặp.
+Ảnh owner-celebration.png lưu riêng, không chỉ suy ra từ trạng thái database.
+
+Hủy đúng TEST HTTP200 CANCELLED, release timestamp có, stock13→14 và40/16
+không đổi. Audit104 ORDER_FULFILLMENT_STOCK_RELEASED ghi before13/after14/qty1,
+audit105 ORDER_CANCELLED. Hủy lặpHTTP400, không thêm release/tăng tồn. Giữ bản ghi
+TEST/audit để truy vết; không xóa, giao hàng, thanh toán hoặc sửa balance SQL.
+Receipts từng pha: output/strict_uat_20261012/*.json (SQL readonly; API scoped).
+
+Hai outbox ORDER độc lập SENT/attempt1 lúc02:55 UTC. Chủ dự án xác nhận rõ
+**cả hai inbox đã nhận** ở lượt hỏi đối chiếu; ghi là human Inbox/Spam confirmation,
+không tự đọc nội dung hộp thư và không suy ra các sự kiện khác từ đơn này.
+
+## Follow-up kiểm chứng và nguồn đọc
+
+Header commit d5dab699368c667171d6bae42678f32851b9ddfc: CI38197498719 success36steps,
+RenderFree dep-db64np942hec73at69c0 LIVE. Browser375: title.right170,08 < cart.left
+182,07, docwidth360 <=375; landscape812: title.right275,99 < cart.left418,33,
+docwidth797 <=812. Ảnh branch-mobile-375-after.png/branch-landscape-812.png;
+override viewport đã reset. Không coi kích thước browser là GPS điện thoại thật.
+
+UAT phát hiện xác nhận/chi tiết đơn dùng Customer.phone trống và email hồ sơ cũ,
+mặc dù có OrderDeliveryAddress. Sửa2readviews/templates đọc snapshot hiện có,
+chỉ fallback Customer cho đơn không có snapshot; blank snapshot không fallback.
+Không parse notes/rewrite dữ liệu. Snapshot/ownership/guest/escape/read-only cùng
+identity/policy25/25OK5.302s. Nhãn chờ telemetry đổi thành HTTP health, không
+gọi request health là benchmark AI/GIS; tăng assertion, không bỏ test cũ.
+
+F18 bổ sung test thật generate rule/PostGIS→accept→approval→reviewer khác→dispatch
+task/audit→replay. 36/36OK10.856s, DB test riêng tự hủy; không mock generator,
+Recommendation thủ công hoặc execute_tool rời. Dữ liệu fixture synthetic và test
+chỉ chứng minh workflow local, chưa chứng minh chất lượng quyết định hoặc UAT
+production recommendation tự sinh. Chưa chạy evaluate toàn production để tạo
+TEST vì sẽ ghi khuyến nghị cho nghiệp vụ không nằm trong TEST.
+
+## Cổng full-suite follow-up cuối
+
+Export Git index mới: **1394/1394 OK, 281.556s**, không skip, test database
+test_alphatech_evidence_c94a1cf08b6f47aa tự hủy. Receipt
+output/repair_release_snapshot_result_final_followup_20261012.json ghi tree
+9d342f082fb3fc542f104f290b90b0e3853c1452 và index_unchanged=True. Đây là toàn
+bộ source test tracked chuẩn bị phát hành, không12test untracked có sẵn; không
+lấy count discovery worktree làm count test release. MD5 và legacy compatibility
+chỉ process disposable test, runtime strict/no-key không đổi. Snapshot đọc,
+generated recommendation chain và telemetry loading assertions đều trong lượt.
+Sau lượt chỉ thêm receipt tài liệu; không đổi runtime/test assertions.

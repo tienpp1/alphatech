@@ -208,6 +208,8 @@ class ForecastRuleRepairTests(TestCase):
             self.assertNotContains(response, unsupported)
         self.assertContains(response, "DATABASE SNAPSHOT")
         self.assertContains(response, "không phải benchmark AI/GIS")
+        self.assertContains(response, "Đang kiểm tra HTTP /api/health/")
+        self.assertNotContains(response, "Đang gửi truy vấn benchmark đo lường")
 
     def test_chart_weekly_actuals_follow_saved_run_granularity(self):
         self.order("weekly-a", datetime.date(2026, 1, 2), "20")

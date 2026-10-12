@@ -1764,3 +1764,20 @@ title chồngcart, CSS2dòng và1test source sửa; layout/policy13/13OK0.630s,
 chờ đo browser bảnCSS mới. Full1385 thuộc source trướcCSS/test này.
 Form TEST chuẩn bị/chưa submit; email/stock/approval mới chưa nghiệm thu.
 GPS điện thoại chủ dự án báo chưa thử, xin hỏi lại khi rảnh; không tự đóng cổng.
+
+TEST ORD-20261012-B8277C live đã giữ1tồn14→13, manager tạoapproval3/tựduyệt400,
+admin khác duyệt/EXECUTED/audit, replay idempotent. Nonowner(manager) noticeẩn,
+ack404/order404; anonymous401. Chủđơn Google thấy đúngdialog+22confetti, ack/reload
+khônglặp. Đã hủy TEST, tồn14/40/16 khôi phục, auditrelease qty1; hủylặp400 không
+thêmrelease. Không xóaTEST/audit. Chủdựán xác nhận2inbox nhận email đơn này.
+d5dab69 CI38197498719 success/RenderLIVE, browser375/812 header không chồngcart.
+Snapshot2publicorderreadviews sửa dùngOrderDeliveryAddress, legacyfallback,
+25/25OK5.302s. Generatedrule/PostGIS→approval→dispatch/audit/replay local36/36OK
+10.856s; không phải generatedrecommendation UAT production. Nguồn follow-up này
+chờ fullindex và CI/deploy riêng. GPS vẫn chưa thử; sổ97 giữ nguyên.
+
+Full exportindex follow-up cuối1394/1394OK281.556s, khôngskip, indexunchanged;
+DBdisposable tựhủy, MD5/compatibilitylegacy chỉ process test, runtime vẫnstrict.
+Sau lượt chỉ receipt tài liệu. Receipt/tree trong
+output/repair_release_snapshot_result_final_followup_20261012.json; CI/deploy
+source snapshot/telemetry mới sẽ đối chiếu SHA riêng, không mượn d5 PASS.

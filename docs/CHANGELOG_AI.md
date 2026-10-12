@@ -1207,3 +1207,9 @@ Contact validates form email before persistence and preserves safe form errors.
 Checkout refreshes server totals per method with pending/error/retry/race guards,
 and rejects coarse/invalid/stale GPS without persisting location. No schema,
 business-data reset, paid infrastructure or97-ledger changes.
+
+Follow-up public order reads use the existing immutable OrderDeliveryAddress
+for recipient/delivery details, with legacy Customer fallback only when the
+snapshot row is absent. No historical data rewrite or ownership change.
+Generated service-rule→controlled approval→dispatch/audit/replay is now covered
+by an actual PostGIS/disposable-fixture regression, not a live quality claim.

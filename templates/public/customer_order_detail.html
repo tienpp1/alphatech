@@ -58,9 +58,9 @@
                     </h4>
                 </div>
                 <div style="color: var(--pub-text-body); line-height: 1.65; font-size: 0.88rem;">
-                    <div>Người nhận: <strong style="color: var(--pub-text-heading);">{{ order.customer.name }}</strong></div>
-                    <div>Số điện thoại: <strong style="color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ order.customer.phone|default:"Chưa cập nhật" }}</strong></div>
-                    <div>Email: {{ order.customer.email }}</div>
+                    <div>Người nhận: <strong style="color: var(--pub-text-heading);">{% if delivery_address %}{{ delivery_address.recipient_name }}{% else %}{{ order.customer.name }}{% endif %}</strong></div>
+                    <div>Số điện thoại: <strong style="color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{% if delivery_address %}{{ delivery_address.phone|default:"Chưa cung cấp" }}{% else %}{{ order.customer.phone|default:"Chưa cập nhật" }}{% endif %}</strong></div>
+                    <div>Email: {% if delivery_address %}{{ delivery_address.email|default:"Chưa cung cấp" }}{% else %}{{ order.customer.email }}{% endif %}</div>
                 </div>
             </div>
 
@@ -75,6 +75,10 @@
                     <div>Thời gian đặt: <strong style="color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ order.order_timestamp|date:"H:i, d/m/Y" }}</strong></div>
                     <div>Phương thức: <strong style="color: var(--pub-text-heading);">{{ order.get_payment_method_display|default:order.payment_method }} (COD)</strong></div>
                     <div>Chi nhánh: <strong style="color: var(--pub-text-heading);">{{ order.branch.name|default:"ABC Tech Store" }}</strong></div>
+                    {% if delivery_address %}
+                    <div>Nhận hàng: {% if delivery_address.delivery_method == 'STORE_PICKUP' %}Nhận tại chi nhánh{% elif delivery_address.delivery_method == 'HOME_DELIVERY' %}Giao hàng tận nơi{% else %}Chưa xác nhận{% endif %}</div>
+                    <div>Địa chỉ: {{ delivery_address_text|default:"Chưa cung cấp" }}</div>
+                    {% endif %}
                     {% if order.notes %}
                     <div style="font-size: 0.82rem; color: var(--pub-text-muted); margin-top: 4px; font-style: italic;">
                         Ghi chú: {{ order.notes }}

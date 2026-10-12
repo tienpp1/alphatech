@@ -255,7 +255,7 @@ function runPingTest(type) {
 
     const loadingSpan = document.createElement('span');
     loadingSpan.style.color = '#f59e0b';
-    loadingSpan.textContent = `[*] Đang gửi truy vấn benchmark đo lường [${String(type || '').toUpperCase()}]...`;
+    loadingSpan.textContent = `[*] Đang kiểm tra HTTP /api/health/ [${String(type || '').toUpperCase()}] — không chạy thuật toán AI/GIS...`;
     term.replaceChildren(loadingSpan);
 
     fetch('/api/health/')

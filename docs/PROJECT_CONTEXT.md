@@ -513,3 +513,8 @@ the incomplete current day, and chart/monitor prefer saved run cadence.
 Checkout method changes refresh totals from the existing server cart API and
 hold submission on unknown totals; GPS requires reported accuracy0–100m and
 clears stale callbacks/coordinates. No schema or97-ledger change.
+
+Public order confirmation/detail read the existing OrderDeliveryAddress snapshot,
+not subsequently edited Customer contact fields. Legacy rows without a snapshot
+retain the old fallback; blank snapshot fields remain blank/unknown. Reads never
+rewrite profiles, snapshots or notes, and creator/session ownership is unchanged.

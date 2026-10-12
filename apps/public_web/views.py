@@ -1948,7 +1948,7 @@ def public_order_success_view(request, order_number):
     Public Order Success Confirmation View (GET /dat-hang-thanh-cong/<order_number>/) - Light Theme.
     Displays order confirmation summary, line items snapshot, and next steps.
     """
-    orders = Order.objects.select_related("customer", "branch").prefetch_related("items__product").filter(
+    orders = Order.objects.select_related("customer", "branch", "delivery_address").prefetch_related("items__product").filter(
         workspace__workspace_type=WorkspaceType.RETAIL,
     )
     if request.user.is_authenticated:
@@ -1959,6 +1959,7 @@ def public_order_success_view(request, order_number):
         orders = orders.none()
 
     order = get_object_or_404(orders, order_number=order_number)
+    delivery_address = getattr(order, "delivery_address", None)
 
     deliveries = CustomerEmailDelivery.objects.filter(entity_type="Order", entity_id=str(order.pk))
     resendable_deliveries = deliveries.none()
@@ -1971,6 +1972,10 @@ def public_order_success_view(request, order_number):
         "page_title": f"Đặt hàng thành công #{order.order_number} | ABC Tech Store",
         "order": order,
         "items": order.items.all(),
+        "delivery_address": delivery_address,
+        "delivery_address_text": ", ".join(filter(None, (
+            delivery_address.address_line, delivery_address.district, delivery_address.city,
+        ))) if delivery_address is not None else "",
         "email_delivery_failed": deliveries.filter(status=CustomerEmailDelivery.Status.FAILED).exists(),
         "resendable_email_deliveries": resendable_deliveries,
         "active_nav": "cart",
@@ -2013,16 +2018,21 @@ def public_customer_order_detail_view(request, order_number):
 
     # Strict IDOR Enforcement
     order = get_object_or_404(
-        Order.objects.select_related("customer", "branch").prefetch_related("items__product"),
+        Order.objects.select_related("customer", "branch", "delivery_address").prefetch_related("items__product"),
         order_number=order_number,
         created_by=request.user,
         workspace__workspace_type=WorkspaceType.RETAIL,
     )
+    delivery_address = getattr(order, "delivery_address", None)
 
     context = {
         "page_title": f"Chi tiết đơn hàng #{order.order_number} | Nền tảng Doanh nghiệp AI",
         "order": order,
         "items": order.items.all(),
+        "delivery_address": delivery_address,
+        "delivery_address_text": ", ".join(filter(None, (
+            delivery_address.address_line, delivery_address.district, delivery_address.city,
+        ))) if delivery_address is not None else "",
         "customer": customer_profile,
         "active_nav": "account",
     }

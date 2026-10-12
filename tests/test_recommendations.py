@@ -384,6 +384,135 @@ class RecommendationEngineTests(TestCase):
         self.assertIsNotNone(event.timestamp)
         self.assertEqual(event.changes["result"]["ticket_id"], self.ticket.pk)
 
+    def test_rule_generated_dispatch_reaches_independent_approval_audit_and_replay(self):
+        """Local synthetic fixtures, real rules/PostGIS/API; not production UAT."""
+        now = timezone.now()
+        ServiceRequest.objects.filter(pk=self.ticket.pk).update(
+            created_at=now - datetime.timedelta(hours=2), priority="HIGH",
+            location=Point(106.7000, 10.7750, srid=4326),
+            response_deadline_at=now - datetime.timedelta(minutes=30),
+            resolution_deadline_at=now + datetime.timedelta(hours=8),
+        )
+        self.employee.current_location = Point(106.7010, 10.7750, srid=4326)
+        self.employee.is_active = True
+        self.employee.is_available = True
+        self.employee.skills = []
+        self.employee.save(update_fields=["current_location", "is_active", "is_available", "skills"])
+        self.assertFalse(Recommendation.objects.exists())
+        self.assertFalse(ApprovalRequest.objects.exists())
+        self.assertFalse(Task.objects.filter(service_request=self.ticket).exists())
+
+        # No mocked generator, manual Recommendation row or direct execute_tool.
+        generated = evaluate_service_recommendations(self.workspace_service)
+        candidates = [row for row in generated
+                      if row.recommendation_type == RecommendationType.SERVICE_NEARBY_TECHNICIAN]
+        self.assertEqual(len(candidates), 1)
+        rec = candidates[0]
+        parameters = {"ticket_id": self.ticket.pk, "employee_id": self.employee.pk}
+        self.assertEqual(rec.workspace_id, self.workspace_service.pk)
+        self.assertEqual(rec.status, RecommendationStatus.PENDING)
+        self.assertEqual(rec.proposed_action, "dispatch_technician")
+        self.assertEqual(rec.proposed_parameters, parameters)
+        self.assertIsNone(rec.approval_request_id)
+        self.assertGreater(rec.expires_at, now)
+        self.assertIn(f"ticket:{self.ticket.pk}", rec.source_references)
+        self.assertIn(f"employee:{self.employee.pk}", rec.source_references)
+        top = rec.explanation["evidence"]["top_candidate"]
+        self.assertEqual(top["technician_id"], self.employee.pk)
+        self.assertGreater(top["distance_km"], 0)
+        self.assertLess(top["distance_km"], 1)
+        self.assertTrue(top["is_available"])
+        self.assertFalse(top["skill_match_verified"])
+        self.assertIsNone(top["score_breakdown"]["skill_score"])
+        self.assertEqual(evaluate_service_recommendations(self.workspace_service), [])
+
+        self.client.force_authenticate(user=self.user_manager)
+        headers = {"HTTP_X_WORKSPACE_ID": str(self.workspace_service.pk)}
+        # A real generated recommendation cannot be accepted from another scope.
+        foreign = self.client.post(f"/api/v1/recommendations/{rec.pk}/accept/", {}, format="json",
+                                   HTTP_X_WORKSPACE_ID=str(self.workspace_retail.pk))
+        self.assertEqual(foreign.status_code, 404)
+        self.assertFalse(ApprovalRequest.objects.exists())
+        accepted = self.client.post(f"/api/v1/recommendations/{rec.pk}/accept/",
+                                    {"decision_reason": "TEST — review generated dispatch"},
+                                    format="json", **headers)
+        self.assertEqual(accepted.status_code, 200)
+        rec.refresh_from_db()
+        self.assertEqual(rec.status, RecommendationStatus.ACCEPTED)
+        approval = ApprovalRequest.objects.get(pk=rec.approval_request_id)
+        self.assertEqual(approval.workspace_id, self.workspace_service.pk)
+        self.assertEqual(approval.requester_id, self.user_manager.pk)
+        self.assertEqual(approval.status, ApprovalStatus.PENDING)
+        self.assertEqual(approval.proposed_action, rec.proposed_action)
+        self.assertEqual(approval.parameters, parameters)
+        self.assertEqual(approval.idempotency_key, f"RECOMMENDATION-{rec.pk}")
+        self.assertIsNone(approval.executed_at)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status, "OPEN")
+        self.assertIsNone(self.ticket.assigned_employee_id)
+        self.assertFalse(Task.objects.filter(service_request=self.ticket).exists())
+        accepted_again = self.client.post(f"/api/v1/recommendations/{rec.pk}/accept/", {}, format="json", **headers)
+        self.assertEqual(accepted_again.status_code, 200)
+        self.assertEqual(ApprovalRequest.objects.filter(workspace=self.workspace_service,
+                                                        idempotency_key=approval.idempotency_key).count(), 1)
+
+        permission, _ = Permission.objects.get_or_create(
+            codename="approvals.manage_approval", defaults={"name": "Review", "module": "approvals"})
+        self.role_manager.permissions.add(permission)
+        self.assertFalse(self.user_manager.is_superuser)
+        self_review = self.client.post(f"/api/v1/approvals/{approval.pk}/decision/",
+                                        {"decision": "APPROVED"}, format="json", **headers)
+        self.assertEqual(self_review.status_code, 400)
+        approval.refresh_from_db()
+        self.assertEqual(approval.status, ApprovalStatus.PENDING)
+        self.assertFalse(Task.objects.filter(service_request=self.ticket).exists())
+        reviewer = User.objects.create_user(username="generated-rule-reviewer", password=None)
+        WorkspaceMembership.objects.create(user=reviewer, workspace=self.workspace_service, role=self.role_manager)
+        self.assertNotEqual(reviewer.pk, approval.requester_id)
+        self.assertFalse(reviewer.is_superuser)
+        self.client.force_authenticate(user=reviewer)
+        reviewed = self.client.post(f"/api/v1/approvals/{approval.pk}/decision/",
+                                    {"decision": "APPROVED", "decision_reason": "TEST — independent review"},
+                                    format="json", **headers)
+        self.assertEqual(reviewed.status_code, 200)
+        self.assertEqual(reviewed.data["data"]["status"], "EXECUTED")
+        approval.refresh_from_db()
+        self.ticket.refresh_from_db()
+        self.assertEqual(approval.status, ApprovalStatus.EXECUTED)
+        self.assertEqual(approval.reviewer_id, reviewer.pk)
+        self.assertIsNotNone(approval.executed_at)
+        self.assertEqual(self.ticket.status, "IN_PROGRESS")
+        self.assertEqual(self.ticket.assigned_employee_id, self.employee.pk)
+        task = Task.objects.get(service_request=self.ticket)
+        self.assertEqual(task.assigned_to_id, self.employee.pk)
+        self.assertEqual(task.status, "IN_PROGRESS")
+        event = AuditLog.objects.get(workspace=self.workspace_service, action="MUTATION_EXECUTED",
+                                     entity_type="ApprovalRequest", entity_id=str(approval.pk))
+        self.assertEqual(event.actor_user_id, reviewer.pk)
+        self.assertEqual(event.changes["proposed_action"], rec.proposed_action)
+        self.assertEqual(event.changes["result"]["ticket_id"], self.ticket.pk)
+        self.assertEqual(event.changes["result"]["assigned_employee_id"], self.employee.pk)
+        self.assertEqual(event.changes["result"]["task_id"], task.pk)
+        dispatched = AuditLog.objects.get(workspace=self.workspace_service, action="TECHNICIAN_DISPATCHED",
+                                          entity_type="ServiceRequest", entity_id=str(self.ticket.pk))
+        self.assertEqual(dispatched.actor_user_id, reviewer.pk)
+        self.assertEqual(dispatched.changes["before"]["status"], "OPEN")
+        self.assertEqual(dispatched.changes["after"]["status"], "IN_PROGRESS")
+        executed_at = approval.executed_at
+        replay = self.client.post(f"/api/v1/approvals/{approval.pk}/decision/",
+                                  {"decision": "APPROVED"}, format="json", **headers)
+        self.assertEqual(replay.status_code, 200)
+        self.assertTrue(replay.data["data"]["idempotent_replay"])
+        approval.refresh_from_db()
+        self.assertEqual(approval.executed_at, executed_at)
+        self.assertEqual(list(Task.objects.filter(service_request=self.ticket).values_list("pk", flat=True)), [task.pk])
+        self.assertEqual(AuditLog.objects.filter(workspace=self.workspace_service, action="MUTATION_EXECUTED",
+                                                entity_id=str(approval.pk)).count(), 1)
+        self.assertEqual(AuditLog.objects.filter(workspace=self.workspace_service, action="TECHNICIAN_DISPATCHED",
+                                                entity_id=str(self.ticket.pk)).count(), 1)
+        rec.refresh_from_db()
+        self.assertEqual(rec.approval_request_id, approval.pk)
+
     def test_generated_retail_advice_does_not_enable_unimplemented_actions(self):
         recommendations = evaluate_retail_recommendations(self.workspace_retail)
         self.assertTrue(recommendations)
