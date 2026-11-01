@@ -1944,6 +1944,11 @@ output/acceptance_verification/20261101T124111Z/; không lấy local làm CI/liv
 Release032b205 đã qua cả CI41308558218/41309132726 và RenderFree live/health200.
 Lần thêm Neon đầu rollback đúng toàn bộ,0run mới/old-row fingerprint giữ nguyên:
 service không có quan sát trong block chấm vì nguồn cuối nằm ở phần dư bị bỏ.
-Đang sửa end-alignment bằng N/phần trăm yêu cầu, không theo sai số; hiển thị số
-quan sát thực và cảnh báo thiếu mẫu. Full1508 phía trên thuộc source cũ đã ghi,
-không tự nghiệm thu source mới hoặc lần thêm Neon chưa thành công.
+Đã sửa end-alignment bằng N/phần trăm yêu cầu, không theo sai số; hiển thị số
+quan sát thực và cảnh báo thiếu mẫu. Full1508 phía trên thuộc source cũ đã ghi;
+bằng chứng source mới và lần thêm dữ liệu phải được ghi riêng bên dưới.
+
+Source7fd0df9: full1513/1513OK551,611s,0fail/error/skip,788files giữhash trong
+run và TEST tựhủy; focused39/39OK16,287s. Review delta không còn issue.
+Receipt output/acceptance_verification/20261101T133437Z/; lõi/study5file giữSHA.
+Đây là bằng chứng local của bản sửa, CI/live/Neon dùng receipt riêng theoHEAD.

@@ -114,6 +114,13 @@ cho cấu hình holdout runtime này. Bản sửa phải qua hồi quy/CI/live m
 khi thử thêm dữ liệu lại. N56..62/f=.5 vẫn bị từ chối khi initial<7, không tự
 bịa metric hoặc đổi dữ liệu để vượt điều kiện.
 
+Bản sửa7fd0df9 đã được review không còn issue, focused39/39OK16,287s và full
+local1513/1513OK551,611s,0failure/error/skip. Source788files giữ nguyên trong
+run và TEST tựhủy; receipt `output/acceptance_verification/20261101T133437Z/`.
+Năm source của core/study giữSHA đúng manifest cũ; không huấn luyện lại hoặc
+đổi kết quả20case để khớp runtime. Các log RED và lượt lỗi test trung gian
+được giữ riêng; không dùng localfull làm bằng chứng CI hoặc Neon thành công.
+
 ## Kết luận có giới hạn
 
 Đã xử lý mẫu lỗi đã biết bằng bộ chọn được duyệt và đạt20 case mô phỏng mới,
