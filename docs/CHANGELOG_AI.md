@@ -1317,3 +1317,11 @@ tasks complete; preserve detached experimental worktree and scoped outputs.
   append-only release command; legacy strategy and schema/RBAC remain unchanged.
 - Research V1–V4 sources/results remain historical; release evidence is separate
   and no 97-item count or production certification is inferred here.
+
+Availability follow-up: runtime (not the frozen research engine) end-aligns
+complete14-period holdout windows from history length/requested fraction.
+Requested/effective split provenance and visible observed-sample counters keep
+the sparse service endpoint in evaluation without inventing gap observations.
+Low observation counts are explicitly limited evidence, not generalizable
+quality. The initial Neon publication rolled back on no-observed-truth and is
+not recorded as success; a fresh release must verify the runtime repair first.

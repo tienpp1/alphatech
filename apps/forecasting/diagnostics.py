@@ -28,6 +28,37 @@ def get_run_model_label(run):
     return "Chưa xác định"
 
 
+def get_guarded_holdout_evidence(provenance):
+    """Return validated guarded holdout coverage for UI/API display."""
+    evaluation = provenance.get("evaluation", {}) if isinstance(provenance, dict) else {}
+    counts = evaluation.get("counts", {}) if isinstance(evaluation, dict) else {}
+    observed = counts.get("observed_holdout") if isinstance(counts, dict) else None
+    periods = counts.get("holdout") if isinstance(counts, dict) else None
+    if (
+        isinstance(observed, bool)
+        or not isinstance(observed, int)
+        or observed < 0
+        or isinstance(periods, bool)
+        or not isinstance(periods, int)
+        or periods < 1
+        or observed > periods
+    ):
+        return {
+            "observed_holdout_count": None,
+            "holdout_periods": None,
+            "holdout_evidence_message": None,
+        }
+
+    message = f"Bằng chứng holdout: {observed}/{periods} kỳ có quan sát thực."
+    if observed < 14:
+        message += " Dưới 14 kỳ quan sát; chưa đủ căn cứ và không chứng minh chất lượng tổng quát."
+    return {
+        "observed_holdout_count": observed,
+        "holdout_periods": periods,
+        "holdout_evidence_message": message,
+    }
+
+
 def get_run_granularity(run):
     """Prefer the training snapshot over a subsequently edited configuration."""
     parameters = run.job_parameters if isinstance(run.job_parameters, dict) else {}

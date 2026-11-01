@@ -21,7 +21,7 @@ from apps.forecasting.services import (
     get_default_target_for_workspace,
     get_or_create_default_config,
 )
-from apps.forecasting.diagnostics import get_run_model_label
+from apps.forecasting.diagnostics import get_guarded_holdout_evidence, get_run_model_label
 
 
 @login_required
@@ -65,6 +65,9 @@ def forecasting_dashboard_view(request: HttpRequest) -> HttpResponse:
         run.display_model_label = get_run_model_label(run)
         provenance = ((run.job_parameters or {}).get("provenance", {}))
         guarded = isinstance(provenance, dict) and provenance.get("strategy") == "guarded_direct_v1"
+        holdout_evidence = get_guarded_holdout_evidence(provenance) if guarded else {}
+        run.display_observed_holdout_count = holdout_evidence.get("observed_holdout_count")
+        run.display_holdout_periods = holdout_evidence.get("holdout_periods")
         run.display_baseline_label = "MA7" if guarded else "Naive (lag 7)"
         baseline = run.baseline_metrics or {}
         run.display_baseline_mae = (

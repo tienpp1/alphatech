@@ -362,6 +362,7 @@
         <strong>{{ chart_data.snapshot.status }}:</strong> {{ chart_data.snapshot.message }}
         {% if chart_data.snapshot.period_end %} Ngày cuối dữ liệu: {{ chart_data.snapshot.period_end }}; đánh giá đến {{ chart_data.snapshot.as_of }} ({{ chart_data.snapshot.age_days }} ngày).{% endif %}
         <br>{{ chart_data.quality.message }} {{ chart_data.quality.r2_warning }}
+        {% if chart_data.holdout_evidence_message %}<br><strong>{{ chart_data.holdout_evidence_message }}</strong>{% endif %}
         {% if chart_data.quality.comparisons.mae.best_baseline %}<br>Baseline tốt nhất theo MAE: {{ chart_data.quality.comparisons.mae.best_baseline }} ({{ chart_data.quality.comparisons.mae.baseline_value|floatformat:2 }}).{% endif %}
     </div>
     {% endif %}
@@ -484,6 +485,7 @@
                         <th>Chỉ tiêu dự báo</th>
                         <th>Khoảng thời gian tập dữ liệu</th>
                         <th>Phân chia (Train/Test)</th>
+                        <th>Holdout có dữ liệu thực</th>
                         <th>Mô hình</th>
                         <th>MAE</th>
                         <th>MAPE</th>
@@ -506,6 +508,7 @@
                         <td>{{ run.get_target_type_display }}</td>
                         <td>{{ run.dataset_period_start|default:"—" }} đến {{ run.dataset_period_end|default:"—" }} ({{ run.dataset_row_count }} điểm)</td>
                         <td>{{ run.train_row_count }} / {{ run.test_row_count }}</td>
+                        <td>{% if run.display_holdout_periods is not None %}{{ run.display_observed_holdout_count }}/{{ run.display_holdout_periods }} kỳ có dữ liệu thực{% else %}—{% endif %}</td>
                         <td>{{ run.display_model_label }}</td>
                         <td><strong>{{ run.model_metrics.mae|default:"—" }}</strong></td>
                         <td>{{ run.model_metrics.mape|default:"—" }}%</td>
@@ -514,7 +517,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" style="text-align: center; color: #94a3b8; padding: 2rem;">
+                        <td colspan="11" style="text-align: center; color: #94a3b8; padding: 2rem;">
                             Chưa có lượt huấn luyện nào cho chỉ tiêu này. Nhấp "Huấn luyện Mô hình" để bắt đầu.
                         </td>
                     </tr>

@@ -58,6 +58,14 @@ Training calls `fit_guarded` with exactly estimator/depth/rate overrides and sep
 
 ### Task 3: Scientific verification, release and Neon proof
 
+Before retrying Neon, complete the runtime availability repair recorded in the
+spec: deterministic end-aligned full14-period holdout, requested/effective split
+provenance, real sparse125-period regression and visible observation counters.
+First release032b205 passed both CI runs and deployed, but Neon command safely
+rolled back (0release rows/old rows unchanged) because service holdout had no
+observed truth in its first complete block. Core/study source remains frozen;
+fresh full/regression/CI/live checks are required for the runtime-only fix.
+
 **Files:** new scripts/forecast_guarded_benchmark.py/test; dated report; docs CURRENT_STATUS/CHANGELOG/PROJECT_CONTEXT updates; existing quality.yml focused test additions only.
 **Interfaces:** core `fit_guarded` and holdout_rows to frozen offline evidence, publication command to explicit Neon subprocess.
 

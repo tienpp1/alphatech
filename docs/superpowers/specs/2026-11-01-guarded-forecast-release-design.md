@@ -105,6 +105,30 @@ new strategy validates its source fingerprint. Extend provenance source hashes.
 Default config resolution chooses latest active version; no historical config
 deactivation/deletion. UI/chart/report/assistant quality uses actual model label.
 
+Canonical availability repair (after the first publication safely rolled back):
+service history has125periods, but its last observed day lies in the11-period
+tail dropped by the pure engine's25-period holdout. No error score was obtained;
+zero observations correctly refused publication. Runtime training now aligns
+the requested holdout length to complete14-period blocks ending at history end,
+using ONLY row count and requested fraction, never actual values or loss.
+Take max(14,floor(n*fraction)), round up to a multiple of14, capped at the largest
+multiple of14 within0.5*n; require n>=49/at least14heldout periods. Pass the
+effective fraction to the unchanged core, with a one-ULP adjustment only if
+float multiplication would truncate the intended integer. Preserve requested
+and effective fractions/period counts and policy in provenance. Other core
+history/fit/data-quality checks still fail closed. This applies each retraining,
+not only this release. Pure benchmark/default-engine protocol and all five
+frozen study sources stay byte-identical; the synthetic score is not claimed
+for a differently configured runtime holdout. Show observed-truth count versus
+calendar heldout periods; fewer than14 observations gets an explicit limitation,
+not a claim of generalizable quality. No generated transactions or imputed
+periods are relabeled as observed, and no model is chosen with holdout losses.
+
+Boundary ruling: N>=49 is a minimum, not a guarantee for every requested split.
+For N56..62 at requested0.5, H28 plus mandatory28validation leaves initial<7:
+retain the core's explicit insufficient-fit error, do not shrink the holdout
+after seeing loss or invent a zero-metric result. Test this fail-closed boundary.
+
 ## Append-only release on Neon
 
 Management command `publish_guarded_forecasts --release-id <id> --workspace

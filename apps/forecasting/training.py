@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple
 import hashlib
 import os
 import datetime
+import math
 import platform
 import django
 from pathlib import Path
@@ -40,6 +41,7 @@ from apps.forecasting.evaluation import (
 
 
 GUARDED_STRATEGY = "guarded_direct_v1"
+GUARDED_HOLDOUT_ALIGNMENT_POLICY = "end_aligned_full_14_period_windows_v1"
 GUARDED_SOURCE_FILES = ("adaptive.py", "guarded.py", "artifacts.py", "prediction.py")
 DEFAULT_TRAINING_CONFIG = {
     "n_estimators": 100,
@@ -49,6 +51,45 @@ DEFAULT_TRAINING_CONFIG = {
     "colsample_bytree": 0.8,
     "test_size": 0.20,
 }
+
+
+def _align_guarded_holdout_periods(history_periods, requested_test_size):
+    """Round guarded runtime holdouts up to full 14-period windows ending at the latest row."""
+    if (
+        isinstance(history_periods, bool)
+        or not isinstance(history_periods, int)
+        or history_periods < 49
+    ):
+        raise ValueError("Guarded forecast requires at least 49 history periods.")
+    if (
+        isinstance(requested_test_size, bool)
+        or not isinstance(requested_test_size, (int, float))
+        or not math.isfinite(float(requested_test_size))
+        or not 0.05 <= float(requested_test_size) <= 0.5
+    ):
+        raise ValueError("test_size must be in the supported range [0.05, 0.5]")
+
+    requested_size = float(requested_test_size)
+    requested_periods = max(14, int(history_periods * requested_size))
+    maximum_full_periods = 14 * math.floor((history_periods * 0.5) / 14)
+    if maximum_full_periods < 14:
+        raise ValueError("Guarded forecast requires at least 49 history periods.")
+    effective_periods = min(14 * math.ceil(requested_periods / 14), maximum_full_periods)
+    effective_size = effective_periods / history_periods
+    if int(history_periods * effective_size) != effective_periods:
+        effective_size = math.nextafter(effective_size, 1.0)
+    if int(history_periods * effective_size) != effective_periods:
+        raise ValueError("Unable to represent the aligned guarded holdout size exactly.")
+
+    return {
+        "policy": GUARDED_HOLDOUT_ALIGNMENT_POLICY,
+        "requested_periods": requested_periods,
+        "requested_test_size": requested_size,
+        "requested_percentage": round(requested_size * 100.0, 8),
+        "effective_periods": effective_periods,
+        "effective_test_size": effective_size,
+        "effective_percentage": round(effective_size * 100.0, 8),
+    }
 
 
 def resolve_default_model_config(workspace: Workspace, target_type: str) -> ForecastModelConfig:
@@ -211,7 +252,11 @@ def _train_guarded_forecast(
     from apps.forecasting.artifacts import save_run_artifact
     from apps.forecasting.guarded import fit_guarded
 
-    test_size = float(train_cfg.get("test_size", getattr(settings, "FORECAST_DEFAULT_TEST_SIZE", 0.20)))
+    requested_test_size = float(
+        train_cfg.get("test_size", getattr(settings, "FORECAST_DEFAULT_TEST_SIZE", 0.20))
+    )
+    holdout_alignment = _align_guarded_holdout_periods(len(ts_df), requested_test_size)
+    effective_test_size = holdout_alignment["effective_test_size"]
     candidate_params = {
         key: train_cfg[key]
         for key in ("n_estimators", "max_depth", "learning_rate")
@@ -222,7 +267,7 @@ def _train_guarded_forecast(
         horizon=horizon_days,
         granularity=model_config.granularity,
         params=candidate_params,
-        test_size=test_size,
+        test_size=effective_test_size,
         observed_dates=(getattr(ts_df, "attrs", {}) or {}).get("observed_period_dates"),
     )
     selection = result["selection"]
@@ -263,14 +308,42 @@ def _train_guarded_forecast(
     provenance["training_config"] = {
         "strategy": GUARDED_STRATEGY,
         "candidate_params": dict(selection.get("params") or {}),
-        "test_size": test_size,
+        "test_size": effective_test_size,
+        "requested_test_size": requested_test_size,
+        "effective_test_size": effective_test_size,
+        "holdout_alignment_policy": holdout_alignment["policy"],
         "serving_refit_history_rows": int(len(ts_df)) if provenance["effective_model"] == "XGBOOST_DIRECT" else 0,
         "serving_refit_history_end": str(ts_df.index[-1].date()) if provenance["effective_model"] == "XGBOOST_DIRECT" else None,
+    }
+    provenance["holdout_alignment"] = {
+        "policy": holdout_alignment["policy"],
+        "requested": {
+            "periods": holdout_alignment["requested_periods"],
+            "test_size": requested_test_size,
+            "percentage": holdout_alignment["requested_percentage"],
+        },
+        "effective": {
+            "periods": holdout_alignment["effective_periods"],
+            "test_size": effective_test_size,
+            "percentage": holdout_alignment["effective_percentage"],
+        },
+        "actual_split_counts": {
+            "history": int(counts["history"]),
+            "initial_fit": int(counts["initial_fit"]),
+            "validation": int(counts["validation"]),
+            "holdout": int(counts["holdout"]),
+            "observed_holdout": int(counts["observed_holdout"]),
+        },
     }
     provenance["dataset"]["unit"] = _target_unit(target_type)
     provenance["split"].update({
         "method": "chronological_validation_then_rolling_holdout",
-        "test_size": test_size,
+        "test_size": effective_test_size,
+        "requested_test_size": requested_test_size,
+        "effective_test_size": effective_test_size,
+        "requested_test_rows": holdout_alignment["requested_periods"],
+        "effective_test_rows": holdout_alignment["effective_periods"],
+        "holdout_alignment_policy": holdout_alignment["policy"],
         "train_rows": run.train_row_count,
         "test_rows": run.test_row_count,
         "train_start": partitions["initial_fit"][0],

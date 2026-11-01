@@ -31,6 +31,7 @@ from apps.audit.services import log_audit_event
 from apps.forecasting.diagnostics import (
     assess_model_quality,
     assess_snapshot,
+    get_guarded_holdout_evidence,
     get_run_granularity,
     get_run_model_label,
 )
@@ -180,6 +181,11 @@ def get_forecast_chart_data(
     model_label = get_run_model_label(latest_run) if latest_run else None
     provenance = ((latest_run.job_parameters or {}).get("provenance", {}) if latest_run else {})
     is_guarded = isinstance(provenance, dict) and provenance.get("strategy") == "guarded_direct_v1"
+    holdout_evidence = get_guarded_holdout_evidence(provenance) if is_guarded else {
+        "observed_holdout_count": None,
+        "holdout_periods": None,
+        "holdout_evidence_message": None,
+    }
     comparison_prefix = "moving_average_7" if is_guarded else "naive"
     comparison_label = "MA7" if is_guarded else "Naive (lag 7)"
     comparison_metrics = baseline_metrics.get("ma7") if is_guarded else None
@@ -212,6 +218,7 @@ def get_forecast_chart_data(
         "model_label": model_label,
         "effective_model": provenance.get("effective_model") if is_guarded else None,
         "show_prediction_intervals": show_prediction_intervals,
+        **holdout_evidence,
         "selection_reason": (provenance.get("selection") or {}).get("reason") if is_guarded else None,
         "comparison_baseline_label": comparison_label,
         "comparison_baseline_mae": comparison_metrics.get("mae"),

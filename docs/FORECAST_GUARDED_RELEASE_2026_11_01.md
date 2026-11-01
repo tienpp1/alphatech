@@ -94,6 +94,26 @@ Full1508 là lượt sau các bản sửa đó; không biến các log lỗi th�
 Các cập nhật tài liệu sau full không được gọi là full runtime mới; phải giữ
 non-document source fingerprint trước khi push. CI/live receipts là cổng riêng.
 
+## Phát hành đầu và sửa khả năng chấm dữ liệu thưa
+
+Commit032b205 đã qua CI41308558218 và41309132726, Render Free
+`dep-dbjjh1ou01pc73flqgbg` live/health200. Tuy nhiên lần thêm Neon đầu đã
+rollback toàn bộ:0run release mới và mọi row cũ giữ fingerprint. Không ghi đó
+là phát hành dữ liệu thành công. Receipt đọc riêng:
+`D:/AlphaTech_Private/forecast_guard_20261101/publication_failure_readonly.json`.
+
+Nguyên nhân là availability: chuỗi dịch vụ125kỳ có quan sát cuối ở phần dư11kỳ
+của holdout25, trong khi core chỉ chấm block14đầy đủ đầu tiên nên không còn
+quan sát nào. Sửa runtime căn holdout thành block14kết thúc đúng cuối lịch sử,
+chỉ dựa N/phần trăm yêu cầu, không dùng giá trị hoặc sai số. Core/study5source
+giữ nguyên. Lưu cả split yêu cầu/thực tế, không gắn nhãn gap-zero là quan sát.
+N125/f=.2 thành28kỳ, initial69 nên chọn MA7 do không đủ điều kiện XGBoost;
+chỉ1quan sát thực trong holdout phải hiển thị rõ, R²không xác định và cảnh báo
+chưa đủ chứng minh chất lượng tổng quát. Không suy ra score34,8268%của study
+cho cấu hình holdout runtime này. Bản sửa phải qua hồi quy/CI/live mới trước
+khi thử thêm dữ liệu lại. N56..62/f=.5 vẫn bị từ chối khi initial<7, không tự
+bịa metric hoặc đổi dữ liệu để vượt điều kiện.
+
 ## Kết luận có giới hạn
 
 Đã xử lý mẫu lỗi đã biết bằng bộ chọn được duyệt và đạt20 case mô phỏng mới,

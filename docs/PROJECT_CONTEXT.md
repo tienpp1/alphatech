@@ -11,6 +11,14 @@ The explicit append-only publication command creates new configurations/runs/
 results and a SYSTEM_JOB audit, not transactions or historical replacements.
 This changes no schema/RBAC/worker policy/97 ledger; release evidence is separate.
 
+Runtime availability follow-up: guarded training aligns complete14-period
+holdout blocks to the end of canonical history using only row count/requested
+fraction, preserving requested/effective split metadata. Imputed gaps remain
+unobserved. UI/API report scored observations versus calendar periods and warn
+on fewer than14 observations. Pure research engine/default protocol is unchanged;
+a single observed holdout supports no generalizable accuracy claim. No data
+fabrication, holdout-loss model selection or retroactive metric replacement.
+
 AI context improvement (2026-10-09, local): public copilot remains rule-based,
 with a public-only source-reviewed navigation FAQ, whole-phrase Vietnamese
 matching and explicit million-VND upper-budget filtering. Internal KB ingestion

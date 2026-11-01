@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pandas as pd
 from django.conf import settings
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 
 from apps.forecasting.models import (
@@ -164,6 +164,211 @@ class GuardedForecastLifecycleTests(TestCase):
         )
         self.assertEqual(get_run_model_label(legacy), "XGBoost")
 
+    def test_guarded_holdout_alignment_uses_end_aligned_14_period_windows(self):
+        from apps.forecasting.training import _align_guarded_holdout_periods
+
+        cases = (
+            (90, 0.20, 18, 28),
+            (125, 0.20, 25, 28),
+            (730, 0.20, 146, 154),
+            (49, 0.50, 24, 14),
+        )
+        for history_periods, requested_size, requested_periods, effective_periods in cases:
+            with self.subTest(history_periods=history_periods, requested_size=requested_size):
+                aligned = _align_guarded_holdout_periods(history_periods, requested_size)
+                self.assertEqual(aligned["requested_periods"], requested_periods)
+                self.assertEqual(aligned["effective_periods"], effective_periods)
+                self.assertEqual(int(history_periods * aligned["effective_test_size"]), effective_periods)
+                self.assertAlmostEqual(aligned["requested_percentage"], requested_size * 100)
+                self.assertAlmostEqual(
+                    aligned["effective_percentage"],
+                    effective_periods / history_periods * 100,
+                )
+
+        with self.assertRaisesMessage(ValueError, "at least 49"):
+            _align_guarded_holdout_periods(48, 0.20)
+        with self.assertRaisesMessage(ValueError, "[0.05, 0.5]"):
+            _align_guarded_holdout_periods(125, 0.04)
+
+    def test_holdout_evidence_rejects_observed_count_greater_than_holdout(self):
+        from apps.forecasting.diagnostics import get_guarded_holdout_evidence
+
+        invalid = get_guarded_holdout_evidence({
+            "strategy": "guarded_direct_v1",
+            "evaluation": {"counts": {"observed_holdout": 29, "holdout": 28}},
+        })
+        self.assertIsNone(invalid["observed_holdout_count"])
+        self.assertIsNone(invalid["holdout_periods"])
+        self.assertIsNone(invalid["holdout_evidence_message"])
+
+    def test_short_fit_core_after_alignment_fails_without_publishing_metrics(self):
+        config = self.create_config(1, strategy="guarded_direct_v1")
+        config.training_config["test_size"] = 0.50
+        config.save(update_fields=["training_config"])
+        index = pd.date_range("2026-01-01", periods=56, freq="D", name="date")
+        history = pd.DataFrame({"target": [float(100 + i) for i in range(56)]}, index=index)
+        history.attrs["observed_period_dates"] = [day.date().isoformat() for day in index]
+
+        with patch("apps.forecasting.training.get_historical_timeseries", return_value=history):
+            with self.assertRaisesMessage(ValueError, "At least seven initial fit periods"):
+                train_forecast_model(
+                    self.workspace,
+                    TargetType.RETAIL_REVENUE,
+                    model_config=config,
+                    horizon_days=14,
+                )
+
+        run = ForecastRun.objects.get(model_config=config)
+        self.assertEqual(run.status, RunStatus.FAILED)
+        self.assertIn("At least seven initial fit periods", run.error_message)
+        self.assertEqual(run.model_metrics, {})
+        self.assertEqual(run.baseline_metrics, {})
+        self.assertEqual(run.artifact_path, "")
+
+    def test_90_period_history_uses_28_period_holdout_and_ma7_fallback(self):
+        config = self.create_config(1, strategy="guarded_direct_v1")
+        index = pd.date_range("2026-01-01", periods=90, freq="D", name="date")
+        history = pd.DataFrame({"target": [float(200 + (i % 9)) for i in range(90)]}, index=index)
+        history.attrs["observed_period_dates"] = [day.date().isoformat() for day in index]
+
+        with patch("apps.forecasting.training.get_historical_timeseries", return_value=history):
+            run = train_forecast_model(
+                self.workspace,
+                TargetType.RETAIL_REVENUE,
+                model_config=config,
+                horizon_days=14,
+            )
+
+        provenance = run.job_parameters["provenance"]
+        self.assertEqual(run.status, RunStatus.COMPLETED)
+        self.assertEqual(run.test_row_count, 28)
+        self.assertEqual(provenance["selection"]["eligibility"]["initial_fit_periods"], 34)
+        self.assertEqual(provenance["effective_model"], "MA7")
+        self.assertEqual(provenance["evaluation"]["counts"]["observed_holdout"], 28)
+
+    def test_sparse_125_period_holdout_scores_latest_truth_and_surfaces_evidence(self):
+        from apps.forecasting.guarded import fit_guarded
+        from apps.forecasting.selectors import get_historical_timeseries
+        from apps.forecasting.services import get_forecast_chart_data
+
+        last_date = datetime.date(2026, 10, 12)
+        first_date = last_date - datetime.timedelta(days=124)
+        for order_index, offset in enumerate((*range(64), 90, 124)):
+            current = first_date + datetime.timedelta(days=offset)
+            Order.objects.create(
+                workspace=self.workspace,
+                order_number=f"GSPARSE-{order_index:03d}",
+                customer=self.customer,
+                order_date=current,
+                order_timestamp=timezone.make_aware(
+                    datetime.datetime.combine(current, datetime.time(12, 0))
+                ),
+                status=OrderStatus.COMPLETED,
+                total_amount=Decimal(str(1000 + order_index)),
+            )
+
+        history = get_historical_timeseries(self.workspace, TargetType.RETAIL_REVENUE)
+        self.assertEqual(len(history), 125)
+        self.assertEqual(history.attrs["source_observation_count"], 66)
+        self.assertEqual(len(history.attrs["observed_period_dates"]), 66)
+        self.assertEqual(history.attrs["observed_period_dates"][-1], last_date.isoformat())
+
+        config = self.create_config(1, strategy="guarded_direct_v1")
+        real_fit_guarded = fit_guarded
+        fit_results = []
+
+        def capture_real_fit(*args, **kwargs):
+            result = real_fit_guarded(*args, **kwargs)
+            fit_results.append(result)
+            return result
+
+        with patch("apps.forecasting.guarded.fit_guarded", side_effect=capture_real_fit):
+            run = train_forecast_model(
+                self.workspace,
+                TargetType.RETAIL_REVENUE,
+                model_config=config,
+                horizon_days=14,
+            )
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, RunStatus.COMPLETED)
+        self.assertEqual(run.test_row_count, 28)
+        self.assertEqual(run.model_metrics["count"], 1)
+        self.assertIsNone(run.model_metrics["r2"])
+        self.assertEqual(run.baseline_metrics["ma7"]["count"], 1)
+        provenance = run.job_parameters["provenance"]
+        self.assertEqual(provenance["effective_model"], "MA7")
+        self.assertEqual(provenance["selection"]["eligibility"]["initial_fit_periods"], 69)
+        self.assertEqual(provenance["training_config"]["test_size"], 28 / 125)
+        self.assertEqual(provenance["training_config"]["requested_test_size"], 0.20)
+        self.assertEqual(provenance["training_config"]["effective_test_size"], 28 / 125)
+        self.assertEqual(provenance["split"]["test_size"], 28 / 125)
+        self.assertEqual(provenance["split"]["requested_test_size"], 0.20)
+        self.assertEqual(provenance["split"]["effective_test_size"], 28 / 125)
+        self.assertEqual(provenance["evaluation"]["counts"]["holdout"], 28)
+        self.assertEqual(provenance["evaluation"]["counts"]["observed_holdout"], 1)
+        self.assertEqual(provenance["holdout_alignment"]["effective"]["periods"], 28)
+        self.assertEqual(provenance["training_config"]["effective_test_size"], 28 / 125)
+        self.assertEqual(provenance["holdout_alignment"]["requested"]["periods"], 25)
+        self.assertEqual(provenance["holdout_alignment"]["requested"]["percentage"], 20.0)
+        self.assertEqual(provenance["holdout_alignment"]["effective"]["periods"], 28)
+        self.assertEqual(provenance["holdout_alignment"]["effective"]["percentage"], 22.4)
+        self.assertEqual(
+            provenance["holdout_alignment"]["actual_split_counts"],
+            {"history": 125, "initial_fit": 69, "validation": 28, "holdout": 28, "observed_holdout": 1},
+        )
+        self.assertEqual(provenance["evaluation"]["counts"]["holdout"], 28)
+        self.assertEqual(provenance["evaluation"]["counts"]["observed_holdout"], 1)
+
+        scored_rows = [row for row in fit_results[0]["holdout_rows"] if row["observed"]]
+        self.assertEqual([row["date"] for row in scored_rows], [last_date.isoformat()])
+        self.assertEqual(len(fit_results[0]["holdout_rows"]), 28)
+        self.assertEqual(sum(not row["observed"] for row in fit_results[0]["holdout_rows"]), 27)
+
+        chart = get_forecast_chart_data(
+            self.workspace,
+            TargetType.RETAIL_REVENUE,
+            history_days=3660,
+            horizon_days=14,
+        )
+        self.assertEqual(chart["observed_holdout_count"], 1)
+        self.assertEqual(chart["holdout_periods"], 28)
+        self.assertEqual(chart["model_label"], "MA7")
+        self.assertIn("1/28", chart["holdout_evidence_message"])
+        self.assertIn("không chứng minh chất lượng tổng quát", chart["holdout_evidence_message"])
+
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+
+        user = get_user_model().objects.create_superuser(
+            username="guarded-sparse-evidence",
+            email="guarded-sparse-evidence@example.test",
+            password="local-test-only",
+        )
+        api_client = APIClient()
+        api_client.force_authenticate(user=user)
+        api_response = api_client.get(
+            "/api/v1/forecasting/chart-data/?target_type=RETAIL_REVENUE",
+            HTTP_X_WORKSPACE_ID=str(self.workspace.pk),
+        )
+        self.assertEqual(api_response.status_code, 200)
+        self.assertEqual(api_response.data["data"]["observed_holdout_count"], 1)
+        self.assertEqual(api_response.data["data"]["holdout_periods"], 28)
+        self.assertEqual(api_response.data["data"]["model_label"], "MA7")
+
+        client = Client()
+        client.force_login(user)
+        response = client.get(
+            "/forecasting/",
+            HTTP_X_WORKSPACE_ID=str(self.workspace.pk),
+        )
+        dashboard_html = response.content.decode("utf-8")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Bằng chứng holdout: 1/28 kỳ", dashboard_html)
+        self.assertIn("Dưới 14 kỳ quan sát", dashboard_html)
+        self.assertIn("1/28 kỳ có dữ liệu thực", dashboard_html)
+        self.assertIn("MA7", dashboard_html)
+
     def test_guarded_training_records_actual_model_baselines_and_snapshot_without_refetch(self):
         self.create_daily_orders(130)
         config = self.create_config(1, strategy="guarded_direct_v1")
@@ -199,7 +404,14 @@ class GuardedForecastLifecycleTests(TestCase):
         self.assertEqual(provenance["selection"]["params"]["subsample"], 1.0)
         self.assertEqual(provenance["selection"]["params"]["colsample_bytree"], 1.0)
         self.assertNotIn("test_size", provenance["selection"]["params"])
-        self.assertEqual(provenance["training_config"]["test_size"], 0.20)
+        self.assertEqual(provenance["training_config"]["test_size"], 28 / 130)
+        self.assertEqual(provenance["training_config"]["requested_test_size"], 0.20)
+        self.assertEqual(provenance["training_config"]["effective_test_size"], 28 / 130)
+        self.assertEqual(provenance["split"]["test_size"], 28 / 130)
+        self.assertEqual(provenance["split"]["requested_test_size"], 0.20)
+        self.assertEqual(provenance["split"]["effective_test_size"], 28 / 130)
+        self.assertEqual(provenance["evaluation"]["counts"]["holdout"], 28)
+        self.assertEqual(provenance["evaluation"]["counts"]["observed_holdout"], 28)
         self.assertTrue(provenance["deployment_qualification"])
         self.assertNotIn("holdout_rows", provenance)
         self.assertIn("ma7", run.baseline_metrics)
@@ -676,11 +888,17 @@ class GuardedForecastLifecycleTests(TestCase):
             "evaluation": {
                 "method": "chronological_validation_selection_then_separate_rolling_holdout",
                 "partitions": {
-                    "initial_fit": ["2025-01-01", "2025-03-17"],
-                    "validation": ["2025-03-18", "2025-04-14"],
-                    "holdout": ["2025-04-15", "2025-05-10"],
+                    "initial_fit": ["2025-01-01", "2025-03-15"],
+                    "validation": ["2025-03-16", "2025-04-12"],
+                    "holdout": ["2025-04-13", "2025-05-10"],
                 },
-                "counts": {"initial_fit": 76, "validation": 28, "holdout": 26, "history": 130},
+                "counts": {
+                    "initial_fit": 74,
+                    "validation": 28,
+                    "holdout": 28,
+                    "observed_holdout": 28,
+                    "history": 130,
+                },
                 "intervals_calibrated": False,
             },
             "holdout_rows": [],

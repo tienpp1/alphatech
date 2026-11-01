@@ -1940,3 +1940,10 @@ Source573d219 full1508/1508OK279,731s,0fail/error/skip,788files giữhash trong
 run; TEST tựhủy. Framework0issues/driftNoChanges, secret869files0findings,
 Bandit227files34.402LOC0findings theo cấu hình hiện có. Receipt riêng trong
 output/acceptance_verification/20261101T124111Z/; không lấy local làm CI/live.
+
+Release032b205 đã qua cả CI41308558218/41309132726 và RenderFree live/health200.
+Lần thêm Neon đầu rollback đúng toàn bộ,0run mới/old-row fingerprint giữ nguyên:
+service không có quan sát trong block chấm vì nguồn cuối nằm ở phần dư bị bỏ.
+Đang sửa end-alignment bằng N/phần trăm yêu cầu, không theo sai số; hiển thị số
+quan sát thực và cảnh báo thiếu mẫu. Full1508 phía trên thuộc source cũ đã ghi,
+không tự nghiệm thu source mới hoặc lần thêm Neon chưa thành công.
