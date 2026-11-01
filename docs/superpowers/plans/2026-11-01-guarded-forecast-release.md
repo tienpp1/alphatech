@@ -72,8 +72,12 @@ fresh full/regression/CI/live checks are required for the runtime-only fix.
 - [x] Freeze20new-series inputs/policy/source; run once and preserve every failure/loss/negativeR²; old2236 separate SEEN demonstration.
 - [x] Audit raw paired MAE/gates/selection chronology and model roundtrip; do not tune/reseed after final.
 - [x] Full worktree suite, framework/drift/Bandit/diff/source freeze and oldartifact/97hash guards; fullfresh branch review (operator preconditions separately addressed before use).
-- [ ] Push isolated code branch, verify GitHub CI; fast-forward shared main only with expected oldSHA; noforce or unrelated dirtymain staging.
-- [ ] Deploy existing Free Render, verify exact commit/live state and readiness; no paid services or insecure credential workarounds.
-- [ ] Private read-only canonical backup/fingerprints; apply append-only Neon release for the two workspace defaults, optionally all four existing targets with --all-targets after qualification.
-- [ ] Read-only check model SHA/DB snapshot/in-memory serving, old-row/business invariants, release idempotency and actual labels/HTTP where credentials allow.
-- [ ] Report actual outcomes, exact commit/CI/deploy/release IDs and any unverified boundary. Update no97progress.
+- [x] Push isolated code branch, verify GitHub CI; fast-forward shared main only with expected oldSHA; noforce or unrelated dirtymain staging.
+- [x] Deploy existing Free Render, verify exact commit/live state and readiness; no paid services or insecure credential workarounds.
+- [x] Private read-only canonical backup/fingerprints; apply append-only Neon release for the two workspace defaults, optionally all four existing targets with --all-targets after qualification.
+- [x] Read-only check model SHA/DB snapshot/in-memory serving, old-row/business invariants, release idempotency and actual labels/HTTP where credentials allow.
+- [x] Report actual outcomes, exact commit/CI/deploy/release IDs and any unverified boundary. Update no97progress.
+
+Completion above refers to tested runtime14b089c and releaseguarded-20261101-v1.
+Documentation-only follow-up corrects fixture-versus-canonical observation
+counts and records actual receipts, without retraining or replacing any run.

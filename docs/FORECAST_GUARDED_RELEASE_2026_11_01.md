@@ -107,9 +107,10 @@ của holdout25, trong khi core chỉ chấm block14đầy đủ đầu tiên n�
 quan sát nào. Sửa runtime căn holdout thành block14kết thúc đúng cuối lịch sử,
 chỉ dựa N/phần trăm yêu cầu, không dùng giá trị hoặc sai số. Core/study5source
 giữ nguyên. Lưu cả split yêu cầu/thực tế, không gắn nhãn gap-zero là quan sát.
-N125/f=.2 thành28kỳ, initial69 nên chọn MA7 do không đủ điều kiện XGBoost;
-chỉ1quan sát thực trong holdout phải hiển thị rõ, R²không xác định và cảnh báo
-chưa đủ chứng minh chất lượng tổng quát. Không suy ra score34,8268%của study
+N125/f=.2 thành28kỳ, initial69 nên chọn MA7 do không đủ điều kiện XGBoost.
+Fixture hồi quy kiểm trường hợp1quan sát/R²không xác định; không được suy ra
+số1đó là số liệu canonical Neon. Số quan sát và R² thực được đọc riêng từ run,
+giữ cảnh báo ít mẫu và không chứng minh chất lượng tổng quát. Không suy ra score34,8268%của study
 cho cấu hình holdout runtime này. Bản sửa phải qua hồi quy/CI/live mới trước
 khi thử thêm dữ liệu lại. N56..62/f=.5 vẫn bị từ chối khi initial<7, không tự
 bịa metric hoặc đổi dữ liệu để vượt điều kiện.
@@ -120,6 +121,28 @@ run và TEST tựhủy; receipt `output/acceptance_verification/20261101T133437Z
 Năm source của core/study giữSHA đúng manifest cũ; không huấn luyện lại hoặc
 đổi kết quả20case để khớp runtime. Các log RED và lượt lỗi test trung gian
 được giữ riêng; không dùng localfull làm bằng chứng CI hoặc Neon thành công.
+
+## Bằng chứng vận hành runtime14b089c
+
+GitHub main và feature CI41313881279/41312958786 completed/success cùng
+commit14b089c. RenderFree `dep-dbjkc2nb9u1s73e9on60` live đúng commit/health200.
+Sau bản sửa đã thêm đúng4config/4run/56result/4SYSTEM_JOBaudit vào Neon;
+mọi row có trước publication giữ fingerprint, không thêm bảng hoặc giao dịch
+mô phỏng. Lần retry cùng release không thêm/sửa row. Bốn model snapshot đã
+kiểm SHA/scope và suy luận trong process kiểm thử với thư mục model trống,
+khớp14ngày/giá trị đã lưu. Đây không phải quan sát một API suy luận từ xa mới.
+
+Browser production bằng phiên admin đã đọc cả3chỉ tiêu bán lẻ và1dịch vụ:
+đúng modelMA7, đủ14điểm, cảnh báo lịch sử/ít mẫu/R²âm và không bịa feature
+importance XGBoost. Số canonical thực nằm trong biên bản riêng; fixture1điểm
+không được dùng thay số thực. UAT chỉ đổi workspace của phiên đã được cấp
+quyền, không cấp thêm membership hoặc sửa dữ liệu nghiệp vụ.
+
+Receipt riêng tại `D:/AlphaTech_Private/forecast_guard_20261101/` gồm
+`after.json`, `snapshot_serving.json`, `idempotency.json`, `ui_readback.json`;
+không công bố transaction/model native/các metric kinh doanh lên GitHub.
+Source/model history cũ, sổ97 và CSV lịch sử bảo vệ giữ nguyên. Các commit
+tài liệu sau runtime14b089c không được gọi là huấn luyện lại hoặc đổi dữ liệu.
 
 ## Kết luận có giới hạn
 
