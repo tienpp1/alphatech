@@ -648,17 +648,18 @@
     </div>
 
     <!-- 3. Machine Learning Forecasting Evaluation -->
-    <div class="section-title">3. Đánh giá Dự báo Học máy XGBoost vs Baseline</div>
+    <div class="section-title">3. Đánh giá Dự báo Chuỗi thời gian</div>
     <div class="report-table-wrapper">
     <table class="report-table">
         <thead>
             <tr>
                 <th>Mục tiêu Dự báo</th>
                 <th>Không gian Vận hành</th>
-                <th>XGBoost MAE</th>
-                <th>XGBoost RMSE</th>
-                <th>Naive Baseline MAE</th>
-                <th>Cải thiện (%)</th>
+                <th>Mô hình</th>
+                <th>MAE</th>
+                <th>RMSE</th>
+                <th>Đường cơ sở MAE</th>
+                <th>Cải thiện so với cơ sở (%)</th>
             </tr>
         </thead>
         <tbody>
@@ -666,9 +667,10 @@
             <tr>
                 <td><strong>{{ run.target_name }}</strong></td>
                 <td>{{ run.workspace }}</td>
+                <td>{{ run.model_label|default:"XGBoost" }}</td>
                 <td>{{ run.mae|floatformat:2|default:"Chưa đo" }}</td>
                 <td>{{ run.rmse|floatformat:2|default:"Chưa đo" }}</td>
-                <td>{{ run.baseline_mae|floatformat:2|default:"Chưa đo" }}</td>
+                <td>{{ run.baseline_label|default:"Naive (lag 7)" }} MAE: {{ run.baseline_mae|floatformat:2|default:"Chưa đo" }}</td>
                 <td class="{% if run.improvement_pct != None and run.improvement_pct < 0 %}text-improvement-negative{% else %}text-improvement-positive{% endif %}">
                     {% if run.improvement_pct != None %}
                         {{ run.improvement_pct }}%
@@ -679,7 +681,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6" style="text-align: center; color: #94a3b8;">Đang cập nhật các mô hình chuỗi thời gian đã huấn luyện.</td>
+                <td colspan="7" style="text-align: center; color: #94a3b8;">Đang cập nhật các mô hình chuỗi thời gian đã huấn luyện.</td>
             </tr>
             {% endfor %}
         </tbody>

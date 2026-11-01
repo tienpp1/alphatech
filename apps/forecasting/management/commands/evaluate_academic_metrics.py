@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from apps.approvals.models import ApprovalRequest
 from apps.forecasting.academic_reporting import render_report
+from apps.forecasting.diagnostics import get_run_model_label
 from apps.forecasting.models import ForecastRun
 from apps.recommendations.models import Recommendation
 from apps.workspaces.models import Workspace
@@ -37,6 +38,7 @@ class Command(BaseCommand):
             'test': run.test_row_count, 'metrics': run.model_metrics or {},
             'baseline': run.baseline_metrics or {}, 'start': run.dataset_period_start,
             'end': run.dataset_period_end, 'parameters': run.job_parameters,
+            'model_label': get_run_model_label(run),
         } for run in runs]
         approvals = ApprovalRequest.objects.filter(workspace=workspace)
         counts = {

@@ -22,9 +22,18 @@ from apps.forecasting.models import (
     RunStatus,
 )
 from apps.forecasting.selectors import get_historical_timeseries
-from apps.forecasting.training import train_forecast_model, validate_target_for_workspace
+from apps.forecasting.training import (
+    train_forecast_model,
+    validate_target_for_workspace,
+    resolve_default_model_config,
+)
 from apps.audit.services import log_audit_event
-from apps.forecasting.diagnostics import assess_model_quality, assess_snapshot, get_run_granularity
+from apps.forecasting.diagnostics import (
+    assess_model_quality,
+    assess_snapshot,
+    get_run_granularity,
+    get_run_model_label,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -39,34 +48,7 @@ def get_default_target_for_workspace(workspace: Workspace) -> str:
 
 def get_or_create_default_config(workspace: Workspace, target_type: str) -> ForecastModelConfig:
     """Retrieves or provisions default configuration for the given workspace and target."""
-    validate_target_for_workspace(workspace, target_type)
-
-    cfg, _ = ForecastModelConfig.objects.get_or_create(
-        workspace=workspace,
-        target_type=target_type,
-        model_version=1,
-        defaults={
-            "name": f"Default {target_type.replace('_', ' ').title()}",
-            "model_type": ModelType.XGBOOST_REGRESSOR,
-            "granularity": Granularity.DAILY,
-            "feature_config": {
-                "lags": [1, 7, 14],
-                "rolling_windows": [7, 14],
-                "calendar_features": True,
-            },
-            "training_config": {
-                "n_estimators": 100,
-                "max_depth": 4,
-                "learning_rate": 0.05,
-                "subsample": 0.8,
-                "colsample_bytree": 0.8,
-                "test_size": 0.20,
-            },
-            "is_active": True,
-            "model_version": 1,
-        },
-    )
-    return cfg
+    return resolve_default_model_config(workspace, target_type)
 
 
 def execute_training_job(
@@ -195,6 +177,18 @@ def get_forecast_chart_data(
             for k, v in (latest_run.feature_importances or {}).items()
         ]
 
+    model_label = get_run_model_label(latest_run) if latest_run else None
+    provenance = ((latest_run.job_parameters or {}).get("provenance", {}) if latest_run else {})
+    is_guarded = isinstance(provenance, dict) and provenance.get("strategy") == "guarded_direct_v1"
+    comparison_prefix = "moving_average_7" if is_guarded else "naive"
+    comparison_label = "MA7" if is_guarded else "Naive (lag 7)"
+    comparison_metrics = baseline_metrics.get("ma7") if is_guarded else None
+    if not isinstance(comparison_metrics, dict):
+        comparison_metrics = {
+            "mae": baseline_metrics.get(f"{comparison_prefix}_mae"),
+            "mape": baseline_metrics.get(f"{comparison_prefix}_mape"),
+        }
+
     snapshot = assess_snapshot(latest_run.dataset_period_end if latest_run else None,
                                [datetime.date.fromisoformat(point["date"]) for point in forecast_points],
                                granularity)
@@ -209,7 +203,13 @@ def get_forecast_chart_data(
         "forecast_start": forecast_points[0]["date"] if forecast_points else None,
         "forecast_end": forecast_points[-1]["date"] if forecast_points else None,
         "snapshot": snapshot,
-        "quality": assess_model_quality(model_metrics, baseline_metrics),
+        "quality": assess_model_quality(model_metrics, baseline_metrics, model_label=model_label),
+        "model_label": model_label,
+        "effective_model": provenance.get("effective_model") if is_guarded else None,
+        "selection_reason": (provenance.get("selection") or {}).get("reason") if is_guarded else None,
+        "comparison_baseline_label": comparison_label,
+        "comparison_baseline_mae": comparison_metrics.get("mae"),
+        "comparison_baseline_mape": comparison_metrics.get("mape"),
         "historical": historical_points,
         "forecast": forecast_points,
         "metrics": model_metrics,

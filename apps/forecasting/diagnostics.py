@@ -6,6 +6,18 @@ from numbers import Real
 from django.utils import timezone
 
 
+def get_run_model_label(run):
+    """Use stored evidence for guarded runs; preserve the historical default otherwise."""
+    parameters = run.job_parameters if isinstance(run.job_parameters, dict) else {}
+    provenance = parameters.get("provenance")
+    if not isinstance(provenance, dict) or provenance.get("strategy") != "guarded_direct_v1":
+        return "XGBoost"
+    return {
+        "MA7": "MA7",
+        "XGBOOST_DIRECT": "XGBoost Direct",
+    }.get(provenance.get("effective_model"), "Chưa xác định")
+
+
 def get_run_granularity(run):
     """Prefer the training snapshot over a subsequently edited configuration."""
     parameters = run.job_parameters if isinstance(run.job_parameters, dict) else {}
@@ -24,7 +36,7 @@ def _number(value):
     return number if math.isfinite(number) else None
 
 
-def assess_model_quality(metrics, baselines):
+def assess_model_quality(metrics, baselines, model_label="XGBoost"):
     metrics, baselines = metrics or {}, baselines or {}
     comparisons = {}
     for metric in ("mae", "rmse"):
@@ -48,8 +60,8 @@ def assess_model_quality(metrics, baselines):
     return {"status": status, "comparisons": comparisons, "negative_r2": negative_r2,
             "operationally_validated": False,
             "message": "Chưa đủ số liệu đối sánh." if not assessed else
-            "Đường cơ sở tốt hơn hoặc bằng XGBoost ở ít nhất một chỉ số; cần ưu tiên đối sánh trước khi vận hành." if not beats_all else
-            "XGBoost tốt hơn các baseline có số liệu đối sánh trên MAE/RMSE của tập kiểm thử này; không bảo đảm chất lượng tương lai.",
+            f"Đường cơ sở tốt hơn hoặc bằng {model_label} ở ít nhất một chỉ số; cần ưu tiên đối sánh trước khi vận hành." if not beats_all else
+            f"{model_label} tốt hơn các baseline có số liệu đối sánh trên MAE/RMSE của tập kiểm thử này; không bảo đảm chất lượng tương lai.",
             "r2_warning": "R² âm: mô hình chưa giải thích tốt biến thiên của tập kiểm thử." if negative_r2 else ""}
 
 

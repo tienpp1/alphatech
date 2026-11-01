@@ -328,7 +328,7 @@
     <div class="studio-header">
         <div class="studio-title">
             <h1>📈 Dự báo &amp; Phân tích Xu hướng (Predictive Analytics)</h1>
-            <p>XGBoost với kiểm thử lịch sử và đối sánh Naive/MA7. Hoàn tất huấn luyện không đồng nghĩa chất lượng đã đạt.</p>
+            <p>Dự báo chuỗi thời gian với đối sánh Naive/MA7. Hoàn tất huấn luyện không đồng nghĩa chất lượng đã đạt.</p>
         </div>
         <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
             <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; background: rgba(255,255,255,0.08);">← Bảng điều khiển</a>
@@ -370,7 +370,7 @@
         <div class="kpi-card">
             <div class="kpi-label">Mô hình Hiện hành</div>
             <div class="kpi-val">
-                Hồi quy XGBoost
+                {{ chart_data.model_label|default:"Chưa có lượt chạy" }}
             </div>
             <div class="kpi-sub">
                 Lượt chạy #{% if chart_data.run_id %}{{ chart_data.run_id }}{% else %}N/A{% endif %}
@@ -388,7 +388,7 @@
                 {% endif %}
             </div>
             <div class="kpi-sub">
-                Đường cơ sở Naive: {% if chart_data.baseline_metrics.naive_mae is not None %}{{ chart_data.baseline_metrics.naive_mae|floatformat:2 }}{% else %}—{% endif %}
+                Đường cơ sở {{ chart_data.comparison_baseline_label|default:"Naive (lag 7)" }}: {% if chart_data.comparison_baseline_mae is not None %}{{ chart_data.comparison_baseline_mae|floatformat:2 }}{% else %}—{% endif %}
             </div>
         </div>
 
@@ -402,7 +402,7 @@
                 {% endif %}
             </div>
             <div class="kpi-sub">
-                Đường cơ sở: {% if chart_data.baseline_metrics.naive_mape is not None %}{{ chart_data.baseline_metrics.naive_mape|floatformat:1 }}%{% else %}—{% endif %}
+                Đường cơ sở {{ chart_data.comparison_baseline_label|default:"Naive (lag 7)" }}: {% if chart_data.comparison_baseline_mape is not None %}{{ chart_data.comparison_baseline_mape|floatformat:1 }}%{% else %}—{% endif %}
             </div>
         </div>
 
@@ -439,7 +439,11 @@
                 <canvas id="forecastChart"></canvas>
             </div>
             <div class="disclaimer-box" style="margin-top: 0.5rem; font-size: 0.75rem;">
+                {% if chart_data.effective_model %}
+                ℹ️ <strong>Độ bất định:</strong> Dự báo guarded không cung cấp khoảng dự báo đã hiệu chuẩn; cận được lưu là trống. Không dùng điểm dự báo như cam kết kết quả kinh doanh.
+                {% else %}
                 ℹ️ <strong>Dải tham khảo về độ bất định:</strong> Dải bóng được ước lượng từ RMSE kiểm thử lịch sử và mở rộng theo bước dự báo. Đây là dải chẩn đoán, chưa được hiệu chỉnh để bảo đảm độ bao phủ 95%. Dự báo đa bước đệ quy có thể tích lũy sai số; không dùng dải này như cam kết kết quả kinh doanh.
+                {% endif %}
             </div>
         </div>
 
@@ -454,7 +458,11 @@
                 <canvas id="importanceChart"></canvas>
             </div>
             <div class="disclaimer-box">
+                {% if chart_data.effective_model == 'MA7' %}
+                ℹ️ Mô hình hiện hành là đường cơ sở MA7, không có mức độ quan trọng của đặc trưng XGBoost.
+                {% else %}
                 ℹ️ <strong>Ghi chú Giải thích:</strong> Mức độ quan trọng của đặc trưng phản ánh mức giảm sai số phân nhánh cây quyết định trong mô hình; không đồng nghĩa với quan hệ nhân quả trực tiếp.
+                {% endif %}
             </div>
         </div>
     </div>
@@ -476,8 +484,9 @@
                         <th>Chỉ tiêu dự báo</th>
                         <th>Khoảng thời gian tập dữ liệu</th>
                         <th>Phân chia (Train/Test)</th>
-                        <th>XGBoost MAE</th>
-                        <th>XGBoost MAPE</th>
+                        <th>Mô hình</th>
+                        <th>MAE</th>
+                        <th>MAPE</th>
                         <th>MAE Cơ sở</th>
                         <th>Thời điểm</th>
                     </tr>
@@ -497,14 +506,15 @@
                         <td>{{ run.get_target_type_display }}</td>
                         <td>{{ run.dataset_period_start|default:"—" }} đến {{ run.dataset_period_end|default:"—" }} ({{ run.dataset_row_count }} điểm)</td>
                         <td>{{ run.train_row_count }} / {{ run.test_row_count }}</td>
+                        <td>{{ run.display_model_label }}</td>
                         <td><strong>{{ run.model_metrics.mae|default:"—" }}</strong></td>
                         <td>{{ run.model_metrics.mape|default:"—" }}%</td>
-                        <td>{{ run.baseline_metrics.naive_mae|default:"—" }}</td>
+                        <td>{{ run.display_baseline_label }}: {{ run.display_baseline_mae|default:"—" }}</td>
                         <td>{{ run.created_at|date:"d/m/Y H:i T" }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" style="text-align: center; color: #94a3b8; padding: 2rem;">
+                        <td colspan="10" style="text-align: center; color: #94a3b8; padding: 2rem;">
                             Chưa có lượt huấn luyện nào cho chỉ tiêu này. Nhấp "Huấn luyện Mô hình" để bắt đầu.
                         </td>
                     </tr>
@@ -519,7 +529,7 @@
 <div id="trainModal" class="modal-overlay">
     <div class="modal-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="margin: 0; color: #f8fafc; font-size: 1.25rem;">Huấn luyện Dự báo XGBoost</h3>
+            <h3 style="margin: 0; color: #f8fafc; font-size: 1.25rem;">Huấn luyện Dự báo</h3>
             <button onclick="closeTrainModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.25rem; cursor: pointer;">&times;</button>
         </div>
 
@@ -585,6 +595,7 @@ function initForecastChart() {
 
     const histData = chartPayload.historical || [];
     const predData = chartPayload.forecast || [];
+    const modelLabel = chartPayload.model_label || 'XGBoost';
 
     // Merge dates
     const labels = [];
@@ -632,7 +643,7 @@ function initForecastChart() {
                     tension: 0.1,
                 },
                 {
-                    label: 'Dự báo XGBoost',
+                    label: `Dự báo ${modelLabel}`,
                     data: forecastSeries,
                     borderColor: '#a855f7',
                     borderDash: [5, 5],

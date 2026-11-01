@@ -60,12 +60,32 @@ def provenance_notes(parameters):
             lines.append(f'| {group}.{key} | {cell(value if value is not None else "Chưa ghi nhận")} |')
     for key in ('workspace_code', 'target_type', 'model_config_id', 'model_version', 'granularity',
                 'dimensions', 'horizon_days', 'feature_config', 'feature_columns', 'training_config',
-                'artifact_sha256', 'source_sha256'):
+                'artifact_sha256', 'source_sha256', 'strategy', 'effective_model', 'selection', 'evaluation',
+                'deployment_qualification', 'deployment_qualification_reason', 'deployment_comparison'):
         value = provenance.get(key)
         rendered = json.dumps(value, ensure_ascii=False, sort_keys=True) if value is not None else 'Chưa ghi nhận'
         lines.append(f'| {key} | {cell(rendered)} |')
-    lines.append('validation=no_separate_validation_partition nghĩa là không có tập validation riêng; không phải đã tối ưu trên validation. Hash nhận diện dữ liệu/model, không thay thế bản lưu dữ liệu gốc.')
+    if provenance.get('strategy') != 'guarded_direct_v1':
+        lines.append('validation=no_separate_validation_partition nghĩa là không có tập validation riêng; không phải đã tối ưu trên validation.')
+    else:
+        lines.append(
+            'Đánh giá guarded dùng phương pháp đã lưu trong evaluation.method; các block holdout rolling theo origin được tách khỏi serving refit trên toàn bộ lịch sử.'
+        )
+    lines.append('Hash nhận diện dữ liệu/model, không thay thế bản lưu dữ liệu gốc.')
     return lines
+
+
+def _row_model_label(row):
+    explicit = row.get('model_label')
+    if explicit:
+        return str(explicit)
+    parameters = row.get('parameters') if isinstance(row.get('parameters'), dict) else {}
+    provenance = parameters.get('provenance') if isinstance(parameters.get('provenance'), dict) else {}
+    if provenance.get('strategy') == 'guarded_direct_v1':
+        return {'MA7': 'MA7', 'XGBOOST_DIRECT': 'XGBoost Direct'}.get(
+            provenance.get('effective_model'), 'Chưa xác định'
+        )
+    return 'XGBoost'
 
 
 def render_report(rows, counts, timestamp):
@@ -76,8 +96,8 @@ def render_report(rows, counts, timestamp):
         'Đây là bản đọc các run đã lưu, không huấn luyện lại, không gọi API AI và không chứng nhận nghiệm thu.',
         'Mỗi run được liệt kê riêng, kể cả run thất bại; không chọn kết quả tốt nhất hoặc gộp khác workspace/cấu hình.', '',
         '## Dự báo', '',
-        '| Run | Workspace | Config | Target | Status | Train/Test | MAE | RMSE | MAPE % | R² | Baseline MAE | Cải thiện MAE % | Nhận xét |',
-        '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+        '| Run | Workspace | Config | Target | Mô hình thực tế | Status | Train/Test | MAE | RMSE | MAPE % | R² | Baseline đối sánh MAE | Cải thiện MAE % | Nhận xét |',
+        '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
     ]
     if not rows:
         lines.append('Chưa có run trong phạm vi đã chọn; không suy ra sai số bằng 0.')
@@ -87,10 +107,16 @@ def render_report(rows, counts, timestamp):
         eligible = row['status'] == 'COMPLETED' and has_test
         metrics = row['metrics'] if eligible and isinstance(row['metrics'], dict) else {}
         baseline = row['baseline'] if eligible and isinstance(row['baseline'], dict) else {}
+        parameters = row.get('parameters') if isinstance(row.get('parameters'), dict) else {}
+        provenance = parameters.get('provenance') if isinstance(parameters.get('provenance'), dict) else {}
+        is_guarded = provenance.get('strategy') == 'guarded_direct_v1'
         mae = measured(metrics.get('mae'))
-        base = measured(baseline.get('naive_mae', baseline.get('mae')))
+        base = measured(
+            baseline.get('moving_average_7_mae') if is_guarded
+            else baseline.get('naive_mae', baseline.get('mae'))
+        )
         r2 = measured(metrics.get('r2'), nonnegative=False)
-        values = [row['id'], row['workspace'], row['config'], row['target'], row['status'],
+        values = [row['id'], row['workspace'], row['config'], row['target'], _row_model_label(row), row['status'],
                   f"{row['train']}/{row['test']}", fmt(mae), fmt(measured(metrics.get('rmse'))),
                   fmt(measured(metrics.get('mape'))), fmt(r2), fmt(base), fmt(improvement(mae, base)),
                   comparison_text(mae, base)]
@@ -100,8 +126,20 @@ def render_report(rows, counts, timestamp):
         if r2 is not None and r2 < 0:
             notes.append('R² âm: không kết luận mô hình giải thích phần lớn phương sai.\n')
     lines += notes
-    lines += ['', 'Backtest hiện tại là one-step observed-history; không thay thế đánh giá đệ quy nhiều ngày.',
-              'Số liệu thiếu/không hợp lệ ghi Chưa đo. Baseline bằng 0 không có phần trăm cải thiện xác định.',
+    row_provenance = [
+        (row.get('parameters') or {}).get('provenance', {})
+        for row in rows if isinstance(row.get('parameters'), dict)
+    ]
+    has_legacy = not row_provenance or any(
+        not isinstance(provenance, dict) or provenance.get('strategy') != 'guarded_direct_v1'
+        for provenance in row_provenance
+    )
+    lines.append('')
+    if has_legacy:
+        lines.append('Backtest hiện tại là one-step observed-history; không thay thế đánh giá đệ quy nhiều ngày.')
+    else:
+        lines.append('Phương pháp, horizon, partition và serving refit được ghi riêng theo từng run; không suy rộng vượt dữ liệu đã lưu.')
+    lines += ['Số liệu thiếu/không hợp lệ ghi Chưa đo. Baseline bằng 0 không có phần trăm cải thiện xác định.',
               'Cần snapshot dữ liệu, cấu hình và đánh giá độc lập trước khi suy rộng hiệu quả kinh doanh.', '',
               '## RAG', '',
               'CHƯA ĐÁNH GIÁ trong lệnh này. Bộ chấm keyword hiện tại chưa chứng minh độ đúng ngữ nghĩa.',

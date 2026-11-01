@@ -405,23 +405,30 @@ def executive_operational_report_ui_view(request):
     resolution_rate = round((resolved_tickets / total_tickets * 100), 1) if total_tickets else None
     active_technicians = Employee.objects.filter(workspace__in=authorized_workspaces, is_active=True).count()
 
-    # 3. XGBoost Latest Runs
+    # 3. Latest forecast runs, labeled from each run's stored provenance.
     forecast_runs = []
     latest_completed_runs = ForecastRun.objects.filter(
         workspace__in=authorized_workspaces, status="COMPLETED"
     ).order_by("-created_at")[:4]
+    from apps.forecasting.diagnostics import get_run_model_label
     for r in latest_completed_runs:
         m = r.model_metrics or {}
         b = r.baseline_metrics or {}
+        provenance = ((r.job_parameters or {}).get("provenance", {}))
+        guarded = isinstance(provenance, dict) and provenance.get("strategy") == "guarded_direct_v1"
+        baseline_label = "MA7" if guarded else "Naive (lag 7)"
+        baseline_mae = b.get("moving_average_7_mae") if guarded else b.get("naive_mae", b.get("mae"))
         forecast_runs.append({
             "target_name": r.model_config.get_target_type_display(),
             "workspace": r.workspace.name,
+            "model_label": get_run_model_label(r),
+            "baseline_label": baseline_label,
             "mae": m.get("mae"),
             "rmse": m.get("rmse"),
             "mape": m.get("mape"),
             "r2": m.get("r2"),
-            "baseline_mae": b.get("naive_mae", b.get("mae")),
-            "improvement_pct": _forecast_improvement(m.get("mae"), b.get("naive_mae", b.get("mae"))),
+            "baseline_mae": baseline_mae,
+            "improvement_pct": _forecast_improvement(m.get("mae"), baseline_mae),
         })
 
     # 4. GIS Summary

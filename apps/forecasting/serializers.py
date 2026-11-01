@@ -2,6 +2,7 @@
 DRF Serializers for Predictive Analytics & Forecasting.
 """
 
+from copy import deepcopy
 from rest_framework import serializers
 from apps.forecasting.models import (
     ForecastModelConfig,
@@ -42,12 +43,30 @@ class ForecastRunSerializer(serializers.ModelSerializer):
     target_type_display = serializers.CharField(source="get_target_type_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     config_name = serializers.CharField(source="model_config.name", read_only=True)
+    model_label = serializers.SerializerMethodField()
+    job_parameters = serializers.SerializerMethodField()
     quality_assessment = serializers.SerializerMethodField()
     snapshot_assessment = serializers.SerializerMethodField()
 
     def get_quality_assessment(self, obj):
-        from .diagnostics import assess_model_quality
-        return assess_model_quality(obj.model_metrics, obj.baseline_metrics)
+        from .diagnostics import assess_model_quality, get_run_model_label
+        return assess_model_quality(
+            obj.model_metrics,
+            obj.baseline_metrics,
+            model_label=get_run_model_label(obj),
+        )
+
+    def get_model_label(self, obj):
+        from .diagnostics import get_run_model_label
+        return get_run_model_label(obj)
+
+    def get_job_parameters(self, obj):
+        """Expose snapshot metadata only; keep the original JSON value untouched."""
+        parameters = deepcopy(obj.job_parameters) if isinstance(obj.job_parameters, dict) else {}
+        snapshot = parameters.get("artifact_snapshot")
+        if isinstance(snapshot, dict):
+            snapshot.pop("body", None)
+        return parameters
 
     def get_snapshot_assessment(self, obj):
         from .diagnostics import assess_snapshot, get_run_granularity
@@ -59,6 +78,7 @@ class ForecastRunSerializer(serializers.ModelSerializer):
             "id",
             "model_config",
             "config_name",
+            "model_label",
             "target_type",
             "target_type_display",
             "status",

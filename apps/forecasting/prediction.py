@@ -8,6 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import List, Optional
 import datetime
+import hashlib
 import pandas as pd
 import numpy as np
 from django.conf import settings
@@ -42,6 +43,7 @@ def load_model_artifact(artifact_path: str) -> xgb.XGBRegressor:
 def generate_future_forecast(
     forecast_run: ForecastRun,
     horizon_days: int = 14,
+    history_snapshot: Optional[pd.DataFrame] = None,
 ) -> List[ForecastResult]:
     """
     Generates point forecasts and approximate 95% prediction bands based on historical test
@@ -58,33 +60,72 @@ def generate_future_forecast(
 
     if isinstance(horizon_days, bool) or not isinstance(horizon_days, int) or horizon_days < 1:
         raise ValueError("Forecast horizon must be a positive integer.")
-    model = load_model_artifact(forecast_run.artifact_path)
     workspace = forecast_run.workspace
     target_type = forecast_run.target_type
 
     provenance = (forecast_run.job_parameters or {}).get("provenance", {})
+    guarded = isinstance(provenance, dict) and provenance.get("strategy") == "guarded_direct_v1"
+    if guarded:
+        if provenance.get("deployment_qualification") is not True:
+            raise ValueError("Forecast run did not qualify for deployment.")
+        from apps.forecasting.artifacts import load_run_artifact
+        from apps.forecasting.guarded import predict_artifact
+
+        artifacts_dir = getattr(settings, "FORECASTING_ARTIFACTS_DIR", settings.BASE_DIR / "ml_models" / "forecasting")
+        artifact = load_run_artifact(
+            forecast_run,
+            base_dir=settings.BASE_DIR,
+            artifacts_dir=artifacts_dir,
+        )
+        model = None
+    else:
+        model = load_model_artifact(forecast_run.artifact_path)
+
     granularity = provenance.get("granularity", forecast_run.model_config.granularity)
     feature_config = provenance.get("feature_config", forecast_run.model_config.feature_config)
     # Snapshot configuration takes precedence over later edits to model_config.
-    ts_df = get_historical_timeseries(workspace, target_type, granularity=granularity,
-                                    dimensions=provenance.get("dimensions", (forecast_run.job_parameters or {}).get("dimensions", {})))
+    ts_df = history_snapshot if guarded and history_snapshot is not None else get_historical_timeseries(
+        workspace,
+        target_type,
+        granularity=granularity,
+        dimensions=provenance.get("dimensions", (forecast_run.job_parameters or {}).get("dimensions", {})),
+    )
     if ts_df.empty:
         raise ValueError("No historical series available to anchor future predictions.")
+
+    if guarded:
+        expected_fingerprint = ((provenance.get("dataset") or {}).get("fingerprint_sha256"))
+        actual_fingerprint = hashlib.sha256(
+            pd.util.hash_pandas_object(ts_df, index=True).values.tobytes()
+        ).hexdigest()
+        if not isinstance(expected_fingerprint, str) or actual_fingerprint != expected_fingerprint:
+            raise ValueError("Forecast history does not match the saved dataset fingerprint.")
 
     last_date = ts_df.index[-1]
     # horizon_days remains the existing number of forecast points. Weekly
     # configurations produce weekly points, not daily points from weekly totals.
     stride = 7 if granularity == Granularity.WEEKLY else 1
     dates = [last_date + datetime.timedelta(days=stride * step) for step in range(1, horizon_days + 1)]
-    predictions = recursive_feature_predictions(model, ts_df, dates, feature_config,
-                                               provenance.get("feature_columns"))
+    if guarded:
+        predictions = predict_artifact(artifact, ts_df, horizon=horizon_days, granularity=granularity)
+    else:
+        predictions = recursive_feature_predictions(
+            model,
+            ts_df,
+            dates,
+            feature_config,
+            provenance.get("feature_columns"),
+        )
 
     # Obtain model test RMSE for interval estimation
     metrics = forecast_run.model_metrics or {}
-    try:
-        rmse = float(metrics.get("rmse"))
-    except (TypeError, ValueError):
+    if guarded:
         rmse = None
+    else:
+        try:
+            rmse = float(metrics.get("rmse"))
+        except (TypeError, ValueError):
+            rmse = None
     if rmse is not None and (not np.isfinite(rmse) or rmse < 0):
         rmse = None
     created_results = []

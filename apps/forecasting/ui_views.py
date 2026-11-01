@@ -21,6 +21,7 @@ from apps.forecasting.services import (
     get_default_target_for_workspace,
     get_or_create_default_config,
 )
+from apps.forecasting.diagnostics import get_run_model_label
 
 
 @login_required
@@ -60,6 +61,16 @@ def forecasting_dashboard_view(request: HttpRequest) -> HttpResponse:
     # Fetch configs and recent runs
     configs = ForecastModelConfig.objects.for_workspace(workspace).filter(target_type=selected_target)
     runs = ForecastRun.objects.for_workspace(workspace).select_related("model_config").filter(target_type=selected_target).order_by("-created_at")[:10]
+    for run in runs:
+        run.display_model_label = get_run_model_label(run)
+        provenance = ((run.job_parameters or {}).get("provenance", {}))
+        guarded = isinstance(provenance, dict) and provenance.get("strategy") == "guarded_direct_v1"
+        run.display_baseline_label = "MA7" if guarded else "Naive (lag 7)"
+        baseline = run.baseline_metrics or {}
+        run.display_baseline_mae = (
+            baseline.get("moving_average_7_mae") if guarded
+            else baseline.get("naive_mae")
+        )
 
     query = ForecastChartQuerySerializer(data={key: value for key, value in request.GET.items() if value != ""})
     query.is_valid()

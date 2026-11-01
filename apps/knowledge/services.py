@@ -1076,10 +1076,19 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                     if warning:
                         answer_parts.append(warning)
                 if fc:
+                    model_label = td.get("model_label") or "XGBoost"
+                    first = fc[0]
+                    if first.get("lower") is None and first.get("upper") is None:
+                        uncertainty = "Run này không cung cấp cận dự báo; khoảng dự báo chưa được hiệu chuẩn."
+                    else:
+                        uncertainty = (
+                            f"Biên ước tính dựa trên sai số: {first.get('lower')} - {first.get('upper')}; "
+                            "không phải khoảng tin cậy 95% đã hiệu chuẩn."
+                        )
                     answer_parts.append(
-                        f"Dự báo lưu trong hệ thống cho chỉ số {td.get('target_type')} ({len(fc)} điểm): "
-                        f"điểm đầu {fc[0].get('date', 'Chưa ghi nhận ngày')}, giá trị {fc[0].get('predicted')}. "
-                        f"Biên ước tính dựa trên sai số: {fc[0].get('lower')} - {fc[0].get('upper')}; không phải khoảng tin cậy 95% đã hiệu chuẩn."
+                        f"Dự báo lưu trong hệ thống cho chỉ số {td.get('target_type')} "
+                        f"({model_label}; {len(fc)} điểm): điểm đầu {first.get('date', 'Chưa ghi nhận ngày')}, "
+                        f"giá trị {first.get('predicted')}. {uncertainty}"
                     )
                 else:
                     answer_parts.append("Chưa có điểm dự báo lưu cho chỉ số được hỏi.")

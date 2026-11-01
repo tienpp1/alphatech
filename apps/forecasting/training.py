@@ -38,6 +38,265 @@ from apps.forecasting.evaluation import (
 )
 
 
+GUARDED_STRATEGY = "guarded_direct_v1"
+GUARDED_SOURCE_FILES = ("adaptive.py", "guarded.py", "artifacts.py", "prediction.py")
+DEFAULT_TRAINING_CONFIG = {
+    "n_estimators": 100,
+    "max_depth": 4,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "test_size": 0.20,
+}
+
+
+def resolve_default_model_config(workspace: Workspace, target_type: str) -> ForecastModelConfig:
+    """Return the latest active scoped config, creating only the first legacy default."""
+    validate_target_for_workspace(workspace, target_type)
+    configs = ForecastModelConfig.objects.for_workspace(workspace).filter(target_type=target_type)
+    active = configs.filter(is_active=True).order_by("-model_version", "-updated_at", "-pk").first()
+    if active is not None:
+        return active
+    if configs.exists():
+        raise ValueError("No active forecast configuration exists for this workspace and target.")
+
+    config, _ = ForecastModelConfig.objects.get_or_create(
+        workspace=workspace,
+        target_type=target_type,
+        model_version=1,
+        defaults={
+            "name": f"Default {target_type.replace('_', ' ').title()}",
+            "model_type": ModelType.XGBOOST_REGRESSOR,
+            "granularity": Granularity.DAILY,
+            "feature_config": {
+                "lags": [1, 7, 14],
+                "rolling_windows": [7, 14],
+                "calendar_features": True,
+            },
+            "training_config": dict(DEFAULT_TRAINING_CONFIG),
+            "is_active": True,
+        },
+    )
+    if not config.is_active:
+        raise ValueError("No active forecast configuration exists for this workspace and target.")
+    return config
+
+
+def _target_unit(target_type: str) -> str:
+    return {
+        TargetType.RETAIL_REVENUE: "VND",
+        TargetType.RETAIL_ORDER_VOLUME: "orders",
+        TargetType.RETAIL_PRODUCT_DEMAND: "item_units",
+        TargetType.SERVICE_TICKET_VOLUME: "tickets",
+    }[target_type]
+
+
+def _guarded_deployment_qualification(result: dict) -> dict:
+    """Require selected XGBoost to be no worse than its paired held-out MA7."""
+    effective_model = result.get("artifact", {}).get("effective_model")
+    selected_mae = (result.get("model_metrics") or {}).get("mae")
+    ma7_mae = ((result.get("baseline_metrics") or {}).get("ma7") or {}).get("mae")
+
+    def finite_nonnegative(value):
+        if isinstance(value, (bool, np.bool_)):
+            return None
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return number if np.isfinite(number) and number >= 0 else None
+
+    selected_value = finite_nonnegative(selected_mae)
+    baseline_value = finite_nonnegative(ma7_mae)
+    if effective_model == "MA7":
+        qualified, reason = True, "ma7_baseline_selected"
+    elif effective_model != "XGBOOST_DIRECT":
+        qualified, reason = False, "unknown_effective_model"
+    elif selected_value is None or baseline_value is None:
+        qualified, reason = False, "missing_comparable_holdout_mae"
+    elif selected_value > baseline_value:
+        qualified, reason = False, "selected_model_holdout_mae_exceeded_matched_ma7"
+    else:
+        qualified, reason = True, "selected_model_holdout_mae_not_worse_than_matched_ma7"
+    return {
+        "qualified": qualified,
+        "reason": reason,
+        "selected_model": effective_model,
+        "selected_model_holdout_mae": selected_value,
+        "ma7_holdout_mae": baseline_value,
+        "comparison": "strict_float_greater_than_rejects; ties_allowed",
+    }
+
+
+def _record_guarded_quality_failure(run, *, workspace, lease_token, reason):
+    """Persist a rejected diagnostic run without publishing forecast rows."""
+    with transaction.atomic():
+        locked = ForecastRun.objects.select_for_update().get(pk=run.pk, workspace=workspace)
+        if lease_token and (
+            locked.lease_token != lease_token
+            or locked.status != RunStatus.RUNNING
+            or locked.cancel_requested
+            or locked.lease_expires_at is None
+            or locked.lease_expires_at <= timezone.now()
+        ):
+            raise ValueError("FORECAST_LEASE_LOST")
+        run.status = RunStatus.FAILED
+        run.error_message = reason
+        run.training_end_at = timezone.now()
+        run.lease_token = None
+        run.lease_expires_at = None
+        run.save()
+
+
+def _finish_training_run(run, *, workspace, horizon_days, lease_token=None, history_snapshot=None):
+    """Publish forecast rows and completion status behind the final lease fence."""
+    with transaction.atomic():
+        locked = ForecastRun.objects.select_for_update().get(pk=run.pk)
+        if lease_token and (
+            locked.lease_token != lease_token
+            or locked.status != RunStatus.RUNNING
+            or locked.cancel_requested
+            or locked.lease_expires_at <= timezone.now()
+        ):
+            raise ValueError("FORECAST_LEASE_LOST")
+        from apps.forecasting.prediction import generate_future_forecast
+
+        generate_future_forecast(run, horizon_days=horizon_days, history_snapshot=history_snapshot)
+        run.status = RunStatus.COMPLETED
+        run.training_end_at = timezone.now()
+        run.lease_token = None
+        run.lease_expires_at = None
+        run.save()
+
+
+def _train_guarded_forecast(
+    *, workspace, target_type, model_config, run, ts_df, feature_cfg, train_cfg,
+    horizon_days, lease_token,
+):
+    """Train/evaluate the opt-in guarded strategy and preserve its scoped artifact."""
+    from apps.forecasting.artifacts import save_run_artifact
+    from apps.forecasting.guarded import fit_guarded
+
+    test_size = float(train_cfg.get("test_size", getattr(settings, "FORECAST_DEFAULT_TEST_SIZE", 0.20)))
+    candidate_params = {
+        key: train_cfg[key]
+        for key in ("n_estimators", "max_depth", "learning_rate")
+        if key in train_cfg
+    }
+    result = fit_guarded(
+        ts_df,
+        horizon=horizon_days,
+        granularity=model_config.granularity,
+        params=candidate_params,
+        test_size=test_size,
+        observed_dates=(getattr(ts_df, "attrs", {}) or {}).get("observed_period_dates"),
+    )
+    selection = result["selection"]
+    evaluation = result["evaluation"]
+    qualification = _guarded_deployment_qualification(result)
+    partitions = evaluation["partitions"]
+    counts = evaluation["counts"]
+    run.train_row_count = int(counts["initial_fit"])
+    run.test_row_count = int(counts["holdout"])
+
+    provenance = build_run_provenance(
+        ts_df,
+        workspace=workspace,
+        target_type=target_type,
+        model_config=model_config,
+        feature_config=feature_cfg,
+        training_config=train_cfg,
+        horizon_days=horizon_days,
+        dimensions=(run.job_parameters or {}).get("dimensions", {}),
+        train_rows=run.train_row_count,
+        test_rows=run.test_row_count,
+    )
+    provenance["strategy"] = GUARDED_STRATEGY
+    provenance["effective_model"] = result["artifact"]["effective_model"]
+    provenance["selection"] = selection
+    provenance["evaluation"] = evaluation
+    provenance["deployment_qualification"] = qualification["qualified"]
+    provenance["deployment_qualification_reason"] = qualification["reason"]
+    provenance["deployment_comparison"] = {
+        key: qualification[key]
+        for key in ("selected_model", "selected_model_holdout_mae", "ma7_holdout_mae", "comparison")
+    }
+    provenance["source_sha256"].update({
+        name: hashlib.sha256((settings.BASE_DIR / "apps" / "forecasting" / name).read_bytes()).hexdigest()
+        for name in GUARDED_SOURCE_FILES
+    })
+    provenance["feature_columns"] = list(result["artifact"].get("columns") or [])
+    provenance["training_config"] = {
+        "strategy": GUARDED_STRATEGY,
+        "candidate_params": dict(selection.get("params") or {}),
+        "test_size": test_size,
+        "serving_refit_history_rows": int(len(ts_df)) if provenance["effective_model"] == "XGBOOST_DIRECT" else 0,
+        "serving_refit_history_end": str(ts_df.index[-1].date()) if provenance["effective_model"] == "XGBOOST_DIRECT" else None,
+    }
+    provenance["dataset"]["unit"] = _target_unit(target_type)
+    provenance["split"].update({
+        "method": "chronological_validation_then_rolling_holdout",
+        "test_size": test_size,
+        "train_rows": run.train_row_count,
+        "test_rows": run.test_row_count,
+        "train_start": partitions["initial_fit"][0],
+        "train_end": partitions["initial_fit"][1],
+        "validation_start": partitions["validation"][0],
+        "validation_end": partitions["validation"][1],
+        "test_start": partitions["holdout"][0],
+        "test_end": partitions["holdout"][1],
+        "validation": "past_only_rolling_origin_blocks",
+        "evaluation": evaluation["method"],
+    })
+    parameters = dict(run.job_parameters or {})
+    parameters["provenance"] = provenance
+    run.job_parameters = parameters
+
+    raw_baselines = result["baseline_metrics"]
+    ma7 = raw_baselines["ma7"]
+    seasonal = raw_baselines["seasonal_naive_7"]
+    run.baseline_metrics = {
+        **raw_baselines,
+        **{f"moving_average_7_{key}": ma7[key] for key in ("mae", "rmse", "mape", "r2")},
+        **{f"naive_{key}": seasonal[key] for key in ("mae", "rmse", "mape", "r2")},
+    }
+    selected_baseline = {key: ma7[key] for key in ("mae", "rmse", "mape", "r2")}
+    run.model_metrics = {
+        **result["model_metrics"],
+        **compare_model_against_baseline(result["model_metrics"], selected_baseline),
+        "intervals_calibrated": False,
+    }
+    run.feature_importances = {
+        name: round(float(value), 6)
+        for name, value in result["feature_importances"].items()
+    }
+
+    artifacts_dir = getattr(settings, "FORECASTING_ARTIFACTS_DIR", settings.BASE_DIR / "ml_models" / "forecasting")
+    save_run_artifact(run, result["artifact"], base_dir=settings.BASE_DIR, artifacts_dir=artifacts_dir)
+    if not qualification["qualified"]:
+        error_message = (
+            "GUARDED_HOLDOUT_QUALITY_GATE_FAILED: selected model holdout MAE exceeded matched MA7 "
+            f"({qualification['selected_model_holdout_mae']} > {qualification['ma7_holdout_mae']})."
+            if qualification["reason"] == "selected_model_holdout_mae_exceeded_matched_ma7"
+            else "GUARDED_HOLDOUT_QUALITY_GATE_FAILED: " + qualification["reason"]
+        )
+        _record_guarded_quality_failure(
+            run,
+            workspace=workspace,
+            lease_token=lease_token,
+            reason=error_message,
+        )
+        raise ValueError(error_message)
+    _finish_training_run(
+        run,
+        workspace=workspace,
+        horizon_days=horizon_days,
+        lease_token=lease_token,
+        history_snapshot=ts_df,
+    )
+    return run
+
+
 def validate_target_for_workspace(workspace: Workspace, target_type: str) -> None:
     """Ensures target type aligns with workspace operational domain."""
     ws_type = getattr(workspace, "workspace_type", "")
@@ -156,30 +415,7 @@ def train_forecast_model(
         model_config = run.model_config
 
     if model_config is None:
-        model_config, _ = ForecastModelConfig.objects.get_or_create(
-            workspace=workspace,
-            target_type=target_type,
-            defaults={
-                "name": f"Default {target_type} Forecaster",
-                "model_type": ModelType.XGBOOST_REGRESSOR,
-                "granularity": Granularity.DAILY,
-                "feature_config": {
-                    "lags": [1, 7, 14],
-                    "rolling_windows": [7, 14],
-                    "calendar_features": True,
-                },
-                "training_config": {
-                    "n_estimators": 100,
-                    "max_depth": 4,
-                    "learning_rate": 0.05,
-                    "subsample": 0.8,
-                    "colsample_bytree": 0.8,
-                    "test_size": 0.20,
-                },
-                "is_active": True,
-                "model_version": 1,
-            },
-        )
+        model_config = resolve_default_model_config(workspace, target_type)
 
     if run is None:
         run = ForecastRun.objects.create(
@@ -209,9 +445,16 @@ def train_forecast_model(
 
     try:
         # 1. Fetch historical timeseries
-        ts_df = get_historical_timeseries(workspace, target_type, granularity=model_config.granularity,
-                                        dimensions=run.job_parameters.get("dimensions", {}))
-        if ts_df.empty or len(ts_df) < 20:
+        ts_df = get_historical_timeseries(
+            workspace,
+            target_type,
+            granularity=model_config.granularity,
+            dimensions=run.job_parameters.get("dimensions", {}),
+        )
+        strategy = (model_config.training_config or {}).get("strategy")
+        if strategy not in (None, GUARDED_STRATEGY):
+            raise ValueError(f"Unsupported forecast training strategy: {strategy}")
+        if ts_df.empty or (strategy != GUARDED_STRATEGY and len(ts_df) < 20):
             raise ValueError(f"Insufficient historical data ({len(ts_df)} rows). At least 20 continuous data points required for training.")
 
         run.dataset_period_start = ts_df.index.min().date()
@@ -222,6 +465,19 @@ def train_forecast_model(
         feature_cfg = {**DEFAULT_FEATURE_CONFIG, **(model_config.feature_config or {})}
         train_cfg = {**(model_config.training_config or {}), **(hyperparams or {})}
         dimensions = run.job_parameters.get("dimensions", {}) or {}
+        if strategy == GUARDED_STRATEGY:
+            return _train_guarded_forecast(
+                workspace=workspace,
+                target_type=target_type,
+                model_config=model_config,
+                run=run,
+                ts_df=ts_df,
+                feature_cfg=feature_cfg,
+                train_cfg=train_cfg,
+                horizon_days=horizon_days,
+                lease_token=lease_token,
+            )
+
         provenance = build_run_provenance(
             ts_df,
             workspace=workspace,
@@ -372,18 +628,12 @@ def train_forecast_model(
         run.artifact_path = f"ml_models/forecasting/{artifact_filename}"
         # Publish results and completion together, only while this attempt owns
         # the lease. A killed/replaced worker can never publish stale results.
-        with transaction.atomic():
-            locked = ForecastRun.objects.select_for_update().get(pk=run.pk)
-            if lease_token and (locked.lease_token != lease_token or locked.status != RunStatus.RUNNING
-                                or locked.cancel_requested or locked.lease_expires_at <= timezone.now()):
-                raise ValueError("FORECAST_LEASE_LOST")
-            from apps.forecasting.prediction import generate_future_forecast
-            generate_future_forecast(run, horizon_days=horizon_days)
-            run.status = RunStatus.COMPLETED
-            run.training_end_at = timezone.now()
-            run.lease_token = None
-            run.lease_expires_at = None
-            run.save()
+        _finish_training_run(
+            run,
+            workspace=workspace,
+            horizon_days=horizon_days,
+            lease_token=lease_token,
+        )
 
         return run
 
