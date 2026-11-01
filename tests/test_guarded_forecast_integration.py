@@ -3,6 +3,7 @@
 import datetime
 import hashlib
 import tempfile
+import uuid
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
@@ -120,6 +121,49 @@ class GuardedForecastLifecycleTests(TestCase):
         self.assertEqual(run.model_config_id, latest.pk)
         self.assertEqual(run.status, RunStatus.FAILED)
 
+    def test_guarded_runs_without_stored_selection_do_not_claim_xgboost(self):
+        from apps.forecasting.diagnostics import get_run_model_label
+
+        guarded = self.create_config(1, strategy="guarded_direct_v1")
+        for status in (RunStatus.PENDING, RunStatus.RUNNING):
+            with self.subTest(status=status):
+                run = ForecastRun.objects.create(
+                    workspace=self.workspace,
+                    model_config=guarded,
+                    target_type=TargetType.RETAIL_REVENUE,
+                    status=status,
+                )
+                self.assertEqual(get_run_model_label(run), "Đang chờ lựa chọn")
+
+        failed = ForecastRun.objects.create(
+            workspace=self.workspace,
+            model_config=guarded,
+            target_type=TargetType.RETAIL_REVENUE,
+            status=RunStatus.FAILED,
+            error_message="Insufficient history",
+        )
+        self.assertEqual(get_run_model_label(failed), "Chưa xác định")
+
+        completed = ForecastRun.objects.create(
+            workspace=self.workspace,
+            model_config=guarded,
+            target_type=TargetType.RETAIL_REVENUE,
+            status=RunStatus.COMPLETED,
+            job_parameters={"provenance": {
+                "strategy": "guarded_direct_v1",
+                "effective_model": "XGBOOST_DIRECT",
+            }},
+        )
+        self.assertEqual(get_run_model_label(completed), "XGBoost Direct")
+
+        legacy = ForecastRun.objects.create(
+            workspace=self.workspace,
+            model_config=self.create_config(2),
+            target_type=TargetType.RETAIL_REVENUE,
+            status=RunStatus.PENDING,
+        )
+        self.assertEqual(get_run_model_label(legacy), "XGBoost")
+
     def test_guarded_training_records_actual_model_baselines_and_snapshot_without_refetch(self):
         self.create_daily_orders(130)
         config = self.create_config(1, strategy="guarded_direct_v1")
@@ -143,6 +187,7 @@ class GuardedForecastLifecycleTests(TestCase):
         run.refresh_from_db()
         self.assertEqual(history_fetch.call_count, 1)
         self.assertEqual(run.status, RunStatus.COMPLETED)
+        self.assertTrue((Path(settings.BASE_DIR) / run.artifact_path).is_file())
         provenance = run.job_parameters["provenance"]
         self.assertEqual(provenance["strategy"], "guarded_direct_v1")
         self.assertIn(provenance["effective_model"], {"MA7", "XGBOOST_DIRECT"})
@@ -285,6 +330,7 @@ class GuardedForecastLifecycleTests(TestCase):
         self.assertEqual(chart["model_label"], "MA7")
         self.assertIn("MA7", chart["quality"]["message"])
         self.assertEqual(chart["comparison_baseline_label"], "MA7")
+        self.assertFalse(chart["show_prediction_intervals"])
         run.display_model_label = "MA7"
         run.display_baseline_label = "MA7"
         run.display_baseline_mae = run.baseline_metrics["moving_average_7_mae"]
@@ -304,6 +350,7 @@ class GuardedForecastLifecycleTests(TestCase):
         self.assertIn("MA7", dashboard_html)
         self.assertIn('Dự báo ${modelLabel}', dashboard_html)
         self.assertIn('"model_label": "MA7"', dashboard_html)
+        self.assertIn('"show_prediction_intervals": false', dashboard_html)
         self.assertIn("MA7: ", dashboard_html)
 
         report = render_to_string("dashboard/executive_report.html", {
@@ -321,6 +368,8 @@ class GuardedForecastLifecycleTests(TestCase):
         self.assertIn("MA7", report)
         self.assertNotIn("XGBoost MAE", report)
         self.assertNotIn("XGBoost vs Baseline", report)
+        self.assertNotIn("cảnh báo của mô hình XGBoost", report)
+        self.assertIn("số liệu tồn kho và nhu cầu đã ghi nhận trong kỳ", report)
 
         from apps.knowledge.services import generate_grounded_answer
         forecast_point = run.results.first()
@@ -378,6 +427,171 @@ class GuardedForecastLifecycleTests(TestCase):
         regenerated = generate_future_forecast(run, horizon_days=14, history_snapshot=history)
         self.assertEqual(len(regenerated), 14)
         self.assertEqual(run.results.count(), 14)
+
+    def test_legacy_chart_keeps_prediction_interval_datasets(self):
+        from apps.forecasting.services import get_forecast_chart_data
+
+        self.create_daily_orders(30)
+        config = self.create_config(1)
+        last_history_date = datetime.date(2025, 1, 30)
+        run = ForecastRun.objects.create(
+            workspace=self.workspace,
+            model_config=config,
+            target_type=TargetType.RETAIL_REVENUE,
+            status=RunStatus.COMPLETED,
+            dataset_period_end=last_history_date,
+            baseline_metrics={"naive_mae": 10.0, "naive_rmse": 12.0},
+        )
+        ForecastResult.objects.create(
+            workspace=self.workspace,
+            forecast_run=run,
+            target_type=TargetType.RETAIL_REVENUE,
+            forecast_date=last_history_date + datetime.timedelta(days=1),
+            predicted_value=Decimal("1000.00"),
+            lower_bound=Decimal("900.00"),
+            upper_bound=Decimal("1100.00"),
+        )
+
+        chart = get_forecast_chart_data(
+            self.workspace,
+            TargetType.RETAIL_REVENUE,
+            history_days=3660,
+            horizon_days=7,
+        )
+        self.assertTrue(chart["show_prediction_intervals"])
+
+    @override_settings(FORECAST_ASYNC_ENABLED=True)
+    def test_guarded_worker_losing_final_fence_removes_only_new_artifact(self):
+        import apps.forecasting.training as training
+        from apps.forecasting.queue import claim_job
+        from apps.forecasting.services import execute_training_job
+
+        config = self.create_config(1, strategy="guarded_direct_v1", granularity=Granularity.WEEKLY)
+        index = pd.date_range("2024-01-01", periods=55, freq="7D", name="date")
+        history = pd.DataFrame({"target": [float(100 + (i % 7)) for i in range(55)]}, index=index)
+        history.attrs["observed_period_dates"] = [day.date().isoformat() for day in index]
+        pending = execute_training_job(self.workspace, TargetType.RETAIL_REVENUE, is_async=True)
+        old_artifact = self.artifact_dir / f"run_{pending.pk}_{uuid.uuid4().hex}.json"
+        old_artifact.write_bytes(b"previous artifact")
+        ForecastRun.objects.filter(pk=pending.pk).update(
+            artifact_path=old_artifact.relative_to(settings.BASE_DIR).as_posix(),
+        )
+        claimed = claim_job()
+        finish_with_fence = training._finish_training_run
+
+        def cancel_after_artifact_save(run, **kwargs):
+            ForecastRun.objects.filter(pk=run.pk).update(
+                status=RunStatus.CANCELLED,
+                cancel_requested=True,
+                lease_token=None,
+                lease_expires_at=None,
+                error_message="CANCELLED_AFTER_ARTIFACT_SAVE",
+            )
+            return finish_with_fence(run, **kwargs)
+
+        with patch("apps.forecasting.training.get_historical_timeseries", return_value=history), patch(
+            "apps.forecasting.training._finish_training_run", side_effect=cancel_after_artifact_save,
+        ):
+            with self.assertRaisesMessage(ValueError, "FORECAST_LEASE_LOST"):
+                train_forecast_model(
+                    self.workspace,
+                    TargetType.RETAIL_REVENUE,
+                    model_config=config,
+                    run=claimed,
+                    lease_token=claimed.lease_token,
+                )
+
+        claimed.refresh_from_db()
+        self.assertEqual(claimed.status, RunStatus.CANCELLED)
+        self.assertEqual(claimed.error_message, "CANCELLED_AFTER_ARTIFACT_SAVE")
+        self.assertEqual(sorted(self.artifact_dir.glob(f"run_{claimed.pk}_*.json")), [old_artifact])
+        self.assertEqual(claimed.results.count(), 0)
+
+    def test_guarded_artifact_cleanup_rejects_path_outside_trusted_root(self):
+        from apps.forecasting.training import _remove_new_guarded_artifact
+
+        config = self.create_config(1, strategy="guarded_direct_v1")
+        run = ForecastRun.objects.create(
+            workspace=self.workspace,
+            model_config=config,
+            target_type=TargetType.RETAIL_REVENUE,
+            status=RunStatus.RUNNING,
+        )
+        outside_dir = tempfile.TemporaryDirectory(
+            prefix="guarded-cleanup-sentinel-",
+            dir=self.artifact_dir.parent,
+        )
+        self.addCleanup(outside_dir.cleanup)
+        sentinel = Path(outside_dir.name) / f"run_{run.pk}_{uuid.uuid4().hex}.json"
+        sentinel.write_bytes(b"leave outside artifact root untouched")
+        generated_path = sentinel.relative_to(settings.BASE_DIR).as_posix()
+        generated_sha = hashlib.sha256(sentinel.read_bytes()).hexdigest()
+        run.artifact_path = generated_path
+
+        _remove_new_guarded_artifact(
+            run,
+            generated_path,
+            generated_sha,
+            base_dir=settings.BASE_DIR,
+            artifacts_dir=self.artifact_dir,
+        )
+        self.assertTrue(sentinel.is_file())
+
+    def test_guarded_artifact_cleanup_rejects_symlink_before_resolving_target(self):
+        from apps.forecasting.training import _remove_new_guarded_artifact
+
+        config = self.create_config(1, strategy="guarded_direct_v1")
+        run = ForecastRun.objects.create(
+            workspace=self.workspace,
+            model_config=config,
+            target_type=TargetType.RETAIL_REVENUE,
+            status=RunStatus.RUNNING,
+        )
+        existing_artifact = self.artifact_dir / f"run_{run.pk}_{uuid.uuid4().hex}.json"
+        existing_artifact.write_bytes(b"existing artifact must survive")
+        alias = self.artifact_dir / f"run_{run.pk}_{uuid.uuid4().hex}.json"
+        try:
+            alias.symlink_to(existing_artifact)
+            symlink_available = True
+        except (OSError, NotImplementedError):
+            alias.write_bytes(b"symlink stand-in")
+            symlink_available = False
+        generated_path = alias.relative_to(settings.BASE_DIR).as_posix()
+        generated_sha = hashlib.sha256(existing_artifact.read_bytes()).hexdigest()
+        run.artifact_path = generated_path
+
+        def resolve_to_existing_artifact(*args, **kwargs):
+            return existing_artifact.resolve()
+
+        resolver_patch = patch(
+            "apps.forecasting.artifacts._validated_artifact_path",
+            side_effect=resolve_to_existing_artifact,
+        )
+        if symlink_available:
+            with resolver_patch:
+                _remove_new_guarded_artifact(
+                    run,
+                    generated_path,
+                    generated_sha,
+                    base_dir=settings.BASE_DIR,
+                    artifacts_dir=self.artifact_dir,
+                )
+        else:
+            original_is_symlink = type(alias).is_symlink
+
+            def report_raw_path_as_symlink(path):
+                return True if path == alias else original_is_symlink(path)
+
+            with patch.object(type(alias), "is_symlink", new=report_raw_path_as_symlink), resolver_patch:
+                _remove_new_guarded_artifact(
+                    run,
+                    generated_path,
+                    generated_sha,
+                    base_dir=settings.BASE_DIR,
+                    artifacts_dir=self.artifact_dir,
+                )
+
+        self.assertTrue(existing_artifact.is_file())
 
     @override_settings(FORECAST_ASYNC_ENABLED=True)
     def test_guarded_worker_losing_lease_cannot_publish_metadata_or_results(self):
@@ -512,4 +726,3 @@ class GuardedForecastLifecycleTests(TestCase):
         rejected = _guarded_deployment_qualification(result(10.0000000001, 10.0))
         self.assertFalse(rejected["qualified"])
         self.assertEqual(rejected["reason"], "selected_model_holdout_mae_exceeded_matched_ma7")
-

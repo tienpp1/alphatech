@@ -628,6 +628,26 @@ function initForecastChart() {
         upperSeries.push(item.upper);
     });
 
+    const intervalDatasets = chartPayload.show_prediction_intervals === false ? [] : [
+        {
+            label: 'Cận trên — dải tham khảo, chưa hiệu chỉnh',
+            data: upperSeries,
+            borderColor: 'rgba(168, 85, 247, 0.25)',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: '+1',
+            backgroundColor: 'rgba(168, 85, 247, 0.12)',
+        },
+        {
+            label: 'Cận dưới — dải tham khảo, chưa hiệu chỉnh',
+            data: lowerSeries,
+            borderColor: 'rgba(168, 85, 247, 0.25)',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: false,
+        }
+    ];
+
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -652,23 +672,7 @@ function initForecastChart() {
                     pointBackgroundColor: '#a855f7',
                     tension: 0.1,
                 },
-                {
-                    label: 'Cận trên — dải tham khảo, chưa hiệu chỉnh',
-                    data: upperSeries,
-                    borderColor: 'rgba(168, 85, 247, 0.25)',
-                    borderWidth: 1,
-                    pointRadius: 0,
-                    fill: '+1',
-                    backgroundColor: 'rgba(168, 85, 247, 0.12)',
-                },
-                {
-                    label: 'Cận dưới — dải tham khảo, chưa hiệu chỉnh',
-                    data: lowerSeries,
-                    borderColor: 'rgba(168, 85, 247, 0.25)',
-                    borderWidth: 1,
-                    pointRadius: 0,
-                    fill: false,
-                }
+                ...intervalDatasets
             ]
         },
         options: {

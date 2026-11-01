@@ -393,4 +393,3 @@ class GuardedForecastPublicationTests(TestCase):
         self.assertTrue(all(run.results.count() == 14 for run in runs))
         self.assertEqual(ForecastResult.objects.count(), before[2] + 56)
         self.assertEqual(AuditLog.objects.count(), before[3] + 4)
-

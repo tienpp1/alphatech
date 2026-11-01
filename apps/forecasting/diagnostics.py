@@ -10,12 +10,22 @@ def get_run_model_label(run):
     """Use stored evidence for guarded runs; preserve the historical default otherwise."""
     parameters = run.job_parameters if isinstance(run.job_parameters, dict) else {}
     provenance = parameters.get("provenance")
-    if not isinstance(provenance, dict) or provenance.get("strategy") != "guarded_direct_v1":
+    provenance = provenance if isinstance(provenance, dict) else {}
+    config = getattr(run, "model_config", None)
+    training_config = getattr(config, "training_config", None)
+    config_strategy = training_config.get("strategy") if isinstance(training_config, dict) else None
+    strategy = provenance.get("strategy") or config_strategy
+    if strategy != "guarded_direct_v1":
         return "XGBoost"
-    return {
+    effective_model = {
         "MA7": "MA7",
         "XGBOOST_DIRECT": "XGBoost Direct",
-    }.get(provenance.get("effective_model"), "Chưa xác định")
+    }.get(provenance.get("effective_model"))
+    if effective_model:
+        return effective_model
+    if getattr(run, "status", None) in ("PENDING", "RUNNING"):
+        return "Đang chờ lựa chọn"
+    return "Chưa xác định"
 
 
 def get_run_granularity(run):

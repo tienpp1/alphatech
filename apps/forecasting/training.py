@@ -10,6 +10,7 @@ import os
 import datetime
 import platform
 import django
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from django.utils import timezone
@@ -169,6 +170,39 @@ def _finish_training_run(run, *, workspace, horizon_days, lease_token=None, hist
         run.save()
 
 
+def _remove_new_guarded_artifact(run, generated_path, generated_sha256, *, base_dir, artifacts_dir):
+    """Best-effort delete only this attempt's verified artifact after lease loss."""
+    if (
+        not isinstance(generated_path, str)
+        or not generated_path
+        or run.artifact_path != generated_path
+        or not generated_sha256
+    ):
+        return False
+    raw_candidate = Path(base_dir) / generated_path
+    if raw_candidate.is_symlink():
+        return False
+    from apps.forecasting.artifacts import (
+        MAX_ARTIFACT_BYTES,
+        _trusted_directories,
+        _validated_artifact_path,
+    )
+
+    try:
+        base, artifact_root = _trusted_directories(base_dir, artifacts_dir)
+        candidate = _validated_artifact_path(run, base, artifact_root)
+        if candidate.is_symlink() or not candidate.is_file():
+            return False
+        with candidate.open("rb") as stream:
+            raw = stream.read(MAX_ARTIFACT_BYTES + 1)
+        if len(raw) > MAX_ARTIFACT_BYTES or hashlib.sha256(raw).hexdigest() != generated_sha256:
+            return False
+        candidate.unlink()
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 def _train_guarded_forecast(
     *, workspace, target_type, model_config, run, ts_df, feature_cfg, train_cfg,
     horizon_days, lease_token,
@@ -272,28 +306,43 @@ def _train_guarded_forecast(
     }
 
     artifacts_dir = getattr(settings, "FORECASTING_ARTIFACTS_DIR", settings.BASE_DIR / "ml_models" / "forecasting")
+    previous_artifact_path = run.artifact_path
     save_run_artifact(run, result["artifact"], base_dir=settings.BASE_DIR, artifacts_dir=artifacts_dir)
-    if not qualification["qualified"]:
-        error_message = (
-            "GUARDED_HOLDOUT_QUALITY_GATE_FAILED: selected model holdout MAE exceeded matched MA7 "
-            f"({qualification['selected_model_holdout_mae']} > {qualification['ma7_holdout_mae']})."
-            if qualification["reason"] == "selected_model_holdout_mae_exceeded_matched_ma7"
-            else "GUARDED_HOLDOUT_QUALITY_GATE_FAILED: " + qualification["reason"]
-        )
-        _record_guarded_quality_failure(
+    generated_artifact_path = run.artifact_path if run.artifact_path != previous_artifact_path else None
+    provenance = (run.job_parameters or {}).get("provenance", {})
+    generated_artifact_sha256 = provenance.get("artifact_sha256") if isinstance(provenance, dict) else None
+    try:
+        if not qualification["qualified"]:
+            error_message = (
+                "GUARDED_HOLDOUT_QUALITY_GATE_FAILED: selected model holdout MAE exceeded matched MA7 "
+                f"({qualification['selected_model_holdout_mae']} > {qualification['ma7_holdout_mae']})."
+                if qualification["reason"] == "selected_model_holdout_mae_exceeded_matched_ma7"
+                else "GUARDED_HOLDOUT_QUALITY_GATE_FAILED: " + qualification["reason"]
+            )
+            _record_guarded_quality_failure(
+                run,
+                workspace=workspace,
+                lease_token=lease_token,
+                reason=error_message,
+            )
+            raise ValueError(error_message)
+        _finish_training_run(
             run,
             workspace=workspace,
+            horizon_days=horizon_days,
             lease_token=lease_token,
-            reason=error_message,
+            history_snapshot=ts_df,
         )
-        raise ValueError(error_message)
-    _finish_training_run(
-        run,
-        workspace=workspace,
-        horizon_days=horizon_days,
-        lease_token=lease_token,
-        history_snapshot=ts_df,
-    )
+    except ValueError as exc:
+        if lease_token and str(exc) == "FORECAST_LEASE_LOST" and generated_artifact_path:
+            _remove_new_guarded_artifact(
+                run,
+                generated_artifact_path,
+                generated_artifact_sha256,
+                base_dir=settings.BASE_DIR,
+                artifacts_dir=artifacts_dir,
+            )
+        raise
     return run
 
 

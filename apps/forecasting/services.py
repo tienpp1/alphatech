@@ -183,6 +183,11 @@ def get_forecast_chart_data(
     comparison_prefix = "moving_average_7" if is_guarded else "naive"
     comparison_label = "MA7" if is_guarded else "Naive (lag 7)"
     comparison_metrics = baseline_metrics.get("ma7") if is_guarded else None
+    has_prediction_bounds = any(
+        point["lower"] is not None and point["upper"] is not None
+        for point in forecast_points
+    )
+    show_prediction_intervals = not is_guarded or has_prediction_bounds
     if not isinstance(comparison_metrics, dict):
         comparison_metrics = {
             "mae": baseline_metrics.get(f"{comparison_prefix}_mae"),
@@ -206,6 +211,7 @@ def get_forecast_chart_data(
         "quality": assess_model_quality(model_metrics, baseline_metrics, model_label=model_label),
         "model_label": model_label,
         "effective_model": provenance.get("effective_model") if is_guarded else None,
+        "show_prediction_intervals": show_prediction_intervals,
         "selection_reason": (provenance.get("selection") or {}).get("reason") if is_guarded else None,
         "comparison_baseline_label": comparison_label,
         "comparison_baseline_mae": comparison_metrics.get("mae"),
