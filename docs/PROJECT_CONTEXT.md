@@ -1,5 +1,16 @@
 # AI Business Platform — canonical project context
 
+Guarded forecasting (2026-11-01): opt-in `guarded_direct_v1` selects normalized
+direct XGBoost or MA7 using past-only validation with recorded conservative
+heuristics. Holdout qualifies promotion, never reselects the model. Final serving
+refit is separate from holdout scoring. New runs store a bounded, strict native
+JSON artifact snapshot with SHA/scope binding in existing job_parameters for
+missing-disk inference on Render Free. API redacts snapshot body. Legacy runs
+keep their loader/metrics; scoped default resolution uses latest active version.
+The explicit append-only publication command creates new configurations/runs/
+results and a SYSTEM_JOB audit, not transactions or historical replacements.
+This changes no schema/RBAC/worker policy/97 ledger; release evidence is separate.
+
 AI context improvement (2026-10-09, local): public copilot remains rule-based,
 with a public-only source-reviewed navigation FAQ, whole-phrase Vietnamese
 matching and explicit million-VND upper-budget filtering. Internal KB ingestion

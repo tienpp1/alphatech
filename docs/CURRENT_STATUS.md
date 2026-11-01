@@ -1809,3 +1809,129 @@ SERVICE123 chỉ có providerSENT, chưa xác nhận inbox riêng. GPS chủ d�
 Generated recommendation chain chỉ local; live nonowner notice là MANAGER, không
 khách thườngB. Giữ XGBoost kém baseline/no-key/LocalStorage/no-worker và sổ97.
 Chi tiết/kết quả lỗi trung gian: AUDIT_FOLLOWUP_RESULTS_2026_10_12.md.
+
+## XGBoost synthetic offline —16/10/2026, worktree riêng
+
+Chủ dự án chốt benchmark riêng, không đổi production/Neon/sổ97. Từ base4f3c6ab,
+hai script mới sinh30chuỗi×730ngày có provenance,12candidate validation-only,
+180fitdevelopment/30fitfinal hoàn tất763.599s, networkguard0calls. ChọnL1/depth2/
+250trees. Final11/15case thắng MA7 nhưng primary mean-case-relativeMAE kém12.0067%
+do levelshift stress; không tuyên bố vượtbaseline bao quát hoặc sửa kết quả14/10.
+18test mớiOK76.829s; independentartifact arithmetic470031checks/1589hash0errors;
+representative5/5artifactreplayhash bằng nhau. Bandit1.9.4 hai scripts0findings.
+Fullsuite worktree đang chờ, không mượn full1461 của dirtymain14/10. Source/runtime
+forecasting không đổi, không migration/datawrites/push/deploy. Báo cáo:
+XGBOOST_SYNTHETIC_BENCHMARK_2026_10_16.md; dữ liệu/model ở ignoredoutput worktree.
+
+Receipt cuối16/10: fullworktree1420/1420OK692.628s/noSkip,source_unchanged=true/
+754inputs tại output/acceptance_verification/20261016T010546Z, DB00c03cf... tựhủy.
+Lượt005031ZFAILED1inventory18test mới thiếu tên, giữ log; chỉ sửa inventorydoc,
+focused6/6OK3.385s rồi rerunfullgreen. Lượt004613Zngắt vìHEADrunner không hỗtrợ
+fasthasherflag, không tínhPASS; owninactiveTESTec6... đã dọn đúngcreationlog.
+HasherMD5/legacyfixtures chỉtestprocess, runtime khôngđổi. Check0/driftNoChanges.
+SauPASS chỉdocsreceipts; no commit/merge/push/deploy/97change. Đợt thực nghiệm
+hoàn tất nhưng primaryXGB vẫn kémMA7, không công bố đã giải quyết độchínhxác.
+
+## XGBoost thích nghi mức —19/10/2026, worktree riêng
+
+Chủ dự án đồng ý bản thử nghiệm riêng/chưa đổi production. Chẩn đoán V1 là
+target tuyệt đối không thích nghi mức thấp, kể cả one-step đã thấyactualmới.
+Thêm standalone MA7-anchored normalized direct-horizon residual XGB, chưa đổi
+runtime model. Guard pair/truth và đủcase duy nhất đã RED→GREEN qua review;
+23tests (5model+18V1)OK94.967s,12V2testsOK10.133s, nguồn V1 giữ nguyên.
+Protocol40chuỗi/8candidate khóa trướcfit; job nền mộtthread đang chạy, chưa
+nghiệm thuaccuracy trước audit. Không DB/network/migration/97-ledger change.
+Chi tiết XGBOOST_LEVEL_ADAPTIVE_2026_10_19.md.
+
+StudyV2hoàn tất532.656s,110fits/0networkcalls; selectionL1/d2/200/alpha1.
+Freshfinal24/25wins,primarymeanratio.603810605633 (giảmMAE39.6189%),levelshift
+giảm20.0481%,mọifamilygatePASS; case noise1912thua1.1342%giữnguyên,R²âmở
+noise/intermittentkhôngche. Audit1,479,612assertions/873SHA/0errors;2replaycases
+8/8artifactSHA+2/2payloadkhớp. Old15caseSEENdiagnostic14wins/ratio.600636466898,
+15rawmodelsSHAkhớpV1gốc. Framework0issues/driftNoChanges trênDBTESTmới tựhủy.
+Fullworktreeđợt19/10chờ,khônggánproductionaccuracy hoặc100%mọidữliệutươnglai.
+
+Receipt cuối19/10: fullworktree1432/1432OK293.820s/noSkip,source_unchanged=true/
+761inputs, output/acceptance_verification/20261019T023626Z; ownDBTESTda4d...tựhủy.
+MD5/legacyfixtures chỉtestprocess, khôngruntime. Bandit0/compile/diffcheckđạt.
+SauPASSchỉdocreceipts, chưacommit/merge/push/deploy. Hoàn tất thử nghiệmV2 theo
+phạmviđãkhóa, khôngđổiđiểmV1/90ngàynghiệpvụ hoặcchứngnhậnproduction/97.
+
+## XGBoost chọn đặc trưng lịch —19/10/2026, offline V3
+
+Giữ pureXGB, chọn none/weekly/full bằng3shadowfits438rows/10pastvalidationblocks,
+one-SEheuristic; freeze65selections trước refit584/final50freshcases.284fits/
+869.409s/0networkcalls, source/runtime/47.450syntheticrows khóa.49/50winsMA7,
+primary.623262901417290 (giảm37.673710%), noise10/10wins. Nhưng preservationFAIL:
+levelshift V3/V2=1.056071790077245>1.05, case1944thuaMA715.093619%. Overallmean
+percaseV3/V2=1.01052247332234, không cải thiện tổng thể so với V2; khôngpromote.
+Casecũnoise1912đãxem: V3noneMAE1,640,355.15 vsMA71,670,432.25, tốthơn1.800558%;
+V2refitSHAtrùngcũ. Audit độc lập1,464,194checks/1439SHA/0errors,41,300JSONpred;
+2replay14artifactSHA/4payloadkhớp, seen1912cóauditriêng. Focus21/21OK25.608s,
+Bandit0. Fullworktree/frameworkđangchờ, khôngmượnV2PASS. NoDB/runtime/97change,
+chưacommit/push/deploy. Xem XGBOOST_CALENDAR_SELECTION_2026_10_19.md để rõ
+qualityFAIL khác integrityPASS; không reseed/tune/relax gate sau khi thấy final.
+
+Receipt cuốiV3: fullworktree1441/1441OK328.195s/0skip,source_unchanged=true/
+768inputs, output/acceptance_verification/20261019T091622Z; ownTESTe349...tựhủy.
+Framework0issues/driftNoChanges, MD5/legacycompatchỉtestprocess. Saufullchỉdocs
+receipt/planupdates, khôngruntimecode. Handoff/package tách integrity_verified
+với accuracy_gate_passed=false; qualitygateFAILgiữ nguyên, chưa promote/deploy.
+Main97/old90CSV/V1/V2 giữhash, source ngoài docs đối chiếu fullsnapshot riêng.
+
+HandoffV3đãverify605non-docsources/2140frozenartifactentries,hai audit vàreplay/
+seenreceipt,main97/old90CSV giữhash. Integrityverified=true nhưngqualityfalse;
+khôngđượcgộp testPASS thànhmodelPASS. GóiV3riêngtrênD/oldV1V2khôngoverwrite.
+
+## XGBoost V4 — nhóm đặc trưng lịch nguyên vẹn, 19/10/2026
+
+Nghiên cứu offline trong worktree riêng, chưa thay production. V4 chỉ
+chọn `none` hoặc `full` bằng validation quá khứ; loại lựa chọn lịch một phần
+`weekly`, giữ nguyên XGBoost/V2 và tất cả nguồn, kết quả V1–V3. Một cohort cố
+định115 chuỗi/83.950 dòng mô phỏng,100 final case mới/20 mỗi cơ chế đã biết.
+Giữ tất cả cổng V3, thêm overall mean per-case V4/V2<=1, không đổi ngưỡng sau
+kết quả. Identity7eb97e995fcbf5fae2e163941dd16d2ad7b480aff4f97c6d6cdf4ff9edb22b74.
+
+TDD/review:32/32 focused tests OK189.837s; hai hồi quy mới từ review chặn tỷ
+lệ boolean và manifest bị thay khi resume COMPLETED. Bandit hai module mới:
+253LOC/0 findings/0 errors, compile/diff sạch. Kết quả thực thi/audit ở dưới;
+không dùng test mã nguồn thay nghiệm thu hiệu quả model.
+Không DB/Neon/runtime/sổ97, không commit/push/deploy. Mục tiêu là toàn bộ cổng
+thử nghiệm đã khóa, không bảo đảm thắng mọi case hoặc mọi dữ liệu tương lai.
+
+Study hoàn tất2.786,663s/370fits/430savedJSON/0networkcalls, tất cả10gatePASS.
+100final:99thắng/0hòa/1thuaMA7, primary0,6156384796877542 (giảm38,436152%);
+overallmeanV4/V2=0,9969403605718969 (cải thiện0,305964%). Structured3nhóm giữ
+đúngV2; noise/intermittent mean đều cải thiện. Finalnone40/full60; soV2 có25
+tốt/60bằng/15kém. Noise2236 vẫn thuaMA70,689438%, không xóa hoặc reseed.
+Replay12artifactSHA/4payload khớp; oldseen1912 tốt hơnMA71,800558%, old1944
+tốt hơnMA712,164674%/giảm23,683583% soV3. MainauditPASS/2.358.891checks/
+2.421SHA/60.200JSONpred/150.500CSVrows/0errors; seen auditPASS43.943checks/
+74SHA/1.260JSONpred/0errors. Fullworktree1452/1452OK312.229s/0skip,
+source_unchanged=true/775files, output/acceptance_verification/20261019T105622Z;
+ownTEST358d...tựhủy. Framework0issues/driftNoChanges trênTESTriêng. MD5/legacy
+compatchỉtestprocess; khôngruntime/maincombined/remoteCI/productioncertification.
+SoV3snapshot, oldnon-docsource/test giữhash, chỉ4newPython. HandoffPASS:
+609non-docsources/2140old+1310V4frozenartifactentries/main97/old90CSVđúnghash;
+integrity_verified=true/accuracy_gate_passed=true. GóiD dùngcreate-only/SHA
+whitelist riêng; source khôngpromote/commit/push/deploy. Plan trongZIP là
+snapshot trướcpackaging; receiptngoàiZIP xác nhậnarchive thực, khôngtựthamchiếu.
+
+Delivery đã tạo/readbackPASS:1454ZIPentries/16.576.706bytes, archiveSHA
+c847da5d36c562b1080d69a3772abeedf5e667e76e7806793fad215b668c21b3;
+reportSHAb356f9fb2aa5e3b7c309f7f4640f53f5e65a0c3f5d7bf01304daaacc64799d77.
+BaZIPcũ giữhash. Preflightpackage từng failfloatroundoff1–2e-16, rawlog giữ;
+delivery-onlynumericguard1e-12/strictbooleans đã3testsRED→GREEN, khôngđổi
+source/gates/results/full1452. Task1/2/3complete; worktreegiữriêng, chưacommit/
+push/deploy. Hoàn tất phạmvinghiêncứu/cổngđãkhóa, không100%futureaccuracy.
+## Guarded forecast release — 01/11/2026
+
+Engine chọn XGBoost/MA7 bằng validation và JSON snapshot SHA/scope trong
+ForecastRun, không thêm bảng. Tích hợp lifecycle/latest-active/nhãn mô hình và
+command append-only dùng mô hình thực tế, không ghi đè history. Study mới20case
+đạt13thắng/7bằng/0thua MA7, meanratio0,6517315445; audit2.800rawrows/6.448SHA
+đạt. V1–V4 giữ nguyên; mẫu nhiễu V4 cũ là SEEN diagnostic, không holdout mới.
+Chi tiết và giới hạn: FORECAST_GUARDED_RELEASE_2026_11_01.md. CI/Render/Neon
+là các cổng riêng, chỉ xác nhận bằng receipt thực tại
+D:/AlphaTech_Private/forecast_guard_20261101/, không suy ra từ study hoặc test
+local. Không thay đổi cấu trúc/tiến độ sổ97 hoặc tạo giao dịch mô phỏng.

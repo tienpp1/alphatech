@@ -17,6 +17,8 @@
 - XGB gate:gain>=10%,gain>3pairedSE,blockwins>=80%,>=2usableblocks; not a confidence guarantee.
 - Final serving refit never scores holdout; imputed gaps not scored; all losses/negativeR² retained.
 - Explicit apply/new-version/idempotent release only; GitHub/Render verified before Neon activation.
+- A selected model that loses matched holdout MAE fails deployment qualification,
+  never gets reselected with holdout; publication rolls back only its new rows.
 
 ## Review Focus
 
@@ -31,18 +33,20 @@
 **Files:** new apps/forecasting/adaptive.py, guarded.py, artifacts.py; new tests/test_guarded_forecast_engine.py and tests/test_guarded_forecast_artifacts.py.
 **Interfaces:** Exact functions/result keys/format in spec; no Django/DB imports in core, base_dir/artifacts_dir passed explicitly.
 
-- [ ] RED tests for real normalized feature/schema/reconstruction and JSONroundtrip, fixedparams/bounded overrides.
-- [ ] RED tests for minhistory/weekly/long-horizon explicit fallback, finite/nonnegative input, constant/tie/zero-error baselines.
-- [ ] RED future-truth perturbation test: selection unchanged; first holdout block prediction unchanged when only its truth changes.
-- [ ] RED paired arithmetic10%/3SE/80% boundaries, missing-observed blocks and gapmask; no scenario/seed inputs.
-- [ ] RED trusted-path/SHA/size/strictJSON/snapshot recovery, disk tamper cannot recover silently, save never calls DBsave.
-- [ ] Implement minimal core; GREEN standalone unittest suites. Tests use tiny real XGB fits; no performance claims from mocks.
-- [ ] Combined source review and scoped fix; commit only assigned core/test files and new design/plan.
+- [x] RED tests for real normalized feature/schema/reconstruction and JSONroundtrip, fixedparams/bounded overrides.
+- [x] RED tests for minhistory/weekly/long-horizon explicit fallback, finite/nonnegative input, constant/tie/zero-error baselines.
+- [x] RED future-truth perturbation test: selection unchanged; first holdout block prediction unchanged when only its truth changes.
+- [x] RED paired arithmetic10%/3SE/80% boundaries, missing-observed blocks and gapmask; no scenario/seed inputs.
+- [x] RED trusted-path/SHA/size/strictJSON/snapshot recovery, disk tamper cannot recover silently, save never calls DBsave.
+- [x] Implement minimal core; GREEN standalone unittest suites. Tests use tiny real XGB fits; no performance claims from mocks.
+- [x] Combined source review and scoped fix; commit only assigned core/test files and new design/plan.
 
 ### Task 2: Existing lifecycle, truthful UI and append-only release
 
-**Files:** training.py,prediction.py,services.py,serializers.py,diagnostics.py,academic_reporting.py; templates/forecasting/index.html; new management/commands/publish_guarded_forecasts.py; focused integration tests.
+**Files:** training.py,prediction.py,services.py,serializers.py,diagnostics.py,academic_reporting.py; templates/forecasting/index.html; narrowly scoped forecast prose in apps/knowledge/services.py/config/views.py if it hardcodes model identity; new management/commands/publish_guarded_forecasts.py; tests/test_guarded_forecast_integration.py and tests/test_guarded_forecast_publication.py.
 **Interfaces:** consume Task1 result/artifact APIs. New saved provenance.strategy/effective_model/selection/evaluation, artifact_snapshot body excluded from serializer. Latest active config selection remains scoped; legacy absent strategy unchanged.
+
+Training calls `fit_guarded` with exactly estimator/depth/rate overrides and separate test_size. Engine baseline_metrics is nested ma7/seasonal_naive_7: adapt to existing flat moving_average_7_* and naive_* fields without losing raw dictionaries. New strategy holds no calibrated bounds. `generate_future_forecast` accepts optional `history_snapshot=None` for the same canonical frame used by training; new strategy validates saved dataset fingerprint before predictions. No historical result replacement in publication: append new run, then activate new config only after success. Source hashes include adaptive.py,guarded.py,artifacts.py,prediction.py for new strategy. Guarded provenance records actual evaluation method, actual model label, candidate params vs selected baseline and serving-refit history; no raw holdout_rows or native booster in provenance/API. Run serializer must not mutate the original job_parameters while redacting body. Config with no active version but existing disabled entries fails explicitly, never silently reactivates old config. Bounds/legacy outputs remain unchanged for absent strategy.
 
 - [ ] RED guarded train/predict real DB integration, source snapshot consistency, legacy compatibility, latest-active config, weekly/long horizon, metadata label and snapshot redaction.
 - [ ] RED lease loss/no completion, prediction failure/no old-result loss, expected SHA rejection and missing-disk verified-inline inference.
@@ -57,11 +61,11 @@
 **Files:** new scripts/forecast_guarded_benchmark.py/test; dated report; docs CURRENT_STATUS/CHANGELOG/PROJECT_CONTEXT updates; existing quality.yml focused test additions only.
 **Interfaces:** core `fit_guarded` and holdout_rows to frozen offline evidence, publication command to explicit Neon subprocess.
 
-- [ ] Freeze20new-series inputs/policy/source; run once and preserve every failure/loss/negativeR²; old2236 separate SEEN demonstration.
-- [ ] Audit raw paired MAE/gates/selection chronology and model roundtrip; do not tune/reseed after final.
+- [x] Freeze20new-series inputs/policy/source; run once and preserve every failure/loss/negativeR²; old2236 separate SEEN demonstration.
+- [x] Audit raw paired MAE/gates/selection chronology and model roundtrip; do not tune/reseed after final.
 - [ ] Full worktree suite, framework/drift/Bandit/diff/source freeze and oldartifact/97hash guards; fullfresh branch review.
 - [ ] Push isolated code branch, verify GitHub CI; fast-forward shared main only with expected oldSHA; noforce or unrelated dirtymain staging.
 - [ ] Deploy existing Free Render, verify exact commit/live state and readiness; no paid services or insecure credential workarounds.
-- [ ] Private read-only canonical backup/fingerprints; apply append-only Neon release for abc-retail/RETAIL_REVENUE and xyz-service/SERVICE_TICKET_VOLUME only.
+- [ ] Private read-only canonical backup/fingerprints; apply append-only Neon release for the two workspace defaults, optionally all four existing targets with --all-targets after qualification.
 - [ ] Read-only check model SHA/DB snapshot/in-memory serving, old-row/business invariants, release idempotency and actual labels/HTTP where credentials allow.
 - [ ] Report actual outcomes, exact commit/CI/deploy/release IDs and any unverified boundary. Update no97progress.

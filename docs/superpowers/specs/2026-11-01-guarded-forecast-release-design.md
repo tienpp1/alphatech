@@ -57,6 +57,14 @@ partition dates/counts, actual params, evaluation method, source observed policy
 Negative R², null undefined metrics, all losses and stale-source labels remain.
 No calibrated interval claim; guarded prediction bounds may remain null.
 
+Runtime promotion has a separate deployment qualification: if the already
+selected model loses to matched MA7 on holdout MAE, refuse completion/promotion
+and retain the reason. This is NOT holdout-based model reselection: do not switch
+to MA7 after observing holdout. Normal training records a failed new run; the
+publication transaction rolls back its new rows. Old runs remain untouched.
+Qualification is reported separately from selection and research scores;
+accuracy of only the published subset is not an unbiased holdout estimate.
+
 ## Runtime interfaces
 
 `apps.forecasting.adaptive`: normalized direct features/fit/predict/JSON helpers.
@@ -106,6 +114,11 @@ creates only new config/run/results plus audit, activates new config only with
 successful completion. One release/workspace/target is idempotent. On failure,
 transaction rolls back new records; old results/configs/business data untouched.
 System audit actor must be truthful, never impersonate a human approver.
+
+Default targets remain retail revenue and service ticket volume. Optional
+`--all-targets` includes the existing retail order-volume and product-demand
+targets too; all four remain subject to identical qualification. Idempotency is
+release/workspace/target scoped. No new domain target is introduced.
 
 Deployment order: tested code -> GitHub CI -> verified existing Free Render
 deployment -> Neon append/promotion -> read-only serving/model snapshot checks.

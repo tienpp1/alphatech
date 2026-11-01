@@ -1565,3 +1565,49 @@ trung gian/full suite, ghi riêng tại AUDIT_REPAIR_RESULTS_2026_10_11.md.
   mô phỏng DOM/provider, không tự chứng nhận GPS thiết bị hoặc inbox production.
 - `service_request_priority.test.cjs` — thực thi handler inline P1/P2/P3 gửi
   HIGH/MEDIUM/LOW và từ chối key khác; bộ đếm SLA vẫn chỉ là minh họa.
+
+### Bổ sung inventory synthetic forecasting 16/10/2026 — không thay sổ97
+
+- `test_forecast_atomic_calendar.py` thuộc TIME-SERIES FORECASTING: ablate
+  calendar nguyên nhóm, schema/model thật, two-mode one-SE và input fail-closed.
+- `test_forecast_atomic_benchmark.py` thuộc TIME-SERIES FORECASTING: chronology
+  V4, immutable115choices,100freshcases, retainedfailures và kiểm không suy giảm
+  tổng thể so với V2; lifecycle doubles không phải accuracy evidence.
+- `test_forecast_calendar_selection.py` thuộc TIME-SERIES FORECASTING: chọn
+  đặc trưng lịch bằng validation quá khứ, schema model thật và quy tắc one-SE.
+- `test_forecast_calendar_benchmark.py` thuộc TIME-SERIES FORECASTING: V3
+  calibration/final tách biệt, khóa lựa chọn trước final, giữ lỗi và chống sửa
+  receipt khi resume; không chứng minh XGBoost luôn thắng hoặc thay production.
+- `test_forecast_level_adaptive.py` thuộc TIME-SERIES FORECASTING: past-only direct residual model, không bằng chứng production.
+- `test_forecast_level_benchmark.py` thuộc TIME-SERIES FORECASTING: V2 frozen experiment/metric gates, không thay ledger97.
+- `test_forecast_synthetic_benchmark.py` thuộc TIME-SERIES FORECASTING:18ca
+  generator/provenance, validation-only selection, disjoint recursive origins,
+  baseline parity, future-target perturbation, real-XGB replay, retained failures,
+  immutable evidence, receipt/case binding, runtime identity và interruption/resume.
+  Không có assertion buộc XGB thắng, không đọc/ghi businessDB hoặc chứng nhận
+  chất lượng thương mại. Một số test điều khiển interruption thay bước fit chậm
+  bằng double; các ca model/replay và benchmark sử dụng XGBoost thật.
+
+Fullworktree đầu1420test/573.312s FAILED1 vì inventory thiếu file mới này;
+giữ nguyên test/log, chỉ bổ sung danh mục. Kết quả chạy lại ghi riêng trong
+XGBOOST_SYNTHETIC_BENCHMARK_2026_10_16.md, không biến lượt lỗi thành PASS.
+
+Receipt worktree16/10: inventoryfocused6/6OK3.385s; fullrerun1420/1420OK692.628s,
+0fail/error/skip/sourcefreeze. Đây là testsource/logiclocal, không phải nghiệm thu
+production hoặc XGBoost tốt hơn trên dữ liệu doanh nghiệp thật; sổ97 không đổi.
+
+### Bổ sung inventory guarded forecasting 01/11/2026 — không thay sổ97
+
+- `test_guarded_forecast_engine.py` — chọn XGBoost/MA7 bằng validation quá khứ,
+  chronology, dữ liệu thiếu và JSON model thật; không bảo đảm luôn thắng MA7.
+- `test_guarded_forecast_artifacts.py` — giới hạn JSON, SHA, trusted path,
+  binding workspace/run và snapshot recovery; không tải model từ URL tùy ý.
+- `test_guarded_forecast_integration.py` — lifecycle/lease, dự đoán từ snapshot,
+  model label, redaction và cổng từ chối promotion; không đổi schema.
+- `test_guarded_forecast_publication.py` — plan chỉ đọc, append-only/idempotency,
+  rollback và target/workspace isolation trên database TEST riêng.
+- `test_guarded_forecast_benchmark.py` — cohort/gates/paired arithmetic của study
+  mô phỏng mới; test điều khiển không thay bằng chứng thực nghiệm thực tế.
+
+Đây là danh mục source; receipt local, CI, Render và Neon được ghi riêng sau
+thực thi, không tự suy ra PASS từ việc có file hoặc đổi tiến độ97.

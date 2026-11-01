@@ -52,6 +52,8 @@ jobs:
         run: python manage.py test tests.test_forecast_worker_process tests.test_forecasting_queue --noinput
       - name: Recursive forecast integrity and reproducible horizon
         run: python manage.py test tests.test_forecast_recursive_integrity tests.test_forecasting_prediction tests.test_forecast_experiment_bundle --noinput
+      - name: Guarded forecast selection and portable artifact regressions
+        run: coverage run --branch manage.py test tests.test_guarded_forecast_engine tests.test_guarded_forecast_artifacts tests.test_guarded_forecast_benchmark tests.test_guarded_forecast_integration tests.test_guarded_forecast_publication --noinput
       - name: Grounded source disagreement regressions
         run: python manage.py test tests.test_rag_source_authority tests.test_adversarial_rag_execution tests.test_rag_independent_execution tests.test_rag_review_packet --noinput
       - name: Academic draft source and diagram contracts
@@ -78,7 +80,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           set -o pipefail
-          coverage run --branch manage.py test tests.test_customer_account_identity tests.test_approval_state_integrity tests.test_approvals tests.test_recommendations tests.test_public_ecommerce_cart_and_checkout tests.test_production_readiness tests.test_health tests.test_web_auth_routing tests.test_phase10_demonstration_scenarios tests.test_executive_reporting_and_telemetry tests.test_authorization_convergence tests.test_public_copilot_and_cart_api tests.test_internal_notifications tests.test_noibo_route_convergence --noinput 2>&1 | tee focused-tests.log
+          coverage run --append --branch manage.py test tests.test_customer_account_identity tests.test_approval_state_integrity tests.test_approvals tests.test_recommendations tests.test_public_ecommerce_cart_and_checkout tests.test_production_readiness tests.test_health tests.test_web_auth_routing tests.test_phase10_demonstration_scenarios tests.test_executive_reporting_and_telemetry tests.test_authorization_convergence tests.test_public_copilot_and_cart_api tests.test_internal_notifications tests.test_noibo_route_convergence --noinput 2>&1 | tee focused-tests.log
       - name: HTTPS email and deployment regressions
         if: ${{ !cancelled() }}
         run: |

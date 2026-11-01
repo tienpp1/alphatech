@@ -1219,3 +1219,101 @@ P1/P2/P3 mapping and legacy MEDIUM default. MEDIUM fingerprints are unchanged
 across releases; invalid priorities fail before writes. New requests include
 canonical REQUEST_CREATED audit within the same transaction without contact PII.
 No SLA, schedule, automatic dispatch, historical-row rewrite or schema changes.
+
+## 2026-10-16 — Offline synthetic forecasting protocol (isolated worktree)
+
+Added standalone deterministic scenario/seed data and bounded XGBoost benchmark,
+using existing features/recursive inference/metrics without Django or business DB.
+Development-only selection, immutable case-bound artifacts, runtime/source/input
+hashes, OS-exclusive writer and verified resume/finalization retain failures.
+TDD/fresh review exposed and repaired four evidence-durability defects. No runtime
+model promotion, schema changes, fake orders, historical-score rewrite or97change.
+Final synthetic scores include losses:11/15wins, equal-case mean relativeMAE
+12.0067%worse thanMA7. See dated benchmark report, not a commercial quality claim.
+
+Final localworktree regression1420/1420OK692.628s/0skip/sourcefreeze754inputs,
+framework0issues/migrationNoChanges. PriorfullFAILED1missingtestinventory retained,
+inventory doc only repaired, no test weakening; interruptedslowrun not countedPASS.
+Post-pass documentation receipts only; no commit/merge/push/deploy or97updates.
+
+## 2026-10-19 — Offline level-adaptive direct XGBoost (isolated worktree)
+
+Added an experimental MA7-anchored normalized residual target and direct14-day
+horizon features, preserving past-only origin snapshots and training cutoffs.
+New V2 fresh-seed protocol/selection/artifact lifecycle reuses unchanged V1
+generator and evidence primitives; paired truth/case identity validation added
+after fresh review. No production forecasting, schema/data or97-ledger change.
+Accuracy is a separate frozen experiment/audit gate; see dated V2 report.
+
+Fresh V2final meanrelativeMAE .603810605633 /24of25wins vsMA7; all declared
+gatesPASS, levelshift familygain20.0481%. Independent arithmetic/hashaudit and
+two exact replays verified; one noise loss/negativeR² remain. Old15seenpanel
+diagnostic reported separately; originalV1 untouched. Full regression pending.
+
+Final regression1432/1432OK293.820s,0skip/sourcefreeze761inputs; framework/drift,
+Bandit/compile checksPASS. Only documentation receipts after fullPASS. No commit,
+merge,push,deployment or promotion; V2known-mechanism offline scope only.
+
+## 2026-10-19 — Offline calendar-subset XGBoost selection (V3)
+
+Three persisted feature schemas share unchanged V2 direct residual model.
+Per-series shadowfit438/validate140 targets, one-SE simplicity gate; freeze
+all65selections before refit584 and50freshfinal. No scenario/seed selector,
+production promotion, schema/business writes or97change. New9TDD tests and
+fresh review preserve cutoff/schema/resume/failure evidence.
+
+Study completed869.409s,49of50winsMA7/meanratio.62326290141729, noise10/10wins.
+Knownseennoise1912 now beatsMA71.800558% with originalV2comparatorSHA unchanged.
+But qualitygateFAIL: levelshiftmeanV3/V2=1.05607179 exceeds1.05; overallmean
+percaseV3/V2=1.01052247. Retainloss1944 and allmetrics, never retune this final
+or callit fullqualityacceptance. Independentaudit/replay verify evidence,
+not performancePASS. Fullsuite pending; no commit/push/deploy.
+
+Final V3worktree regression1441/1441OK328.195s/0skip, sourcefreeze768inputs;
+framework0issues/migrationNoChanges on disposableTEST automatically destroyed.
+Only documentation receipts afterfullPASS; originalFAIL qualitygate preserved.
+No runtime integration or deployment; separate integrity/quality handoff flags.
+
+## 2026-10-19 — Offline atomic-calendar XGBoost selection (V4)
+
+Added full-or-none calendar ablation, reusing unchanged V3 model adapters/V2
+normalized direct residual forecasting. Past-only one-SE choice is frozen for
+all115series before100final evaluations. Old source/generator/results remain
+unchanged; no production promotion, schema/business data writes or97progress.
+Retain every V3 quality gate and add overall mean per-case V4/V2<=1. New11tests
+include cutoff/schema/overflow, lifecycle and review regressions for malformed
+ratios and checkpoint-bound completed manifests. Focused32tests pass; actual
+empirical results and independent audits/fullsuite are not yet complete.
+
+Frozen V4completed:10/10qualitygatesPASS,99/100winsMA7,meanrelativeMAE
+0.6156384796877542 (38.436152%reduction),meanV4/V2=0.9969403605718969.
+Three structured families exactly preserveV2; no repeated V3 preservationFAIL.
+Keep noise2236loss0.689438% and15percaseV2regressions, not universaldominance.
+370fits/0networkcalls, exact12SHA/4payload replay; two oldSEENcases now beat
+MA7 with unchangedV2comparator hashes. Independent mainauditPASS2,358,891checks/
+2,421SHA/60,200JSONpredictions, seen auditPASS43,943checks/74SHA/1,260predictions.
+Both zeroerrors and trueaccuracyflag. Fullworktree1452/1452OK312.229s/0skip,
+775sourcefilesunchangedduringrun; framework0issues/driftNoChanges, ownTESTDB
+autodestroyed. MD5/legacyfixtures onlytestprocess; postfullonlydocreceipts,
+no runtime/97change. No oldnon-docsource/test changed, exactly4Pythonadded.
+FinalhandoffPASS609non-docsources/2140old+1310V4artifactentries,97/oldCSV/
+runtime/schema unchanged. Integritytrue/accuracytrue separately verified.
+Create-only whitelist delivery uses externalSHAreceipt; plan snapshot precedes
+actual archive creation. No promotion/commit/push/deploy or production claim.
+
+Delivery readbackPASS1454entries/16,576,706bytes; three priorZIPs SHAunchanged.
+Delivery-only floatguard fixed independent-roundoff mismatch after RED→GREEN3;
+originalfailure retained, no model/data/gate/fullsuitecode change. Allplan
+tasks complete; preserve detached experimental worktree and scoped outputs.
+## 2026-11-01 — Guarded model selection and portable run artifact
+
+- Opt-in `guarded_direct_v1`: validation-only XGBoost/MA7 selection; evaluation
+  and all-history serving refit are separated, missing-source periods not scored.
+- Separate holdout promotion qualification refuses a worse selected model,
+  without holdout-based reselection or replacement of historic forecasts.
+- Bounded native JSON snapshots in existing ForecastRun metadata, strict SHA,
+  trusted path and workspace/run/target binding; API omits native body.
+- Latest-active scoped configurations, truthful model labels, explicit audited
+  append-only release command; legacy strategy and schema/RBAC remain unchanged.
+- Research V1–V4 sources/results remain historical; release evidence is separate
+  and no 97-item count or production certification is inferred here.
