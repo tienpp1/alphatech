@@ -48,13 +48,13 @@
 
 Training calls `fit_guarded` with exactly estimator/depth/rate overrides and separate test_size. Engine baseline_metrics is nested ma7/seasonal_naive_7: adapt to existing flat moving_average_7_* and naive_* fields without losing raw dictionaries. New strategy holds no calibrated bounds. `generate_future_forecast` accepts optional `history_snapshot=None` for the same canonical frame used by training; new strategy validates saved dataset fingerprint before predictions. No historical result replacement in publication: append new run, then activate new config only after success. Source hashes include adaptive.py,guarded.py,artifacts.py,prediction.py for new strategy. Guarded provenance records actual evaluation method, actual model label, candidate params vs selected baseline and serving-refit history; no raw holdout_rows or native booster in provenance/API. Run serializer must not mutate the original job_parameters while redacting body. Config with no active version but existing disabled entries fails explicitly, never silently reactivates old config. Bounds/legacy outputs remain unchanged for absent strategy.
 
-- [ ] RED guarded train/predict real DB integration, source snapshot consistency, legacy compatibility, latest-active config, weekly/long horizon, metadata label and snapshot redaction.
-- [ ] RED lease loss/no completion, prediction failure/no old-result loss, expected SHA rejection and missing-disk verified-inline inference.
-- [ ] RED publish command defaults to plan/no writes, explicit apply appends config/run/results, idempotency, rollback and original-row hashes/tenancy.
-- [ ] Integrate strategy branch within existing train try and final fenced transaction; do not rewrite legacy implementation or metrics.
-- [ ] Label actual model in chart/quality/template/academic export; preserve stale/R²/baseline warnings and no-key boundaries.
-- [ ] Implement scoped publication under workspace lock, own config version, new-only activation and truthful system audit.
-- [ ] GREEN focused suites plus old forecast/queue/RBAC/reporting tests on disposable TEST; fresh review and fixes; commit explicit files only.
+- [x] RED guarded train/predict real DB integration, source snapshot consistency, legacy compatibility, latest-active config, weekly/long horizon, metadata label and snapshot redaction.
+- [x] RED lease loss/no completion, prediction failure/no old-result loss, expected SHA rejection and missing-disk verified-inline inference.
+- [x] RED publish command defaults to plan/no writes, explicit apply appends config/run/results, idempotency, rollback and original-row hashes/tenancy.
+- [x] Integrate strategy branch within existing train try and final fenced transaction; do not rewrite legacy implementation or metrics.
+- [x] Label actual model in chart/quality/template/academic export; preserve stale/R²/baseline warnings and no-key boundaries.
+- [x] Implement scoped publication under workspace lock, own config version, new-only activation and truthful system audit.
+- [x] GREEN focused suites plus old forecast/queue/RBAC/reporting tests on disposable TEST; fresh review and fixes; commit explicit files only.
 
 ### Task 3: Scientific verification, release and Neon proof
 
@@ -63,7 +63,7 @@ Training calls `fit_guarded` with exactly estimator/depth/rate overrides and sep
 
 - [x] Freeze20new-series inputs/policy/source; run once and preserve every failure/loss/negativeR²; old2236 separate SEEN demonstration.
 - [x] Audit raw paired MAE/gates/selection chronology and model roundtrip; do not tune/reseed after final.
-- [ ] Full worktree suite, framework/drift/Bandit/diff/source freeze and oldartifact/97hash guards; fullfresh branch review.
+- [x] Full worktree suite, framework/drift/Bandit/diff/source freeze and oldartifact/97hash guards; fullfresh branch review (operator preconditions separately addressed before use).
 - [ ] Push isolated code branch, verify GitHub CI; fast-forward shared main only with expected oldSHA; noforce or unrelated dirtymain staging.
 - [ ] Deploy existing Free Render, verify exact commit/live state and readiness; no paid services or insecure credential workarounds.
 - [ ] Private read-only canonical backup/fingerprints; apply append-only Neon release for the two workspace defaults, optionally all four existing targets with --all-targets after qualification.

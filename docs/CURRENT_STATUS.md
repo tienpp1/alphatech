@@ -1935,3 +1935,8 @@ Chi tiết và giới hạn: FORECAST_GUARDED_RELEASE_2026_11_01.md. CI/Render/N
 là các cổng riêng, chỉ xác nhận bằng receipt thực tại
 D:/AlphaTech_Private/forecast_guard_20261101/, không suy ra từ study hoặc test
 local. Không thay đổi cấu trúc/tiến độ sổ97 hoặc tạo giao dịch mô phỏng.
+
+Source573d219 full1508/1508OK279,731s,0fail/error/skip,788files giữhash trong
+run; TEST tựhủy. Framework0issues/driftNoChanges, secret869files0findings,
+Bandit227files34.402LOC0findings theo cấu hình hiện có. Receipt riêng trong
+output/acceptance_verification/20261101T124111Z/; không lấy local làm CI/live.

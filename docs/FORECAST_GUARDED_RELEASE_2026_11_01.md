@@ -73,6 +73,27 @@ GitHub CI, Render và Neon là các cổng riêng: không suy ra chúng đã đ�
 Hồ sơ vận hành thực tế được lưu riêng tại
 `D:/AlphaTech_Private/forecast_guard_20261101/` sau khi thực thi.
 
+## Kiểm thử source trước phát hành
+
+Tree573d219: full local **1.508/1.508 tests OK**,279,731 giây,0 failure/error/
+skip;788 source files giữ nguyên trong run. Database TEST ngẫu nhiên riêng đã
+được hủy đúng phạm vi. Receipt:
+`output/acceptance_verification/20261101T124111Z/result.json` và `django.log`.
+MD5 password hashing chỉ ở process TEST, legacy fulfillment chỉ để tương thích
+fixture; không đổi runtime hoặc bỏ các ca kiểm strict fulfillment.
+
+Framework check0 issues và migration dry-run không thay đổi, cũng trên TEST
+riêng. Secret-pattern scan869files/0findings; Bandit227files/34.402LOC/0findings
+trong phạm vi cấu hình hiện có (1 check được loại trừ có sẵn, không thêm nosec).
+Không coi scanner là bằng chứng secret đã rotate hoặc không có lỗ hổng mọi loại.
+
+Các review core/lifecycle/study và fix round đã được thực hiện. Lỗi trung gian
+về coverage evidence, nhãn mô hình, chart và cleanup được giữ log RED/failed;
+GREEN2 của lượt fix từng có4 NameError, đã sửa và chạy lại34/34OK13,137 giây.
+Full1508 là lượt sau các bản sửa đó; không biến các log lỗi thành PASS.
+Các cập nhật tài liệu sau full không được gọi là full runtime mới; phải giữ
+non-document source fingerprint trước khi push. CI/live receipts là cổng riêng.
+
 ## Kết luận có giới hạn
 
 Đã xử lý mẫu lỗi đã biết bằng bộ chọn được duyệt và đạt20 case mô phỏng mới,
