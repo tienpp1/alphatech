@@ -179,6 +179,24 @@ class GuardedForecastArtifactTests(unittest.TestCase):
             with self.assertRaises((PermissionError, ValueError)):
                 load_run_artifact(run, base_dir=base, artifacts_dir=artifacts)
 
+    def test_rejects_noncanonical_duplicate_separator_before_inline_recovery(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base, artifacts = roots(temp)
+            run = make_run(temp)
+            save_run_artifact(run, payload(), base_dir=base, artifacts_dir=artifacts)
+            run.artifact_path = run.artifact_path.replace("/", "//", 1)
+            with self.assertRaises((PermissionError, ValueError)):
+                load_run_artifact(run, base_dir=base, artifacts_dir=artifacts)
+
+    def test_rejects_noncanonical_dot_segment_before_inline_recovery(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base, artifacts = roots(temp)
+            run = make_run(temp)
+            save_run_artifact(run, payload(), base_dir=base, artifacts_dir=artifacts)
+            run.artifact_path = run.artifact_path.replace("/", "/./", 1)
+            with self.assertRaises((PermissionError, ValueError)):
+                load_run_artifact(run, base_dir=base, artifacts_dir=artifacts)
+
     def test_rejects_symlink_escape_before_inline_recovery(self):
         with tempfile.TemporaryDirectory() as temp, tempfile.TemporaryDirectory() as outside:
             base, artifacts = roots(temp)

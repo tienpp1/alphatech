@@ -53,7 +53,7 @@ def _validated_artifact_path(run: Any, base: Path, artifact_root: Path) -> Path:
     if not isinstance(relative, str) or not relative or "\\" in relative:
         raise PermissionError("Artifact path must be a canonical relative POSIX path")
     pure = PurePosixPath(relative)
-    if pure.is_absolute() or any(part in ("", ".", "..") for part in pure.parts):
+    if relative != pure.as_posix() or pure.is_absolute() or any(part in ("", ".", "..") for part in pure.parts):
         raise PermissionError("Artifact path must not contain traversal components")
     candidate = base.joinpath(*pure.parts)
     try:
