@@ -256,7 +256,7 @@
                 </h3>
 
                 <!-- Cart Items Mini List -->
-                <div style="display: flex; flex-direction: column; gap: 12px; max-height: 280px; overflow-y: auto; padding-right: 4px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--pub-border); padding-bottom: 1.25rem;">
+                <div id="checkout-review-items" style="display: flex; flex-direction: column; gap: 12px; max-height: 280px; overflow-y: auto; padding-right: 4px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--pub-border); padding-bottom: 1.25rem;">
                     {% for item in items %}
                     <div style="display: flex; gap: 12px; align-items: center;">
                         <div style="width: 52px; height: 52px; background: #F8FAFC; border-radius: 8px; border: 1px solid var(--pub-border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
@@ -287,7 +287,7 @@
                 <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; border-bottom: 1px solid var(--pub-border); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
                     <div style="display: flex; justify-content: space-between; color: var(--pub-text-muted);">
                         <span>Tạm tính</span>
-                        <strong style="color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ summary.subtotal|floatformat:0 }} VNĐ</strong>
+                        <strong id="summary-subtotal" style="color: var(--pub-text-heading); font-family: var(--pub-font-mono);">{{ summary.subtotal|floatformat:0 }} VNĐ</strong>
                     </div>
 
                     <div style="display: flex; justify-content: space-between; color: var(--pub-text-muted);">
@@ -332,6 +332,35 @@
 var checkoutSummaryVersion = 0;
 var checkoutSummaryController;
 var checkoutLocationVersion = 0;
+var checkoutReviewKnown = true;
+var checkoutCartPending = false;
+function invalidateCheckoutReview() {
+    checkoutReviewKnown = false;
+    document.getElementById('btn-place-order').disabled = true;
+    checkoutSummaryVersion++;
+    if (checkoutSummaryController) checkoutSummaryController.abort();
+    document.getElementById('checkout-summary-status').textContent = 'Giỏ hàng đang thay đổi. Chờ xác nhận lại sản phẩm và tổng tiền…';
+}
+function renderCheckoutItems(data) {
+    if (!Array.isArray(data.items) || !Number.isFinite(data.subtotal) || data.subtotal < 0 || typeof data.formatted_subtotal !== 'string') throw new Error('invalid_items');
+    var rows = data.items.map(function (item) {
+        if (typeof item.name !== 'string' || !Number.isSafeInteger(item.quantity) || item.quantity <= 0 ||
+                !Number.isFinite(item.line_total) || item.line_total < 0 || typeof item.formatted_unit_price !== 'string' || typeof item.formatted_line_total !== 'string') throw new Error('invalid_item');
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:12px;align-items:center;justify-content:space-between;';
+        var name = document.createElement('div'); name.textContent = item.name;
+        var detail = document.createElement('div'); detail.textContent = item.quantity + ' × ' + item.formatted_unit_price;
+        var price = document.createElement('strong'); price.textContent = item.formatted_line_total;
+        var info = document.createElement('div'); info.append(name, detail); row.append(info, price);
+        return row;
+    });
+    if (!rows.length) {
+        var empty = document.createElement('p'); empty.textContent = 'Giỏ hàng đang trống. Vui lòng chọn sản phẩm trước khi đặt hàng.'; rows.push(empty);
+    }
+    document.getElementById('checkout-review-items').replaceChildren.apply(document.getElementById('checkout-review-items'), rows);
+    document.getElementById('summary-subtotal').textContent = data.formatted_subtotal;
+    return data.items.length > 0;
+}
 function clearCheckoutLocation() {
     document.getElementById('delivery-latitude').value = '';
     document.getElementById('delivery-longitude').value = '';
@@ -347,6 +376,7 @@ async function refreshCheckoutSummary(method) {
     var shipping = document.getElementById('summary-shipping-fee');
     var total = document.getElementById('summary-grand-total');
     placeButton.disabled = true;
+    checkoutReviewKnown = false;
     retry.hidden = true;
     status.textContent = 'Đang cập nhật tổng tiền theo cách nhận hàng…';
     shipping.textContent = 'Đang cập nhật…';
@@ -354,7 +384,7 @@ async function refreshCheckoutSummary(method) {
     var timeout = setTimeout(function () { controller.abort(); }, 10000);
     try {
         var response = await fetch("{% url 'public_cart_json' %}?delivery_method=" + encodeURIComponent(method),
-            {credentials: 'same-origin', headers: {'Accept': 'application/json'}, signal: controller.signal});
+            {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}, signal: controller.signal});
         if (!response.ok) throw new Error('summary_unavailable');
         var data = await response.json();
         if (current !== checkoutSummaryVersion) return;
@@ -363,12 +393,15 @@ async function refreshCheckoutSummary(method) {
                 typeof data.formatted_shipping_fee !== 'string' || typeof data.formatted_total_amount !== 'string') {
             throw new Error('invalid_summary');
         }
+        if (data.total_amount !== data.subtotal + data.shipping_fee) throw new Error('invalid_total');
+        var nonempty = renderCheckoutItems(data);
         shipping.textContent = data.formatted_shipping_fee;
         shipping.classList.remove('shipping-free', 'shipping-standard');
         shipping.classList.add(data.shipping_fee === 0 ? 'shipping-free' : 'shipping-standard');
         total.textContent = data.formatted_total_amount;
-        status.textContent = 'Đã cập nhật tổng tiền từ hệ thống.';
-        placeButton.disabled = false;
+        checkoutReviewKnown = nonempty && !checkoutCartPending;
+        status.textContent = nonempty ? 'Đã cập nhật sản phẩm và tổng tiền từ hệ thống.' : 'Giỏ hàng đang trống. Vui lòng chọn sản phẩm.';
+        placeButton.disabled = !checkoutReviewKnown;
     } catch (_) {
         if (current !== checkoutSummaryVersion) return;
         shipping.textContent = 'Chưa xác nhận';
@@ -432,7 +465,19 @@ function setDeliveryMethod(method, refreshSummary) {
     if (selected) setDeliveryMethod(selected.value, false);
     document.getElementById('checkout-summary-retry').addEventListener('click', function () {
         var method = document.querySelector('input[name="delivery_method"]:checked');
+        if (method && !checkoutCartPending) refreshCheckoutSummary(method.value);
+    });
+    document.addEventListener('public-cart:pending', function () {
+        checkoutCartPending = true;
+        invalidateCheckoutReview();
+    });
+    document.addEventListener('public-cart:changed', function () {
+        checkoutCartPending = false;
+        var method = document.querySelector('input[name="delivery_method"]:checked');
         if (method) refreshCheckoutSummary(method.value);
+    });
+    document.getElementById('checkout-form').addEventListener('submit', function (event) {
+        if (!checkoutReviewKnown || checkoutCartPending) event.preventDefault();
     });
     if (!button) return;
     button.addEventListener('click', function () {

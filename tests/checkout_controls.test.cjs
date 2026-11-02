@@ -12,7 +12,9 @@ function harness() {
   const nodes = new Map();
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {value: '', textContent: '', hidden: false,
-      disabled: false, style: {}, attributes: {}, listeners: {}, classes: new Set(),
+      disabled: false, style: {}, attributes: {}, listeners: {}, classes: new Set(), children: [],
+      append(...children) { this.children.push(...children); },
+      replaceChildren(...children) { this.children = children; },
       setAttribute(name, value) { this.attributes[name] = value; },
       removeAttribute(name) { delete this.attributes[name]; },
       addEventListener(name, fn) { this.listeners[name] = fn; },
@@ -23,7 +25,7 @@ function harness() {
   const calls = [], timers = new Map();
   let timerId = 0, gps;
   const context = {console, AbortController, URLSearchParams, encodeURIComponent,
-    document: {getElementById: node,
+    document: {getElementById: node, addEventListener() {}, createElement: () => node('created-' + nodes.size),
       querySelector: () => radios.find(r => r.checked), querySelectorAll: () => radios},
     navigator: {geolocation: {getCurrentPosition(success, error) { gps = {success, error}; }}},
     setTimeout(fn) { timers.set(++timerId, fn); return timerId; },
@@ -35,6 +37,9 @@ function harness() {
 const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 function reply(call, shipping, total) {
   call.resolve({ok: true, json: async () => ({shipping_fee: shipping, total_amount: total,
+    subtotal: total - shipping, formatted_subtotal: (total - shipping) + '₫',
+    items: [{name: 'TEST cable', quantity: 1, line_total: total - shipping,
+      formatted_unit_price: (total - shipping) + '₫', formatted_line_total: (total - shipping) + '₫'}],
     formatted_shipping_fee: shipping ? shipping + '₫' : 'Miễn phí', formatted_total_amount: total + '₫'})});
 }
 

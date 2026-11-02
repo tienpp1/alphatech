@@ -941,6 +941,8 @@
         </div>
     </div>
 
+    <!-- The shared AJAX widgets also work on a first anonymous visit. -->
+    <div hidden>{% csrf_token %}</div>
     <script>
     function toggleMobileNav() {
         var menu = document.getElementById('pub-mobile-menu');
@@ -995,6 +997,17 @@
         if (drawerBadge) drawerBadge.textContent = countNum;
     }
 
+    function publicCartText(value) {
+        return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function publicCartImageURL(value) {
+        if (typeof value !== 'string' || !value.trim()) return '';
+        try {
+            var url = new URL(value, window.location.href);
+            return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';
+        } catch (_) { return ''; }
+    }
     function renderCyberCart(cartData) {
         var body = document.getElementById('cyber-cart-body');
         if (!body) return;
@@ -1043,17 +1056,20 @@
 
         var html = '';
         cartData.items.forEach(function(item) {
-            var imgHtml = item.image_url
-                ? `<img src="${item.image_url}" alt="${item.name}" class="cyber-cart-item-img">`
+            if (!Number.isSafeInteger(item.product_id) || item.product_id <= 0 || !Number.isSafeInteger(item.quantity) || item.quantity <= 0) return;
+            var imageURL = publicCartImageURL(item.image_url);
+            var name = publicCartText(item.name);
+            var imgHtml = imageURL
+                ? `<img src="${publicCartText(imageURL)}" alt="${name}" class="cyber-cart-item-img">`
                 : `<div class="cyber-cart-item-img" style="display:flex;align-items:center;justify-content:center;color:#64748B;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg></div>`;
 
             html += `
                 <div class="cyber-cart-item">
                     ${imgHtml}
                     <div class="cyber-cart-item-info">
-                        <div class="cyber-cart-item-name" title="${item.name}">${item.name}</div>
+                        <div class="cyber-cart-item-name" title="${name}">${name}</div>
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-                            <span class="cyber-cart-item-price">${item.formatted_unit_price}</span>
+                            <span class="cyber-cart-item-price">${publicCartText(item.formatted_unit_price)}</span>
                             <div class="cyber-cart-qty-ctrl">
                                 <button type="button" class="cyber-cart-qty-btn" onclick="cyberCartUpdateQty(${item.product_id}, ${item.quantity - 1})" aria-label="Giảm">−</button>
                                 <span class="cyber-cart-qty-val">${item.quantity}</span>
@@ -1083,43 +1099,45 @@
         });
     }
 
+    var publicCartMutationPending = false;
+    // pending blocks checkout before POST; changed means reconcile using GET,
+    // even when the POST response was lost. Never replay an uncertain mutation.
+    async function mutatePublicCart(url, formData) {
+        if (publicCartMutationPending) return false;
+        publicCartMutationPending = true;
+        document.dispatchEvent(new CustomEvent('public-cart:pending'));
+        var controller = new AbortController();
+        var timeout = setTimeout(function () { controller.abort(); }, 10000);
+        var success = false;
+        try {
+            var response = await fetch(url, {method: 'POST', credentials: 'same-origin',
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken'), 'Accept': 'application/json'},
+                body: formData, signal: controller.signal});
+            if (!response.ok) throw new Error('cart_unavailable');
+            var data = await response.json();
+            if (!data.success || !data.cart) throw new Error('cart_rejected');
+            renderCyberCart(data.cart);
+            success = true;
+        } catch (_) {
+            var body = document.getElementById('cyber-cart-body');
+            if (body) body.textContent = 'Chưa xác nhận được thay đổi giỏ hàng. Hãy mở lại giỏ để kiểm tra; không gửi lại thao tác nếu chưa biết kết quả.';
+        } finally {
+            clearTimeout(timeout);
+            publicCartMutationPending = false;
+            document.dispatchEvent(new CustomEvent('public-cart:changed', {detail: {confirmed: success}}));
+        }
+        return success;
+    }
     function cyberCartUpdateQty(productId, newQty) {
-        var csrf = getCookie('csrftoken');
         var formData = new FormData();
         formData.append('quantity', newQty);
         formData.append('format', 'json');
-
-        fetch('/gio-hang/cap-nhat/' + productId + '/', {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': csrf,
-            },
-            body: formData,
-        })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            if (data.cart) renderCyberCart(data.cart);
-        });
+        return mutatePublicCart('/gio-hang/cap-nhat/' + productId + '/', formData);
     }
-
     function cyberCartRemoveItem(productId) {
-        var csrf = getCookie('csrftoken');
         var formData = new FormData();
         formData.append('format', 'json');
-
-        fetch('/gio-hang/xoa/' + productId + '/', {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': csrf,
-            },
-            body: formData,
-        })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            if (data.cart) renderCyberCart(data.cart);
-        });
+        return mutatePublicCart('/gio-hang/xoa/' + productId + '/', formData);
     }
 
 

@@ -57,6 +57,8 @@ def handle_order_tracking(request, user_query, q_lower):
 
     order = orders.filter(order_number__iexact=matched_code).first()
     if order:
+        detail_url = (f"/tai-khoan/don-hang/{order.order_number}/" if request.user.is_authenticated
+                      else f"/dat-hang-thanh-cong/{order.order_number}/")
         items_count = order.items.count()
         status_display = order.get_status_display() if hasattr(order, "get_status_display") else order.status
         total_vnd = format_vnd(order.total_amount)
@@ -68,7 +70,7 @@ def handle_order_tracking(request, user_query, q_lower):
             f"• **Số lượng sản phẩm:** {items_count} mặt hàng\n"
             f"• **Tổng giá trị thanh toán:** **{total_vnd}**\n\n"
             f"Quý khách có thể xem chi tiết hành trình vận chuyển và cập nhật mới nhất tại "
-            f"[Chi tiết đơn hàng](/tai-khoan/don-hang/{order.order_number}/)."
+            f"[Chi tiết đơn hàng]({detail_url})."
         )
         return {
             "reply": reply,

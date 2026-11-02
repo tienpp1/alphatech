@@ -1242,16 +1242,21 @@
         var badge = document.getElementById('header-cart-badge');
 
         fetch('/gio-hang/them/' + productId + '/?action=add_to_cart&quantity=1', {
-            method: 'GET',
+            method: 'POST',
             headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
             }
         })
         .then(function(res) {
-            if (res.ok) {
+            if (!res.ok) throw new Error('cart_unavailable');
+            return res.json();
+        })
+        .then(function(data) {
+            if (data.success) {
                 if (badge) {
-                    var currentCount = parseInt(badge.textContent.trim() || '0', 10);
-                    badge.textContent = currentCount + 1;
+                    badge.textContent = data.total_items;
                     badge.style.display = 'inline-block';
                 }
                 if (toastMsg) toastMsg.textContent = 'Đã thêm "' + productName + '" vào giỏ hàng!';
@@ -1262,11 +1267,12 @@
                     }, 3200);
                 }
             } else {
-                window.location.href = '/gio-hang/them/' + productId + '/';
+                throw new Error('cart_rejected');
             }
         })
         .catch(function() {
-            window.location.href = '/gio-hang/them/' + productId + '/';
+            if (toastMsg) toastMsg.textContent = 'Chưa xác nhận được thao tác thêm hàng. Vui lòng mở giỏ để kiểm tra trước khi thử lại.';
+            if (toast) { toast.setAttribute('role', 'alert'); toast.classList.add('show'); }
         });
     }
 </script>
