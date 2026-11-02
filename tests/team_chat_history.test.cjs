@@ -118,3 +118,19 @@ test('wrong-workspace or invalid history responses cannot corrupt cursor or visi
         assert.equal(h.ids.chatLoadOlder.disabled,false);
     }
 });
+
+for (const denialSource of ['poll', 'history']) test(`pending send preserves draft and shows terminal denial after revoked ${denialSource} and successful POST`,async()=>{
+    const h=harness();await tick();let release;
+    h.ids.chatInputMessage.value='draft awaiting confirmation';
+    h.setHandler((url,options)=>options.method==='POST'?new Promise(resolve=>release=resolve):Promise.resolve({ok:false,status:403}));
+    const pending=h.ids.chatForm.listeners.submit({preventDefault(){}});
+    assert.match(h.ids.chatSendStatus.textContent,/Đang gửi/);
+    if (denialSource === 'poll') { h.events.online();await tick(); } else { await older(h); }
+    release(response({ok:true,message_id:111,message:{text:'draft awaiting confirmation'},sender_name:'Employee',created_at:'12:00 02/11'}));
+    await pending;
+    assert.match(h.ids.chatSendStatus.textContent,/Quyền truy cập.*đăng nhập lại/);
+    assert.equal(h.ids.chatInputMessage.value,'draft awaiting confirmation');
+    assert.equal(h.ids.btnSendChat.disabled,true);
+    assert.equal(h.ids.chatLoadOlder.disabled,true);
+    assert.equal(rows(h).length,50);
+});

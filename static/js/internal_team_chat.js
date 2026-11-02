@@ -147,6 +147,7 @@
         } finally {
             sending = false;
             button.disabled = stopped;
+            if (stopped) sendStatus.textContent = 'Quyền truy cập đã thay đổi. Nội dung được giữ lại; vui lòng đăng nhập lại.';
         }
     });
     document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
