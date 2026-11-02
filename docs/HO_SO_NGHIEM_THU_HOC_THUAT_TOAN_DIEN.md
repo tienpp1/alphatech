@@ -1611,3 +1611,20 @@ production hoặc XGBoost tốt hơn trên dữ liệu doanh nghiệp thật; s�
 
 Đây là danh mục source; receipt local, CI, Render và Neon được ghi riêng sau
 thực thi, không tự suy ra PASS từ việc có file hoặc đổi tiến độ97.
+
+### Bổ sung inventory chuẩn bị bảo vệ 02/11/2026 — không thay sổ 97
+
+- `test_defense_public_flows.py` thuộc RETAIL COMMERCE/AUTH: khách mới có
+  CSRF, guest ownership, chữ ký bản chốt thanh toán, hai thứ tự race session,
+  giữ bản nháp và GET không được thêm giỏ hàng. Dữ liệu chỉ trên TEST riêng.
+- `test_defense_mapping_gis.py` thuộc DATA INTEGRATION & MAPPING/GIS:
+  Task canonical apply, kết quả partial/zero, workspace và che thông tin cá nhân.
+- `test_team_chat_history.py` thuộc TEAM CHAT: phân trang lịch sử, hai HTTP
+  client độc lập, tải lại hội thoại, cách ly và thu hồi quyền.
+- `test_forecast_backed_recommendations.py` thuộc TIME-SERIES FORECASTING/
+  ACTIONS & APPROVALS: đọc forecast đã lưu, nguồn đối chiếu quan sát thật,
+  lịch sử/metadata/ngày qua nửa đêm, advisory và chống trùng đồng thời.
+
+Đây là inventory, không là điểm chất lượng AI hoặc nghiệm thu browser. Kết quả
+chạy được ghi riêng trong DEFENSE_READINESS_2026_11_02.md; không cộng nhóm test
+chồng lặp và không sửa cấu trúc hoặc tiến độ checklist 97.

@@ -30,12 +30,13 @@ forecast advisory integration reads existing saved runs without training or SQL 
 
 ### Task 1: Public customer flow safety and checkout coherence
 
-**Files:** templates/public/base_public.html, checkout.html, products.html and product_detail.html as required; apps/public_web/alphatech_ai.py and cart view methods only if needed; tests/test_defense_public_flows.py; tests/js/public_defense_flows.test.js.
+**Files:** templates/public/base_public.html, checkout.html, products.html, home.html quick-add script and product_detail.html as required; apps/public_web/alphatech_ai.py, checkout_review.py and cart/checkout view methods as needed; tests/test_defense_public_flows.py; tests/js/public_defense_flows.test.js.
 **Interfaces:** Existing cart JSON API remains authoritative; dispatch a documented successful-cart-change event for checkout, without replaying uncertain POSTs. Existing guest success route remains ownership protected.
 
 - [ ] Write/execute failing fresh-cookie CSRF, drawer-injection, stale-summary and guest-link tests.
 - [ ] Bootstrap token through the shared shell; use safe DOM text/attributes/URLs; safely refresh the entire checkout review and gate its submit while unknown. Remove failed-POST GET fallback; report errors.
 - [ ] Preserve form drafts and fulfillment computations. Test failed update/no mutation, empty cart, latest totals, foreign guest denial and old regressions.
+- [ ] Verify signed UI review against locked server products before placement. A late cart POST cannot change a reviewed order; reject stale/missing/invalid review before business writes, retain submitted draft. Retire state-mutating GET after confirmed POST-only shipped-caller inventory. Version drawer reads against later mutations.
 - [ ] Run focused Django and actual shipped JS tests; capture output and obtain scoped review.
 
 ### Task 2: Mapping and internal GIS correctness

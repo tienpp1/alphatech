@@ -2,6 +2,21 @@
 
 Do not log cosmetic edits.
 
+## 2026-11-02 — Proposal-aligned defense repairs
+
+Public CSRF bootstrap, safe dynamic data rendering, synchronized checkout review
+and signed locked-product validation close confirmed customer-flow defects.
+Review rejection retains draft; JSON review GET does not mutate session; cart-add
+GET is retired after verifying shipped callers use POST. Existing outside-UI
+headless POST compatibility is explicit, not universal token enforcement.
+Task mapping assignment, truthful partial apply, explicit GIS workspace headers
+and PII permission gating preserve canonical/RBAC boundaries. Chat adds bounded
+older history with independent polling cursor and two-client regressions.
+Saved revenue forecasts now feed a provenance/quality-guarded advisory rule with
+historical opt-in, immutable comparison evidence and date-aware acceptance gate.
+No schema, grants, production transactions, Word or97ledger changes. Dated
+verification/limits: docs/DEFENSE_READINESS_2026_11_02.md.
+
 ## 2026-10-09 — Additional operational context (local, batch 2)
 
 Add source-reviewed order/stock, staging/mapping and service triage guides:

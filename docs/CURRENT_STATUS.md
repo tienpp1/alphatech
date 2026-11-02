@@ -1960,3 +1960,21 @@ SnapshotSHA/scope/in-memorymissing-disk14point parity đạt; đây là process
 kiểm chứng vớiNeon, không tự gán là API suy luận từ xa. Browseradmin đã đọc
 4chỉ tiêu/modelMA7/counter/cảnh báo thật. Chi tiếtvàgiới hạn ở báo cáo dated và
 receiptprivate, không đổi sổ97 hoặc tuyên bố mọi dữ liệu tương lai thắngMA7.
+
+## Chuẩn bị bảo vệ 02/11/2026 — source đã sửa, cổng phát hành riêng
+
+Đối chiếu đúng teacher_review_v2; bản Downloads (1) cùng SHA/byte. Giữ Word,
+workspace chính đang dirty và checklist97. Sửa fresh-guestCSRF, XSStext trong
+cart/import/mapping/GIS, signedcheckoutreview dưới productlocks/409giữdraft,
+GETcartadd405, JSONreviewGETreadonly chốngghiđè session, guesttrackinglink,
+Taskmapping.assigned_to, partialdiagnostics, GISselector vàstaffPIIgate.
+Chat thêm boundedbefore_id/history UI/haiHTTPclient; forecast nối ruleadvisory
+với savedrun/model/canonicalcomparison/qualityguards/historicaloptin, kiểm
+freshness lại lúcđọc/accept qua nửađêm. Không schema/migration/datareset,
+LLMAPI/modeltraining hoặc quyền mới. Source-only decisions/limits và focused
+receipts ở DEFENSE_READINESS_2026_11_02.md; full/CI/live là cổng riêng.
+
+Review từng nhóm đã sạch sau sửa; nguồn chuẩn bị whole-branch/source-freeze
+verification. HTTPbaseline12public/29mụcđọc mỗi manager/employee không5xx,
+RBACdenialsđúng; không browser hoặc bản sửa đã deploy. CUA/NodeREPL đều lỗi
+kernel-assets path trước khi thao tác UI, không dùng VM/HTTP giả visualUAT.

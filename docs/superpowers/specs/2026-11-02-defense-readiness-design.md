@@ -21,6 +21,17 @@ Preserve the structure and progress of the 97-item ledger.
    block submission while its amount/items are stale or unknown. Guest-owned
    tracking links must use the existing guest-session-owned confirmation page.
    Do not weaken CSRF or ownership, or silently mutate cart via failed-POST GET.
+   Bind actual browser checkout forms to a signed bounded/expiring server review
+   of items/quantities/prices/method/totals and verify it under product locks before
+   writes. GET after an aborted POST is not a settlement proof. A missing/invalid
+   issued review must fail closed, preserving contact draft and requiring review.
+   Legacy direct-POST clients outside the actual browser UI keep their old contract;
+   this is not a claim of universal review enforcement for all API clients.
+   Shipped cart-add callers are all POST; retire the legacy mutating GET with405.
+   Review issuance must not create/write a session; a missing session key yields
+   no usable token. The JSON cart/review GET uses a copied read-only cart snapshot,
+   not persisted stale-item cleanup. The explicit browser review query enforces
+   validation even if a legacy session marker is absent or overwritten.
 2. Data integration/mapping: fix Task assignment to its real assigned_to field;
    escape arbitrary source/preview/suggestion values; display partial and zero-row
    apply outcomes truthfully and retain rejection details.
