@@ -73,7 +73,7 @@ forecast advisory integration reads existing saved runs without training or SQL 
 **Files:** docs/DEFENSE_READINESS_2026_11_02.md (new); docs/CURRENT_STATUS.md; docs/CHANGELOG_AI.md; docs/PROJECT_CONTEXT.md only changed contracts; existing CI workflow only to include new regression commands.
 **Interfaces:** Dated source/route/Word/evidence matrix. No changes to approved Word or 97 ledger.
 
-- [ ] Run full test suite on isolated TEST DB with source fingerprints, all JS regressions, check/drift, configured security scans. Retain intermediate failures and fix causes.
+- [x] Run full test suite on isolated TEST DB with source fingerprints, all JS regressions, check/drift, configured security scans. Retain intermediate failures and fix causes.
 - [ ] Exercise real HTTP journeys and attempt browser customer/manager UAT; identify tooling/auth/provider gates distinctly.
 - [x] Fresh whole-branch review and regression verification of important findings.
 - [ ] Produce Vietnamese report with exact tested source/counts, repairs, proposal alignment and accepted scope exceptions. Commit/push/deploy only after evidence gates, keeping the dirty main workspace untouched.
@@ -109,3 +109,10 @@ Markdown as new scoped files here; isolated views/urls/AI/email and public links
       regressions on patched isolated TEST; fresh scoped review, update inventory/CI.
 - [ ] Rerun final full source-freeze and release gates after integration; clearly
       distinguish local/HTTP proof from unavailable browser UAT.
+
+Final integrated local full fbb85bb:1591/1591OK337.286s,892inputs unchanged,
+own randomizedTEST destroyed;JS73PASS and5transportgroups. No runtime/test/CI
+edits after this receipt. Remaining external push/CI/live/HTTP actions are recorded
+create-only under D:/AlphaTech_Private/defense_readiness_20261102, not assumed
+from these checkboxes. Browser initialization remains an explicitly unverified
+visual gate even when local/HTTP/release gates pass.

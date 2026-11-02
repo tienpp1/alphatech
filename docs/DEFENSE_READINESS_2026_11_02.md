@@ -142,11 +142,28 @@ nghiệp vụ, gọi forecast GET có thể provision config, logout thu hồi t
 lưu token/cookie/PII trong evidence. Timings một lượt không là load benchmark.
 Chi tiết: output/defense_http_smoke_20261102.json và report riêng.
 
-## Cổng kiểm chứng còn phải chốt trong phiên này
+## Bản tích hợp cuối và cổng phát hành
 
-Full source-freeze suite, toàn bộ JS, check/migration drift, security scan,
-whole-branch review, CI và deploy đúng SHA sẽ được ghi bằng receipt riêng bên
-dưới sau khi chạy; số test focused phía trên không tự thay các cổng đó.
+Full tại fbb85bb45e072a307e9d0cbf1c2c4871537bfad8 đã đạt **1591/1591**,
+337,286s, không skip;892tệp nguồn không đổi trong lượt. TESTaafe549c25df40c8
+tự hủy. Bằng chứng: output/defense_verification/20261102T024558Z/result.json,
+source_before.json và django.log. Đây là bản có cả chính sách1.1, không cộng
+các nhóm focused. Mật khẩu hasher nhanh và compatibility fixture legacy chỉ
+ở process TEST; runtime strict/RBAC không đổi. AggregateJS73/73PASS2146,5141ms,
+cùng5nhóm transport; security scan bản cuối Bandit0finding/0error và
+884file secret-pattern0finding. Không suy ra không còn mọi lỗ hổng.
+
+Sau lượt full chỉ cập nhật ba tài liệu bằng chứng/kế hoạch: báo cáo này,
+CURRENT_STATUS và plan; không đổi app/test/asset/CI/dependency. Các test tài liệu
+và framework/drift được kiểm lại riêng. Phiên bản phát hành có thể khác SHA
+full ở commit receipt-only; closure đối chiếu hash mã chạy với source_before.
+
+Push/CI/deploy đúng SHA và HTTP sau deploy là cổng bên ngoài riêng, không tự
+suy ra từ local. Kết quả cuối được lưu create-only tại
+D:/AlphaTech_Private/defense_readiness_20261102/BAO_CAO_BAO_VE_2026_11_02.md
+và closure_<SHA>.json sau khi cổng thực sự đạt; không dùng tên đường dẫn này
+làm bằng chứng trước khi tệp tồn tại. CI quality.yml là focused/coverage/security,
+không gọi đó là full-suite GitHub. Không thay đổi mô hình hoặc dữ liệu Neon.
 
 Browser UAT bị chặn bởi công cụ: CUA không ghi được kernel assets (path missing),
 reset/retry vẫn lỗi; Node REPL độc lập cũng không khởi tạo. Đó không phải HTTP500
