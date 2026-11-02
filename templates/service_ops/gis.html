@@ -245,6 +245,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+    const gisHeaders = {"X-Requested-With": "XMLHttpRequest", "X-Workspace-ID": "{{ active_workspace.id|escapejs }}"};
+    function escapeGisHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[character]));
+    }
     // 1. Initialize Map
     const map = L.map("service-map", {
         center: [10.7769, 106.7009],
@@ -277,7 +283,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (prio) url += `priority=${prio}&`;
         if (stat) url += `status=${stat}&`;
 
-        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        fetch(url, { headers: gisHeaders })
             .then(res => res.json())
             .then(res => {
                 ticketLayerGroup.clearLayers();
@@ -306,20 +312,20 @@ document.addEventListener("DOMContentLoaded", function() {
                     marker.bindPopup(`
                         <div style="min-width: 240px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <strong style="color: #60a5fa; font-size: 0.95rem;">${props.request_number}</strong>
-                                <span class="badge ${pinClass}" style="font-size: 0.7rem;">${props.priority}</span>
+                                <strong style="color: #60a5fa; font-size: 0.95rem;">${escapeGisHtml(props.request_number)}</strong>
+                                <span class="badge ${pinClass}" style="font-size: 0.7rem;">${escapeGisHtml(props.priority)}</span>
                             </div>
-                            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">${props.title}</div>
+                            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">${escapeGisHtml(props.title)}</div>
                             <div style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 6px;">
-                                Phân loại: <span class="badge bg-gray-800" style="color: #6ee7b7;">${props.category_display}</span>
+                                Phân loại: <span class="badge bg-gray-800" style="color: #6ee7b7;">${escapeGisHtml(props.category_display)}</span>
                             </div>
                             <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 0.8rem;">
-                                <div>🏢 Khách hàng: <strong>${props.customer_name}</strong></div>
-                                <div>🔧 Phân công: <strong>${props.assigned_employee_name}</strong></div>
-                                <div>⏱️ Trạng thái: <span class="badge bg-primary" style="font-size: 0.7rem;">${props.status_display}</span></div>
+                                <div>🏢 Khách hàng: <strong>${escapeGisHtml(props.customer_name)}</strong></div>
+                                <div>🔧 Phân công: <strong>${escapeGisHtml(props.assigned_employee_name)}</strong></div>
+                                <div>⏱️ Trạng thái: <span class="badge bg-primary" style="font-size: 0.7rem;">${escapeGisHtml(props.status_display)}</span></div>
                                 ${props.is_breached ? '<div style="color: #ef4444; font-weight: bold; margin-top: 4px;">⚠️ ĐÃ VI PHẠM SLA</div>' : ''}
                             </div>
-                            <div style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 10px;">📍 ${props.customer_address}</div>
+                            <div style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 10px;">📍 ${escapeGisHtml(props.customer_address)}</div>
                             <button onclick="inspectNearbyTechnicians(${props.ticket_id})" class="btn btn-sm btn-primary" style="width: 100%; font-size: 0.8rem;">
                                 📍 Tìm Kỹ sư Gần nhất
                             </button>
@@ -333,7 +339,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 3. Load Technicians & Coverage Envelopes
     function loadTechnicians() {
-        fetch("/api/v1/gis/service/technicians/", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        fetch("/api/v1/gis/service/technicians/", { headers: gisHeaders })
             .then(res => res.json())
             .then(res => {
                 techLayerGroup.clearLayers();
@@ -357,14 +363,14 @@ document.addEventListener("DOMContentLoaded", function() {
                     const marker = L.marker([lat, lon], { icon: techIcon });
                     marker.bindPopup(`
                         <div style="min-width: 220px;">
-                            <div style="font-weight: bold; color: #60a5fa; font-size: 0.95rem;">${props.full_name} (${props.code})</div>
-                            <div style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 6px;">📞 ${props.phone}</div>
+                            <div style="font-weight: bold; color: #60a5fa; font-size: 0.95rem;">${escapeGisHtml(props.full_name)} (${escapeGisHtml(props.code)})</div>
+                            <div style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 6px;">📞 ${escapeGisHtml(props.phone)}</div>
                             <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 0.8rem;">
-                                <div>💼 Đơn giá: <strong style="color: #34d399;">${props.formatted_rate}</strong></div>
+                                <div>💼 Đơn giá: <strong style="color: #34d399;">${escapeGisHtml(props.formatted_rate)}</strong></div>
                                 <div>📊 Chỉ số tải: <strong>${props.current_workload_score.toFixed(1)}</strong></div>
                                 <div>⚡ Trạng thái: <span class="badge ${props.is_available ? 'bg-success' : 'bg-danger'}">${props.is_available ? 'Sẵn sàng' : 'Bận'}</span></div>
                             </div>
-                            <div style="font-size: 0.75rem; color: #cbd5e1;">Kỹ năng: <em>${props.skills.join(', ')}</em></div>
+                            <div style="font-size: 0.75rem; color: #cbd5e1;">Kỹ năng: <em>${escapeGisHtml(props.skills.join(', '))}</em></div>
                         </div>
                     `);
                     techLayerGroup.addLayer(marker);
@@ -395,7 +401,7 @@ document.addEventListener("DOMContentLoaded", function() {
         contentPanel.innerHTML = `<div class="text-center py-4 text-sm text-gray-400">Đang thực thi truy vấn PostGIS ST_DWithin & ST_Distance...</div>`;
 
         fetch(`/api/v1/gis/service/nearby-technicians/?request_id=${ticketId}&radius_km=10`, {
-            headers: { "X-Requested-With": "XMLHttpRequest" },
+            headers: gisHeaders,
         })
         .then(res => res.json())
         .then(res => {
@@ -449,19 +455,19 @@ document.addEventListener("DOMContentLoaded", function() {
                 html += `
                     <div class="proximity-card">
                         <div class="flex justify-between items-center mb-1">
-                            <span class="font-bold text-gray-200">#${idx + 1} ${cand.full_name}</span>
+                            <span class="font-bold text-gray-200">#${idx + 1} ${escapeGisHtml(cand.full_name)}</span>
                             <span class="badge bg-warning text-black" style="font-size: 0.75rem; font-weight: bold;">
-                                📍 ${cand.distance_km} km
+                                📍 ${escapeGisHtml(cand.distance_km)} km
                             </span>
                         </div>
                         <div class="text-xs text-gray-400 mb-1">
-                            Mã: ${cand.code} | Đơn giá: <span class="text-emerald-400">${cand.formatted_rate}</span>
+                            Mã: ${escapeGisHtml(cand.code)} | Đơn giá: <span class="text-emerald-400">${escapeGisHtml(cand.formatted_rate)}</span>
                         </div>
                         <div class="flex justify-between text-xs text-gray-400 mb-1">
                             <span>Chỉ số tải: <strong>${cand.current_workload_score.toFixed(1)}</strong></span>
                             <span>Trạng thái: <strong class="text-green-400">Sẵn sàng</strong></span>
                         </div>
-                        <div class="text-xs text-gray-500 truncate">Kỹ năng: ${cand.skills.join(', ')}</div>
+                        <div class="text-xs text-gray-500 truncate">Kỹ năng: ${escapeGisHtml(cand.skills.join(', '))}</div>
                     </div>
                 `;
             });

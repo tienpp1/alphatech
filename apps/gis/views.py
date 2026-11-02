@@ -72,7 +72,7 @@ class RetailCustomersGeoJSONAPIView(APIView):
 
         # Check PII permission
         can_view_pii = False
-        if request.user.is_superuser or request.user.is_staff:
+        if request.user.is_superuser:
             can_view_pii = True
         else:
             membership = getattr(request, "active_membership", None) or (

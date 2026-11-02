@@ -175,6 +175,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+    const gisHeaders = {"X-Requested-With": "XMLHttpRequest", "X-Workspace-ID": "{{ active_workspace.id|escapejs }}"};
+    function escapeGisHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[character]));
+    }
     // 1. Initialize Leaflet Map centered on Ho Chi Minh City
     const map = L.map("retail-map", {
         center: [10.7769, 106.7009],
@@ -208,7 +214,7 @@ document.addEventListener("DOMContentLoaded", function() {
             url += `?start_date=${past.toISOString().split('T')[0]}`;
         }
 
-        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        fetch(url, { headers: gisHeaders })
             .then(res => res.json())
             .then(res => {
                 branchLayerGroup.clearLayers();
@@ -232,14 +238,14 @@ document.addEventListener("DOMContentLoaded", function() {
                     const marker = L.marker([lat, lon], { icon: branchIcon });
                     marker.bindPopup(`
                         <div style="min-width: 200px;">
-                            <div style="font-weight: bold; font-size: 1rem; color: #60a5fa; margin-bottom: 4px;">${props.name}</div>
-                            <div style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 8px;">Mã: ${props.code} | Khu vực: ${props.region}</div>
+                            <div style="font-weight: bold; font-size: 1rem; color: #60a5fa; margin-bottom: 4px;">${escapeGisHtml(props.name)}</div>
+                            <div style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 8px;">Mã: ${escapeGisHtml(props.code)} | Khu vực: ${escapeGisHtml(props.region)}</div>
                             <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 8px;">
-                                <div style="font-size: 0.85rem;">💰 Doanh thu: <strong style="color: #34d399;">${props.formatted_revenue}</strong></div>
-                                <div style="font-size: 0.85rem;">📦 Đơn hàng: <strong>${props.order_count}</strong></div>
+                                <div style="font-size: 0.85rem;">💰 Doanh thu: <strong style="color: #34d399;">${escapeGisHtml(props.formatted_revenue)}</strong></div>
+                                <div style="font-size: 0.85rem;">📦 Đơn hàng: <strong>${escapeGisHtml(props.order_count)}</strong></div>
                                 <div style="font-size: 0.85rem;">📊 Đơn TB: <strong>${formatVND(props.average_order_value)}</strong></div>
                             </div>
-                            <div style="font-size: 0.75rem; color: #9ca3af;">📍 ${props.address}</div>
+                            <div style="font-size: 0.75rem; color: #9ca3af;">📍 ${escapeGisHtml(props.address)}</div>
                         </div>
                     `);
                     branchLayerGroup.addLayer(marker);
@@ -255,7 +261,7 @@ document.addEventListener("DOMContentLoaded", function() {
             url += `?segment=${currentSegment}`;
         }
 
-        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        fetch(url, { headers: gisHeaders })
             .then(res => res.json())
             .then(res => {
                 customerLayerGroup.clearLayers();
@@ -282,10 +288,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
                     marker.bindPopup(`
                         <div>
-                            <div style="font-weight: bold; color: ${color};">${props.name}</div>
-                            <div style="font-size: 0.8rem; color: #9ca3af;">Mã: ${props.code}</div>
+                            <div style="font-weight: bold; color: ${color};">${escapeGisHtml(props.name)}</div>
+                            <div style="font-size: 0.8rem; color: #9ca3af;">Mã: ${escapeGisHtml(props.code)}</div>
                             <div style="font-size: 0.8rem; margin-top: 4px;">Phân khúc: <span class="badge" style="background: ${color}; color: black;">${segText}</span></div>
-                            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">📍 ${props.address}</div>
+                            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">📍 ${escapeGisHtml(props.address)}</div>
                         </div>
                     `);
                     customerLayerGroup.addLayer(marker);
@@ -303,7 +309,7 @@ document.addEventListener("DOMContentLoaded", function() {
             url += `?start_date=${past.toISOString().split('T')[0]}`;
         }
 
-        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        fetch(url, { headers: gisHeaders })
             .then(res => res.json())
             .then(res => {
                 const rankingContainer = document.getElementById("branch-ranking-list");
@@ -323,12 +329,12 @@ document.addEventListener("DOMContentLoaded", function() {
                     html += `
                         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px; border-radius: 6px;">
                             <div class="flex justify-between items-center mb-1">
-                                <span class="font-bold text-gray-200">#${idx + 1} ${b.name}</span>
-                                <span class="badge bg-primary" style="font-size: 0.7rem;">${b.revenue_share_pct}% thị phần</span>
+                                <span class="font-bold text-gray-200">#${idx + 1} ${escapeGisHtml(b.name)}</span>
+                                <span class="badge bg-primary" style="font-size: 0.7rem;">${escapeGisHtml(b.revenue_share_pct)}% thị phần</span>
                             </div>
                             <div class="flex justify-between text-xs text-gray-400">
                                 <span>Doanh thu: <strong class="text-emerald-400">${formatVND(b.revenue)}</strong></span>
-                                <span>Đơn hàng: <strong>${b.order_count}</strong></span>
+                                <span>Đơn hàng: <strong>${escapeGisHtml(b.order_count)}</strong></span>
                             </div>
                         </div>
                     `;

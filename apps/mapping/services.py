@@ -592,7 +592,7 @@ def apply_mapping_to_domain(
 
                     task = Task.objects.create(
                         service_request=sr,
-                        assigned_employee=assigned_tech,
+                        assigned_to=assigned_tech,
                         title=str(data["title"]).strip(),
                         status=data.get("status", TaskStatus.PENDING),
                         estimated_duration_minutes=int(data.get("estimated_duration", 60)),
