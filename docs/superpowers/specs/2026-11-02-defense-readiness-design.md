@@ -125,3 +125,15 @@ Publish this narrow version as AT-DEMO-1.1 dated02Nov, preserving original1.0
 hashes in evidence and leaving dirty-main files intact. Public routes stay GET/
 HEAD-only; new email snapshots may carry links/version, but old dedup material
 and retry snapshots must remain unchanged. No schema or97ledger changes.
+
+## Explicit operational exception and actual-browser follow-up
+
+Owner approved exactly2existing EMPLOYEE readgrants after live source-vs-role
+drift was proven; add-only audited reconciliation, no customer memberships,
+management rights or resets. This supersedes only the original no-grants scope
+for those two codes, not general authority to change roles.
+
+InstalledChrome headless is available as a separate browser test runner despite
+nativeCUA kernel failure. Record viewport-emulated versus physical-device limits.
+Its retry-hidden CSS finding is fixed only for the existing ID+[hidden] control,
+preserving failed-request visibility, submit gate and all animation/other styling.

@@ -18,6 +18,9 @@ forecast advisory integration reads existing saved runs without training or SQL 
 - New tests reproduce actual defects RED before fixes; retain old tests/assertions.
 - One heavy test/ML job at a time; root alone commits/releases and edits shared docs.
 - Accepted no-live-LLM, historical data, local storage and Render Free boundaries remain.
+- Exception explicitly approved02Nov after live readback: add only existing
+  service.view_task/view_schedule to globalEMPLOYEE, with reviewed read-only
+  plan, protected-state checks, atomic audit and no other grant/membership write.
 
 ## Review Focus
 
@@ -116,3 +119,16 @@ edits after this receipt. Remaining external push/CI/live/HTTP actions are recor
 create-only under D:/AlphaTech_Private/defense_readiness_20261102, not assumed
 from these checkboxes. Browser initialization remains an explicitly unverified
 visual gate even when local/HTTP/release gates pass.
+
+### Browser-observed follow-up after first live release
+
+Alternative installedChrome headless enabled actual desktop/mobile-size checks,
+not interactive Windows or physicalphone. Four scenarios found only retry CSS
+visibility defect (62/64); preserve driver-error evidence and do not reset accounts.
+
+- [x] Diagnose hiddenattribute versus authorbuttonCSS in actual browser, scoped
+      temporaryCSS/error/retry/recovery hypothesis12PASS; source/render RED→GREEN.
+- [x] Restore explicitly approved2EMPLOYEEreadgrants with atomic audit113,
+      preserving all other grants/userflags/memberships, no-op retry verified.
+- [ ] Verify the final scoped CSS/test source with fresh full/CI/live/HTTP/browser
+      receipts before closure; do not reuse first-live or hypothesis evidence.

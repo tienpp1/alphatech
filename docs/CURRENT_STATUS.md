@@ -2006,3 +2006,18 @@ chỉreceipt-docs/plan, khôngđổiapp/test/assets/CI/dependencies. CổngCI/de
 HTTPsaupháthành phảiđốichiếuSHA/receiptversioned tại privateclosure được nêu
 trongDEFENSE_READINESS_2026_11_02.md. Browsertoolvẫnlỗikernelassetspathmissing;
 khônggánvisualUAT hoặcproductioncertification. Sổ97/Word/mainowneredits giữ nguyên.
+
+Bổ sung sau deploy06e9d62: CIfeature41380138662/main41380888222đềusuccess,
+RenderFree dep-dbjvrfgu01pc738lb1g0live/health200. HTTP94requestcó2lỗiđọc
+EMPLOYEEtasks/schedules403, khôngđổiassertionđểlàmxanh. Ownerduyệtthêmđúng
+service.view_task/view_schedule choglobalEMPLOYEE; atomicadd2grant/audit113,
+users/membership/othergrantsgiữnguyên, retryNOOPkhôngauditmới; profileliveđã
+có2readrights/khôngmanage/assign. Operator19TESTcasesđạt; receiptprivate.
+
+KênhCUA/Windowsvẫnlỗinhưng ChromeCLIheadlessphiênriêngđãchạyđược:
+4scenario/64assertion62PASS+2lỗicùngretryhiddenCSS ởdesktop/mobile-size390.
+Video phát,cart/tổng/phí/draft,managerlogin/chatpoll/historyexhaustion/5trang
+nội bộđạt. Drivercredentialparserbanđầusaiđãđốichiếu/sửa, khôngresetaccount.
+CSSscopedẩnretrykhi[hidden], RED1→focused57/57/JS22PASS; hypothesisChrome12/12
+giữđượcerror/retry/recovery, chưalàdeployproof. BảnCSScuốichờfull/CI/live/
+HTTP94/browserreceiptmới; khônggán62/64là100%hoặcmobileemulationlàphoneUAT.

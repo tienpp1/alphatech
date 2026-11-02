@@ -25,6 +25,17 @@ class DefensePublicFlowTests(TestCase):
         cls.order = Order.objects.create(workspace=cls.workspace, customer=customer,
             order_number="ORD-20261102-GUEST", order_date=timezone.localdate(), order_timestamp=timezone.now(), total_amount=125000)
 
+    def test_checkout_retry_obeys_hidden_state_despite_button_display_css(self):
+        self.client.post(f"/gio-hang/them/{self.product.pk}/", {"quantity": 1})
+        response = self.client.get("/thanh-toan/")
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('id="checkout-summary-retry"', html)
+        self.assertIsNotNone(
+            re.search(r"#checkout-summary-retry\[hidden\]\s*\{[^}]*display\s*:\s*none\s*!important\s*;", html),
+            "The checkout retry button must honor hidden even when button classes set display.",
+        )
+
     def test_fresh_public_pages_bootstrap_csrf_for_guest_copilot(self):
         for path in ("/", "/san-pham/", "/dich-vu/", "/gioi-thieu/"):
             with self.subTest(path=path):

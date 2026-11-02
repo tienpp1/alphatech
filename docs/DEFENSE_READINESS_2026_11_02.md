@@ -163,13 +163,50 @@ suy ra từ local. Kết quả cuối được lưu create-only tại
 D:/AlphaTech_Private/defense_readiness_20261102/BAO_CAO_BAO_VE_2026_11_02.md
 và closure_<SHA>.json sau khi cổng thực sự đạt; không dùng tên đường dẫn này
 làm bằng chứng trước khi tệp tồn tại. CI quality.yml là focused/coverage/security,
-không gọi đó là full-suite GitHub. Không thay đổi mô hình hoặc dữ liệu Neon.
+không gọi đó là full-suite GitHub. Không thay đổi model/kết quả dự báo hoặc giao
+dịch; ngoại lệ hai quyền đọc EMPLOYEE được chủ dự án duyệt được ghi rõ dưới đây.
 
 Browser UAT bị chặn bởi công cụ: CUA không ghi được kernel assets (path missing),
 reset/retry vẫn lỗi; Node REPL độc lập cũng không khởi tạo. Đó không phải HTTP500
 của dự án. Không dùng HTTP/VM để giả mạo browser hoặc khẳng định giao diện mượt
 trên điện thoại. Cần kiểm visual sau khi công cụ hoạt động lại; không yêu cầu
 restart ứng dụng giữa tác vụ nặng vì lần trước đã gián đoạn tiến trình.
+
+## Bổ sung từ Chrome thật và phân quyền production
+
+Release06e9d62 đã có CI nhánh41380138662 và main41380888222 cùng success;
+RenderFree dep-dbjvrfgu01pc738lb1g0 live đúng SHA, health200. Probe94request
+khách/manager/employee có2assertion chưa đạt: EMPLOYEE tasks/schedules403.
+Không đổi kỳ vọng thành403 để làm xanh. Đối chiếu auth/me và plan chỉ đọc cho
+thấy roleEMPLOYEE thiếu2grant nguồn seed đã có. Chủ dự án đồng ý rõ việc thêm
+service.view_task/service.view_schedule cho role dùng chung; chỉ thêm2M2Mrow,
+giữ mọi grant cũ/userflags/membership và auditSYSTEM_JOB113. Retry no-op không
+thêm audit; profile thực tế đã có2quyền đọc, vẫn không có manage/assign.
+Plan/apply/19testoperator/ảnh hưởng1active membership mỗi2workspace nằm ở
+private/employee_role_sync; không reset hoặc thay dữ liệu bán hàng.
+
+Theo yêu cầu thử cách khác, đã dùng Chrome có sẵn156.0.8078.76 qua Playwright
+CLI headless, phiên riêng không đọc profile/cookie của người dùng. Desktop1365
+và mobile-size390 kiểm4scenario,64assertion:62đạt,2lỗi cùng một nút retry.
+Video nền phát thật, đổi giỏ/tổng/phí/draft đúng; manager login và2poll chat
+giữ draft, history3tin/exhausted,5trang nội bộ đọc được ở hai kích thước.
+Không lỗi JS/HTTP trong lượt cuối; mobile emulation không là điện thoại thật.
+Không gửi đơn/email/chat/bản tin/RAG/approval; chỉ giỏ phiên guest và login.
+
+Hai lần login đầu lỗi do parser credential của driver, không phải tài khoản
+hoặc app; đã sửa parser theo block chính xác, giữ nguyên kết quả lỗi cũ. Không
+reset mật khẩu. Headercart là link sang trang giỏ theo hợp đồng hiện có, nên
+không gọi hàm ẩn để giả kiểm drawer ngay trên checkout. >50tin chat live chưa
+được dùng; testcase123tin vẫn là TEST riêng, không sản xuất100tin trên production.
+
+Lỗi retry: hidden=true nhưng stylesheet nút ép display:flex. CSS sửa chỉ
+`#checkout-summary-retry[hidden]`, không đổi animation/logic. Source/render RED1
+được giữ, focused57/57OK7,444s vàJS22/22PASS228,7732ms sau sửa. Chrome thử CSS
+tạm thời12/12: thành công ẩn nút; lỗi GET thật thì hiện retry/chặn submit/xóa
+token; khôi phục mạng và click retry thì phục hồi. Đây là hypothesis chưa deploy,
+không dùng nó thay kiểm browser sau phát hành. Full/CI/live/probe/browser của
+bản CSS cuối sẽ có receipt riêng trong hồ sơ private; không mượn1591 hoặc
+62/64 để gọi mọi cổng hoàn thành.
 
 ## Quyết định phạm vi vẫn giữ nguyên
 

@@ -1363,3 +1363,13 @@ not recorded as success; a fresh release must verify the runtime repair first.
 - New transactional email snapshots reference public policy without changing
   dedup inputs or old retry snapshots. No internal Knowledge lookup, schema or
   97-item ledger changes; runtime/full/deployment evidence remains separate.
+
+## 2026-11-02 — Owner-approved production EMPLOYEE read-grant reconciliation
+
+- Live readback found the existing global EMPLOYEE role lacked the two read
+  grants already defined by source seed policy. After explicit owner approval,
+  add only service.view_task/service.view_schedule; preserve every other grant,
+  user flag and workspace membership. No management/assignment permission added.
+- Scoped atomic SYSTEM_JOB audit113 records before/after and source/plan scope;
+  retry is no-op without another audit. This is configuration reconciliation,
+  not a new permission model or schema migration; customer/Google isolation stays.

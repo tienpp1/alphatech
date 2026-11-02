@@ -25,6 +25,8 @@
 .display-none { display: none; }
 .shipping-free { color: #10B981; font-family: var(--pub-font-mono); }
 .shipping-standard { color: var(--pub-text-heading); font-family: var(--pub-font-mono); }
+/* Button display styles must not override the retry control's hidden state. */
+#checkout-summary-retry[hidden] { display: none !important; }
 </style>
 <!-- Page Hero Banner -->
 <div class="page-hero-banner">
