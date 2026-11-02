@@ -270,11 +270,18 @@
     <!-- Right Main Chat Window -->
     <div class="chat-main-window">
         <div id="chatConnectionStatus" role="status" aria-live="polite" style="padding: 10px 18px; color: #cbd5e1;">Đang kết nối kênh trao đổi…</div>
+        <div style="padding: 0 18px 10px;">
+            <button type="button" id="chatLoadOlder" class="btn btn-secondary"
+                    aria-controls="chatMessagesStream" aria-describedby="chatHistoryStatus" aria-busy="false"
+                    data-has-older="{{ has_older_messages|yesno:'true,false' }}"{% if not has_older_messages %} disabled{% endif %}>Tải tin nhắn cũ</button>
+            <span id="chatHistoryStatus" role="status" aria-live="polite">{% if not has_older_messages %}Đã hiển thị toàn bộ lịch sử hội thoại.{% endif %}</span>
+        </div>
         <!-- Messages Stream -->
         <div id="chatMessagesStream" class="chat-messages-container"
              data-workspace-id="{{ active_workspace.id }}"
              data-user-id="{{ request.user.id|default:'0' }}"
-             data-latest-id="{{ latest_message_id|default:'0' }}">
+             data-latest-id="{{ latest_message_id|default:'0' }}"
+             data-oldest-id="{{ oldest_message_id|default:'0' }}">
             {% if messages_list %}
                 {% for m in messages_list %}
                 <div class="chat-bubble-row {% if m.sender.id == request.user.id %}mine{% else %}theirs{% endif %}" data-msg-id="{{ m.id }}">

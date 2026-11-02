@@ -300,7 +300,8 @@ def bulletin_create_api(request):
 def team_chat_messages_api(request):
     """
     GET /api/v1/notifications/chat/messages/?workspace_id=...&since_id=...
-    Returns team chat messages for incremental synchronization / polling.
+    Or use before_id (positive, mutually exclusive) for bounded older history.
+    Returns chronological messages and independent page metadata.
     """
     valid, err_resp = _verify_internal_user(request)
     if not valid:
@@ -311,11 +312,22 @@ def team_chat_messages_api(request):
     if not target_ws:
         return JsonResponse({"error": "Không tìm thấy hoặc không có quyền truy cập workspace."}, status=403)
 
-    since_id = request.GET.get("since_id")
-    since_id_int = int(since_id) if since_id and str(since_id).isdigit() else None
+    if "since_id" in request.GET and "before_id" in request.GET:
+        return JsonResponse({"error": "Chỉ được chọn một hướng tải tin nhắn."}, status=400)
+    cursors = {"since_id": None, "before_id": None}
+    for name, minimum in (("since_id", 0), ("before_id", 1)):
+        if name not in request.GET:
+            continue
+        raw = request.GET[name]
+        if (not raw or len(raw) > 19 or not raw.isascii() or not raw.isdecimal()
+                or not minimum <= int(raw) <= 9223372036854775807):
+            return JsonResponse({"error": "Mốc tin nhắn không hợp lệ."}, status=400)
+        cursors[name] = int(raw)
+    since_id_int = cursors["since_id"]
 
     try:
-        msgs = get_recent_team_messages(target_ws, request.user, limit=50, since_id=since_id_int)
+        msgs = get_recent_team_messages(target_ws, request.user, limit=50, **cursors)
+        has_older = bool(msgs and get_recent_team_messages(target_ws, request.user, limit=1, before_id=msgs[0].id))
     except PermissionDenied:
         return JsonResponse({"error": "Bạn không có quyền truy cập cuộc trao đổi này."}, status=403)
 
@@ -338,6 +350,8 @@ def team_chat_messages_api(request):
         "workspace_id": str(target_ws.id),
         "messages": items,
         "latest_id": items[-1]["id"] if items else since_id_int or 0,
+        "oldest_id": items[0]["id"] if items else 0,
+        "has_older": has_older,
     })
 
 

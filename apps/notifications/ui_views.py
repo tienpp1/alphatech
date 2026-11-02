@@ -265,6 +265,10 @@ def team_chat_ui_view(request):
                 messages.error(request, "Nội dung tin nhắn không hợp lệ.")
 
     messages_list = get_recent_team_messages(target_workspace, request.user, limit=50)
+    oldest_message_id = messages_list[0].id if messages_list else 0
+    has_older_messages = bool(messages_list and get_recent_team_messages(
+        target_workspace, request.user, limit=1, before_id=oldest_message_id,
+    ))
     colleagues = get_workspace_colleagues(target_workspace)
 
     context = {
@@ -273,5 +277,7 @@ def team_chat_ui_view(request):
         "messages_list": messages_list,
         "colleagues": colleagues,
         "latest_message_id": messages_list[-1].id if messages_list else 0,
+        "oldest_message_id": oldest_message_id,
+        "has_older_messages": has_older_messages,
     }
     return render(request, "notifications/team_chat.html", context)

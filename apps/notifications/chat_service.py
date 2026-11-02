@@ -60,14 +60,26 @@ def get_recent_team_messages(
     user=None,
     limit: int = 50,
     since_id: Optional[int] = None,
+    before_id: Optional[int] = None,
 ) -> List[TeamChatMessage]:
     """
     Retrieves chronological messages for the workspace.
     If since_id is provided, returns only messages newer than since_id (for live polling).
+    If before_id is provided instead, returns the nearest older page, still chronological.
+    All pages are bounded to at most 50 messages.
     Raises PermissionDenied if a user is supplied and has no active membership in the workspace.
     """
     if user is not None and not verify_chat_access(user, workspace):
         raise PermissionDenied("Bạn không có quyền truy cập kênh trao đổi của không gian làm việc này.")
+
+    if since_id is not None and before_id is not None:
+        raise ValueError("Chỉ được chọn một hướng tải tin nhắn.")
+    for cursor, minimum in ((since_id, 0), (before_id, 1)):
+        if cursor is not None and (type(cursor) is not int or not minimum <= cursor <= 9223372036854775807):
+            raise ValueError("Mốc tin nhắn không hợp lệ.")
+    if type(limit) is not int or limit <= 0:
+        raise ValueError("Số lượng tin nhắn không hợp lệ.")
+    limit = min(limit, 50)
 
     qs = TeamChatMessage.objects.filter(workspace=workspace).select_related("sender")
 
@@ -75,6 +87,9 @@ def get_recent_team_messages(
     # edited independently, otherwise a page can skip messages permanently.
     if since_id is not None:
         return list(qs.filter(id__gt=since_id).order_by("id")[:limit])
+
+    if before_id is not None:
+        qs = qs.filter(id__lt=before_id)
 
     # Default initial load: get latest `limit` messages in chronological order in 1 query
     messages = list(qs.order_by("-id")[:limit])
