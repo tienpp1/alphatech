@@ -29,7 +29,7 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.http import JsonResponse, HttpResponse
 from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_encode, urlsafe_base64_decode
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_safe
 from django.views.decorators.debug import sensitive_post_parameters
 
 from apps.accounts.models import User
@@ -76,6 +76,23 @@ from apps.public_web.fulfillment import FulfillmentError, allocate_home_delivery
 from apps.public_web.checkout_review import issue_checkout_review, checkout_review_matches, checkout_review_required
 
 logger = logging.getLogger(__name__)
+
+
+@require_safe
+def public_policy_view(request, policy_kind="all"):
+    """Public source-reviewed text; no SOP retrieval or business data writes."""
+    from .policies import POLICIES, POLICY_VERSION, POLICY_DATE, POLICY_SCOPE, POLICY_NOTICE
+    pages = [item for item in POLICIES if policy_kind == "all" or item["key"] == policy_kind]
+    if not pages:
+        from django.http import Http404
+        raise Http404
+    title = "Bộ chính sách dành cho đồ án" if policy_kind == "all" else pages[0]["title"]
+    return render(request, "public/policy.html", {
+        "page_title": title, "active_nav": "policies", "policy_kind": policy_kind,
+        "policy_pages": pages, "policy_version": POLICY_VERSION, "policy_date": POLICY_DATE,
+        "policy_scope": POLICY_SCOPE, "policy_notice": POLICY_NOTICE,
+    })
+
 
 EMAIL_VERIFICATION_SALT = "public_web.email_verification.v1"
 SERVICE_SUBMISSION_SALT = "public_web.service_submission.v1"

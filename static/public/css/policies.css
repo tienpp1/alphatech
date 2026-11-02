@@ -1,0 +1,22 @@
+.policy-layout { max-width: 1160px; padding-bottom: 7rem; }
+.policy-header { max-width: 76ch; margin: 0 auto 2rem; }
+.policy-header h1 { color: var(--pub-text-heading); font-size: clamp(1.7rem, 4vw, 2.5rem); line-height: 1.25; }
+.policy-eyebrow { color: var(--pub-primary); font-weight: 700; }
+.policy-header p, .policy-content p { line-height: 1.8; color: var(--pub-text-body); }
+.policy-notice { padding: 1rem 1.25rem; border-left: 4px solid var(--pub-primary); background: var(--pub-bg-subtle); border-radius: 0 8px 8px 0; }
+.policy-pages { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+.policy-pages a, .policy-toc a { display: inline-block; padding: .6rem 0; }
+.policy-layout a { color: var(--pub-primary); text-decoration: underline; text-underline-offset: .2em; }
+.policy-layout a:focus-visible { outline: 3px solid var(--pub-primary); outline-offset: 4px; border-radius: 3px; }
+.policy-pages a[aria-current] { font-weight: 800; }
+.policy-toc { padding: 1.25rem; border: 1px solid var(--pub-border); border-radius: 12px; margin: 0 auto 2rem; max-width: 76ch; }
+.policy-toc h2, .policy-content h2 { color: var(--pub-text-heading); font-size: 1.45rem; }
+.policy-toc h3, .policy-content h3 { color: var(--pub-text-heading); font-size: 1.12rem; line-height: 1.5; }
+.policy-toc ol { list-style: none; margin: 0; padding: 0; }
+.policy-content { max-width: 76ch; margin: auto; overflow-wrap: anywhere; }
+.policy-content section { scroll-margin-top: 7rem; padding: .5rem 0 1.25rem; border-bottom: 1px solid var(--pub-border); }
+.policy-content p { margin: .75rem 0; }
+.policy-content h2 { margin: 2rem 0 1rem; }
+.policy-contact { padding: 1rem; background: var(--pub-bg-subtle); border-radius: 8px; }
+@media (max-width: 600px) { .policy-layout { padding-top: 1.5rem; } .policy-toc { padding: 1rem; } }
+@media print { .pub-header, .pub-footer, .copilot-launcher, .copilot-chat-modal, .cyber-cart-drawer, .policy-pages, .policy-toc { display: none !important; } .policy-layout, .policy-content, .policy-header { max-width: none; padding: 0; } .policy-content section { break-inside: avoid; } }

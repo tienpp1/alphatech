@@ -33,40 +33,40 @@ forecast advisory integration reads existing saved runs without training or SQL 
 **Files:** templates/public/base_public.html, checkout.html, products.html, home.html quick-add script and product_detail.html as required; apps/public_web/alphatech_ai.py, checkout_review.py and cart/checkout view methods as needed; tests/test_defense_public_flows.py; tests/js/public_defense_flows.test.js.
 **Interfaces:** Existing cart JSON API remains authoritative; dispatch a documented successful-cart-change event for checkout, without replaying uncertain POSTs. Existing guest success route remains ownership protected.
 
-- [ ] Write/execute failing fresh-cookie CSRF, drawer-injection, stale-summary and guest-link tests.
-- [ ] Bootstrap token through the shared shell; use safe DOM text/attributes/URLs; safely refresh the entire checkout review and gate its submit while unknown. Remove failed-POST GET fallback; report errors.
-- [ ] Preserve form drafts and fulfillment computations. Test failed update/no mutation, empty cart, latest totals, foreign guest denial and old regressions.
-- [ ] Verify signed UI review against locked server products before placement. A late cart POST cannot change a reviewed order; reject stale/missing/invalid review before business writes, retain submitted draft. Retire state-mutating GET after confirmed POST-only shipped-caller inventory. Version drawer reads against later mutations.
-- [ ] Run focused Django and actual shipped JS tests; capture output and obtain scoped review.
+- [x] Write/execute failing fresh-cookie CSRF, drawer-injection, stale-summary and guest-link tests.
+- [x] Bootstrap token through the shared shell; use safe DOM text/attributes/URLs; safely refresh the entire checkout review and gate its submit while unknown. Remove failed-POST GET fallback; report errors.
+- [x] Preserve form drafts and fulfillment computations. Test failed update/no mutation, empty cart, latest totals, foreign guest denial and old regressions.
+- [x] Verify signed UI review against locked server products before placement. A late cart POST cannot change a reviewed order; reject stale/missing/invalid review before business writes, retain submitted draft. Retire state-mutating GET after confirmed POST-only shipped-caller inventory. Version drawer reads against later mutations.
+- [x] Run focused Django and actual shipped JS tests; capture output and obtain scoped review.
 
 ### Task 2: Mapping and internal GIS correctness
 
 **Files:** apps/mapping/services.py; templates/integration/import.html; templates/mapping/mapping_studio.html; apps/gis/views.py; templates/retail/gis.html; templates/service_ops/gis.html; scoped new tests.
 **Interfaces:** Real Task.assigned_to relation; existing preview/apply envelopes; explicit X-Workspace-ID on GIS fetches using page context, existing permission codenames.
 
-- [ ] Write/execute failing Task apply, hostile preview/popups, partial/zero import and opposite-workspace/staff-only PII regressions.
-- [ ] Correct the field; render data as text; show partial counts and retain errors; bind every GIS API read to the authorized page workspace; remove is_staff-only PII bypass, retain explicit permissions/superuser.
-- [ ] Run mapping/import/GIS regressions and behavioral JS harnesses, preserving deny/rollback cases.
-- [ ] Obtain scoped review; no route/domain/security redesign.
+- [x] Write/execute failing Task apply, hostile preview/popups, partial/zero import and opposite-workspace/staff-only PII regressions.
+- [x] Correct the field; render data as text; show partial counts and retain errors; bind every GIS API read to the authorized page workspace; remove is_staff-only PII bypass, retain explicit permissions/superuser.
+- [x] Run mapping/import/GIS regressions and behavioral JS harnesses, preserving deny/rollback cases.
+- [x] Obtain scoped review; no route/domain/security redesign.
 
 ### Task 3: Older chat history and independent-session evidence
 
 **Files:** apps/notifications/chat_service.py, views.py, ui_views.py as needed; static/js/internal_team_chat.js; templates/notifications/team_chat.html (actual path to inspect); scoped tests.
 **Interfaces:** Existing workspace selector and 3-second polling. Add mutually exclusive positive before_id paging, <=50 rows, chronological response. Keep forward cursor separate from backward page cursor.
 
-- [ ] Write/execute >100-message backward paging and independent manager/employee client tests, including foreign selector/revocation.
-- [ ] Add accessible Vietnamese load-older control; prepend/de-duplicate without losing scroll position or overwriting draft. Handle failure/hidden tabs and exhaustion without polling gaps.
-- [ ] Run collaboration Django/JS regressions and scoped review. No new model/WebSocket/provider.
+- [x] Write/execute >100-message backward paging and independent manager/employee client tests, including foreign selector/revocation.
+- [x] Add accessible Vietnamese load-older control; prepend/de-duplicate without losing scroll position or overwriting draft. Handle failure/hidden tabs and exhaustion without polling gaps.
+- [x] Run collaboration Django/JS regressions and scoped review. No new model/WebSocket/provider.
 
 ### Task 4: Saved forecast to explainable advisory rule
 
 **Files:** apps/recommendations/forecast_rules.py (new focused module), rules.py, views.py, services.py and templates/recommendations/index.html only for integration/presentation; tests/test_forecast_backed_recommendations.py.
 **Interfaces:** evaluate_forecast_recommendations(workspace, *, include_historical=False) -> list[Recommendation]; existing evaluation endpoint accepts explicit boolean include_historical_forecast. Existing recommendation state exposes advisory/historical status.
 
-- [ ] Write/execute source-run/date/observed comparison RED tests and endpoint/RBAC/idempotency tests.
-- [ ] Implement spec's daily revenue >10% decline rule, saved-model/source references, eligibility guards and serialized dedup. Invoke from existing evaluation with historical opt-in only; malformed flag returns400.
-- [ ] Historical outputs cannot become current executable recommendations or approvals. Existing observed rules/actions remain unchanged.
-- [ ] Run recommendation/forecast/approval regression groups and scoped review.
+- [x] Write/execute source-run/date/observed comparison RED tests and endpoint/RBAC/idempotency tests.
+- [x] Implement spec's daily revenue >10% decline rule, saved-model/source references, eligibility guards and serialized dedup. Invoke from existing evaluation with historical opt-in only; malformed flag returns400.
+- [x] Historical outputs cannot become current executable recommendations or approvals. Existing observed rules/actions remain unchanged.
+- [x] Run recommendation/forecast/approval regression groups and scoped review.
 
 ### Task 5: Whole-system verification and defense handoff
 
@@ -75,7 +75,7 @@ forecast advisory integration reads existing saved runs without training or SQL 
 
 - [ ] Run full test suite on isolated TEST DB with source fingerprints, all JS regressions, check/drift, configured security scans. Retain intermediate failures and fix causes.
 - [ ] Exercise real HTTP journeys and attempt browser customer/manager UAT; identify tooling/auth/provider gates distinctly.
-- [ ] Fresh whole-branch review and regression verification of important findings.
+- [x] Fresh whole-branch review and regression verification of important findings.
 - [ ] Produce Vietnamese report with exact tested source/counts, repairs, proposal alignment and accepted scope exceptions. Commit/push/deploy only after evidence gates, keeping the dirty main workspace untouched.
 
 #### Security gate extension after first full run
@@ -85,10 +85,27 @@ Add only security floors for existing dependencies and patched installer bootstr
 no new feature/model/schema, no global Python upgrade or changes to numerical study.
 Files: requirements.txt, build.sh, quality.yml, test_dependency_security_floors.py.
 
-- [ ] Observe offline policy tests RED, apply floors/branch exclusions and bootstrap,
+- [x] Observe offline policy tests RED, apply floors/branch exclusions and bootstrap,
       then GREEN; preserve every existing CI test/audit and fresh review the delta.
-- [ ] Create an independent venv without system packages, record exact resolved
+- [x] Create an independent venv without system packages, record exact resolved
       inventory and pip check, audit it without ignoring advisories, and rerun
       framework/full/JS gates. Retain the original old-runtime full receipt separately.
-- [ ] Disclose the upstream Twisted IMAP advisory's unresolved patch/reachability
+- [x] Disclose the upstream Twisted IMAP advisory's unresolved patch/reachability
       uncertainty; zero package audit is not an application security certificate.
+
+### Task 6: Preserve existing unpublished public demo policy
+
+Late comparison found owner-approved Oct12 code only in dirty main. Restore
+isolated hunks, never overwrite defended public files wholesale. Files: existing
+main policies.py/policy.html/policies.css/test_public_demo_policies.py/canonical
+Markdown as new scoped files here; isolated views/urls/AI/email and public links.
+
+- [x] Record original policy/Markdown hashes; observe original15tests RED for the
+      missing implementation, preserve all assertions and cases after restoration.
+- [x] Publish narrow AT-DEMO-1.1/date02Nov correction to model-storage wording;
+      keep every commercial/demo boundary, original main files and old outbox
+      dedup/retry snapshots. Add explicit regression for this factual correction.
+- [x] Verify links/routes, consent, copilot, email and latest strict-checkout
+      regressions on patched isolated TEST; fresh scoped review, update inventory/CI.
+- [ ] Rerun final full source-freeze and release gates after integration; clearly
+      distinguish local/HTTP proof from unavailable browser UAT.

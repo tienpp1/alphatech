@@ -110,3 +110,18 @@ No finite test suite proves an optimally smooth system on all devices. Report
 confirmed improvements, remaining user/external gates and accepted scope
 deviations explicitly. Do not activate live Gemini or claim the final report/
 slides have been approved; only an approved proposal is currently identified.
+
+## Restoring unpublished owner-approved demo policy
+
+Late source comparison found the owner's Oct12 AT-DEMO-1.0 implementation only
+in the dirty main workspace; remote-derived source still sent consent links to
+About. This is not an accepted scope omission. Restore its canonical public
+module/assets and isolated integration hunks without copying whole modified
+files or publishing internal SOPs. Keep all existing15policy test assertions.
+
+Only the outdated all-models-local wording is corrected for the current guarded
+ForecastRun JSON snapshots; media/legacy local and noS3/offsite limits remain.
+Publish this narrow version as AT-DEMO-1.1 dated02Nov, preserving original1.0
+hashes in evidence and leaving dirty-main files intact. Public routes stay GET/
+HEAD-only; new email snapshots may carry links/version, but old dedup material
+and retry snapshots must remain unchanged. No schema or97ledger changes.

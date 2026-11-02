@@ -373,7 +373,7 @@
                 <div style="margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 10px;">
                     <input type="checkbox" id="terms" name="terms" required style="margin-top: 3px; cursor: pointer; accent-color: var(--pub-primary); width: 16px; height: 16px;">
                     <label for="terms" style="font-size: 0.84rem; color: var(--pub-text-body); cursor: pointer; line-height: 1.45;">
-                        Tôi đồng ý với <a href="/gioi-thieu/" target="_blank" style="color: var(--pub-primary); text-decoration: none; font-weight: 700;">Điều khoản sử dụng</a> và <a href="/gioi-thieu/" target="_blank" style="color: var(--pub-primary); text-decoration: none; font-weight: 700;">Chính sách bảo mật</a> của nền tảng.
+                        Tôi đồng ý với <a href="{% url 'public_terms' %}" target="_blank" rel="noopener noreferrer" style="color: var(--pub-primary); text-decoration: underline; font-weight: 700;">Điều khoản sử dụng</a> và <a href="{% url 'public_privacy' %}" target="_blank" rel="noopener noreferrer" style="color: var(--pub-primary); text-decoration: underline; font-weight: 700;">Chính sách bảo mật</a>, đồng thời xác nhận đã đọc các chính sách này trong phạm vi đồ án của nền tảng.
                     </label>
                 </div>
 

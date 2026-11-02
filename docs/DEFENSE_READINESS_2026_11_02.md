@@ -50,6 +50,12 @@ tối ưu tuyệt đối, mọi thiết bị hoặc hiệu quả kinh doanh ngo�
     Không bịa ngày thiếu, không huấn luyện trong rule, không tự tạo action.
     Historical phải opt-in, có nhãn, không chấp thuận như hành động hiện tại.
     Trạng thái ngày được kiểm lại lúc đọc/chấp thuận, kể cả qua nửa đêm.
+12. Phục hồi chính sách demo đã được chủ dự án chốt nhưng chỉ tồn tại ở source
+    local chưa phát hành. Ba trang đọc công khai, consent/footer/copilot trỏ
+    đúng chính sách thay vì Giới thiệu. Email mới gắn phiên bản/link sau khi
+    tính key dedup gốc; retry không đổi snapshot cũ. AT-DEMO-1.1 chỉ cập nhật
+    ngày/phiên bản và giải thích JSON model guarded lưu trong ForecastRun,
+    không biến LocalStorage thành S3 hoặc đưa ra cam kết thương mại mới.
 
 Kiểm thử tập trung hiện có (các nhóm chồng lặp, không cộng thành full suite):
 public sau sửa empty-cart121/121OK12,479s + JS22/22; mapping/GIS74/74OK12,391s + JS9/9;
@@ -57,6 +63,8 @@ chat66/66OK12,809s + JS9/9 và5 nhóm transport cũ; forecast/rule/approval99/99
 OK38,517s + JS5/5. Các RED, lỗi fixture trung gian và kết quả GREEN được giữ
 riêng trong output và báo cáo từng task. Fresh reviewer của từng nhóm đã duyệt
 sau các vòng sửa; không coi self-review hoặc tên file GREEN là bằng chứng.
+Nhóm phục hồi chính sách249/249OK20,833s và JS22/22PASS463,3033ms; giữ nguyên
+15 test/assertions cũ, chỉ thêm2test. Không cộng vào full1574 trước integration.
 
 Whole-branch review tìm thêm trường hợp cart bị xóa hết sau bản chốt: đường
 strict trả409 và giữ bản nháp, kể cả sản phẩm vừa bị vô hiệu hóa; nút đặt mua
@@ -76,7 +84,9 @@ patch cũ ở nhánh6.0/6.1; DRF/Pillow/pypdf và transitive HTTP/Daphne có flo
 bảo mật tương ứng. CI/build bootstrap pip26.2.2; giữ audit và toàn bộ test cũ.
 8 test policy offline đã thấy RED trước sửa và GREEN sau sửa; chúng không thay
 audit môi trường thật. Python chung không được nâng/xóa; tạo venv riêng hoàn
-toàn để kiểm chứng, giữ nguyên phiên bản stack số liệu của thực nghiệm cũ.
+toàn để kiểm chứng, giữ phiên bản trực tiếp NumPy/pandas/scikit-learn/XGBoost
+của baseline. Transitive như SciPy/joblib được resolver cập nhật và có inventory
+riêng; không chạy lại hoặc ghi đè kết quả nghiên cứu cũ.
 
 Đối chiếu bản vá từ [Django](https://www.djangoproject.com/weblog/2026/oct/06/security-releases/),
 [Pillow](https://github.com/python-pillow/Pillow/security/advisories/GHSA-78g4-xqwv-q3g8),
@@ -86,13 +96,30 @@ dự án không có IMAP listener/import tương ứng. Không suy ra upstream �
 vì bản mới ngoài khoảng affected ghi trong feed; rủi ro dư này tiếp tục được
 ghi rõ, không ignore advisory để đạt số0. Report chi tiết và inventory local
 nằm tại output/defense_dependency_triage_20261102.md. Audit/full trên venv mới
-đang chờ receipt; chưa gọi production đã nâng dependency.
+đã có receipt riêng; chưa gọi production đã nâng dependency.
+
+Full tại8b8ca8095ee6523deba37dc14b66466977a9af49 trên venv mới đạt1574/1574
+OK355,253s,887 source files không đổi, không skip; database TESTc096e9a692da4719
+tự hủy. Audit chính venv80 distribution:0advisory/0skip; pip check đạt. Django
+check0issue và migration drift No changes detected trên TEST riêng. Bandit apps/
+config khôngmigrations:0finding/0error; secret-pattern guard880file:0finding,
+không phải kiểm toán toàn bộ lịch sử secret. Các receipt tại
+output/defense_verification/20261102T022653Z và output/defense_*_20261102.*.
+Phiên bản kiểm chứng: Django6.1.2/DRF3.18.3/Pillow13.0.0/pypdf6.21.4,
+Twisted26.10.0/autobahn26.10.2; đây là local, không suy ra inventory production.
+
+Đối chiếu bổ sung tìm thấy chính sách demo chủ dự án đã chốt ngày12/10 chỉ có
+ở workspace chính chưa phát hành. Phần này đã được ghép từng hunk, không chép
+đè cả views/checkout/shell đã sửa. Bản1.1 chỉ sửa mô tả storage model hiện tại
+và phiên bản/ngày; không tự thêm cam kết thương mại. Lượt full1574 phía trên
+trước integration chính sách, nên bản cuối cần receipt source-freeze riêng.
 
 ## Đối chiếu các nhóm yêu cầu Word
 
 | Yêu cầu đề cương | Triển khai và kiểm chứng | Giới hạn giữ rõ |
 |---|---|---|
 | Khách hàng đăng ký/xác minh/đặt hàng/dịch vụ/tra cứu | public_web, ownership, email outbox; regression nguồn và HTTP entry pages | Không gửi thêm email hoặc đơn thật trong đợt này |
+| Điều khoản và quyền riêng tư demo | Nguồn AT-DEMO-1.1, ba trang đọc, link consent/help/email và snapshot regression | Không phê duyệt SOP thương mại hoặc chứng nhận pháp lý |
 | Quản lý Retail/Service/dashboard/báo cáo | Canonical /noibo/, services/selectors và API phân quyền | HTTP entry/detail không thay thế mọi thao tác CRUD visual |
 | Nhân viên theo dõi công việc được phân công | EMPLOYEE seed có view_request/task/schedule; UI/API hiển thị công việc của workspace | Không có yêu cầu Word về trang riêng chỉ-my-tasks; không tự đổi role/grants |
 | Integration và Mapping | Staging/preview/canonical apply, Task và partial outcomes được sửa | Không nhập file vào production |

@@ -1,0 +1,42 @@
+{% extends "public/base_public.html" %}
+{% load static %}
+{% block title %}{{ page_title }} | AlphaTech{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'public/css/policies.css' %}">{% endblock %}
+{% block content %}
+<div class="pub-section policy-layout">
+    <header class="policy-header">
+        <p class="policy-eyebrow">AlphaTech · {{ policy_scope }}</p>
+        <h1>{{ page_title }}</h1>
+        <p>Phiên bản <strong>{{ policy_version }}</strong> · Công bố {{ policy_date }}</p>
+        <p class="policy-notice">{{ policy_notice }}</p>
+        <nav class="policy-pages" aria-label="Các trang chính sách">
+            <a href="{% url 'public_policies' %}"{% if policy_kind == 'all' %} aria-current="page"{% endif %}>Toàn bộ chính sách</a>
+            <a href="{% url 'public_terms' %}"{% if policy_kind == 'terms' %} aria-current="page"{% endif %}>Điều khoản và giao dịch</a>
+            <a href="{% url 'public_privacy' %}"{% if policy_kind == 'privacy' %} aria-current="page"{% endif %}>Dữ liệu và quyền riêng tư</a>
+        </nav>
+    </header>
+    <nav class="policy-toc" aria-label="Mục lục chính sách">
+        <h2>Mục lục</h2>
+        {% for policy in policy_pages %}
+        <h3>{{ policy.title }}</h3>
+        <ol>
+            {% for id, title, paragraphs in policy.sections %}
+            <li><a href="#{{ policy.key }}-{{ id }}">{{ title }}</a></li>
+            {% endfor %}
+        </ol>
+        {% endfor %}
+    </nav>
+    <article class="policy-content">
+        {% for policy in policy_pages %}
+        <h2>{{ policy.title }}</h2>
+        {% for id, title, paragraphs in policy.sections %}
+        <section id="{{ policy.key }}-{{ id }}" aria-labelledby="heading-{{ policy.key }}-{{ id }}">
+            <h3 id="heading-{{ policy.key }}-{{ id }}">{{ title }}</h3>
+            {% for paragraph in paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+        </section>
+        {% endfor %}
+        {% endfor %}
+        <p class="policy-contact">Cần kiểm tra một điều kiện hoặc yêu cầu về dữ liệu? <a href="{% url 'public_contact' %}">Gửi liên hệ</a>. Không gửi mật khẩu hoặc mã OTP.</p>
+    </article>
+</div>
+{% endblock %}

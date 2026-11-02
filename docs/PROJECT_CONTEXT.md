@@ -37,6 +37,14 @@ Hidden tabs pause requests; access denial stops synchronization. No WebSocket,
 Redis, schema change or production rollout is implied.
 
 Last verified against source: 2026-09-15
+Public demo policy integration (2026-11-02): the owner's unpublished Oct12
+AT-DEMO-1.0 bundle is restored as a public versioned source, with narrowly
+corrected AT-DEMO-1.1 storage wording for guarded ForecastRun JSON snapshots.
+Consent/footer/copilot links now refer to public read-only policy routes instead
+of About. New outbox snapshots include public version/links only after unchanged
+dedup material; existing retry snapshots remain untouched. This academic policy
+does not approve internal SOP publication, commercial guarantees or legal
+compliance. Media/legacy local and missing offsite/S3 limits remain disclosed.
 Chat display-time follow-up (2026-10-05): polling and send responses use the
 active Django timezone, matching initial template timestamps. Successful sends
 include created_at display text. This does not change membership/RBAC, message

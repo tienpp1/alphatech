@@ -1352,3 +1352,14 @@ not recorded as success; a fresh release must verify the runtime repair first.
   Distinguish installed-package findings from exploitable paths and retain the
   unresolved upstream TwistedIMAP scope limitation. Full/runtime audit evidence
   and deployment are separate gates, not implied by these source changes.
+
+## 2026-11-02 — Restore owner-approved public demo policy
+
+- Integrate the previously unpublished Oct12 policy bundle with isolated hunks;
+  preserve all dirty-main files and defended checkout/CSRF/escaping behaviors.
+- Publish AT-DEMO-1.1 only to correct dated model-storage wording and version/date;
+  no additional commercial promises. Canonical content renders public pages and
+  Markdown; actual consent/help/footer destinations replace misleading About links.
+- New transactional email snapshots reference public policy without changing
+  dedup inputs or old retry snapshots. No internal Knowledge lookup, schema or
+  97-item ledger changes; runtime/full/deployment evidence remains separate.

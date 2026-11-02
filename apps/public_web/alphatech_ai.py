@@ -15,6 +15,7 @@ from django.db.models import Q
 from apps.retail.models import Product, Branch, Order
 from apps.service_ops.models import Service, ServiceCategory
 from apps.workspaces.models import WorkspaceType
+from .policies import POLICY_VERSION, policy_reference
 
 
 def normalize_question(text):
@@ -98,6 +99,7 @@ def handle_authenticity_and_cocq(q_lower):
         return None
 
     reply = "**Nguồn gốc và giấy tờ sản phẩm**\n\nTôi chưa có hồ sơ đã xác minh để cam kết xuất xứ, CO/CQ hoặc mức bồi hoàn cho từng sản phẩm. Quý khách nên yêu cầu thông tin Serial/Service Tag, chứng từ và điều kiện bảo hành của đúng mã hàng trước khi mua.\n\nVui lòng [liên hệ tư vấn](/lien-he/) hoặc xem [sản phẩm](/san-pham/) để được xác nhận."
+    reply += policy_reference()
     return {
         "reply": reply,
         "suggestions": ["Xem danh mục Laptop Dell", "Hỏi điều kiện bảo hành", "Hệ thống Showroom"]
@@ -200,7 +202,8 @@ def handle_privacy_and_data_security(q_lower):
     if not contains_keywords(q_lower, keywords):
         return None
 
-    reply = "**Thông tin bảo mật dữ liệu**\n\nTôi chưa có bằng chứng xác minh chứng nhận ISO 27001 hoặc các cam kết bảo mật tuyệt đối của đơn vị. Không thể xác nhận điều kiện camera, lưu trữ hay mã hóa chỉ từ cuộc trò chuyện này.\n\nTrước khi bàn giao thiết bị, Quý khách nên sao lưu dữ liệu cần thiết và yêu cầu xác nhận phạm vi truy cập, xử lý dữ liệu. Không gửi mật khẩu, mã OTP hoặc tài liệu nhạy cảm ở đây. Có thể [liên hệ](/lien-he/) để yêu cầu chính sách áp dụng."
+    reply = "**Thông tin bảo mật dữ liệu**\n\nTôi chưa có bằng chứng xác minh chứng nhận ISO 27001 hoặc các cam kết bảo mật tuyệt đối của đơn vị. Không thể xác nhận điều kiện camera, lưu trữ hay mã hóa chỉ từ cuộc trò chuyện này.\n\nTrước khi bàn giao thiết bị, Quý khách nên sao lưu dữ liệu cần thiết và yêu cầu xác nhận phạm vi truy cập, xử lý dữ liệu. Không gửi mật khẩu, mã OTP hoặc tài liệu nhạy cảm ở đây. Có thể [liên hệ](/lien-he/) để hỏi điều kiện của yêu cầu cụ thể."
+    reply += policy_reference("privacy")
     return {
         "reply": reply,
         "suggestions": ["Xem trạm kỹ thuật gần nhất", "Quy trình sửa chữa minh bạch", "Liên hệ hỗ trợ"]
@@ -240,6 +243,7 @@ def handle_warranty_and_doa(q_lower):
         return None
 
     reply = "**Thông tin bảo hành và đổi trả**\n\nĐiều kiện bảo hành cần được kiểm tra theo đúng sản phẩm và chứng từ mua hàng. Tôi chưa có chính sách đã xác minh để cam kết thời hạn, đổi máy ngay hoặc cho mượn máy thay thế.\n\nQuý khách vui lòng gửi mã đơn hàng và mô tả tình trạng tại [Liên hệ](/lien-he/) để được xác nhận điều kiện áp dụng."
+    reply += policy_reference()
     return {
         "reply": reply,
         "suggestions": ["Tìm chi nhánh bảo hành", "Báo sự cố kỹ thuật tận nơi", "Tư vấn Laptop thay thế"]
@@ -256,6 +260,7 @@ def handle_shipping_payment_vat(q_lower):
         return None
 
     reply = "**Thanh toán, giao hàng và hóa đơn VAT**\n\nQuý khách hãy xem phương thức thanh toán và phí giao hàng đang hiển thị tại [Giỏ hàng](/gio-hang/) và bước thanh toán. Tôi chưa có bằng chứng về dịch vụ phát hành hóa đơn VAT tự động hoặc thời hạn giao hỏa tốc.\n\nNếu cần hóa đơn hoặc giao hàng theo yêu cầu, vui lòng [liên hệ](/lien-he/) để được xác nhận. Email xác nhận đơn hàng không thay thế hóa đơn VAT; gửi đơn cũng không đồng nghĩa tiền đã được nhận."
+    reply += policy_reference()
     return {
         "reply": reply,
         "suggestions": ["Xem giỏ hàng hiện tại", "Tư vấn Laptop chính hãng", "Chi nhánh mua trực tiếp"]
@@ -524,6 +529,21 @@ def process_alphatech_query(request, user_query):
         return {
             "reply": "Tôi chỉ hỗ trợ thông tin công khai và đơn thuộc tài khoản/phiên hiện tại. Tôi không cung cấp bí mật, dữ liệu khách hàng khác hoặc quyền nội bộ. Bạn có thể xem [Sản phẩm](/san-pham/) hoặc gửi [Liên hệ](/lien-he/).",
             "suggestions": ["Xem sản phẩm", "Chi nhánh gần nhất"],
+        }
+
+    if contains_keywords(q_lower, ("điều khoản sử dụng", "điều khoản giao dịch", "chính sách của website", "bộ chính sách")):
+        return {
+            "reply": (
+                f"**Bộ chính sách AlphaTech — {POLICY_VERSION}**\n\n"
+                "Website có bộ chính sách dành cho đồ án, mô tả tài khoản, đặt hàng, "
+                "tiếp nhận dịch vụ, email và dữ liệu cá nhân. Đây không phải xác nhận "
+                "chính sách thương mại của một doanh nghiệp thật. Không thanh toán "
+                "hoặc giao hàng thật trong môi trường demo.\n\n"
+                "[Đọc toàn bộ chính sách](/chinh-sach/) · "
+                "[Điều khoản và giao dịch](/dieu-khoan/) · "
+                "[Dữ liệu và quyền riêng tư](/chinh-sach-bao-mat/)."
+            ),
+            "suggestions": ["Chính sách bảo mật dữ liệu", "Chính sách bảo hành và đổi trả"],
         }
 
     # Address all policy topics in a compound question. These handlers use only

@@ -14,6 +14,7 @@ from apps.public_web.views import (
     public_service_request_view,
     public_branches_view,
     public_about_view,
+    public_policy_view,
     public_contact_view,
     public_login_view,
     public_register_view,
@@ -61,6 +62,9 @@ urlpatterns = [
     path("chi-nhanh/", public_branches_view, name="public_branches"),
     # 5. About & Contact
     path("gioi-thieu/", public_about_view, name="public_about"),
+    path("chinh-sach/", public_policy_view, name="public_policies"),
+    path("dieu-khoan/", public_policy_view, {"policy_kind": "terms"}, name="public_terms"),
+    path("chinh-sach-bao-mat/", public_policy_view, {"policy_kind": "privacy"}, name="public_privacy"),
     path("lien-he/", public_contact_view, name="public_contact"),
     # 6. Public Customer Authentication Flow
     path("dang-nhap/", public_login_view, name="public_login"),

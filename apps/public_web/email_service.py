@@ -18,6 +18,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
 from django.utils import timezone
+from django.utils.html import format_html
 
 from apps.public_web.models import CustomerEmailDelivery
 
@@ -81,6 +82,24 @@ def _delivery_configuration_error() -> str:
     if backend in {"django.core.mail.backends.console.EmailBackend", "django.core.mail.backends.dummy.EmailBackend"}:
         return "NON_DELIVERING_BACKEND"
     return ""
+
+
+def _with_public_policy_reference(plain_body, html_body):
+    """Version new outbox snapshots only; preserve original dedup material."""
+    from .policies import POLICY_VERSION
+    terms_url = public_url("dieu-khoan/")
+    privacy_url = public_url("chinh-sach-bao-mat/")
+    text = f"AlphaTech — chính sách đồ án {POLICY_VERSION}. Không thanh toán/giao hàng thật trong môi trường demo."
+    links = [("Điều khoản", terms_url), ("Dữ liệu và quyền riêng tư", privacy_url)]
+    plain_footer = "\n\n" + text + "\n" + "\n".join(f"{label}: {url}" for label, url in links if url)
+    html_footer = str(format_html('<p style="font-size:12px;line-height:1.6">{}</p>', text))
+    for label, url in links:
+        if url:
+            html_footer += str(format_html('<p><a href="{}">{}</a></p>', url, label))
+    if html_body:
+        before, marker, after = html_body.rpartition("</body>")
+        html_body = before + html_footer + marker + after if marker else html_body + html_footer
+    return plain_body + plain_footer, html_body
 
 
 def deliver_outbox_record(delivery: CustomerEmailDelivery) -> DeliveryResult:
@@ -147,6 +166,9 @@ def queue_and_deliver_email(*, event_type: str, recipient: str, subject: str, pl
     if not deduplication_key:
         material = "|".join((event_type, entity_type, str(entity_id), recipient, subject, plain_body))
         deduplication_key = hashlib.sha256(material.encode("utf-8")).hexdigest()
+    # Compute the legacy key before adding a versioned reference. get_or_create
+    # keeps every existing snapshot intact, including retries across deployment.
+    plain_body, html_body = _with_public_policy_reference(plain_body, html_body)
     delivery, _ = CustomerEmailDelivery.objects.get_or_create(
         deduplication_key=deduplication_key,
         defaults={
