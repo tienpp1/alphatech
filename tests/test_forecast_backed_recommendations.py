@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from concurrent.futures import ThreadPoolExecutor
 import threading
+from unittest.mock import patch
 
 from django.db import connections, close_old_connections
 from django.test import TestCase, TransactionTestCase
@@ -264,6 +265,30 @@ class ForecastBackedRecommendationTests(TestCase):
         self.forecast_run.save(update_fields=['job_parameters'])
         evaluate_retail_recommendations(self.workspace)
         self.assertFalse(self.forecast_recs().exists())
+
+    def test_pending_current_advice_becomes_historical_at_forecast_start(self):
+        evaluate_retail_recommendations(self.workspace)
+        rec = self.forecast_recs().get()
+        immutable = copy.deepcopy(rec.supporting_data)
+        self.assertFalse(recommendation_review_state(rec)['stale'])
+        with patch('apps.recommendations.services.timezone.localdate',
+                   return_value=self.end+datetime.timedelta(days=1)):
+            self.assertTrue(recommendation_review_state(rec)['stale'])
+            with self.assertRaises(ToolValidationError):
+                accept_recommendation(rec, self.user)
+        rec.refresh_from_db()
+        self.assertEqual(rec.status, 'PENDING')
+        self.assertEqual(rec.supporting_data, immutable)
+        self.assertFalse(ApprovalRequest.objects.exists())
+
+    def test_pending_forecast_advice_with_malformed_saved_dates_fails_closed(self):
+        evaluate_retail_recommendations(self.workspace)
+        rec = self.forecast_recs().get()
+        rec.supporting_data['forecast_start'] = 'not-a-date'
+        rec.save(update_fields=['supporting_data'])
+        self.assertTrue(recommendation_review_state(rec)['stale'])
+        with self.assertRaises(ToolValidationError):
+            accept_recommendation(rec, self.user)
 
 
 class ForecastRecommendationConcurrencyTests(TransactionTestCase):

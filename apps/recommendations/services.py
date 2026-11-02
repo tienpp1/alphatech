@@ -32,6 +32,24 @@ def _stockout_evidence_is_current(supporting_data):
     return True
 
 
+def _forecast_advisory_date_state(data):
+    from apps.recommendations.forecast_rules import RULE_KEY
+    if data.get('rule_key') != RULE_KEY:
+        return None
+    try:
+        source = datetime.date.fromisoformat(data.get('period_end'))
+        start = datetime.date.fromisoformat(data.get('forecast_start'))
+        end = datetime.date.fromisoformat(data.get('forecast_end'))
+    except (TypeError, ValueError):
+        return 'INVALID'
+    today = timezone.localdate()
+    if source > today or start != source+datetime.timedelta(days=1) or end != start+datetime.timedelta(days=6):
+        return 'INVALID'
+    if start <= today or source < today-datetime.timedelta(days=7):
+        return 'HISTORICAL'
+    return 'CURRENT_SNAPSHOT'
+
+
 def recommendation_review_state(recommendation):
     """Assess snapshot age without rewriting historical records on a GET."""
     now = timezone.now()
@@ -46,9 +64,12 @@ def recommendation_review_state(recommendation):
         except (TypeError, ValueError):
             outdated = True
     unverified_stockout = recommendation.recommendation_type == RecommendationType.RETAIL_STOCKOUT_RISK and not _stockout_evidence_is_current(recommendation.supporting_data)
-    historical = supporting_data.get('analysis_mode') == 'HISTORICAL'
-    return {"stale": expired or outdated or unverified_stockout or historical,
-            "label": "Phân tích lịch sử — chỉ tham khảo, không chấp thuận như hành động hiện tại" if historical else
+    forecast_state = _forecast_advisory_date_state(supporting_data)
+    historical = supporting_data.get('analysis_mode') == 'HISTORICAL' or forecast_state == 'HISTORICAL'
+    invalid_forecast = forecast_state == 'INVALID'
+    return {"stale": expired or outdated or unverified_stockout or historical or invalid_forecast,
+            "label": "Snapshot dự báo thiếu ngày hoặc ngày không hợp lệ — cần đánh giá lại" if invalid_forecast else
+            "Phân tích lịch sử — chỉ tham khảo, không chấp thuận như hành động hiện tại" if historical else
             "Tồn kho/nhu cầu cũ hoặc chưa xác minh — cần đánh giá lại; không đủ căn cứ chấp thuận" if unverified_stockout else
             "Hết hạn / snapshot cũ — cần đánh giá lại" if expired or outdated else "Snapshot tại thời điểm tạo; cần đối chiếu trước khi quyết định",
             "period_end": period_end,
