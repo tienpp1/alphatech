@@ -27,7 +27,7 @@ class Element {
   addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
   dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn(event); return true; }
 }
-function harness(withCheckout = false) {
+function harness(withCheckout = false, emptyInitialReview = false) {
   const nodes = new Map(), document = new Element(), calls = [], timers = new Map(); let timer = 0;
   const node = id => { if (!nodes.has(id)) nodes.set(id, new Element()); return nodes.get(id); };
   const radios = [{value:'HOME_DELIVERY',checked:true}, {value:'STORE_PICKUP',checked:false}];
@@ -41,6 +41,7 @@ function harness(withCheckout = false) {
       calls.push({url,options,resolve,reject});
     });}};
   vm.createContext(context); vm.runInContext(shell,context);
+  if(emptyInitialReview) node('btn-place-order').disabled=true;
   if (withCheckout) vm.runInContext(checkout,context);
   return {context,node,calls,document,timers};
 }
@@ -172,4 +173,12 @@ test('late drawer GET cannot overwrite a newer confirmed mutation', async () => 
   h.context.refreshCyberCart();h.context.cyberCartUpdateQty(1,2);
   reply(h.calls[1],{success:true,cart:summary()});await flush();
   reply(h.calls[0],old);await flush();assert.equal(h.node('cyber-cart-total').textContent,'220.000₫');
+});
+
+test('initial empty rejected review is unknown and never submits without a fresh nonempty review', () => {
+  const h=harness(true,true);let blocked=false;
+  assert.equal(h.context.checkoutReviewKnown,false);
+  assert.equal(h.node('btn-place-order').disabled,true);
+  h.node('checkout-form').dispatchEvent({type:'submit',preventDefault(){blocked=true;}});
+  assert.equal(blocked,true);assert.equal(h.node('checkout-review-token').value,'');assert.equal(h.calls.length,0);
 });

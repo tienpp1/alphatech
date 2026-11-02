@@ -281,6 +281,8 @@
                             {{ item.line_total|floatformat:0 }} VNĐ
                         </div>
                     </div>
+                    {% empty %}
+                    <p>Giỏ hàng không còn sản phẩm khả dụng. Vui lòng chọn sản phẩm trước khi đặt hàng.</p>
                     {% endfor %}
                 </div>
 
@@ -316,7 +318,7 @@
                     <span id="checkout-summary-status" role="status" aria-live="polite" aria-atomic="true" style="font-size:0.85rem; color:var(--pub-text-muted);"></span>
                     <button type="button" id="checkout-summary-retry" class="pub-btn-secondary" hidden>Thử lại tổng tiền</button>
                 </div>
-                <button type="submit" class="pub-btn-primary" id="btn-place-order" style="width: 100%; justify-content: center; padding: 14px; font-size: 1.05rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                <button type="submit" class="pub-btn-primary" id="btn-place-order" {% if not items or not checkout_review_token %}disabled{% endif %} style="width: 100%; justify-content: center; padding: 14px; font-size: 1.05rem; font-weight: 800; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     <span>Đặt mua đơn hàng</span>
                 </button>
@@ -333,7 +335,7 @@
 var checkoutSummaryVersion = 0;
 var checkoutSummaryController;
 var checkoutLocationVersion = 0;
-var checkoutReviewKnown = true;
+var checkoutReviewKnown = !document.getElementById('btn-place-order').disabled && Boolean(document.getElementById('checkout-review-token').value);
 var checkoutCartPending = false;
 function invalidateCheckoutReview() {
     checkoutReviewKnown = false;

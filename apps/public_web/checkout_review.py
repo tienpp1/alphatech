@@ -48,11 +48,15 @@ def issue_checkout_review(request, cart, delivery_method, *, summary=None):
     return token if len(token) <= REVIEW_MAX_LENGTH else ""
 
 
+def checkout_review_required(request):
+    return (request.GET.get("review") == "1" or
+            bool(request.session.get(REVIEW_REQUIRED_SESSION_KEY)) or
+            "checkout_review_token" in request.POST)
+
+
 def checkout_review_matches(request, *, lines, delivery_method, subtotal, shipping_fee):
     token = request.POST.get("checkout_review_token")
-    required = (request.GET.get("review") == "1" or
-                request.session.get(REVIEW_REQUIRED_SESSION_KEY) or token is not None)
-    if not required:
+    if not checkout_review_required(request):
         # Legacy headless POSTs outside the strict UI keep their prior contract.
         # The actual UI's ?review=1 is strict independently of session markers.
         # Old markers are read for compatibility, never issued/written by GET.

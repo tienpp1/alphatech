@@ -73,7 +73,7 @@ from apps.public_web.registration import (
     consume_registration_link,
 )
 from apps.public_web.fulfillment import FulfillmentError, allocate_home_delivery_stock
-from apps.public_web.checkout_review import issue_checkout_review, checkout_review_matches
+from apps.public_web.checkout_review import issue_checkout_review, checkout_review_matches, checkout_review_required
 
 logger = logging.getLogger(__name__)
 
@@ -1689,14 +1689,14 @@ def public_checkout_view(request):
     return _render_public_checkout(request)
 
 
-def _render_public_checkout(request, *, draft=None, error_message=None, status=200):
+def _render_public_checkout(request, *, draft=None, error_message=None, status=200, allow_empty=False):
     """
     Public Checkout Page (GET /thanh-toan/) - Light Theme.
     Step 2: Customer details, shipping address, delivery method, and COD payment review.
     """
     cart = get_cart(request)
     items = cart.get_items()
-    if not items:
+    if not items and not allow_empty:
         return redirect("/gio-hang/")
 
     draft = draft or {}
@@ -1739,7 +1739,7 @@ def _render_public_checkout(request, *, draft=None, error_message=None, status=2
         "customer_notes": draft.get("notes", ""),
         "selected_branch_id": str(draft.get("branch_id", "")),
         "delivery_method": delivery_method,
-        "checkout_review_token": issue_checkout_review(request, cart, delivery_method, summary=summary),
+        "checkout_review_token": issue_checkout_review(request, cart, delivery_method, summary=summary) if items else "",
         "error_message": error_message,
         "active_nav": "cart",
     }
@@ -1759,6 +1759,9 @@ def public_checkout_place_order_view(request):
     cart = get_cart(request)
     cart_items = cart.get_items()
     if not cart_items:
+        if checkout_review_required(request):
+            return _render_public_checkout(request, draft=request.POST, status=409, allow_empty=True,
+                error_message="Giỏ hàng không còn sản phẩm khả dụng. Thông tin đã nhập được giữ lại; vui lòng chọn lại sản phẩm và xem lại tổng tiền trước khi đặt hàng.")
         request.session["checkout_error"] = "Giỏ hàng của bạn đang trống."
         return redirect("/gio-hang/")
 

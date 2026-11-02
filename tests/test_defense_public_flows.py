@@ -3,6 +3,7 @@ import json
 import re
 import threading
 import time
+from html.parser import HTMLParser
 from unittest.mock import patch
 
 from django.contrib.sessions.backends.db import SessionStore
@@ -101,6 +102,53 @@ class CheckoutReviewFixtures:
 
 
 class DefenseCheckoutReviewTests(CheckoutReviewFixtures, TestCase):
+    def test_strict_empty_cart_rejection_preserves_draft_and_disables_review(self):
+        for unavailable in ("removed", "inactive", "missing_token"):
+            with self.subTest(unavailable=unavailable):
+                Product.objects.filter(pk=self.product.pk).update(is_active=True)
+                session = self.browser.session
+                session["public_shopping_cart"] = {str(self.product.pk): 1}
+                session.save()
+                token = self.review()
+                if unavailable == "inactive":
+                    Product.objects.filter(pk=self.product.pk).update(is_active=False)
+                else:
+                    self.browser.post(f"/gio-hang/cap-nhat/{self.product.pk}/", {"quantity": 0})
+                draft = {**self.form, "name": 'TEST <img src=x onerror="alert(1)">',
+                         "city": "TEST city", "district": "TEST district", "notes": "TEST notes"}
+                data = dict(draft)
+                if unavailable != "missing_token":
+                    data["checkout_review_token"] = token
+                response = self.browser.post("/thanh-toan/dat-hang/?review=1", data)
+                self.assertEqual(response.status_code, 409)
+                self.assert_no_business_writes()
+                for context_key, field in (("customer_name", "name"), ("customer_phone", "phone"),
+                        ("customer_email", "email"), ("customer_address", "address"), ("customer_city", "city"),
+                        ("customer_district", "district"), ("customer_notes", "notes"), ("delivery_method", "delivery_method")):
+                    self.assertEqual(response.context[context_key], draft[field])
+                self.assertEqual(response.context["selected_branch_id"], str(self.branch.pk))
+                self.assertEqual(response.context["items"], [])
+                self.assertEqual(response.context["summary"]["total_amount"], 0)
+                self.assertEqual(response.context["checkout_review_token"], "")
+                self.assertIn("giỏ hàng", response.context["error_message"].lower())
+                self.assertContains(response, '&lt;img src=x', status_code=409)
+                self.assertNotContains(response, '<img src=x onerror=', status_code=409)
+                fields = {}
+                class Fields(HTMLParser):
+                    def handle_starttag(self, tag, attrs):
+                        attrs = dict(attrs)
+                        if attrs.get("id"):
+                            fields[attrs["id"]] = attrs
+                Fields().feed(response.content.decode())
+                self.assertIn("disabled", fields["btn-place-order"])
+                self.assertEqual(fields["checkout-review-token"]["value"], "")
+
+    def test_legacy_unsigned_empty_post_still_redirects_without_business_writes(self):
+        self.browser.post(f"/gio-hang/cap-nhat/{self.product.pk}/", {"quantity": 0})
+        response = self.browser.post("/thanh-toan/dat-hang/", self.form)
+        self.assertRedirects(response, "/gio-hang/", fetch_redirect_response=False)
+        self.assert_no_business_writes()
+
     def test_stale_review_renders_409_with_safe_draft_and_updated_review(self):
         token = self.review()
         Product.objects.filter(pk=self.product.pk).update(unit_price=120000)
