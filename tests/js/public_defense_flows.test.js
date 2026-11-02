@@ -31,7 +31,7 @@ function harness(withCheckout = false) {
   const nodes = new Map(), document = new Element(), calls = [], timers = new Map(); let timer = 0;
   const node = id => { if (!nodes.has(id)) nodes.set(id, new Element()); return nodes.get(id); };
   const radios = [{value:'HOME_DELIVERY',checked:true}, {value:'STORE_PICKUP',checked:false}];
-  Object.assign(document, {cookie:'csrftoken=test', getElementById:node, createElement:tag => new Element(tag),
+  Object.assign(document, {cookie:'csrftoken=test', getElementById:node, createElement:tag => new Element(tag), createElementNS:(_ns,tag) => new Element(tag),
     querySelector:() => radios.find(r => r.checked), querySelectorAll:selector => selector.includes('delivery_method') ? radios : []});
   const context = {document, console, FormData, AbortController, URL, encodeURIComponent, location:{href:'https://example.test/thanh-toan/'},
     window:{location:{href:'https://example.test/thanh-toan/'}}, navigator:{}, CustomEvent:class {constructor(type, options={}) {this.type=type;this.detail=options.detail;}},
@@ -158,7 +158,12 @@ test('refreshed checkout rows retain thumbnail/fallback and typography layout sa
     assert.equal(row.children[1].style.minWidth,'0');
     assert.equal(row.children[1].children[0].style.textOverflow,'ellipsis');
     assert.ok(row.children[0].children.length>0);
-    assert.equal(row.children[0].children[0].tag,image?'img':'span');
+    assert.equal(row.children[0].children[0].tag,image?'img':'div');
+    if(!image) {
+      const svg=row.children[0].children[0].children[0];
+      assert.equal(svg.tag,'svg');assert.equal(svg.attrs.viewBox,'0 0 24 24');assert.equal(svg.attrs.width,'22');
+      assert.equal(svg.children[0].tag,'rect');assert.equal(svg.children.length,3);
+    }
   }
 });
 

@@ -26,6 +26,7 @@ function harness() {
   let timerId = 0, gps;
   const context = {console, AbortController, URLSearchParams, encodeURIComponent,
     document: {getElementById: node, addEventListener() {}, createElement: () => node('created-' + nodes.size),
+      createElementNS: () => node('created-svg-' + nodes.size),
       querySelector: () => radios.find(r => r.checked), querySelectorAll: () => radios},
     navigator: {geolocation: {getCurrentPosition(success, error) { gps = {success, error}; }}},
     setTimeout(fn) { timers.set(++timerId, fn); return timerId; },
