@@ -297,6 +297,7 @@ class PublicEcommerceCartAndCheckoutTestCase(TestCase):
             "/thanh-toan/dat-hang/",
             {
                 "name": "Hoàng Minh Tuấn",
+                "checkout_review_token": checkout_page.context["checkout_review_token"],
                 "phone": "0987654321",
                 "email": "tuan.hoang@testmail.vn",
                 "address": "99 Lê Lợi",
@@ -370,6 +371,7 @@ class PublicEcommerceCartAndCheckoutTestCase(TestCase):
             "/thanh-toan/dat-hang/",
             {
                 "name": "Nguyễn Văn A",
+                "checkout_review_token": checkout_page.context["checkout_review_token"],
                 "phone": "0901234567",
                 "email": "customer_a@example.com",
                 "address": "12 Hai Bà Trưng, Phường Bến Nghé, Quận 1, TP.HCM",

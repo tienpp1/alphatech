@@ -78,7 +78,8 @@
     </div>
     {% endif %}
 
-    <form method="POST" action="/thanh-toan/dat-hang/" id="checkout-form">
+    <form method="POST" action="/thanh-toan/dat-hang/?review=1" id="checkout-form">
+        <input type="hidden" name="checkout_review_token" id="checkout-review-token" value="{{ checkout_review_token }}">
         {% csrf_token %}
 
         <div class="checkout-grid-layout">
@@ -184,7 +185,7 @@
                                 <label for="city" class="pub-form-label">
                                     Tỉnh / Thành phố
                                 </label>
-                                <input type="text" name="city" id="city" value="TP. Hồ Chí Minh" placeholder="Ví dụ: TP. Hồ Chí Minh"
+                                <input type="text" name="city" id="city" value="{{ customer_city }}" placeholder="Ví dụ: TP. Hồ Chí Minh"
                                        class="pub-form-control">
                             </div>
 
@@ -192,7 +193,7 @@
                                 <label for="district" class="pub-form-label">
                                     Quận / Huyện
                                 </label>
-                                <input type="text" name="district" id="district" placeholder="Ví dụ: Quận 1"
+                                <input type="text" name="district" id="district" value="{{ customer_district }}" placeholder="Ví dụ: Quận 1"
                                        class="pub-form-control">
                             </div>
                         </div>
@@ -207,7 +208,7 @@
                             <select name="branch_id" id="branch_id" class="pub-form-control">
                                 <option value="">-- Vui lòng chọn chi nhánh gần bạn nhất --</option>
                                 {% for b in branches %}
-                                <option value="{{ b.id }}">{{ b.name }} - {{ b.address }} ({{ b.region }})</option>
+                                <option value="{{ b.id }}" {% if selected_branch_id == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }} - {{ b.address }} ({{ b.region }})</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -219,7 +220,7 @@
                             Ghi chú đơn hàng (Không bắt buộc)
                         </label>
                         <textarea name="notes" id="notes" rows="2" placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi giao 15 phút..."
-                                  class="pub-form-control" style="resize: vertical;"></textarea>
+                                  class="pub-form-control" style="resize: vertical;">{{ customer_notes }}</textarea>
                     </div>
                 </div>
 
@@ -336,6 +337,7 @@ var checkoutReviewKnown = true;
 var checkoutCartPending = false;
 function invalidateCheckoutReview() {
     checkoutReviewKnown = false;
+    document.getElementById('checkout-review-token').value = '';
     document.getElementById('btn-place-order').disabled = true;
     checkoutSummaryVersion++;
     if (checkoutSummaryController) checkoutSummaryController.abort();
@@ -347,11 +349,26 @@ function renderCheckoutItems(data) {
         if (typeof item.name !== 'string' || !Number.isSafeInteger(item.quantity) || item.quantity <= 0 ||
                 !Number.isFinite(item.line_total) || item.line_total < 0 || typeof item.formatted_unit_price !== 'string' || typeof item.formatted_line_total !== 'string') throw new Error('invalid_item');
         var row = document.createElement('div');
-        row.style.cssText = 'display:flex;gap:12px;align-items:center;justify-content:space-between;';
+        Object.assign(row.style, {display: 'flex', gap: '12px', alignItems: 'center'});
+        var thumbnail = document.createElement('div');
+        Object.assign(thumbnail.style, {width: '52px', height: '52px', background: '#F8FAFC', borderRadius: '8px',
+            border: '1px solid var(--pub-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: '0'});
+        var imageURL = item.image_url ? publicCartImageURL(item.image_url) : '';
+        if (imageURL) {
+            var image = document.createElement('img'); image.setAttribute('src', imageURL); image.setAttribute('alt', item.name);
+            Object.assign(image.style, {width: '100%', height: '100%', objectFit: 'contain', padding: '2px'}); thumbnail.append(image);
+        } else {
+            var fallback = document.createElement('span'); fallback.textContent = '▣'; fallback.setAttribute('aria-hidden', 'true');
+            Object.assign(fallback.style, {color: '#94A3B8', fontSize: '22px'}); thumbnail.append(fallback);
+        }
         var name = document.createElement('div'); name.textContent = item.name;
+        Object.assign(name.style, {fontSize: '0.88rem', fontWeight: '700', color: 'var(--pub-text-heading)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'});
         var detail = document.createElement('div'); detail.textContent = item.quantity + ' × ' + item.formatted_unit_price;
+        Object.assign(detail.style, {fontSize: '0.78rem', color: 'var(--pub-text-muted)', fontFamily: 'var(--pub-font-mono)'});
         var price = document.createElement('strong'); price.textContent = item.formatted_line_total;
-        var info = document.createElement('div'); info.append(name, detail); row.append(info, price);
+        Object.assign(price.style, {fontSize: '0.92rem', fontWeight: '800', color: 'var(--pub-text-heading)', textAlign: 'right', fontFamily: 'var(--pub-font-mono)'});
+        var info = document.createElement('div'); Object.assign(info.style, {flex: '1', minWidth: '0'});
+        info.append(name, detail); row.append(thumbnail, info, price);
         return row;
     });
     if (!rows.length) {
@@ -377,13 +394,14 @@ async function refreshCheckoutSummary(method) {
     var total = document.getElementById('summary-grand-total');
     placeButton.disabled = true;
     checkoutReviewKnown = false;
+    document.getElementById('checkout-review-token').value = '';
     retry.hidden = true;
     status.textContent = 'Đang cập nhật tổng tiền theo cách nhận hàng…';
     shipping.textContent = 'Đang cập nhật…';
     total.textContent = 'Đang cập nhật…';
     var timeout = setTimeout(function () { controller.abort(); }, 10000);
     try {
-        var response = await fetch("{% url 'public_cart_json' %}?delivery_method=" + encodeURIComponent(method),
+        var response = await fetch("{% url 'public_cart_json' %}?review=1&delivery_method=" + encodeURIComponent(method),
             {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}, signal: controller.signal});
         if (!response.ok) throw new Error('summary_unavailable');
         var data = await response.json();
@@ -394,7 +412,9 @@ async function refreshCheckoutSummary(method) {
             throw new Error('invalid_summary');
         }
         if (data.total_amount !== data.subtotal + data.shipping_fee) throw new Error('invalid_total');
+        if (typeof data.checkout_review_token !== 'string' || !data.checkout_review_token || data.checkout_review_token.length > 32768) throw new Error('missing_review');
         var nonempty = renderCheckoutItems(data);
+        document.getElementById('checkout-review-token').value = nonempty ? data.checkout_review_token : '';
         shipping.textContent = data.formatted_shipping_fee;
         shipping.classList.remove('shipping-free', 'shipping-standard');
         shipping.classList.add(data.shipping_fee === 0 ? 'shipping-free' : 'shipping-standard');
@@ -477,7 +497,7 @@ function setDeliveryMethod(method, refreshSummary) {
         if (method) refreshCheckoutSummary(method.value);
     });
     document.getElementById('checkout-form').addEventListener('submit', function (event) {
-        if (!checkoutReviewKnown || checkoutCartPending) event.preventDefault();
+        if (!checkoutReviewKnown || checkoutCartPending || !document.getElementById('checkout-review-token').value) event.preventDefault();
     });
     if (!button) return;
     button.addEventListener('click', function () {

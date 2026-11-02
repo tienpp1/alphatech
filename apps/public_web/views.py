@@ -73,6 +73,7 @@ from apps.public_web.registration import (
     consume_registration_link,
 )
 from apps.public_web.fulfillment import FulfillmentError, allocate_home_delivery_stock
+from apps.public_web.checkout_review import issue_checkout_review, checkout_review_matches
 
 logger = logging.getLogger(__name__)
 
@@ -1494,8 +1495,14 @@ def public_cart_json_view(request):
     """
     cart = get_cart(request)
     delivery_method = request.GET.get("delivery_method", "HOME_DELIVERY")
+    if delivery_method not in {"HOME_DELIVERY", "STORE_PICKUP"}:
+        delivery_method = "HOME_DELIVERY"
     data = serialize_cart_summary(cart, delivery_method=delivery_method)
-    return JsonResponse(data)
+    if request.GET.get("review") == "1":
+        data["checkout_review_token"] = issue_checkout_review(request, cart, delivery_method)
+    response = JsonResponse(data)
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 def public_cart_view(request):
@@ -1518,15 +1525,13 @@ def public_cart_view(request):
     return render(request, "public/cart.html", context)
 
 
+@require_POST
 def public_cart_add_view(request, pk):
     """
     Adds a product to shopping cart (POST /gio-hang/them/<pk>/).
     Supports 'buy_now' (redirects to /gio-hang/) and 'add_to_cart'.
     Also supports AJAX requests returning JSON.
     """
-    if request.method not in ("POST", "GET"):
-        return redirect("/san-pham/")
-
     raw_qty = request.POST.get("quantity") or request.GET.get("quantity") or 1
     action = request.POST.get("action") or request.GET.get("action") or "buy_now"
 
@@ -1681,6 +1686,10 @@ def public_copilot_api_view(request):
 
 
 def public_checkout_view(request):
+    return _render_public_checkout(request)
+
+
+def _render_public_checkout(request, *, draft=None, error_message=None, status=200):
     """
     Public Checkout Page (GET /thanh-toan/) - Light Theme.
     Step 2: Customer details, shipping address, delivery method, and COD payment review.
@@ -1690,7 +1699,10 @@ def public_checkout_view(request):
     if not items:
         return redirect("/gio-hang/")
 
-    delivery_method = request.GET.get("delivery_method", "HOME_DELIVERY")
+    draft = draft or {}
+    delivery_method = draft.get("delivery_method", request.GET.get("delivery_method", "HOME_DELIVERY"))
+    if delivery_method not in {"HOME_DELIVERY", "STORE_PICKUP"}:
+        delivery_method = "HOME_DELIVERY"
     summary = cart.get_summary(delivery_method=delivery_method)
 
     branches = Branch.objects.filter(is_active=True, workspace__workspace_type=WorkspaceType.RETAIL).order_by("name")
@@ -1710,22 +1722,28 @@ def public_checkout_view(request):
             customer_phone = customer_profile.phone or ""
             customer_address = customer_profile.address or ""
 
-    error_message = request.session.pop("checkout_error", None)
+    previous_error = request.session.pop("checkout_error", None)
+    error_message = error_message or previous_error
 
     context = {
         "page_title": "Thanh toán đơn hàng | ABC Tech Store",
         "summary": summary,
         "items": items,
         "branches": branches,
-        "customer_name": customer_name,
-        "customer_phone": customer_phone,
-        "customer_email": customer_email,
-        "customer_address": customer_address,
+        "customer_name": draft.get("name", customer_name),
+        "customer_phone": draft.get("phone", customer_phone),
+        "customer_email": draft.get("email", customer_email),
+        "customer_address": draft.get("address", customer_address),
+        "customer_city": draft.get("city", "TP. Hồ Chí Minh"),
+        "customer_district": draft.get("district", ""),
+        "customer_notes": draft.get("notes", ""),
+        "selected_branch_id": str(draft.get("branch_id", "")),
         "delivery_method": delivery_method,
+        "checkout_review_token": issue_checkout_review(request, cart, delivery_method, summary=summary),
         "error_message": error_message,
         "active_nav": "cart",
     }
-    return render(request, "public/checkout.html", context)
+    return render(request, "public/checkout.html", context, status=status)
 
 
 @transaction.atomic
@@ -1809,6 +1827,18 @@ def public_checkout_place_order_view(request):
             request.session["checkout_error"] = f"Sản phẩm '{item.product.name}' hiện không còn kinh doanh. Vui lòng cập nhật giỏ hàng."
             return redirect("/gio-hang/")
 
+    # Compare the UI consent snapshot against locked current prices before any
+    # stock/customer/order/audit writes. A timed-out earlier cart POST can still
+    # save its session later; a successful intervening GET never proves it ended.
+    subtotal = sum(product_map[item.product.id].unit_price * Decimal(item.quantity) for item in cart_items)
+    shipping_fee = cart.calculate_shipping_fee(delivery_method, subtotal=subtotal)
+    total_amount = subtotal + shipping_fee
+    if not checkout_review_matches(request,
+            lines=[(product_map[item.product.id], item.quantity) for item in cart_items],
+            delivery_method=delivery_method, subtotal=subtotal, shipping_fee=shipping_fee):
+        return _render_public_checkout(request, draft=request.POST, status=409,
+            error_message="Giỏ hàng, giá bán hoặc cách nhận hàng đã thay đổi, hoặc phiên xem lại đã hết hạn. Vui lòng xem lại sản phẩm và tổng tiền trước khi đặt hàng.")
+
     # Strict home delivery reserves one fulfillment branch using locked stock
     # rows. The setting is opt-in so older deployments retain compatibility
     # until their branch balances are complete.
@@ -1858,11 +1888,6 @@ def public_checkout_place_order_view(request):
         workspace=retail_ws, user=request.user, name=name,
         email=email, phone=phone, address=address,
     )
-
-    # Server-Side Computations
-    subtotal = sum(product_map[item.product.id].unit_price * Decimal(item.quantity) for item in cart_items)
-    shipping_fee = cart.calculate_shipping_fee(delivery_method, subtotal=subtotal)
-    total_amount = subtotal + shipping_fee
 
     today = timezone.now().date()
     rand_suffix = uuid.uuid4().hex[:6].upper()

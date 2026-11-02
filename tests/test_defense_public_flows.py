@@ -1,11 +1,16 @@
 """Customer defense regressions; real CSRF/ownership, disposable TEST database."""
 import json
 import re
+import threading
+import time
+from unittest.mock import patch
 
-from django.test import Client, TestCase
+from django.contrib.sessions.backends.db import SessionStore
+from django.test import Client, TestCase, TransactionTestCase
 from django.utils import timezone
 
-from apps.retail.models import Category, Customer, Order, Product
+from apps.audit.models import AuditLog
+from apps.retail.models import Branch, Category, Customer, Order, Product, StockBalance
 from apps.workspaces.models import Workspace
 
 
@@ -56,3 +61,171 @@ class DefensePublicFlowTests(TestCase):
         self.assertEqual(link, "/dat-hang-thanh-cong/ORD-20261102-GUEST/")
         self.assertEqual(browser.get(link).status_code, 200)
         self.assertEqual(Client().get(link).status_code, 404)
+
+    def test_cart_add_get_is_read_only_and_post_still_requires_csrf(self):
+        browser = Client(enforce_csrf_checks=True)
+        browser.get("/san-pham/")
+        url = f"/gio-hang/them/{self.product.pk}/"
+        response = browser.get(url, {"quantity": 9, "format": "json"})
+        self.assertEqual(response.status_code, 405)
+        self.assertNotIn("public_shopping_cart", browser.session)
+        self.assertEqual(browser.post(url, {"quantity": 9}).status_code, 403)
+        self.assertNotIn("public_shopping_cart", browser.session)
+
+
+class CheckoutReviewFixtures:
+    def setUp(self):
+        self.workspace = Workspace.objects.create(code="review-retail", name="Retail", workspace_type="RETAIL")
+        category = Category.objects.create(workspace=self.workspace, code="CABLE", name="Cable")
+        self.product = Product.objects.create(workspace=self.workspace, category=category, sku="REVIEW", name="TEST cable", unit_price=95000)
+        self.branch = Branch.objects.create(workspace=self.workspace, code="REVIEW", name="TEST branch")
+        self.stock = StockBalance.objects.create(workspace=self.workspace, product=self.product, branch=self.branch, quantity_on_hand=10)
+        self.browser = Client()
+        self.browser.post(f"/gio-hang/them/{self.product.pk}/", {"quantity": 1})
+        self.form = {"name": "TEST recipient", "phone": "0900000000", "email": "review@example.test",
+                     "address": "TEST address", "delivery_method": "STORE_PICKUP", "branch_id": self.branch.pk}
+
+    def review(self, browser=None, method="STORE_PICKUP"):
+        response = (browser or self.browser).get("/thanh-toan/", {"delivery_method": method})
+        self.assertEqual(response.status_code, 200)
+        token = response.context.get("checkout_review_token")
+        self.assertTrue(token, "Actual checkout must issue a signed review token")
+        return token
+
+    def assert_no_business_writes(self):
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity_on_hand, 10)
+        self.assertEqual(Customer.objects.count(), 0)
+        self.assertEqual(Order.objects.count(), 0)
+        self.assertEqual(AuditLog.objects.count(), 0)
+
+
+class DefenseCheckoutReviewTests(CheckoutReviewFixtures, TestCase):
+    def test_stale_review_renders_409_with_safe_draft_and_updated_review(self):
+        token = self.review()
+        Product.objects.filter(pk=self.product.pk).update(unit_price=120000)
+        draft = {**self.form, "name": 'TEST <img src=x onerror="alert(1)">',
+                 "city": "TEST city", "district": "TEST district", "notes": "TEST instructions"}
+        response = self.browser.post("/thanh-toan/dat-hang/?review=1", {**draft, "checkout_review_token": token})
+        self.assertEqual(response.status_code, 409)
+        self.assert_no_business_writes()
+        for context_key, field in (("customer_name", "name"), ("customer_phone", "phone"), ("customer_email", "email"),
+                ("customer_address", "address"), ("customer_city", "city"), ("customer_district", "district"),
+                ("customer_notes", "notes"), ("delivery_method", "delivery_method")):
+            self.assertEqual(response.context[context_key], draft[field])
+        self.assertEqual(response.context["selected_branch_id"], str(self.branch.pk))
+        self.assertContains(response, '&lt;img src=x', status_code=409)
+        self.assertNotContains(response, '<img src=x onerror=', status_code=409)
+        self.assertIn("xem lại", response.context["error_message"].lower())
+        self.assertTrue(response.context["checkout_review_token"])
+        self.assertNotEqual(response.context["checkout_review_token"], token)
+        self.assertEqual(response.context["summary"]["total_amount"], 120000)
+
+    def test_actual_form_requires_token_even_if_late_session_save_loses_issued_marker(self):
+        self.review()
+        session = self.browser.session
+        session.pop("public_checkout_review_required", None)
+        session.save()
+        response = self.browser.post("/thanh-toan/dat-hang/?review=1", self.form)
+        self.assertEqual(response.status_code, 409)
+        self.assert_no_business_writes()
+        self.assertIn("xem lại", response.context["error_message"].lower())
+
+    def test_issued_review_missing_or_malformed_token_never_writes(self):
+        self.review()
+        for value in (None, "", "not-signed", "x" * 20000):
+            with self.subTest(token_kind="missing" if value is None else len(value)):
+                data = dict(self.form)
+                if value is not None:
+                    data["checkout_review_token"] = value
+                self.browser.post("/thanh-toan/dat-hang/", data)
+                self.assert_no_business_writes()
+
+    def test_locked_live_price_change_rejects_old_review_before_stock_or_customer(self):
+        token = self.review()
+        Product.objects.filter(pk=self.product.pk).update(unit_price=120000)
+        self.browser.post("/thanh-toan/dat-hang/?review=1", {**self.form, "checkout_review_token": token})
+        self.assert_no_business_writes()
+
+    def test_review_is_bound_to_server_delivery_method(self):
+        token = self.review(method="HOME_DELIVERY")
+        self.browser.post("/thanh-toan/dat-hang/?review=1", {**self.form, "checkout_review_token": token})
+        self.assert_no_business_writes()
+
+    def test_review_cannot_be_used_in_another_browser_session(self):
+        token = self.review()
+        outsider = Client()
+        outsider.post(f"/gio-hang/them/{self.product.pk}/", {"quantity": 1})
+        outsider.post("/thanh-toan/dat-hang/?review=1", {**self.form, "checkout_review_token": token})
+        self.assert_no_business_writes()
+
+    def test_review_expires_without_business_writes(self):
+        with patch("django.core.signing.time.time", return_value=time.time() - 1900):
+            token = self.review()
+        self.browser.post("/thanh-toan/dat-hang/?review=1", {**self.form, "checkout_review_token": token})
+        self.assert_no_business_writes()
+
+    def test_unchanged_review_places_exact_snapshot_and_ignores_posted_totals(self):
+        token = self.review()
+        response = self.browser.post("/thanh-toan/dat-hang/?review=1", {**self.form, "checkout_review_token": token,
+            "total_amount": 1, "unit_price": 1})
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.get()
+        self.assertEqual(order.total_amount, 95000)
+        self.assertEqual(order.items.get().quantity, 1)
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity_on_hand, 9)
+
+    def test_authoritative_get_issues_review_for_selected_method(self):
+        self.review()
+        response = self.browser.get("/gio-hang/api/", {"delivery_method": "STORE_PICKUP", "review": "1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("checkout_review_token"))
+        self.assertEqual(response.json()["total_amount"], 95000)
+
+
+class DefenseCheckoutLateSessionTests(CheckoutReviewFixtures, TransactionTestCase):
+    def test_late_aborted_post_saves_after_old_get_then_placement_rejects_review(self):
+        """Pause actual mutation session persistence, not merely its JS response."""
+        save_reached, release_save = threading.Event(), threading.Event()
+        errors = []
+        writer = Client()
+        writer.cookies = self.browser.cookies.copy()
+        original_save = SessionStore.save
+
+        def delayed_save(session, *args, **kwargs):
+            if threading.current_thread().name == "late-cart-writer":
+                save_reached.set()
+                if not release_save.wait(15):
+                    raise RuntimeError("TEST late save release timeout")
+            return original_save(session, *args, **kwargs)
+
+        def mutate():
+            from django.db import close_old_connections
+            close_old_connections()
+            try:
+                writer.post(f"/gio-hang/cap-nhat/{self.product.pk}/", {"quantity": 2, "format": "json"})
+            except Exception as exc:
+                errors.append(exc)
+            finally:
+                close_old_connections()
+
+        with patch.object(SessionStore, "save", delayed_save):
+            thread = threading.Thread(target=mutate, name="late-cart-writer")
+            thread.start()
+            try:
+                self.assertTrue(save_reached.wait(15))
+                page = self.browser.get("/thanh-toan/", {"delivery_method": "STORE_PICKUP"})
+                self.assertEqual(page.status_code, 200)
+                token = page.context.get("checkout_review_token") or "unsigned-before-repair"
+                old = self.browser.get("/gio-hang/api/", {"delivery_method": "STORE_PICKUP", "review": "1"}).json()
+                self.assertEqual(old["total_quantity"], 1)
+                token = old.get("checkout_review_token") or token
+            finally:
+                release_save.set()
+                thread.join(15)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(errors, [])
+        self.assertEqual(self.browser.get("/gio-hang/api/").json()["total_quantity"], 2)
+        self.browser.post("/thanh-toan/dat-hang/?review=1", {**self.form, "checkout_review_token": token})
+        self.assert_no_business_writes()

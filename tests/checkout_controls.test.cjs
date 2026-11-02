@@ -37,7 +37,7 @@ function harness() {
 const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 function reply(call, shipping, total) {
   call.resolve({ok: true, json: async () => ({shipping_fee: shipping, total_amount: total,
-    subtotal: total - shipping, formatted_subtotal: (total - shipping) + '₫',
+    checkout_review_token: 'signed-test-review', subtotal: total - shipping, formatted_subtotal: (total - shipping) + '₫',
     items: [{name: 'TEST cable', quantity: 1, line_total: total - shipping,
       formatted_unit_price: (total - shipping) + '₫', formatted_line_total: (total - shipping) + '₫'}],
     formatted_shipping_fee: shipping ? shipping + '₫' : 'Miễn phí', formatted_total_amount: total + '₫'})});

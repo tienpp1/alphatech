@@ -1086,13 +1086,17 @@
         body.innerHTML = html;
     }
 
+    var publicCartReadVersion = 0;
     function refreshCyberCart() {
+        if (publicCartMutationPending) return;
+        var current = ++publicCartReadVersion;
         fetch('/gio-hang/api/', {
+            cache: 'no-store',
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
         })
-        .then(function(res) { return res.json(); })
+        .then(function(res) { if (!res.ok) throw new Error('cart_unavailable'); return res.json(); })
         .then(function(data) {
-            renderCyberCart(data);
+            if (current === publicCartReadVersion && !publicCartMutationPending) renderCyberCart(data);
         })
         .catch(function(err) {
             console.error('Error fetching cart:', err);
@@ -1105,6 +1109,7 @@
     async function mutatePublicCart(url, formData) {
         if (publicCartMutationPending) return false;
         publicCartMutationPending = true;
+        publicCartReadVersion++;
         document.dispatchEvent(new CustomEvent('public-cart:pending'));
         var controller = new AbortController();
         var timeout = setTimeout(function () { controller.abort(); }, 10000);

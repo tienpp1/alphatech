@@ -46,7 +46,7 @@ function harness(withCheckout = false) {
 }
 const flush = async () => {for(let i=0;i<20;i++) await Promise.resolve();};
 const summary = (quantity=2) => ({items:quantity ? [{product_id:1,name:'TEST cable',quantity,unit_price:95000,line_total:95000*quantity,formatted_unit_price:'95.000₫',formatted_line_total:'190.000₫',image_url:null}] : [],
-  total_quantity:quantity,items_count:quantity?1:0,subtotal:95000*quantity,formatted_subtotal:quantity?'190.000₫':'0₫',shipping_fee:quantity?30000:0,formatted_shipping_fee:quantity?'30.000₫':'Miễn phí',total_amount:quantity?220000:0,formatted_total_amount:quantity?'220.000₫':'0₫',progress_pct:3,is_free_shipping:!quantity,formatted_remaining:'4.810.000₫'});
+  checkout_review_token:'signed-review-test',total_quantity:quantity,items_count:quantity?1:0,subtotal:95000*quantity,formatted_subtotal:quantity?'190.000₫':'0₫',shipping_fee:quantity?30000:0,formatted_shipping_fee:quantity?'30.000₫':'Miễn phí',total_amount:quantity?220000:0,formatted_total_amount:quantity?'220.000₫':'0₫',progress_pct:3,is_free_shipping:!quantity,formatted_remaining:'4.810.000₫'});
 const reply = (call,data,ok=true) => call.resolve({ok,json:async()=>data});
 
 test('drawer treats product names and unsafe image URLs as data', () => {
@@ -139,4 +139,32 @@ test('malformed full review and inconsistent amounts stay unknown until retry', 
     reply(h.calls[1],bad);await flush();assert.equal(h.node('btn-place-order').disabled,true);
     assert.equal(h.node('checkout-summary-retry').hidden,false);
   }
+});
+
+test('review GET must supply its signed snapshot before checkout can submit', async () => {
+  const h=harness(true);h.context.cyberCartUpdateQty(1,2);reply(h.calls[0],{success:true,cart:summary()});await flush();
+  const unsigned=summary();delete unsigned.checkout_review_token;reply(h.calls[1],unsigned);await flush();
+  assert.equal(h.node('btn-place-order').disabled,true);
+  h.node('checkout-summary-retry').dispatchEvent({type:'click'});reply(h.calls[2],summary());await flush();
+  assert.equal(h.node('checkout-review-token').value,'signed-review-test');
+});
+
+test('refreshed checkout rows retain thumbnail/fallback and typography layout safely', async () => {
+  for(const image of [null,'/media/test.png']) {
+    const h=harness(true),data=summary();data.items[0].image_url=image;
+    h.context.cyberCartUpdateQty(1,2);reply(h.calls[0],{success:true,cart:data});await flush();reply(h.calls[1],data);await flush();
+    const row=h.node('checkout-review-items').children[0];
+    assert.equal(row.children[0].style.width,'52px');assert.equal(row.children[0].style.height,'52px');
+    assert.equal(row.children[1].style.minWidth,'0');
+    assert.equal(row.children[1].children[0].style.textOverflow,'ellipsis');
+    assert.ok(row.children[0].children.length>0);
+    assert.equal(row.children[0].children[0].tag,image?'img':'span');
+  }
+});
+
+test('late drawer GET cannot overwrite a newer confirmed mutation', async () => {
+  const h=harness(),old=summary(1);old.total_amount=125000;old.formatted_total_amount='125.000₫';
+  h.context.refreshCyberCart();h.context.cyberCartUpdateQty(1,2);
+  reply(h.calls[1],{success:true,cart:summary()});await flush();
+  reply(h.calls[0],old);await flush();assert.equal(h.node('cyber-cart-total').textContent,'220.000₫');
 });
