@@ -1340,3 +1340,15 @@ the sparse service endpoint in evaluation without inventing gap observations.
 Low observation counts are explicitly limited evidence, not generalizable
 quality. The initial Neon publication rolled back on no-observed-truth and is
 not recorded as success; a fresh release must verify the runtime repair first.
+
+## 2026-11-02 — Dependency security gate before defense release
+
+- Raise security floors of existing Django/DRF/image/PDF and HTTP/Daphne
+  dependencies; retain patched Django5.2/6.0/6.1 branches with explicit unsafe
+  patch exclusions, without changing numerical/GIS ranges or database schema.
+- Pin patched pip bootstrap in build/CI and tool-only filelock floor in CI;
+  preserve dependency audit and all existing test gates, add8offline policy tests.
+- Verify in an independent Python environment, not the user's global install.
+  Distinguish installed-package findings from exploitable paths and retain the
+  unresolved upstream TwistedIMAP scope limitation. Full/runtime audit evidence
+  and deployment are separate gates, not implied by these source changes.

@@ -1624,6 +1624,9 @@ thực thi, không tự suy ra PASS từ việc có file hoặc đổi tiến đ
 - `test_forecast_backed_recommendations.py` thuộc TIME-SERIES FORECASTING/
   ACTIONS & APPROVALS: đọc forecast đã lưu, nguồn đối chiếu quan sát thật,
   lịch sử/metadata/ngày qua nửa đêm, advisory và chống trùng đồng thời.
+- `test_dependency_security_floors.py` thuộc SECURITY/DEPLOYMENT: kiểm tra
+  offline các khoảng phiên bản an toàn và bootstrap pip. Không thay audit
+  dependency đã cài hoặc chứng minh lỗ hổng không thể khai thác.
 
 Đây là inventory, không là điểm chất lượng AI hoặc nghiệm thu browser. Kết quả
 chạy được ghi riêng trong DEFENSE_READINESS_2026_11_02.md; không cộng nhóm test

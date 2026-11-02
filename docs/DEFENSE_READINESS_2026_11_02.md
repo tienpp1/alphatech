@@ -52,11 +52,41 @@ tối ưu tuyệt đối, mọi thiết bị hoặc hiệu quả kinh doanh ngo�
     Trạng thái ngày được kiểm lại lúc đọc/chấp thuận, kể cả qua nửa đêm.
 
 Kiểm thử tập trung hiện có (các nhóm chồng lặp, không cộng thành full suite):
-public119/119OK14,009s + JS21/21; mapping/GIS74/74OK12,391s + JS9/9;
+public sau sửa empty-cart121/121OK12,479s + JS22/22; mapping/GIS74/74OK12,391s + JS9/9;
 chat66/66OK12,809s + JS9/9 và5 nhóm transport cũ; forecast/rule/approval99/99
 OK38,517s + JS5/5. Các RED, lỗi fixture trung gian và kết quả GREEN được giữ
 riêng trong output và báo cáo từng task. Fresh reviewer của từng nhóm đã duyệt
 sau các vòng sửa; không coi self-review hoặc tên file GREEN là bằng chứng.
+
+Whole-branch review tìm thêm trường hợp cart bị xóa hết sau bản chốt: đường
+strict trả409 và giữ bản nháp, kể cả sản phẩm vừa bị vô hiệu hóa; nút đặt mua
+disabled khi rỗng. Direct POST legacy vẫn redirect như cũ. Reviewer đã đối chiếu
+delta850d1eb và không thấy regression mới trong phạm vi này.
+
+## Dependency bảo mật và môi trường kiểm thử
+
+Lượt full đầu ở1c0f614 đạt1564/1564OK292,720s,886 source files không đổi;
+đây là bằng chứng trước sửa empty-cart và trước nâng dependency, không phải
+chứng nhận bản cuối. Kiểm toán sau đó phát hiện169 dòng/126 advisory duy nhất
+trên Python chung,19 dòng/16 advisory trên môi trường công cụ. Đó là hai
+inventory khác nhau; không cộng trùng hoặc gọi tất cả là khai thác được.
+
+Nguồn đã nâng floor Django theo từng nhánh vá5.2.18/6.0.9/6.1.2, loại rõ các
+patch cũ ở nhánh6.0/6.1; DRF/Pillow/pypdf và transitive HTTP/Daphne có floor
+bảo mật tương ứng. CI/build bootstrap pip26.2.2; giữ audit và toàn bộ test cũ.
+8 test policy offline đã thấy RED trước sửa và GREEN sau sửa; chúng không thay
+audit môi trường thật. Python chung không được nâng/xóa; tạo venv riêng hoàn
+toàn để kiểm chứng, giữ nguyên phiên bản stack số liệu của thực nghiệm cũ.
+
+Đối chiếu bản vá từ [Django](https://www.djangoproject.com/weblog/2026/oct/06/security-releases/),
+[Pillow](https://github.com/python-pillow/Pillow/security/advisories/GHSA-78g4-xqwv-q3g8),
+[pypdf](https://github.com/py-pdf/pypdf/security/advisories/GHSA-5849-834g-hvw5)
+và các maintainer. Twisted có advisory IMAP ghi chưa có patched version; source
+dự án không có IMAP listener/import tương ứng. Không suy ra upstream đã vá chỉ
+vì bản mới ngoài khoảng affected ghi trong feed; rủi ro dư này tiếp tục được
+ghi rõ, không ignore advisory để đạt số0. Report chi tiết và inventory local
+nằm tại output/defense_dependency_triage_20261102.md. Audit/full trên venv mới
+đang chờ receipt; chưa gọi production đã nâng dependency.
 
 ## Đối chiếu các nhóm yêu cầu Word
 

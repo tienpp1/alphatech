@@ -77,3 +77,18 @@ forecast advisory integration reads existing saved runs without training or SQL 
 - [ ] Exercise real HTTP journeys and attempt browser customer/manager UAT; identify tooling/auth/provider gates distinctly.
 - [ ] Fresh whole-branch review and regression verification of important findings.
 - [ ] Produce Vietnamese report with exact tested source/counts, repairs, proposal alignment and accepted scope exceptions. Commit/push/deploy only after evidence gates, keeping the dirty main workspace untouched.
+
+#### Security gate extension after first full run
+
+Actual installed-package audits found outdated application and tooling dependencies.
+Add only security floors for existing dependencies and patched installer bootstrap;
+no new feature/model/schema, no global Python upgrade or changes to numerical study.
+Files: requirements.txt, build.sh, quality.yml, test_dependency_security_floors.py.
+
+- [ ] Observe offline policy tests RED, apply floors/branch exclusions and bootstrap,
+      then GREEN; preserve every existing CI test/audit and fresh review the delta.
+- [ ] Create an independent venv without system packages, record exact resolved
+      inventory and pip check, audit it without ignoring advisories, and rerun
+      framework/full/JS gates. Retain the original old-runtime full receipt separately.
+- [ ] Disclose the upstream Twisted IMAP advisory's unresolved patch/reachability
+      uncertainty; zero package audit is not an application security certificate.

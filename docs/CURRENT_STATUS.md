@@ -1978,3 +1978,13 @@ Review từng nhóm đã sạch sau sửa; nguồn chuẩn bị whole-branch/sou
 verification. HTTPbaseline12public/29mụcđọc mỗi manager/employee không5xx,
 RBACdenialsđúng; không browser hoặc bản sửa đã deploy. CUA/NodeREPL đều lỗi
 kernel-assets path trước khi thao tác UI, không dùng VM/HTTP giả visualUAT.
+
+Review cuối đã sửa strictcheckoutcart rỗng trả409giữdraft/nút disabled;
+publicfocused121/121OK12,479s, aggregateJS73/73PASS2947,5385ms và5transportgroups.
+Fullđầu1564/1564OK292,720s ở1c0f614 là trướcdelta850d1eb/dependency, không
+mượn làm kết quả bản cuối. AuditPythonchung169raw/126unique vàtoolenv19/16
+phát hiện packagecũ. Nguồn nâng securityfloors/frameworkbranches và bootstrap
+pip26.2.2;8offlinecontracts RED→GREEN, reviewerđộc lập duyệt. Tạo venvriêng
+khôngsystempackages, không nângPythonchung. Patchedruntime6.1.2/Pillow13 đã
+cài; audit/full/framework đang chạy riêng. Không ignoreTwistedIMAPadvisory
+chưa có patchedversion: chưa thấy listener/import tương ứng, không nói đãvá.

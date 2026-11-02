@@ -3,8 +3,8 @@
 set -o errexit
 
 echo "==> [BUILD] Installing Python Dependencies..."
-pip install --upgrade pip
-pip install -r requirements.txt
+python -m pip install --upgrade "pip==26.2.2"
+python -m pip install -r requirements.txt
 
 echo "==> [BUILD] Applying Django database migrations..."
 python manage.py migrate --no-input
