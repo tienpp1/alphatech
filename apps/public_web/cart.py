@@ -54,14 +54,18 @@ class ShoppingCart:
     Session storage schema: { "<product_id_str>": <quantity_int> }
     """
 
-    def __init__(self, request: HttpRequest):
+    def __init__(self, request: HttpRequest, *, read_only: bool = False):
         self.request = request
         self.session = request.session
+        self.read_only = read_only
         raw_cart = self.session.get(SESSION_CART_KEY)
         if not isinstance(raw_cart, dict):
             raw_cart = {}
-            self.session[SESSION_CART_KEY] = raw_cart
-        self.cart_data: Dict[str, int] = raw_cart
+            if not self.read_only:
+                self.session[SESSION_CART_KEY] = raw_cart
+        # GET can filter stale lines in its local snapshot without letting a
+        # delayed SessionMiddleware save overwrite a newer POST's whole cart.
+        self.cart_data: Dict[str, int] = dict(raw_cart) if self.read_only else raw_cart
         self._cached_items: Optional[List[CartItem]] = None
 
     def add(self, product_id: int, quantity: int = 1) -> bool:
@@ -125,8 +129,9 @@ class ShoppingCart:
         """
         self.cart_data = {}
         self._cached_items = []
-        self.session[SESSION_CART_KEY] = {}
-        self.session.modified = True
+        if not self.read_only:
+            self.session[SESSION_CART_KEY] = {}
+            self.session.modified = True
 
     @property
     def total_items_count(self) -> int:
@@ -240,10 +245,12 @@ class ShoppingCart:
 
     def _save(self):
         self._cached_items = None
+        if self.read_only:
+            return
         self.session[SESSION_CART_KEY] = self.cart_data
         self.session.modified = True
 
 
-def get_cart(request: HttpRequest) -> ShoppingCart:
+def get_cart(request: HttpRequest, *, read_only: bool = False) -> ShoppingCart:
     """Helper to get or initialize ShoppingCart for request."""
-    return ShoppingCart(request)
+    return ShoppingCart(request, read_only=read_only)

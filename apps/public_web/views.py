@@ -1493,7 +1493,7 @@ def public_cart_json_view(request):
     """
     Returns live cart state as JSON for Slide-over Cyber Cart Drawer (GET /gio-hang/api/).
     """
-    cart = get_cart(request)
+    cart = get_cart(request, read_only=True)
     delivery_method = request.GET.get("delivery_method", "HOME_DELIVERY")
     if delivery_method not in {"HOME_DELIVERY", "STORE_PICKUP"}:
         delivery_method = "HOME_DELIVERY"

@@ -37,8 +37,9 @@ def review_snapshot(request, *, lines, delivery_method, subtotal, shipping_fee):
 
 def issue_checkout_review(request, cart, delivery_method, *, summary=None):
     if not request.session.session_key:
-        request.session.create()
-    request.session[REVIEW_REQUIRED_SESSION_KEY] = True
+        # A first empty read must not create/save a session. A persisted nonempty
+        # cart already has a key; otherwise the strict UI remains fail-closed.
+        return ""
     summary = summary or cart.get_summary(delivery_method=delivery_method)
     payload = review_snapshot(request, lines=[(item.product, item.quantity) for item in summary["items"]],
         delivery_method=delivery_method, subtotal=summary["subtotal"], shipping_fee=summary["shipping_fee"])
@@ -52,9 +53,9 @@ def checkout_review_matches(request, *, lines, delivery_method, subtotal, shippi
     required = (request.GET.get("review") == "1" or
                 request.session.get(REVIEW_REQUIRED_SESSION_KEY) or token is not None)
     if not required:
-        # Existing headless clients which have never requested a UI review keep
-        # their prior POST contract. The actual UI's ?review=1 is always strict,
-        # even if an older in-flight session save overwrites its session marker.
+        # Legacy headless POSTs outside the strict UI keep their prior contract.
+        # The actual UI's ?review=1 is strict independently of session markers.
+        # Old markers are read for compatibility, never issued/written by GET.
         return True
     if not isinstance(token, str) or not token or len(token) > REVIEW_MAX_LENGTH:
         return False

@@ -358,8 +358,20 @@ function renderCheckoutItems(data) {
             var image = document.createElement('img'); image.setAttribute('src', imageURL); image.setAttribute('alt', item.name);
             Object.assign(image.style, {width: '100%', height: '100%', objectFit: 'contain', padding: '2px'}); thumbnail.append(image);
         } else {
-            var fallback = document.createElement('span'); fallback.textContent = '▣'; fallback.setAttribute('aria-hidden', 'true');
-            Object.assign(fallback.style, {color: '#94A3B8', fontSize: '22px'}); thumbnail.append(fallback);
+            var fallback = document.createElement('div'); fallback.style.color = '#94A3B8';
+            var namespace = 'http://www.w3.org/2000/svg';
+            var monitor = document.createElementNS(namespace, 'svg');
+            Object.entries({width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                'stroke-width': '1.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true'})
+                .forEach(function (entry) { monitor.setAttribute(entry[0], entry[1]); });
+            [['rect', {x: '2', y: '3', width: '20', height: '14', rx: '2', ry: '2'}],
+             ['line', {x1: '8', y1: '21', x2: '16', y2: '21'}],
+             ['line', {x1: '12', y1: '17', x2: '12', y2: '21'}]].forEach(function (shape) {
+                var element = document.createElementNS(namespace, shape[0]);
+                Object.entries(shape[1]).forEach(function (entry) { element.setAttribute(entry[0], entry[1]); });
+                monitor.append(element);
+            });
+            fallback.append(monitor); thumbnail.append(fallback);
         }
         var name = document.createElement('div'); name.textContent = item.name;
         Object.assign(name.style, {fontSize: '0.88rem', fontWeight: '700', color: 'var(--pub-text-heading)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'});
