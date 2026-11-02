@@ -21,7 +21,7 @@ from apps.recommendations.models import (
 from apps.recommendations.scoring import calculate_technician_score
 
 
-def evaluate_retail_recommendations(workspace: Workspace) -> List[Recommendation]:
+def evaluate_retail_recommendations(workspace: Workspace, *, include_historical_forecast=False) -> List[Recommendation]:
     """
     Evaluates deterministic Retail rules for a workspace.
     """
@@ -30,7 +30,8 @@ def evaluate_retail_recommendations(workspace: Workspace) -> List[Recommendation
 
     from apps.retail.models import Order, OrderStatus
 
-    created_recs = []
+    from apps.recommendations.forecast_rules import evaluate_forecast_recommendations
+    created_recs = evaluate_forecast_recommendations(workspace, include_historical=include_historical_forecast)
 
     today = timezone.localdate()
     recent_start = today - datetime.timedelta(days=6)
@@ -39,7 +40,7 @@ def evaluate_retail_recommendations(workspace: Workspace) -> List[Recommendation
     latest_order_date = all_orders.aggregate(last=Max("order_date"))["last"]
     # An old imported snapshot is not evidence of a current business decline.
     if latest_order_date and (latest_order_date < today - datetime.timedelta(days=7) or latest_order_date > today):
-        return evaluate_retail_stockout_recommendations(workspace)
+        return created_recs + evaluate_retail_stockout_recommendations(workspace)
     recent_orders = all_orders.filter(order_date__gte=recent_start, order_date__lte=today)
 
     agg = recent_orders.aggregate(s=Sum("total_amount"), c=Count("id"))

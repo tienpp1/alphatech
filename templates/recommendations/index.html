@@ -210,11 +210,21 @@
         <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
             <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; background: rgba(255,255,255,0.08);">← Bảng điều khiển</a>
             {% if can_manage %}
-            <button class="btn-eval" onclick="triggerEvaluation()">⚡ Kích hoạt Động cơ Quy tắc</button>
+            {% if active_workspace.workspace_type == 'RETAIL' %}
+            <label style="font-size:0.85rem;max-width:340px;" for="include-historical-forecast">
+                <input id="include-historical-forecast" type="checkbox" aria-describedby="historical-forecast-help">
+                Phân tích thêm dự báo lịch sử (chỉ tham khảo)
+            </label>
+            {% endif %}
+            <button id="btn-evaluate-rules" class="btn-eval" onclick="triggerEvaluation()">⚡ Kích hoạt Động cơ Quy tắc</button>
             {% endif %}
         </div>
     </div>
 
+    {% if can_manage and active_workspace.workspace_type == 'RETAIL' %}
+    <p id="historical-forecast-help" style="color:#cbd5e1;font-size:0.85rem;">Luật dự báo doanh thu đối chiếu 7 ngày dự báo đã lưu với 7 ngày có đơn hoàn tất; chỉ tạo đề xuất khi đủ dữ liệu và giảm trên ngưỡng minh họa 10%. Snapshot lịch sử không được chấp thuận như hành động hiện tại. Không chạy huấn luyện hoặc tự thay đổi nghiệp vụ.</p>
+    {% endif %}
+    <p id="evaluation-status" role="status" aria-live="polite"></p>
     <div class="kpi-grid">
         <div class="kpi-card">
             <div class="kpi-label">Không gian làm việc</div>
@@ -300,21 +310,31 @@
 
 <script>
 function triggerEvaluation() {
-    fetch('/api/v1/recommendations/evaluate/', {
+    const button = document.getElementById('btn-evaluate-rules');
+    const status = document.getElementById('evaluation-status');
+    const historical = document.getElementById('include-historical-forecast');
+    if (button.disabled) return Promise.resolve();
+    button.disabled = true;
+    status.textContent = 'Đang đánh giá các luật trên dữ liệu đã lưu…';
+    return fetch('/api/v1/recommendations/evaluate/', {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
+            'X-Workspace-ID': '{{ active_workspace.id|escapejs }}',
             'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({include_historical_forecast: Boolean(historical && historical.checked)})
     })
-    .then(r => r.json())
+    .then(r => { if (!r.ok) throw new Error('HTTP'); return r.json(); })
     .then(data => {
         if (data.success) {
             location.reload();
         } else {
-            alert('Đánh giá thất bại: ' + (data.error || 'Lỗi không xác định'));
+            status.textContent = 'Đánh giá thất bại: ' + (data.error || 'Lỗi không xác định');
         }
-    });
+    })
+    .catch(() => { status.textContent = 'Chưa xác nhận được kết quả đánh giá. Hãy tải lại danh sách trước khi thử lại; không tự gửi lại yêu cầu.'; })
+    .finally(() => { button.disabled = false; });
 }
 
 function decideRec(id, action) {
@@ -322,6 +342,7 @@ function decideRec(id, action) {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
+            'X-Workspace-ID': '{{ active_workspace.id|escapejs }}',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ decision_reason: `Hành động '${action}' được thực hiện từ giao diện người dùng.` })

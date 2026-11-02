@@ -46,8 +46,10 @@ def recommendation_review_state(recommendation):
         except (TypeError, ValueError):
             outdated = True
     unverified_stockout = recommendation.recommendation_type == RecommendationType.RETAIL_STOCKOUT_RISK and not _stockout_evidence_is_current(recommendation.supporting_data)
-    return {"stale": expired or outdated or unverified_stockout,
-            "label": "Tồn kho/nhu cầu cũ hoặc chưa xác minh — cần đánh giá lại; không đủ căn cứ chấp thuận" if unverified_stockout else
+    historical = supporting_data.get('analysis_mode') == 'HISTORICAL'
+    return {"stale": expired or outdated or unverified_stockout or historical,
+            "label": "Phân tích lịch sử — chỉ tham khảo, không chấp thuận như hành động hiện tại" if historical else
+            "Tồn kho/nhu cầu cũ hoặc chưa xác minh — cần đánh giá lại; không đủ căn cứ chấp thuận" if unverified_stockout else
             "Hết hạn / snapshot cũ — cần đánh giá lại" if expired or outdated else "Snapshot tại thời điểm tạo; cần đối chiếu trước khi quyết định",
             "period_end": period_end,
             "stockout_evidence_current": not unverified_stockout if recommendation.recommendation_type == RecommendationType.RETAIL_STOCKOUT_RISK else None,

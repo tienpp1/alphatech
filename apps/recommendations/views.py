@@ -157,8 +157,14 @@ class RecommendationEvaluateAPIView(APIView):
         if not has_workspace_permission(request.user, workspace, "recommendations.manage_recommendation") and not request.user.is_superuser:
             return api_response(error="Permission denied: 'recommendations.manage_recommendation' required.", status_code=status.HTTP_403_FORBIDDEN)
 
+        if not isinstance(request.data, dict):
+            return api_response(error="Nội dung đánh giá phải là một đối tượng JSON.", status_code=status.HTTP_400_BAD_REQUEST)
+        include_historical = request.data.get('include_historical_forecast', False)
+        if type(include_historical) is not bool:
+            return api_response(error="include_historical_forecast phải là true hoặc false.", status_code=status.HTTP_400_BAD_REQUEST)
+
         if workspace.workspace_type == WorkspaceType.RETAIL:
-            created = evaluate_retail_recommendations(workspace)
+            created = evaluate_retail_recommendations(workspace, include_historical_forecast=include_historical)
         elif workspace.workspace_type == WorkspaceType.SERVICE:
             created = evaluate_service_recommendations(workspace)
         else:
