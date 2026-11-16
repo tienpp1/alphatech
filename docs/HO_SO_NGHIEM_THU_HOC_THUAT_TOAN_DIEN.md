@@ -1426,6 +1426,11 @@ Hồ sơ này là bản làm việc của đề tài **"Xây dựng nền tảng
 - `test_groq_generation.py`: Groq generation-only transport/fallback/privacy guards,
   citation provenance và kiểm tra không đổi embedding/retrieval; không phải
   bằng chứng chất lượng live LLM hoặc đổi trạng thái ledger97.
+- `test_catalog_price_context.py`: ORM thật trên TEST cô lập, giá danh mục,
+  bộ lọc, đồng giá, Decimal và workspace/RBAC; không phải dữ liệu production.
+- `test_assistant_catalog_context.py`: định tuyến tiếng Việt, ngữ cảnh nối
+  tiếp có giới hạn, câu hỏi giá, từ chối quyền và nguồn cho generation; không
+  tuyên bố hiểu mọi câu hỏi hoặc thay tiến độ97.
 - `test_gis_reference_distances.py`
 - `test_gis_retail.py`
 - `test_gis_security.py`

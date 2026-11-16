@@ -2,6 +2,16 @@
 
 Do not log cosmetic edits.
 
+## 2026-11-16 — Grounded catalog questions and bounded conversation context
+
+Repair polite-prefix skill misrouting and extend the existing catalog tool with
+scoped current-price ranking/search/budget facts, exact Decimal values, ties and
+strict filter/limit validation. Reconstruct bounded prior-user routing context;
+explicit questions override history and unsupported compound conditions clarify.
+Permission denial is no longer mislabeled missing documents. Deterministic
+greetings avoid retrieval/provider calls. Preserve RBAC, schemas, actual prices,
+provider/embedding boundaries and97 ledger; no fine-tuning or public-chat change.
+
 ## 2026-11-16 — Internal OSM tile request policy
 
 Use the canonical OSM tile hostname and per-image origin-only Referer on both

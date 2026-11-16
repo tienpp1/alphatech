@@ -67,13 +67,112 @@ def get_sales_summary(workspace: Workspace, user: User, **kwargs) -> Dict[str, A
 
 def get_product_catalog_summary(workspace: Workspace, user: User, **kwargs) -> Dict[str, Any]:
     """
-    Retrieves catalog counts and top product lines, optionally filtered by category.
+    Retrieves catalog counts, or bounded current-price results with explicit filters.
     Requires 'retail.view_product' permission.
     """
     if not _check_perm(user, workspace, "retail.view_product"):
         raise ToolPermissionDenied("User lacks 'retail.view_product' permission to access product data.")
 
     from apps.retail.models import Product, Category
+
+    # Keep legacy count/sample callers unchanged. Price/search questions require
+    # the complete eligible queryset, never an extremum inferred from a sample.
+    if any(key in kwargs for key in ("sort_by", "search", "min_price", "max_price")):
+        if kwargs.get("sort_by", "unit_price") != "unit_price":
+            raise ValueError("Catalog price sorting supports only unit_price.")
+        sort_order = kwargs.get("sort_order", "DESC")
+        if sort_order not in ("ASC", "DESC"):
+            raise ValueError("Catalog sort_order must be ASC or DESC.")
+        limit = kwargs.get("limit", 5)
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError("Catalog limit must be an integer from 1 to 20.")
+
+        search = kwargs.get("search", "")
+        if not isinstance(search, str) or len(search) > 120:
+            raise ValueError("Catalog search must be a string of at most 120 characters.")
+        search = search.strip()
+
+        price_bounds = {}
+        for field in ("min_price", "max_price"):
+            if field not in kwargs:
+                continue
+            value = kwargs[field]
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("Catalog price bounds must be finite nonnegative decimal strings.")
+            try:
+                amount = Decimal(value.strip())
+            except (ValueError, ArithmeticError):
+                raise ValueError("Catalog price bounds must be finite nonnegative decimal strings.") from None
+            if not amount.is_finite() or amount < 0:
+                raise ValueError("Catalog price bounds must be finite nonnegative decimal strings.")
+            price_bounds[field] = amount
+        if ("min_price" in price_bounds and "max_price" in price_bounds and
+                price_bounds["min_price"] > price_bounds["max_price"]):
+            raise ValueError("Catalog minimum price cannot exceed maximum price.")
+        inclusive = {}
+        for field in ("min_price_inclusive", "max_price_inclusive"):
+            inclusive[field] = kwargs.get(field, True)
+            if type(inclusive[field]) is not bool:
+                raise ValueError("Catalog price inclusivity flags must be booleans.")
+
+        prods = Product.objects.for_workspace(workspace).filter(
+            category__workspace=workspace, is_active=True, deleted_at__isnull=True,
+        )
+        category_filter = str(kwargs.get("category") or "").strip()
+        category_match_status = "UNFILTERED"
+        if category_filter:
+            # Same exact, normalized identity policy as category profit reads.
+            from apps.knowledge.retrieval import _normalize_vietnamese_text
+            category_key = _normalize_vietnamese_text(category_filter)
+            categories_qs = Category.objects.for_workspace(workspace)
+            if category_filter.isdigit():
+                matches = list(categories_qs.filter(pk=int(category_filter)))
+            else:
+                matches = [category for category in categories_qs
+                           if category_key in {_normalize_vietnamese_text(category.code),
+                                               _normalize_vietnamese_text(category.name)}]
+            if len(matches) == 1:
+                prods = prods.filter(category_id=matches[0].pk)
+                category_match_status = "EXACT_MATCH"
+            else:
+                prods = prods.none()
+                category_match_status = "AMBIGUOUS" if matches else "NOT_FOUND"
+        if search:
+            prods = prods.filter(Q(name__icontains=search) | Q(sku__icontains=search))
+        for field, operator in (("min_price", "gte"), ("max_price", "lte")):
+            if field in price_bounds:
+                if not inclusive[field + "_inclusive"]:
+                    operator = "gt" if field == "min_price" else "lt"
+                prods = prods.filter(**{"unit_price__" + operator: price_bounds[field]})
+
+        total_matching = prods.count()
+        price_order = "unit_price" if sort_order == "ASC" else "-unit_price"
+        selected = list(prods.order_by(price_order, "sku", "id").values("sku", "name", "unit_price")[:limit])
+        ranked_products = [{"sku": row["sku"], "name": row["name"],
+                            "unit_price": str(row["unit_price"]),
+                            "unit_price_formatted": f"{row['unit_price']:,.2f} VND"}
+                           for row in selected]
+        result = {
+            "tool": "get_product_catalog_summary", "workspace": workspace.code,
+            "category_filter": category_filter or "all", "category_match_status": category_match_status,
+            "total_products": total_matching, "active_products": total_matching,
+            "categories": list(Category.objects.for_workspace(workspace).values("code", "name").annotate(
+                product_count=Count("products", filter=Q(products__workspace=workspace,
+                    products__is_active=True, products__deleted_at__isnull=True)))[:10]),
+            "sample_products": [{"sku": row["sku"], "name": row["name"],
+                                 "unit_price": row["unit_price_formatted"]} for row in ranked_products[:5]],
+            "ranked_products": ranked_products, "total_matching": total_matching,
+            "displayed_count": len(ranked_products), "limit": limit,
+            "truncated": total_matching > len(ranked_products), "sort_by": "unit_price", "sort_order": sort_order,
+            "search_filter": search,
+            "min_price": str(price_bounds["min_price"]) if "min_price" in price_bounds else None,
+            "max_price": str(price_bounds["max_price"]) if "max_price" in price_bounds else None,
+            **inclusive,
+            "price_basis": "Product.unit_price hiện tại trong danh mục đang kinh doanh; không phải doanh thu, lợi nhuận hoặc tồn kho.",
+        }
+        if limit == 1:
+            result["tie_count"] = prods.filter(unit_price=selected[0]["unit_price"]).count() if selected else 0
+        return result
 
     category_code = kwargs.get("category")
     prods = Product.objects.for_workspace(workspace)

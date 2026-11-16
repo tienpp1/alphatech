@@ -1,5 +1,14 @@
 # AI Business Platform — canonical project context
 
+Assistant catalog/context repair (2026-11-16): current-price questions reuse
+the canonical scoped catalog tool, not sampled KB or sales totals. New price
+mode keeps retail.view_product, active/nondeleted same-workspace products and
+categories, exact Decimal values, bounded filters/results and tie provenance.
+Routing context is rebuilt from at most3 prior USER messages in the owned
+session/workspace, excluding the current turn; full questions override ellipses.
+Unsupported constraints clarify and greetings/permission denials do not call
+the provider. This changes no schema, business rows, public copilot or97 ledger.
+
 GIS tile request boundary (2026-11-16): all three Leaflet surfaces use the
 canonical OSM tile endpoint with per-image referrerPolicy=origin. The global
 same-origin policy stays unchanged; tile providers receive no internal paths

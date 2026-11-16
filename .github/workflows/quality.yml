@@ -70,7 +70,7 @@ jobs:
       - name: Internal collaboration and display-time regressions
         run: python manage.py test tests.test_team_chat_display_time tests.test_bulletin_and_team_chat tests.test_collaboration_workspace_selection tests.test_bulletin_update --noinput
       - name: Knowledge context ingestion and retrieval regressions
-        run: python manage.py test tests.test_rag_documents tests.test_rag_retrieval tests.test_rag_grounding_assistant tests.test_rag_chunking_embedding tests.test_embedding_space_isolation --noinput
+        run: python manage.py test tests.test_rag_documents tests.test_rag_retrieval tests.test_rag_grounding_assistant tests.test_rag_chunking_embedding tests.test_embedding_space_isolation tests.test_catalog_price_context tests.test_assistant_catalog_context --noinput
       - name: Internal collaboration JavaScript transport regressions
         run: node scripts/test_internal_collaboration_js.cjs
       - name: Live audit repair contracts

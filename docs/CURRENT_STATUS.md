@@ -1,5 +1,20 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 16/11/2026 — Sửa ngữ cảnh hỏi giá AI (local, đang chốt)
+
+Khắc phục “cho tôi biết” gọi nhầm kỹ năng nhân viên; mở rộng công cụ catalog
+có sẵn cho giá cao/thấp/topN/tên-SKU/ngân sách VND từ ORM scoped thật, không
+suy max/min từ5mẫu. Giữ Decimal, đồng giá và quyền retail.view_product.
+Sửa lịch sử3câu USER trước, loại câu hiện tại; câu đầy đủ không bị lịch sử
+ghi đè. Điều kiện chưa hỗ trợ hỏi lại, không âm thầm bỏ; thiếu quyền nói rõ.
+Chào/cảm ơn không gọi provider. Không fine-tune/model mới, không đổi embedding,
+schema, dữ liệu, publiccopilot hoặc sổ97. Focused cuối261/261 OK19,377s;
+JS76/76 và5transportgroups đạt. Full1648/1648 OK858,055s, không skip;
+DB TEST riêng tự hủy,6file app/test trọng tâm giữ hash trước/sau. Bandit4module
+0finding/error, scan894files0known-secret findings; primary focused34/34 đạt
+13,470s. CI/live là cổng riêng đang chờ, không gán full cho primary tree bẩn.
+Chi tiết ASSISTANT_CATALOG_CONTEXT_2026_11_16.md; chưa push/deploy lượt này.
+
 ## 16/11/2026 — Sửa chính sách ảnh nền OSM (đang kiểm chứng)
 
 Hai bản đồ nội bộ bán lẻ/dịch vụ dùng endpoint OSM chuẩn và referrerPolicy

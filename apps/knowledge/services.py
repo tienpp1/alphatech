@@ -663,6 +663,11 @@ chỉ vì tài liệu xuất hiện trong kết quả tìm kiếm.
 7. Không tuyên bố đã thực hiện hành động, phê duyệt, gửi email hoặc thay đổi
 dữ liệu chỉ dựa vào văn bản. Chỉ mô tả kết quả hành động có bằng chứng hệ thống;
 dự báo và mô phỏng là ước lượng, không phải cam kết hoặc số liệu thực tế.
+8. Dữ liệu công cụ hệ thống là nguồn độc lập, không bắt buộc có tài liệu kèm
+theo. Giá Product.unit_price là giá niêm yết hiện tại, không phải doanh thu,
+giá vốn hoặc xác nhận tồn kho. Với danh mục, chỉ dùng ranked_products đã được
+lọc/sắp xếp; nêu bộ lọc, giới hạn hiển thị và đồng giá nếu có. Không suy ra
+giá cao nhất/thấp nhất từ sample_products hay tạo lịch sử giá không được cung cấp.
 
 DỮ LIỆU NGỮ CẢNH:
 {full_context}
@@ -714,6 +719,27 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
                     f"với {td.get('total_orders')} đơn hàng ({td.get('completed_orders')} đơn đã hoàn thành)."
                 )
             elif tname == "get_product_catalog_summary":
+                if 'ranked_products' in td:
+                    products = td['ranked_products']
+                    lines = ['Giá niêm yết hiện tại trong workspace (không phải doanh thu hoặc xác nhận còn hàng):']
+                    if products:
+                        lines.append('Sắp xếp giá ' + ('thấp đến cao.' if td.get('sort_order') == 'ASC' else 'cao đến thấp.'))
+                        for item in products:
+                            lines.append(f"- **{item['name']}** (SKU {item['sku']}): **{item['unit_price_formatted']}**")
+                        if td.get('tie_count', 0) > 1:
+                            lines.append(f"Có {td['tie_count']} sản phẩm cùng mức giá này; mục hiển thị không phải kết quả duy nhất.")
+                        if td.get('truncated'):
+                            lines.append(f"Hiển thị {td['displayed_count']}/{td['total_matching']} sản phẩm phù hợp; chưa liệt kê tất cả.")
+                    else:
+                        lines.append('Không tìm thấy sản phẩm đang kinh doanh khớp danh mục, tên/mã và khoảng giá đã yêu cầu; không thay bằng sản phẩm khác.')
+                    if td.get('search_filter'):
+                        lines.append(f"Bộ lọc tên/mã: {td['search_filter']}.")
+                    for key, label in [('min_price', 'Giá tối thiểu'), ('max_price', 'Giá tối đa')]:
+                        if td.get(key) is not None:
+                            inclusive = td.get(key + '_inclusive', True)
+                            lines.append(f"{label}: {td[key]} VND ({'có' if inclusive else 'không'} bao gồm mức biên).")
+                    answer_parts.append('\n'.join(lines))
+                    continue
                 answer_parts.append(
                     f"Danh mục sản phẩm hiện có {td.get('total_products')} sản phẩm ({td.get('active_products')} đang kinh doanh)."
                 )
@@ -1311,7 +1337,7 @@ def answer_grounded_query(
         )
 
     # 3. Record user message
-    ChatMessage.objects.create(
+    user_message = ChatMessage.objects.create(
         workspace=workspace,
         session=session,
         role=ChatRole.USER,
@@ -1392,13 +1418,16 @@ def answer_grounded_query(
     # -----------------------------------------------------------------------
     # Multi-turn Conversation Context Memory (Workspace & Session Scoped)
     # -----------------------------------------------------------------------
-    prior_messages = session.messages.order_by("-created_at")[:6]
+    prior_messages = session.messages.filter(workspace=workspace, role=ChatRole.USER, pk__lt=user_message.pk).order_by("-created_at", "-id")[:3]
     conv_context = []
+    from apps.knowledge.intent_router import classify_business_intent, BusinessIntent
     for m in reversed(list(prior_messages)):
+        prior_intent = classify_business_intent(m.content, workspace, conversation_context=conv_context)
         conv_context.append({
             "role": m.role,
             "content": m.content,
-            "tools_used": m.tools_used,
+            "intent": prior_intent.get('intent'),
+            "parameters": prior_intent.get('parameters', {}),
         })
 
     # -----------------------------------------------------------------------
@@ -1406,13 +1435,21 @@ def answer_grounded_query(
     # -----------------------------------------------------------------------
     from apps.knowledge.intent_router import classify_business_intent, BusinessIntent
     intent_result = classify_business_intent(clean_message, workspace, conversation_context=conv_context)
+    if intent_result.get('intent') == BusinessIntent.SMALL_TALK:
+        answer = intent_result['response']
+        generation = {'mode': 'DETERMINISTIC', 'provider': None, 'model': None, 'reason': 'SMALL_TALK'}
+        reply = ChatMessage.objects.create(workspace=workspace, session=session, role=ChatRole.ASSISTANT, content=answer, sources=[], tools_used=[])
+        log_audit_event(workspace=workspace, user=user, action='AI_CHAT_QUERY', entity_type='ConversationSession', entity_id=str(session.id),
+                        metadata={'query_length':len(clean_message), 'retrieved_chunk_count':0, 'tools_invoked':[], 'has_sources':False, 'generation_metadata':generation})
+        return {'session_id':session.id, 'message_id':reply.id, 'role':'assistant', 'intent':BusinessIntent.SMALL_TALK,
+                'answer':answer, 'sources':[], 'tools_used':[], 'generation_metadata':generation}
     # A pure data question must not acquire unrelated SOP/policy paragraphs
     # merely because hash embeddings share common business vocabulary.
     needs_context = not intent_result.get("tools") or _matches_any_keyword(
         ["quy trình", "chính sách", "quy định", "sop", "tài liệu", "hướng dẫn",
          "thế nào", "làm sao", "như thế nào", "vì sao", "tại sao",
          "có nghĩa", "được tính", "thiếu", "điều kiện"], clean_message)
-    if intent_result.get("allow_document_retrieval", True) and needs_context:
+    if intent_result.get("intent") != BusinessIntent.AMBIGUOUS and intent_result.get("allow_document_retrieval", True) and needs_context:
         retrieved_chunks = search_relevant_chunks(workspace, clean_message, metadata=retrieval_observation)
     else:
         retrieved_chunks = []
@@ -1487,8 +1524,9 @@ def answer_grounded_query(
                     if k in intent_params and intent_params[k] is not None:
                         kwargs[k] = intent_params[k]
             elif tool_name == "get_product_catalog_summary":
-                if "category" in intent_params and intent_params["category"]:
-                    kwargs["category"] = intent_params["category"]
+                for key in ('category', 'sort_by', 'sort_order', 'limit', 'search', 'min_price', 'max_price', 'min_price_inclusive', 'max_price_inclusive'):
+                    if key in intent_params and intent_params[key] is not None:
+                        kwargs[key] = intent_params[key]
             elif tool_name == "get_sales_summary":
                 for k in ("start_date", "end_date", "time_label", "exclude_cancelled"):
                     if k in intent_params and intent_params[k] is not None:
@@ -1542,14 +1580,19 @@ def answer_grounded_query(
 
     # 5. Generate Grounded Answer
     generation_metadata = {}
-    answer_text, citations = generate_grounded_answer(
-        workspace=workspace,
-        user=user,
-        query=clean_message,
-        chunks=retrieved_chunks,
-        tools_data=tools_data,
-        generation_metadata=generation_metadata,
-    )
+    if not tools_data and not retrieved_chunks and tools_used_log and all(entry['status'] == 'PERMISSION_DENIED' for entry in tools_used_log):
+        answer_text = 'Bạn chưa có quyền đọc dữ liệu cần cho câu hỏi này trong workspace hiện tại. Hãy liên hệ quản trị để kiểm tra quyền; tôi chưa truy xuất được dữ liệu đó.'
+        citations = []
+        generation_metadata.update(mode='NO_CONTEXT', provider=None, model=None, reason='PERMISSION_DENIED')
+    else:
+        answer_text, citations = generate_grounded_answer(
+            workspace=workspace,
+            user=user,
+            query=clean_message,
+            chunks=retrieved_chunks,
+            tools_data=tools_data,
+            generation_metadata=generation_metadata,
+        )
 
     # 6. Record assistant message
     asst_msg = ChatMessage.objects.create(

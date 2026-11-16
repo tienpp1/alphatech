@@ -233,6 +233,7 @@ def extract_skill_keyword(query: str) -> Optional[str]:
 
 
 class BusinessIntent:
+    SMALL_TALK = "SMALL_TALK"
     CATALOG_COUNT = "CATALOG_COUNT"
     CATALOG_LIST = "CATALOG_LIST"
     TOP_SELLING_PRODUCTS = "TOP_SELLING_PRODUCTS"
@@ -321,16 +322,78 @@ def resolve_follow_up_context(
     last_turn = conversation_context[-1] if conversation_context else {}
     last_intent = last_turn.get("intent")
     last_params = last_turn.get("parameters", {})
+    if not last_intent or not isinstance(last_params, dict):
+        return {}
+
+    entity_switch = re.fullmatch(r"(?:con|vay)\s+(.+?)\s+(?:thi\s*sao|the\s*nao)[?.!]*", norm)
+    time_switch = re.fullmatch(r"(?:con\s+|vay\s+)?(?:thang truoc|thang nay|tuan nay|tuan truoc|hom qua|quy nay|nam nay)(?:\s+thi\s+(?:the nao|sao))?[?.!]*", norm)
+    short_reference = _contains_word_or_phrase(norm, ["cai do", "con bao nhieu cai", "vay ai", "ai xu ly duoc", "ai phu hop", "ai nen lam", "ai gan nhat", "chi phi la bao nhieu", "tien cong the nao", "ton bao nhieu gio"])
+    if not (entity_switch or time_switch or short_reference):
+        return {}
+
+    # A catalog category/price ranking is not evidence of one selected item or
+    # historical prices. Do not turn these follow-ups into unrelated summaries.
+    if last_intent == BusinessIntent.CATALOG_LIST and last_params.get('sort_by') == 'unit_price':
+        from .catalog_context import clarification, parse_catalog_question
+        if short_reference or time_switch:
+            result = clarification('Bạn hãy cho mã/tên sản phẩm và kỳ cần tra. Tôi chỉ có giá niêm yết hiện tại; chưa xác định một sản phẩm cụ thể hoặc lịch sử giá để trả lời câu tiếp theo.')
+            result['inherited_intent'] = BusinessIntent.AMBIGUOUS
+            return result
+        params = dict(last_params)
+        entity = entity_switch[1].strip() if entity_switch else ''
+        next_category = extract_product_category(entity) or last_params.get('category')
+        if next_category != last_params.get('category'):
+            params['category'] = next_category
+            params.pop('search', None)
+        next_limit, _ = extract_limit_and_ordering(entity)
+        parsed = parse_catalog_question(entity, entity, next_category, next_limit)
+        if parsed:
+            if parsed['intent'] == BusinessIntent.AMBIGUOUS:
+                parsed['inherited_intent'] = BusinessIntent.AMBIGUOUS
+                return parsed
+            updates = dict(parsed['parameters'])
+            for field in ('min_price', 'max_price'):
+                if field not in updates:
+                    updates.pop(field + '_inclusive', None)
+            if not _contains_word_or_phrase(entity, ['re nhat', 'gia thap nhat', 'dat nhat', 'mac nhat', 'gia cao nhat', 'gia lon nhat', 'gia nho nhat', 'gia tang dan', 'gia giam dan', 'gia tu thap den cao', 'gia tu cao den thap']):
+                updates.pop('sort_order', None)
+                if not re.search(r'\btop\s*\d+\b', entity):
+                    updates.pop('limit', None)
+            params.update(updates)
+        else:
+            # Adding a generic price suffix lets the canonical name/brand parser
+            # handle a category/brand switch without an independent heuristic.
+            parsed = parse_catalog_question(entity + ' gia bao nhieu', entity + ' gia bao nhieu', next_category, params.get('limit', 1))
+            if parsed and parsed['intent'] == BusinessIntent.AMBIGUOUS:
+                parsed['inherited_intent'] = BusinessIntent.AMBIGUOUS
+                return parsed
+            next_search = parsed.get('parameters', {}).get('search') if parsed else None
+            if next_search:
+                params['search'] = next_search
+            elif entity not in {'laptop', 'dien thoai', 'smartphone', 'chuot', 'ban phim'}:
+                params['search'] = entity[:120]
+        return {'inherited_intent': BusinessIntent.CATALOG_LIST, 'tools': ['get_product_catalog_summary'], 'parameters': params}
+
+    compatible_tools = {
+        BusinessIntent.TOP_SELLING_PRODUCTS: ['get_top_selling_products'],
+        BusinessIntent.TOP_REVENUE_PRODUCTS: ['get_top_selling_products'],
+        BusinessIntent.SALES_SUMMARY: ['get_sales_summary'],
+        BusinessIntent.BRANCH_REVENUE: ['get_branch_sales_analytics'],
+        BusinessIntent.TOP_CUSTOMERS: ['get_top_customers'],
+        BusinessIntent.CATALOG_COUNT: ['get_product_catalog_summary'],
+    }
 
     # 1. "Còn ASUS / Lenovo / iPhone thì sao?"
-    m_entity = re.search(r"con\s+([A-Za-z0-9\s_-]+?)\s+(?:thi\s*sao|the\s*nao)", norm)
+    m_entity = entity_switch
     if m_entity:
         new_ent = m_entity.group(1).strip()
         inherited["category"] = extract_product_category(new_ent) or last_params.get("category")
         inherited["entity_name"] = new_ent
         inherited["inherited_intent"] = last_intent or BusinessIntent.TOP_SELLING_PRODUCTS
-        inherited["tools"] = ["get_top_selling_products"]
-        inherited["parameters"] = {
+        if last_intent not in compatible_tools:
+            return {}
+        inherited["tools"] = compatible_tools[last_intent]
+        inherited["parameters"] = {**last_params,
             "category": inherited["category"],
             "metric": last_params.get("metric", "quantity_sold"),
             "limit": last_params.get("limit", 1),
@@ -339,13 +402,13 @@ def resolve_follow_up_context(
         return inherited
 
     # 2. "Tháng trước thì thế nào?" / "Còn tuần này?"
-    if any(k in norm for k in ["thang truoc", "thang nay", "tuan nay", "tuan truoc", "hom qua", "quy nay", "nam nay"]):
+    if time_switch and last_intent in compatible_tools:
         s_date, e_date, t_label = parse_date_range_from_text(query)
         inherited["inherited_intent"] = last_intent or BusinessIntent.SALES_SUMMARY
         inherited["category"] = last_params.get("category")
         inherited["branch"] = last_params.get("branch")
-        inherited["tools"] = ["get_sales_summary"]
-        inherited["parameters"] = {
+        inherited["tools"] = compatible_tools[last_intent]
+        inherited["parameters"] = {**last_params,
             "start_date": s_date,
             "end_date": e_date,
             "time_label": t_label,
@@ -397,11 +460,18 @@ def classify_business_intent(
     and suggested tools across Retail, Service, GIS, Forecasting, and Knowledge domains.
     """
     norm = strip_accents_and_lower(query)
+    norm = re.sub(r"\s+", " ", norm)
     ws_type = getattr(workspace, "workspace_type", "RETAIL")
     start_date, end_date, time_label = parse_date_range_from_text(query)
     limit, sort_order = extract_limit_and_ordering(query)
     category = extract_product_category(query)
     exclusions = extract_negations_and_exclusions(query)
+
+    conversational = norm.strip(' .!?,;:')
+    if conversational in {'chao', 'xin chao', 'hello', 'hi', 'chao ban', 'cam on', 'cam on ban', 'thank you', 'thanks', 'ban giup duoc gi', 'ban lam duoc gi'}:
+        reply = ('Rất vui được hỗ trợ bạn. Bạn muốn tra cứu thêm thông tin gì?' if conversational in {'cam on', 'cam on ban', 'thank you', 'thanks'} else
+                 'Xin chào! Tôi có thể giúp tra giá sản phẩm, tồn kho, doanh thu, yêu cầu dịch vụ và tài liệu của workspace theo quyền của bạn. Bạn muốn kiểm tra nội dung nào?')
+        return {'intent': BusinessIntent.SMALL_TALK, 'tools': [], 'parameters': {}, 'response': reply}
 
     # External investment/market questions are not workspace revenue forecasts.
     # A hash-vector coincidence must not turn unrelated SOPs into their answer.
@@ -418,6 +488,7 @@ def classify_business_intent(
             "intent": follow_up["inherited_intent"],
             "tools": follow_up.get("tools", []),
             "parameters": follow_up.get("parameters", {}),
+            **({'clarification_question': follow_up['clarification_question']} if follow_up.get('clarification_question') else {}),
         }
 
     # 1. Genuine Ambiguity Detection
@@ -844,11 +915,17 @@ def classify_business_intent(
             "parameters": {"customer_name": cust_name},
         }
 
+    # Price is a catalog fact, not sales performance or employee competency.
+    from .catalog_context import parse_catalog_question
+    catalog_request = parse_catalog_question(query, norm, category, limit)
+    if catalog_request:
+        return catalog_request
+
     # 7. Technician Skills & Competencies (with optional availability)
     skill_match = extract_skill_keyword(query)
     is_doc_query = _contains_word_or_phrase(norm, ["quy trinh", "sop", "huong dan", "chinh sach", "quy dinh", "tieu chuan", "dieu khoan"])
     is_product_catalog_query = _contains_word_or_phrase(norm, ["model", "cac model", "danh sach san pham", "hien co", "bao nhieu"])
-    is_person_skill_query = _contains_word_or_phrase(norm, ["ai", "ai co", "ky thuat vien", "nhan vien", "nguoi", "chuyen mon", "ky nang", "biet"])
+    is_person_skill_query = _contains_word_or_phrase(norm, ["ai", "ai co", "ky thuat vien", "nhan vien", "nguoi", "chuyen mon", "ky nang"])
 
     if (skill_match or _contains_word_or_phrase(norm, ["ky nang", "chuyen mon", "biet", "chuyen ve"])) and not is_doc_query and not is_product_catalog_query and is_person_skill_query:
         is_avail_only = _contains_word_or_phrase(norm, ["ranh", "san sang", "available", "dang ranh"])
