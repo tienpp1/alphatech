@@ -1,5 +1,11 @@
 # AI Business Platform — canonical project context
 
+Status surface change (2026-11-16, source only): owner retired /status/,
+/noibo/status/ and /health/, their navigation and dashboard infrastructure card.
+/api/health/ remains for telemetry/machine monitoring with existing redaction
+and failure semantics. Dashboard no longer calls the dependency probe for the
+removed card. No RBAC/database/97-item scope changes or deployment implied.
+
 Guarded forecasting (2026-11-01): opt-in `guarded_direct_v1` selects normalized
 direct XGBoost or MA7 using past-only validation with recorded conservative
 heuristics. Holdout qualifies promotion, never reselects the model. Final serving

@@ -453,7 +453,7 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
             "/noibo/bao-cao-dieu-hanh/",
             "/noibo/bao-cao-dieu-hanh/export-csv/",
             "/noibo/telemetry/",
-            "/noibo/status/",
+            "/noibo/telemetry/",
             "/noibo/bang-tin/",
             "/noibo/trao-doi/",
             "/noibo/retail/",

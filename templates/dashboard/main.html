@@ -369,29 +369,4 @@
     </div>
 </div>
 
-<!-- Runtime & Infrastructure Status Summary -->
-<div class="card glass-card" style="padding: 1.5rem 1.75rem; border-radius: 14px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <h3 style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.25rem;">
-                Hạ tầng Kỹ thuật & Độ sẵn sàng Nền tảng
-            </h3>
-            <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem; color: #94a3b8;">
-                <span>Python: <strong style="color: #cbd5e1;">{{ health.environment.python_version }}</strong></span>
-                <span>Django: <strong style="color: #cbd5e1;">{{ health.environment.django_version }}</strong></span>
-                <span>CSDL: <strong style="color: #34d399;">PostgreSQL (Đã kết nối)</strong></span>
-                <span>Không gian: <strong style="color: #38bdf8;">{{ health.database.postgis }}</strong></span>
-                <span>Hiện trạng: <strong style="color: #a78bfa;">{{ health.phase.current }}</strong></span>
-            </div>
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <a href="/noibo/status/" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
-                🔍 Chi tiết Trạng thái Kỹ thuật
-            </a>
-            <a href="/health/" target="_blank" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">
-                JSON Health API ↗
-            </a>
-        </div>
-    </div>
-</div>
 {% endblock %}

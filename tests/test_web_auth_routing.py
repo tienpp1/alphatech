@@ -469,8 +469,6 @@ class WebAuthRoutingTestCase(TestCase):
             "/chi-nhanh/",
             "/gioi-thieu/",
             "/lien-he/",
-            "/status/",
-            "/health/",
             "/api/health/",
         ]
         for p_route in public_routes:
@@ -479,6 +477,8 @@ class WebAuthRoutingTestCase(TestCase):
                 200,
                 f"Public route {p_route} failed to return 200 OK",
             )
+        for retired in ("/status/", "/health/"):
+            self.assertEqual(self.client.get(retired).status_code, 404)
 
         # 3. Authenticated: protected routes load successfully
         self.client.login(username=self.username, password=self.password)

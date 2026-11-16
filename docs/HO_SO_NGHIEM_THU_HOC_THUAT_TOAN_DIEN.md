@@ -1634,3 +1634,9 @@ thực thi, không tự suy ra PASS từ việc có file hoặc đổi tiến đ
 Đây là inventory, không là điểm chất lượng AI hoặc nghiệm thu browser. Kết quả
 chạy được ghi riêng trong DEFENSE_READINESS_2026_11_02.md; không cộng nhóm test
 chồng lặp và không sửa cấu trúc hoặc tiến độ checklist 97.
+
+### Bổ sung inventory16/11/2026 — gỡ trang trạng thái
+
+- `test_retired_status_surfaces.py` thuộc CROSS-CUTTING / INTEGRITY:
+  gỡ đăng ký/status/health cũ, không render khối hạ tầng/menu liên kết,
+  giữ endpoint máy /api/health/. Inventory không tự chứng minh PASS.

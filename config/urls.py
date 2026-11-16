@@ -8,7 +8,6 @@ from django.conf import settings
 from django.conf.urls.static import static
 from config.views import (
     health_check_api_view,
-    health_check_ui_view,
     root_dashboard_ui_view,
     executive_operational_report_ui_view,
     export_report_csv_view,
@@ -29,7 +28,6 @@ urlpatterns = [
     path("noibo/bao-cao-dieu-hanh/", executive_operational_report_ui_view, name="noibo_executive_report"),
     path("noibo/bao-cao-dieu-hanh/export-csv/", export_report_csv_view, name="noibo_executive_report_csv"),
     path("noibo/telemetry/", system_telemetry_ui_view, name="noibo_telemetry"),
-    path("noibo/status/", health_check_ui_view, name="noibo_health_check_ui"),
     path("noibo/thong-bao/", include("apps.notifications.ui_urls")),
     path("noibo/bang-tin/", bulletin_board_ui_view, name="noibo_bulletin_board"),
     path("noibo/bang-tin/<int:pk>/sua/", bulletin_edit_ui, name="noibo_bulletin_edit"),
@@ -47,8 +45,6 @@ urlpatterns = [
     path("noibo/", include("apps.approvals.ui_urls")),
 
     # 3. Dedicated System Status & Health Endpoints
-    path("status/", health_check_ui_view, name="health_check_ui"),
-    path("health/", health_check_api_view, name="health_check"),
     path("api/health/", health_check_api_view, name="api_health_check"),
 
     # 4. Core Platform APIs & Web UI Auth

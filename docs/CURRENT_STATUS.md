@@ -1,5 +1,29 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 16/11/2026 — Gỡ các trang trạng thái theo yêu cầu
+
+Đã gỡ ở source khối Hạ tầng Kỹ thuật khỏi /noibo/, mục menu Trạng thái,
+các route /status/, /noibo/status/, /health/ và template health.html không còn
+dùng. Giữ /api/health/ cho telemetry và đầu dò máy, không còn link trong
+dashboard; dữ liệu che/redaction và trạng thái503 khi DB lỗi được giữ nguyên.
+Dashboard không probe DB/PostGIS chỉ để vẽ khối đã xóa. Không đổi schema,
+dữ liệu, RBAC hoặc sổ97; chưa push/deploy trong lượt này. Kiểm thử hồi quy
+đang chạy trên database TEST local cô lập, không dùng database nghiệp vụ.
+
+Kết quả16/11: source thay đổi tối thiểu cũng áp vào workspace chính;3/3
+regression không DB và52/52 health/auth/dashboard OK24,142s trên TEST random
+riêng đã tự hủy, fast hasher chỉ trong test process. Full của nhánh này đã
+ngắt do chạy chậm, không ghi nhận PASS; đã dọn đúng TEST database của lượt
+ngắt sau khi xác nhận không còn connection. Không reset DB nghiệp vụ.
+
+Pre-release16/11: full1595/538,988s kết thúc1failure duy nhất ở kiểm kê
+manifest vì thiếu tên test_retired_status_surfaces.py; không lỗi runtime
+khác được báo. Bổ sung danh mục, không sửa/xóa assertion; chạy lại9/9 guard
+manifest/retired surfaces OK1,912s. Đây là full có lỗi rồi hồi quy bản sửa
+tài liệu, không phải một lượt full1595 xanh mới. CI thêm nhóm test mới để
+kiểm lại trên runner; không đổi password/fulfillment production (fast hasher
+và legacy compatibility chỉ trong full TEST process).
+
 ## Đợt chốt 97 công việc ngày 09/10/2026
 
 Đối chiếu đủ 97 ID, cập nhật ma trận yêu cầu, sửa thuyết minh nháp vượt source

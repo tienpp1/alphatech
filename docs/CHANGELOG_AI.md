@@ -2,6 +2,16 @@
 
 Do not log cosmetic edits.
 
+## 2026-11-16 — Retire user-facing technical status surfaces
+
+Removed /status/, /noibo/status/ and legacy /health/ routes and the status
+template/menu/dashboard infrastructure card at the owner's request. Dashboard
+no longer runs the dependency probe just to render that card. Retained
+/api/health/ for existing telemetry and machine monitoring, with its redaction
+and 503-on-database-failure contract unchanged. Tests now enforce the removed
+routes and retain endpoint health/security coverage. No database, permissions,
+97-item ledger or production configuration changes; deployment not implied.
+
 ## 2026-11-02 — Proposal-aligned defense repairs
 
 Public CSRF bootstrap, safe dynamic data rendering, synchronized checkout review

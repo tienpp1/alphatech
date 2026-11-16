@@ -106,16 +106,10 @@ from django.contrib.auth.decorators import login_required
 
 
 def health_check_api_view(request):
-    """API endpoint returning health status JSON (GET /health/ and /api/health/)."""
+    """Machine dependency probe (GET /api/health/), not a dashboard page."""
     status_data = get_health_status()
     http_status = 200 if status_data["status"] == "healthy" else 503
     return JsonResponse(status_data, status=http_status)
-
-
-def health_check_ui_view(request):
-    """HTML status dashboard page (GET /status/). Preserves dedicated status/health route."""
-    status_data = get_health_status()
-    return render(request, "health.html", {"health": status_data, "active_tab": "health"})
 
 
 @login_required(login_url="/accounts/login/")
@@ -134,7 +128,6 @@ def root_dashboard_ui_view(request):
         if not has_internal_role:
             return redirect("/tai-khoan/?notice=customer_only")
 
-    status_data = get_health_status()
     authorized_workspaces = get_user_authorized_workspaces(request.user)
 
     from apps.accounts.services import get_user_permissions
@@ -333,7 +326,6 @@ def root_dashboard_ui_view(request):
 
     context = {
         "active_tab": "dashboard",
-        "health": status_data,
         "retail": retail_metrics,
         "service": service_metrics,
         "ai_insights": ai_insights,

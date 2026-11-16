@@ -28,7 +28,7 @@ class GoogleInternalBoundaryTests(TestCase):
     def test_google_superuser_denied_internal_ui_api_admin_and_token_disclosure(self):
         Token.objects.create(user=self.user)
         self.google_session()
-        for path in ("/noibo/", "/retail/products/", "/status/", "/admin/",
+        for path in ("/noibo/", "/retail/products/", "/noibo/telemetry/", "/admin/",
                      "/api/v1/auth/me/", "/api/v1/retail/products/"):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 403)
