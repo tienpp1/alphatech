@@ -673,11 +673,23 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
 
     api_key = getattr(settings, "LLM_API_KEY", "")
     llm_model = getattr(settings, "LLM_MODEL", "gemini-2.5-flash")
+    generation_provider = getattr(settings, 'LLM_GENERATION_PROVIDER', 'gemini')
 
     # If live LLM API is available, invoke it
     # Keep what-if labels and assumptions deterministic, even with a live key.
     has_simulation = any(td.get("tool") == "simulate_what_if_scenario" for td in tools_data)
-    if api_key and api_key.strip() and not has_simulation:
+    groq_reason = None
+    if generation_provider == 'groq' and not has_simulation:
+        from .groq_generation import generate_groq_answer
+        groq_model = getattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b')
+        llm_response, groq_reason = generate_groq_answer(
+            system_prompt, getattr(settings, 'GROQ_API_KEY', ''), groq_model,
+            context={'chunks': chunks, 'tools_data': tools_data},
+        )
+        if llm_response:
+            generation.update(mode='LLM_RESPONSE', provider='groq', model=groq_model, reason=None)
+            return llm_response, sources
+    elif generation_provider == 'gemini' and api_key and api_key.strip() and not has_simulation:
         llm_response = _call_gemini_chat_api(system_prompt, api_key, llm_model)
         if llm_response:
             generation.update(mode="LLM_RESPONSE", provider="google", model=llm_model, reason=None)
@@ -685,7 +697,9 @@ CÂU HỎI CỦA NGƯỜI DÙNG:
 
     generation.update(mode="DETERMINISTIC", provider=None, model=None,
                       reason="SIMULATION" if has_simulation else (
-                          "PROVIDER_UNAVAILABLE" if api_key and api_key.strip() else "NO_API_KEY"))
+                          groq_reason if generation_provider == 'groq' else (
+                              'UNSUPPORTED_PROVIDER' if generation_provider != 'gemini' else (
+                                  "PROVIDER_UNAVAILABLE" if api_key and api_key.strip() else "NO_API_KEY"))))
 
     # Deterministic Grounded Synthesizer (Offline / Test / CI mode)
     answer_parts: List[str] = []

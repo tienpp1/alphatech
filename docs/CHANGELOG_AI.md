@@ -2,6 +2,18 @@
 
 Do not log cosmetic edits.
 
+## 2026-11-16 — Opt-in Groq internal answer generation
+
+Added chat-only Groq dispatch without reusing the key for embeddings. Retained
+Gemini default, source citations, no-context/simulation paths, existing tools,
+workspace/RBAC and deterministic fallback; no migration or public-chat change.
+Fixed-host HTTPS, bounded input/output, timeout, complete-response validation,
+recognizable sensitive-field/pattern rejection and secret-free error logging
+protect the boundary. These heuristics do not prove arbitrary prose is PII-free.
+No retry/provider cascade or automatic paid fallback. Test settings/CI disable
+live keys; transport simulation and real synthetic-only proof are recorded
+separately. No change to the97-item progress ledger.
+
 ## 2026-11-16 — Retire user-facing technical status surfaces
 
 Removed /status/, /noibo/status/ and legacy /health/ routes and the status

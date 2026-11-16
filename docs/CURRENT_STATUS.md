@@ -1,5 +1,22 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 16/11/2026 — Groq generation nội bộ (local, chưa deploy)
+
+Đã thêm lựa chọn Groq riêng cho generation, không thay LLM_API_KEY/embedding,
+threshold, vector cũ, schema, dữ liệu, phân quyền hoặc chatbot công khai.
+Fallback giữ nguyên khi thiếu bằng chứng, mô phỏng, lỗi provider, dữ liệu
+nhạy cảm nhận diện được hoặc vượt giới hạn. Key chỉ ở .env; không đưa vào code.
+Hai câu synthetic live đã trả bằng openai/gpt-oss-120b: số liệu doanh thu và
+mâu thuẫn12/24tháng có hai nguồn. Lượt đầu403 do default client header, giữ
+bằng chứng thất bại; sửa header và xác minh catalog200 trước hai lượt thành công.
+Không gửi dữ liệu nghiệp vụ thật. Focused55/55 đạt6,077s; full cuối1614/432,310s
+OK sau sửa credential-prefix, DB TEST tự hủy. Workspace chính49/49focused đạt
+3,723s; không tuyên bố full trên tree bẩn. ReviewImportant đã sửa RED/GREEN.
+Bandit module0findings, scan888files0known-secret findings. Chủ dự án xác nhận
+ZDR chat inference; đã bật selector local và kiểm settings groq/gpt-oss-120b,
+không in key. Restart server local để nạp cấu hình. Bằng chứng
+output/groq_generation_20261116/; chưa push/deploy, đổi Render hoặc bật paid.
+
 ## 16/11/2026 — Gỡ các trang trạng thái theo yêu cầu
 
 Đã gỡ ở source khối Hạ tầng Kỹ thuật khỏi /noibo/, mục menu Trạng thái,

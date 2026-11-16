@@ -1423,6 +1423,9 @@ Hồ sơ này là bản làm việc của đề tài **"Xây dựng nền tảng
 - `test_fulfillment_inventory_consistency.py`
 - `test_full_demo_seed.py`
 - `test_generation_provenance.py`
+- `test_groq_generation.py`: Groq generation-only transport/fallback/privacy guards,
+  citation provenance và kiểm tra không đổi embedding/retrieval; không phải
+  bằng chứng chất lượng live LLM hoặc đổi trạng thái ledger97.
 - `test_gis_reference_distances.py`
 - `test_gis_retail.py`
 - `test_gis_security.py`

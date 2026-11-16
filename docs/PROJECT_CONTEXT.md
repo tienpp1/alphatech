@@ -1,5 +1,14 @@
 # AI Business Platform — canonical project context
 
+Internal generation update (2026-11-16, local): optional
+LLM_GENERATION_PROVIDER=groq uses GROQ_API_KEY/GROQ_MODEL only for final prose.
+Embedding/retrieval still use their existing LLM_API_KEY/configuration; no
+re-index or schema change. The exact Groq HTTPS endpoint has bounded requests,
+no provider failover, sensitive-field/pattern guards and truthful fallback
+metadata. Guards are not a general PII classifier; use reviewed non-confidential
+context only. Public copilot, business tools, RBAC and approval remain unchanged.
+Legacy Gemini stays the default. Live synthetic proof is not a production rollout.
+
 Status surface change (2026-11-16, source only): owner retired /status/,
 /noibo/status/ and /health/, their navigation and dashboard infrastructure card.
 /api/health/ remains for telemetry/machine monitoring with existing redaction

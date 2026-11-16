@@ -334,6 +334,10 @@ EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "768"))
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
 LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
 LLM_API_KEY = os.getenv("LLM_API_KEY", os.getenv("GEMINI_API_KEY", ""))
+# Generation-only configuration; never changes retrieval/embedding credentials.
+LLM_GENERATION_PROVIDER = os.getenv('LLM_GENERATION_PROVIDER', 'gemini').strip().lower()
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'openai/gpt-oss-120b')
 
 # Phase 9: Predictive Analytics & XGBoost Forecasting
 FORECASTING_ARTIFACTS_DIR = BASE_DIR / "ml_models" / "forecasting"

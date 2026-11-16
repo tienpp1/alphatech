@@ -29,6 +29,8 @@ jobs:
       EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
       LLM_API_KEY: ''
       GEMINI_API_KEY: ''
+      GROQ_API_KEY: ''
+      LLM_GENERATION_PROVIDER: gemini
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,7 +46,7 @@ jobs:
       - name: Reject known secrets in release source
         run: python scripts/check_release_secrets.py --output secret-scan.json
       - name: Provider transport and secret-guard regressions
-        run: python manage.py test tests.test_provider_http_boundary tests.test_generation_provenance tests.test_embedding_provenance tests.test_release_secret_scan tests.test_legacy_admin_seed_disabled --noinput
+        run: python manage.py test tests.test_provider_http_boundary tests.test_generation_provenance tests.test_groq_generation tests.test_embedding_provenance tests.test_release_secret_scan tests.test_legacy_admin_seed_disabled --noinput
       - name: Command Center authentication and simulation boundary
         run: python manage.py test tests.test_command_center_security tests.test_google_internal_boundary --noinput
       - name: Existing asset CSP compatibility
