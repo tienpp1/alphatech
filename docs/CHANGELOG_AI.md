@@ -2,6 +2,15 @@
 
 Do not log cosmetic edits.
 
+## 2026-11-16 — Internal OSM tile request policy
+
+Use the canonical OSM tile hostname and per-image origin-only Referer on both
+internal GIS templates, preserving global same-origin privacy and existing CSP,
+workspace/RBAC and escaped map content. Add regression checks for all three
+Leaflet surfaces without weakening existing tests. No provider/proxy/cache
+bypass, database or97-ledger change. Request-policy verification is separate
+from actual live tile loading, which local DNS currently prevents.
+
 ## 2026-11-16 — Opt-in Groq internal answer generation
 
 Added chat-only Groq dispatch without reusing the key for embeddings. Retained

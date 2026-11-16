@@ -188,10 +188,11 @@ document.addEventListener("DOMContentLoaded", function() {
         zoomControl: true,
     });
 
-    // Dark-themed OpenStreetMap tiles
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | Động cơ Không gian PostGIS',
+    // Send only the site origin, not internal paths, to the tile provider.
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Động cơ Không gian PostGIS',
         maxZoom: 19,
+        referrerPolicy: 'origin',
     }).addTo(map);
 
     const branchLayerGroup = L.layerGroup().addTo(map);

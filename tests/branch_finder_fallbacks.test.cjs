@@ -20,6 +20,7 @@ function browser() {
   const map = {setView() { return this; }, removeLayer() {},
     on(type, callback) { events[type] = callback; return this; }};
   let callbacks, markers = 0, requests = 0;
+  const tiles = [];
   const context = {console, URLSearchParams, AbortController,
     document: {getElementById: element, querySelectorAll: () => [],
       createElement: tag => ({tagName: tag, textContent: ''})},
@@ -30,11 +31,15 @@ function browser() {
     L: {map: () => map, divIcon: options => options,
       marker: () => { markers++; return {bindPopup() { return this; },
         addTo() { return this; }, on() { return this; }}; },
-      tileLayer: () => ({on() { return this; }, addTo() { return this; }})},
+      tileLayer: (url, options) => {
+        const tile = {url, options, added: false}; tiles.push(tile);
+        return {on() { return this; }, addTo(map) { tile.added=Boolean(map); return this; }};
+      }},
     fetch: () => { requests++; throw Error('no provider request is permitted'); },
   };
   vm.runInNewContext(source, context);
   return {
+    tiles,
     element, get callbacks() { return callbacks; },
     get markers() { return markers; }, get requests() { return requests; },
     locate() { element('bf-locate').listeners.click(); },
@@ -44,6 +49,17 @@ function browser() {
     },
   };
 }
+
+test('public branch map preserves canonical OSM endpoint and origin-only referrer', () => {
+  const app = browser();
+  assert.equal(app.tiles.length,1);
+  assert.equal(app.tiles[0].url,'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+  assert.equal(app.tiles[0].options.referrerPolicy,'origin');
+  assert.equal(app.tiles[0].options.maxZoom,19);
+  assert.match(app.tiles[0].options.attribution,/openstreetmap\.org\/copyright/);
+  assert.match(app.tiles[0].options.attribution,/contributors/);
+  assert.equal(app.tiles[0].added,true);
+});
 
 test('GPS denied, unavailable and timeout re-enable controls without inventing a location', () => {
   for (const [code, message] of [[1, /chưa cho phép/], [2, /chưa xác định/], [3, /quá thời gian/]]) {

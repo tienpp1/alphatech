@@ -1,5 +1,18 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 16/11/2026 — Sửa chính sách ảnh nền OSM (đang kiểm chứng)
+
+Hai bản đồ nội bộ bán lẻ/dịch vụ dùng endpoint OSM chuẩn và referrerPolicy
+origin riêng cho ảnh tile; không đổi global same-origin/CSP, tọa độ, RBAC,
+database hoặc sổ97. Public branch finder đã có cấu hình đúng, thêm hồi quy.
+Focused JS27/27 và aggregate76/76 đạt; full Django1614/1614 OK746,843s,
+không skip, DB TEST riêng tự hủy;5transportgroups đạt/scan889files0knownsecrets.
+Chrome thật
+trên fixture xác nhận Referer chỉ chứa origin, nhưng ảnh nền chưa tải được do
+DNS mặc định máy trả NXDOMAIN. Không gọi đây là visualUAT PASS. Chủ dự án
+đồng ý thử4G/5G sau deploy. Chi tiết/giới hạn ở MAP_TILE_POLICY_FIX_2026_11_16.md;
+chưa push/deploy bản sửa này.
+
 ## 16/11/2026 — Groq generation nội bộ (local, chưa deploy)
 
 Đã thêm lựa chọn Groq riêng cho generation, không thay LLM_API_KEY/embedding,

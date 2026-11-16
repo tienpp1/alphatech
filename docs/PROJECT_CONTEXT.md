@@ -1,5 +1,12 @@
 # AI Business Platform — canonical project context
 
+GIS tile request boundary (2026-11-16): all three Leaflet surfaces use the
+canonical OSM tile endpoint with per-image referrerPolicy=origin. The global
+same-origin policy stays unchanged; tile providers receive no internal paths
+or workspace selectors. Existing CSP/RBAC/GeoJSON and database contracts stay
+unchanged. Policy-correct requests do not guarantee public-provider uptime or
+successful image loading on a network with broken DNS.
+
 Internal generation update (2026-11-16, local): optional
 LLM_GENERATION_PROVIDER=groq uses GROQ_API_KEY/GROQ_MODEL only for final prose.
 Embedding/retrieval still use their existing LLM_API_KEY/configuration; no

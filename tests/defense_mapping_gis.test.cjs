@@ -89,9 +89,12 @@ for(const [inserted,failed] of [[1,1],[0,2]]) test(`partial import preserves ${f
   assert.equal(app.get('btnConfirmApply').disabled,false);
 });
 
-function leaflet(popups) {
+function leaflet(popups, tiles=[]) {
   const layer=()=>({addTo(){return this;},clearLayers(){},addLayer(){return this;},bindPopup(content){popups.push(content instanceof Element?content.innerHTML:content);return this;}});
-  return {map:()=>({addLayer(){},removeLayer(){},setView(){}}),tileLayer:layer,layerGroup:layer,marker:layer,circleMarker:layer,circle:layer,polyline:layer,divIcon:options=>options};
+  return {map:()=>({addLayer(){},removeLayer(){},setView(){}}),tileLayer:(url,options)=>{
+    const record={url,options,added:false}; tiles.push(record);
+    return {addTo(map){record.added=Boolean(map);return this;}};
+  },layerGroup:layer,marker:layer,circleMarker:layer,circle:layer,polyline:layer,divIcon:options=>options};
 }
 function gisResponder(url) {
   if(url.includes('nearby-technicians')) return {status:'success',data:{ticket_coordinates:[106.7,10.7],search_radius_km:10,total_candidates:1,candidates:[{coordinates:[106.7,10.7],full_name:hostile,code:hostile,formatted_rate:hostile,distance_km:1,current_workload_score:1,skills:[hostile]}]}};
@@ -100,6 +103,18 @@ function gisResponder(url) {
   return {status:'success',data:{metadata:{total_spatial_revenue:1},features:[{geometry:{coordinates:[106.7,10.7]},properties}]}};
 }
 for(const domain of ['retail','service_ops']) {
+  test(`${domain} GIS sends origin-only referrer to the canonical OSM tile endpoint`,async()=>{
+    const tiles=[];
+    setup(`${domain}/gis.html`,gisResponder,{L:leaflet([],tiles)});
+    await settle();
+    assert.equal(tiles.length,1);
+    assert.equal(tiles[0].url,'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+    assert.equal(tiles[0].options.referrerPolicy,'origin');
+    assert.equal(tiles[0].options.maxZoom,19);
+    assert.match(tiles[0].options.attribution,/openstreetmap\.org\/copyright/);
+    assert.match(tiles[0].options.attribution,/contributors/);
+    assert.equal(tiles[0].added,true);
+  });
   test(`${domain} GIS binds every initial/filter/proximity fetch to page workspace`,async()=>{
     const popups=[]; const app=setup(`${domain}/gis.html`,gisResponder,{L:leaflet(popups)}); await settle();
     if(domain==='service_ops') { app.get('filter-category').trigger('change'); app.context.window.inspectNearbyTechnicians(1); }
