@@ -32,13 +32,18 @@ def recommendations_dashboard_view(request):
         recommendation.review_state = recommendation_review_state(recommendation)
         evidence = (recommendation.explanation or {}).get("evidence", recommendation.supporting_data)
         recommendation.evidence_display = json.dumps(evidence, ensure_ascii=False, indent=2)
+    queue = request.GET.get('queue', 'current')
+    pending_count = sum(row.review_state['current'] for row in recommendations)
+    recommendations = [row for row in recommendations if queue == 'all' or
+                       (not row.review_state['current'] if queue == 'history' else row.review_state['current'])]
     context = {
         "active_workspace": workspace,
         "recommendations": recommendations,
+        "selected_queue": queue,
         "selected_status": status_filter,
         "selected_priority": priority_filter,
         "can_manage": can_manage,
-        "total_count": qs.count(),
-        "pending_count": Recommendation.objects.for_workspace(workspace).filter(status=RecommendationStatus.PENDING).count(),
+        "total_count": len(recommendations),
+        "pending_count": pending_count,
     }
     return render(request, "recommendations/index.html", context)

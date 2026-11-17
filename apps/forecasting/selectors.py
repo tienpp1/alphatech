@@ -9,6 +9,7 @@ import datetime
 import pandas as pd
 from django.db.models import Sum, Count, Min, Max
 from django.db.models.functions import TruncDate
+from django.utils import timezone
 
 from apps.workspaces.models import Workspace
 from apps.retail.models import Order, OrderItem, OrderStatus, Product, Category, Branch
@@ -23,6 +24,9 @@ def get_historical_timeseries(
     start_date: Optional[datetime.date] = None,
     end_date: Optional[datetime.date] = None,
     dimensions: Optional[dict] = None,
+    data_mode: str = "historical",
+    as_of: Optional[datetime.date] = None,
+    closed_periods: bool = False,
 ) -> pd.DataFrame:
     """
     Extracts canonical business records for the given workspace and target type,
@@ -30,6 +34,13 @@ def get_historical_timeseries(
 
     Returns DataFrame with DatetimeIndex and a single float column 'target'.
     """
+    if data_mode not in ("historical", "operational"):
+        raise ValueError("Unsupported forecast data_mode.")
+    as_of = as_of or timezone.localdate()
+    closed_periods = closed_periods or data_mode == "operational"
+    closed_end = as_of - datetime.timedelta(days=1)
+    if granularity == Granularity.WEEKLY:
+        closed_end -= datetime.timedelta(days=closed_end.weekday())
     dimensions = dimensions or {}
     if dimensions and target_type != TargetType.RETAIL_PRODUCT_DEMAND:
         raise ValueError("Product dimensions require RETAIL_PRODUCT_DEMAND.")
@@ -128,6 +139,30 @@ def get_historical_timeseries(
     else:
         raise ValueError(f"Unsupported target_type '{target_type}'. Must be one of {[t.value for t in TargetType]}.")
 
+    open_count = sum(day == as_of for day in data)
+    future_count = sum(day > as_of for day in data)
+    excluded_count = sum(day > closed_end for day in data) if closed_periods else 0
+    if closed_periods:
+        data = {day: value for day, value in data.items() if day <= closed_end}
+    source_start, source_end = (min(data), max(data)) if data else (None, None)
+    daily_span = (source_end - source_start).days + 1 if data else 0
+    source_metadata = {
+        "data_mode": data_mode,
+        "as_of": as_of.isoformat(),
+        "closed_periods": closed_periods,
+        "closed_period_end": closed_end.isoformat(),
+        "source_period_start": source_start.isoformat() if source_start else None,
+        "source_period_end": source_end.isoformat() if source_end else None,
+        "open_day_observation_count": open_count,
+        "future_day_observation_count": future_count,
+        "excluded_open_or_future_day_count": excluded_count,
+        "observed_daily_coverage": len(data) / daily_span if daily_span else 0.,
+        "commercial_provenance": "UNKNOWN",
+        "completeness_attested": False,
+        # Keep daily source presence even when weekly totals have the same value
+        # and the same observed-bin labels after a zero-valued source deletion.
+        "source_observed_dates": [day.isoformat() for day in sorted(data)],
+    }
     if not data:
         # Return empty DataFrame with appropriate structure
         empty = pd.DataFrame(columns=["target"], index=pd.DatetimeIndex([], name="date"))
@@ -138,6 +173,9 @@ def get_historical_timeseries(
                 "missing_period_policy": "zero_fill_daily_gap",
                 "source_frequency": granularity,
                 "observed_period_dates": [],
+                "observed_period_count": 0,
+                "imputed_period_count": 0,
+                **source_metadata,
             }
         )
         return empty
@@ -159,6 +197,13 @@ def get_historical_timeseries(
         df = df.resample("W-MON").sum()
         observed = observed.resample("W-MON").sum()
         observed = observed[observed > 0]
+        if closed_periods:
+            # W-MON bins cover Tuesday through Monday. Calendar closure alone
+            # cannot make an unknown leading/trailing partial source week full.
+            eligible = ((df.index - pd.Timedelta(days=6) >= pd.Timestamp(min_d))
+                        & (df.index <= pd.Timestamp(max_d)))
+            df = df.loc[eligible]
+            observed = observed.loc[observed.index.intersection(df.index)]
 
     df.attrs.update(
         {
@@ -169,6 +214,9 @@ def get_historical_timeseries(
             # Source presence is separate from the unchanged zero-filled values.
             # Weekly source presence does not certify completeness of every day.
             "observed_period_dates": [day.date().isoformat() for day in observed.index],
+            "observed_period_count": len(observed),
+            "imputed_period_count": len(df) - len(observed),
+            **source_metadata,
         }
     )
 

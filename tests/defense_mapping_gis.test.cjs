@@ -82,6 +82,23 @@ test('mapping suggestions safely render text and quoted configuration attributes
   assert.deepEqual(payload.transformation_config,{value_map:{[hostile]:hostile}});
 });
 
+test('mapping schema export is explicit and confirmation sends the signed suggestion only',async()=>{
+  const app=setup('mapping/mapping_studio.html',()=>({success:true,provenance:{provider:'groq',fallback_reason:''},suggestions:[{source_field:'code',suggested_target_field:'customer_id',suggested_rule_type:'FIELD_MAPPING',confidence:0,reason:'Schema only',transformation_config:{},confirmation_token:'signed-token'}]}));
+  app.get('source-columns-data').textContent='["code"]';
+  app.get('column-stats-data').textContent='{"code":{"sample_values":["PRIVATE-SAMPLE"]}}';
+  app.get('allowGroqSchemaExport').checked=true;
+  app.get('btnAiSuggest').trigger('click'); await settle();
+  const sent=JSON.parse(app.requests[0].options.body);
+  assert.equal(sent.mode,'groq_schema');
+  assert.equal(sent.allow_schema_export,true);
+  assert.ok(sent.profile_id);
+  assert.equal(JSON.stringify(sent).includes('PRIVATE-SAMPLE'),false);
+  assert.doesNotMatch(app.get('aiSuggestionsList').innerHTML,/Điểm khớp quy tắc:/);
+  const [button]=app.context.document.querySelectorAll('.btn-accept-ai');
+  button.trigger('click'); await settle();
+  assert.deepEqual(JSON.parse(app.requests.at(-1).options.body),{confirmation_token:'signed-token',human_confirmed:true});
+});
+
 for(const [inserted,failed] of [[1,1],[0,2]]) test(`partial import preserves ${failed} rejection diagnostics with ${inserted} saved rows`,async()=>{
   const app=setup('mapping/mapping_studio.html',()=>({success:true,data:{status:'PARTIAL',target_entity:'Task',inserted_count:inserted,failed_count:failed,errors:[{row:2,errors:[{message:hostile}]}]}}));
   app.get('btnConfirmApply').trigger('click'); await settle();

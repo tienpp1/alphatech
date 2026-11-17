@@ -27,6 +27,9 @@ from apps.approvals.registry import (
 def _check_user_tool_permission(user: User, workspace: Workspace, perm_codename: str) -> bool:
     if not user or not user.is_authenticated or not user.is_active:
         return False
+    user = User.objects.filter(pk=user.pk, is_active=True).first()
+    if not user or not Workspace.objects.filter(pk=workspace.pk, is_active=True).exists():
+        return False
     # Service callers must obey the same identity boundary as HTTP middleware.
     # The superuser exemption is only for active non-Google internal identities.
     if is_public_only_session(user, {}):
@@ -105,11 +108,7 @@ def _execute_tool_atomic(
         raise ToolPermissionDenied(f"User lacks required permission '{tool_def.required_permission}' for tool '{name}'.")
 
     # 2. Input Parameter Validation against Schema
-    required_fields = tool_def.input_schema.get("required", [])
-    for field_name in required_fields:
-        if field_name not in parameters or parameters[field_name] is None:
-            raise ToolValidationError(f"Missing required parameter '{field_name}' for tool '{name}'.")
-    validate_action_contract(tool_def, workspace, parameters)
+    validate_action_contract(tool_def, workspace, parameters, check_domain=False)
 
     # Generate idempotency key if not provided
     if not idempotency_key:
@@ -117,6 +116,7 @@ def _execute_tool_atomic(
 
     # 3. Handle READ tools -> Execute immediately
     if tool_def.classification == "READ":
+        validate_action_contract(tool_def, workspace, parameters)
         result_data = tool_def.handler(workspace, user, parameters)
         log_audit_event(
             user=user,
@@ -135,7 +135,7 @@ def _execute_tool_atomic(
     # 4. Handle MUTATION tools -> Requires Human Approval Workflow
     # Serialize proposal creation within a workspace; the database constraint is
     # the final guard for callers that do not use this service.
-    Workspace.objects.select_for_update().get(pk=workspace.pk)
+    Workspace.objects.select_for_update(no_key=True).get(pk=workspace.pk)
     # Check if an active ApprovalRequest already exists with this idempotency key
     existing = ApprovalRequest.objects.for_workspace(workspace).filter(
         idempotency_key=idempotency_key
@@ -165,6 +165,7 @@ def _execute_tool_atomic(
             }
         raise ToolValidationError("This request is terminal; create a new explicit request to proceed.")
 
+    validate_action_contract(tool_def, workspace, parameters)
     approval_req = ApprovalRequest.objects.create(
         workspace=workspace,
         requester=user,
@@ -236,6 +237,12 @@ def process_approval_decision(approval_request, reviewer, decision, decision_rea
         raise ToolValidationError(
             "Không thể thực thi yêu cầu. Thay đổi chưa được lưu; vui lòng thử lại hoặc liên hệ quản trị viên."
         ) from None
+    except ToolValidationError:
+        log_audit_event(user=reviewer, workspace=approval_request.workspace,
+                        action="APPROVAL_VALIDATION_FAILED", entity_type="ApprovalRequest",
+                        entity_id=str(approval_request.pk),
+                        metadata={"approval_id": approval_request.pk, "error_code": "STALE_OR_INVALID_CONTRACT"})
+        raise
 
 
 @transaction.atomic
@@ -250,10 +257,16 @@ def _process_approval_decision_atomic(
     If APPROVED: atomically executes the tool handler with replay protection.
     If REJECTED: marks status as REJECTED.
     """
-    approval_request = ApprovalRequest.objects.select_for_update().select_related("workspace").get(
+    Workspace.objects.select_for_update(no_key=True).get(pk=approval_request.workspace_id)
+    # Lock only the approval row. Locking select_related targets would upgrade
+    # the workspace gate and block unrelated requester/audit FK KEY SHARE checks.
+    approval_request = ApprovalRequest.objects.select_for_update(of=('self',)).select_related("workspace", "requester").get(
         pk=approval_request.pk, workspace_id=approval_request.workspace_id,
     )
     workspace = approval_request.workspace
+    # The separation-of-duties exemption must use the same current identity as
+    # permission checks, not a cached pre-revocation superuser flag.
+    reviewer = User.objects.filter(pk=getattr(reviewer, 'pk', None)).first()
     # Authorize before returning even a cached result, and re-read state under
     # the same lock for rejection and execution.
     if not _check_user_tool_permission(reviewer, workspace, "approvals.manage_approval"):
@@ -300,9 +313,14 @@ def _process_approval_decision_atomic(
         }
 
     elif decision == "APPROVED":
-        tool_def = ToolRegistry.get(approval_request.proposed_action)
-        if not tool_def:
-            raise ToolValidationError(f"Tool '{approval_request.proposed_action}' is not registered.")
+        from apps.approvals.review import validate_approval_current
+        # Domain locks precede the final check and remain held through mutation.
+        from apps.approvals.registry import lock_action_resources
+        definition = ToolRegistry.get(approval_request.proposed_action)
+        if definition:
+            validate_action_contract(definition, workspace, approval_request.parameters, check_domain=False)
+        lock_action_resources(approval_request.proposed_action, workspace, approval_request.parameters)
+        tool_def = validate_approval_current(approval_request, lock=True)
 
         with transaction.atomic():
             # Re-fetch with row lock to prevent race condition double executions

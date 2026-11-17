@@ -6,6 +6,7 @@ and safe model artifact persistence.
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 import hashlib
+import json
 import os
 import datetime
 import math
@@ -475,16 +476,23 @@ def build_run_provenance(
         "target_type": target_type,
         "model_config_id": model_config.pk,
         "model_version": model_config.model_version,
+        "configuration_fingerprint_sha256": configuration_fingerprint(model_config),
         "granularity": model_config.granularity,
         "dimensions": dimensions or {},
         "horizon_days": int(horizon_days),
         "feature_config": feature_config or {},
         "source_sha256": {
             name: hashlib.sha256((settings.BASE_DIR / "apps" / "forecasting" / name).read_bytes()).hexdigest()
-            for name in ("training.py", "selectors.py", "features.py", "evaluation.py")
+            for name in ("training.py", "selectors.py", "features.py", "evaluation.py", "readiness.py")
         },
         "training_config": training_config or {},
         "dataset": {
+            **{key: attrs.get(key) for key in (
+                "data_mode", "as_of", "closed_periods", "closed_period_end", "source_period_start",
+                "source_period_end", "observed_period_count", "imputed_period_count",
+                "observed_daily_coverage", "commercial_provenance", "completeness_attested",
+                "open_day_observation_count", "future_day_observation_count",
+                "excluded_open_or_future_day_count")},
             "period_start": str(timeseries.index.min().date()),
             "period_end": str(timeseries.index.max().date()),
             "row_count": int(len(timeseries)),
@@ -493,6 +501,10 @@ def build_run_provenance(
             "missing_period_policy": attrs.get("missing_period_policy", "unknown"),
             "source_frequency": attrs.get("source_frequency", model_config.granularity),
             "fingerprint_sha256": data_fingerprint,
+            "observation_evidence_fingerprint_version": 1,
+            "observation_evidence_fingerprint_sha256": observation_evidence_fingerprint(
+                timeseries, workspace_id=workspace.pk, target_type=target_type,
+                granularity=model_config.granularity, dimensions=dimensions),
         },
         "split": {
             "test_size": training_config.get("test_size"),
@@ -516,6 +528,39 @@ def build_run_provenance(
     }
 
 
+def observation_evidence_fingerprint(timeseries, *, workspace_id, target_type, granularity, dimensions):
+    """Bind source presence separately from values; missing masks are not attestations.
+
+    This supplements, never replaces, the existing value/index fingerprint. Daily
+    source dates also protect weekly history where a zero-day deletion leaves both
+    totals and observed weekly labels unchanged. Only the digest is persisted.
+    """
+    attrs = getattr(timeseries, "attrs", {}) or {}
+    source_dates = attrs.get("source_observed_dates")
+    observed_dates = attrs.get("observed_period_dates")
+    if source_dates is None or observed_dates is None:
+        return None
+    snapshot = {
+        "version": 1,
+        "workspace_id": str(workspace_id),
+        "target_type": target_type,
+        "granularity": granularity,
+        "dimensions": dimensions or {},
+        "observed_period_dates": sorted({pd.Timestamp(day).date().isoformat() for day in observed_dates}),
+        "source_observed_dates": sorted({pd.Timestamp(day).date().isoformat() for day in source_dates}),
+        "policy": {key: attrs.get(key) for key in (
+            "missing_period_policy", "source_frequency", "data_mode", "closed_periods",
+            "as_of", "closed_period_end", "source_period_start", "source_period_end")},
+    }
+    return hashlib.sha256(json.dumps(snapshot, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def configuration_fingerprint(config):
+    snapshot = {key: getattr(config, key) for key in (
+        "target_type", "model_type", "model_version", "granularity", "feature_config", "training_config")}
+    return hashlib.sha256(json.dumps(snapshot, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
 def train_forecast_model(
     workspace: Workspace,
     target_type: str,
@@ -526,12 +571,17 @@ def train_forecast_model(
     run: Optional[ForecastRun] = None,
     lease_token=None,
     dimensions=None,
+    data_mode="historical",
 ) -> ForecastRun:
     """
     Executes end-to-end training of an XGBoost forecasting model for the active workspace.
     Saves model artifact and generates future horizon predictions.
     """
     validate_target_for_workspace(workspace, target_type)
+    if run is not None:
+        data_mode = (run.job_parameters or {}).get("data_mode", data_mode)
+    if data_mode not in ("historical", "operational"):
+        raise ValueError("Unsupported forecast data_mode.")
 
     if run is not None and model_config is None:
         model_config = run.model_config
@@ -547,7 +597,8 @@ def train_forecast_model(
             status=RunStatus.RUNNING,
             training_start_at=timezone.now(),
             created_by=user if user and user.is_authenticated else None,
-            job_parameters={"dimensions": dimensions or {}},
+            job_parameters={"dimensions": dimensions or {}, "data_mode": data_mode,
+                            "configuration_fingerprint_sha256": configuration_fingerprint(model_config)},
         )
     else:
         if run.workspace_id != workspace.id or run.model_config_id != model_config.id or run.target_type != target_type:
@@ -566,14 +617,41 @@ def train_forecast_model(
             run.save(update_fields=["status", "training_start_at", "training_end_at", "error_message"])
 
     try:
+        if data_mode == "operational":
+            # Re-read queued configuration rather than trusting a cached relation.
+            current_config = ForecastModelConfig.objects.for_workspace(workspace).get(pk=model_config.pk)
+            frozen_config = run.job_parameters.get("configuration_fingerprint_sha256")
+            if frozen_config and frozen_config != configuration_fingerprint(current_config):
+                raise ValueError("CONFIGURATION_CHANGED")
+            latest_active = ForecastModelConfig.objects.for_workspace(workspace).filter(
+                target_type=target_type, is_active=True).order_by("-model_version", "-updated_at", "-pk").first()
+            if latest_active is None or latest_active.pk != current_config.pk:
+                raise ValueError("ACTIVE_CONFIGURATION_CHANGED")
+            model_config = current_config
+            run.model_config = current_config
         # 1. Fetch historical timeseries
         ts_df = get_historical_timeseries(
             workspace,
             target_type,
             granularity=model_config.granularity,
             dimensions=run.job_parameters.get("dimensions", {}),
+            data_mode=data_mode,
+            closed_periods=data_mode == "operational",
         )
         strategy = (model_config.training_config or {}).get("strategy")
+        from .readiness import assess_readiness
+        readiness = assess_readiness(ts_df, guarded=strategy == GUARDED_STRATEGY,
+                                     granularity=model_config.granularity)
+        if data_mode == "historical":
+            readiness.update(ready=False, data_mode="historical", message="Đánh giá lịch sử; không phải bằng chứng dự báo vận hành hiện tại.")
+            readiness["reasons"].insert(0, "HISTORICAL_MODE")
+        run.job_parameters = {**(run.job_parameters or {}), "data_mode": data_mode, "readiness": readiness}
+        if data_mode == "operational":
+            if not model_config.is_active:
+                readiness["reasons"].append("NO_ACTIVE_CONFIGURATION")
+                readiness["ready"] = False
+            if not readiness["ready"]:
+                raise ValueError("OPERATIONAL_DATA_NOT_READY: " + ", ".join(readiness["reasons"]))
         if strategy not in (None, GUARDED_STRATEGY):
             raise ValueError(f"Unsupported forecast training strategy: {strategy}")
         if ts_df.empty or (strategy != GUARDED_STRATEGY and len(ts_df) < 20):
@@ -633,6 +711,8 @@ def train_forecast_model(
                 "test_end": X_test.index.max().isoformat(),
                 "validation": "no_separate_validation_partition",
                 "evaluation": "one_step_observed_history",
+                "requested_serving_horizon": horizon_days,
+                "evaluated_horizon_periods": 1,
             }
         )
         run.job_parameters = {**(run.job_parameters or {}), "provenance": provenance}
@@ -755,6 +835,7 @@ def train_forecast_model(
             workspace=workspace,
             horizon_days=horizon_days,
             lease_token=lease_token,
+            history_snapshot=ts_df,
         )
 
         return run

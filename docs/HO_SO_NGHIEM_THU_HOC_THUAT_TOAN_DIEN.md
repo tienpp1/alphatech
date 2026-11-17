@@ -1656,3 +1656,18 @@ chồng lặp và không sửa cấu trúc hoặc tiến độ checklist 97.
   hướng dẫn giới hạn bằng chứng trên năm trang, giữ nhãn MA7/sai số lớn
   và CSS của khuyến nghị/phê duyệt trong head. Không truy cập database.
   Inventory không chứng minh live production, năng lực AI hoặc tiến độ97mục.
+
+### Bổ sung inventory17/11/2026 — tính toàn vẹn luồng vận hành
+
+- `test_operational_ingestion_mapping.py`: bytes/file/API → biên nhận staging,
+  redaction, kiểm tra schema/nguồn, gợi ý heuristic/Groq có xác nhận ký số,
+  chặn quy tắc chưa duyệt và lỗi ánh xạ enum. Transport provider được kiểm soát
+  trong test, không phải bằng chứng kết nối đối tác hay chất lượng LLM thật.
+- `apps/forecasting/tests/test_operational.py`: kỳ đã đóng, dữ liệu thưa,
+  readiness, horizon thực chấm, fingerprint, ngày nghiệp vụ và phân biệt
+  lịch sử/vận hành; không tự chứng nhận nguồn thương mại hay độ chính xác tương lai.
+- `test_action_freshness.py`: phê duyệt còn điều kiện hiện tại, actor mới nhất,
+  canonical dispatch/state/task, idempotency sau thay đổi tồn và concurrency;
+  ghi nghiệp vụ chỉ trong database TEST độc lập, không phải UAT production.
+- `forecast_operational_ui.test.cjs`: đồ thị hợp nhất ngày và chế độ huấn luyện.
+  Đây là inventory bổ sung, không thay số lượng/trạng thái/cấu trúc97mục.

@@ -44,6 +44,12 @@ class ApprovalWorkflowTests(TestCase):
             workspace=self.workspace,
             role=self.role_mgr,
         )
+        # A valid pending proposal retains an independently authorized requester.
+        propose_perm, _ = Permission.objects.get_or_create(codename='retail.change_order',
+            defaults={'name': 'Propose order change', 'module': 'retail'})
+        requester_role = Role.objects.create(name='AppRequester')
+        requester_role.permissions.add(propose_perm)
+        WorkspaceMembership.objects.create(user=self.user_requester, workspace=self.workspace, role=requester_role)
 
         self.client = APIClient()
 

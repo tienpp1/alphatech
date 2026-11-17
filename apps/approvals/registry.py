@@ -40,7 +40,7 @@ class ToolDefinition:
     handler: Callable[[Workspace, User, Dict[str, Any]], Dict[str, Any]]
 
 
-def validate_action_contract(tool_def: ToolDefinition, workspace: Workspace, parameters: Dict[str, Any]) -> None:
+def validate_action_contract(tool_def: ToolDefinition, workspace: Workspace, parameters: Dict[str, Any], *, check_domain=True) -> None:
     """Validate the typed action contract before an approval is persisted.
 
     Schema validation alone is not enough for mutation proposals: IDs must
@@ -49,6 +49,9 @@ def validate_action_contract(tool_def: ToolDefinition, workspace: Workspace, par
     """
     if not isinstance(parameters, dict):
         raise ToolValidationError("Action parameters must be an object.")
+    for name in tool_def.input_schema.get("required", []):
+        if name not in parameters or parameters[name] is None:
+            raise ToolValidationError(f"Missing required parameter '{name}'.")
 
     properties = tool_def.input_schema.get("properties", {})
     for field_name, spec in properties.items():
@@ -67,7 +70,7 @@ def validate_action_contract(tool_def: ToolDefinition, workspace: Workspace, par
         if not valid:
             raise ToolValidationError(f"Parameter '{field_name}' must be of type {expected}.")
 
-    if tool_def.classification != "MUTATION":
+    if not check_domain or tool_def.classification != "MUTATION":
         return
 
     name = tool_def.name
@@ -101,15 +104,18 @@ def validate_action_contract(tool_def: ToolDefinition, workspace: Workspace, par
         if not Product.objects.for_workspace(workspace).filter(id=parameters.get("product_id")).exists():
             raise ToolValidationError("Product must belong to the active workspace.")
     elif name in {"dispatch_technician", "schedule_task"}:
-        from apps.service_ops.models import Employee, ServiceRequest
+        from apps.service_ops.models import Employee, ServiceRequest, ServiceRequestStatus
         employee_id = parameters.get("employee_id")
-        if employee_id is not None and not Employee.objects.for_workspace(workspace).filter(id=employee_id).exists():
-            raise ToolValidationError("Employee must belong to the active workspace.")
+        if employee_id is not None and not Employee.objects.for_workspace(workspace).filter(
+                id=employee_id, is_active=True, is_available=True).exists():
+            raise ToolValidationError("Kỹ thuật viên không còn hoạt động/khả dụng trong workspace.")
         ticket_id = parameters.get("ticket_id")
         if name == "schedule_task" and ticket_id is None:
             raise ToolValidationError("schedule_task requires an explicit service request ticket_id.")
-        if ticket_id is not None and not ServiceRequest.objects.for_workspace(workspace).filter(id=ticket_id).exists():
-            raise ToolValidationError("Service request must belong to the active workspace.")
+        if ticket_id is not None and not ServiceRequest.objects.for_workspace(workspace).filter(
+                id=ticket_id, status__in=[ServiceRequestStatus.OPEN, ServiceRequestStatus.ASSIGNED,
+                                         ServiceRequestStatus.IN_PROGRESS]).exists():
+            raise ToolValidationError("Phiếu dịch vụ không còn mở trong workspace hiện tại.")
     elif name == "update_order_status":
         from apps.retail.models import Order, OrderStatus
         if not Order.objects.for_workspace(workspace).filter(id=parameters.get("order_id")).exists():
@@ -160,6 +166,28 @@ class ToolRegistry:
             }
             for t in cls._tools.values()
         ]
+
+
+def lock_action_resources(name, workspace, parameters):
+    """Lock scoped mutable evidence until the approved handler finishes."""
+    if not isinstance(parameters, dict):
+        raise ToolValidationError('Action parameters must be an object.')
+    from apps.service_ops.models import ServiceRequest, Employee
+    from apps.retail.models import Product, Order, StockBalance, GoodsReceipt
+    bindings = {
+        'dispatch_technician': [(ServiceRequest, 'ticket_id'), (Employee, 'employee_id')],
+        'schedule_task': [(ServiceRequest, 'ticket_id'), (Employee, 'employee_id')],
+        'adjust_product_price': [(Product, 'product_id')],
+        'update_order_status': [(Order, 'order_id')],
+        'receive_goods_receipt': [(GoodsReceipt, 'receipt_id')],
+    }
+    for model, field in bindings.get(name, []):
+        value = parameters.get(field)
+        if isinstance(value, int) and not isinstance(value, bool):
+            list(model.objects.for_workspace(workspace).select_for_update().filter(pk=value))
+    if name == 'create_stock_transfer':
+        list(StockBalance.objects.for_workspace(workspace).select_for_update().filter(
+            product_id=parameters.get('product_id'), branch_id__in=[parameters.get('source_branch_id'), parameters.get('destination_branch_id')]).order_by('branch_id'))
 
 
 # -------------------------------------------------------------------------
@@ -270,6 +298,8 @@ def handle_get_recommendations(workspace: Workspace, user: User, params: Dict[st
 
 def handle_dispatch_technician(workspace: Workspace, user: User, params: Dict[str, Any]) -> Dict[str, Any]:
     from apps.service_ops.models import ServiceRequest, Employee, Task, ServiceRequestStatus, TaskStatus
+    from apps.service_ops.services import assign_service_request, transition_service_request_status, transition_task_status
+    from django.core.exceptions import ValidationError
 
     ticket_id = params.get("ticket_id")
     employee_id = params.get("employee_id")
@@ -287,28 +317,17 @@ def handle_dispatch_technician(workspace: Workspace, user: User, params: Dict[st
 
     with transaction.atomic():
         # Update ServiceRequest
+        Workspace.objects.select_for_update(no_key=True).get(pk=workspace.pk)
         req = ServiceRequest.objects.select_for_update().get(pk=req.pk, workspace=workspace)
         before = {"status": req.status, "assigned_employee_id": req.assigned_employee_id}
-        req.assigned_employee = emp
-        req.status = ServiceRequestStatus.IN_PROGRESS
-        req.save()
-
-        # Create or update associated task safely
-        task = Task.objects.filter(service_request=req, assigned_to=emp).first()
-        if not task:
-            task = Task.objects.filter(service_request=req).first()
-        if task:
-            task.assigned_to = emp
-            task.status = TaskStatus.IN_PROGRESS
-            task.save(update_fields=["assigned_to", "status", "updated_at"])
-        else:
-            task = Task.objects.create(
-                service_request=req,
-                title=f"Phân công xử lý ticket #{req.request_number or req.id}",
-                assigned_to=emp,
-                status=TaskStatus.IN_PROGRESS,
-                description=f"Công việc phân công trực tiếp cho kỹ thuật viên {emp.full_name}.",
-            )
+        try:
+            req = assign_service_request(req, emp, user)
+            req = transition_service_request_status(req, ServiceRequestStatus.IN_PROGRESS, user)
+            task = Task.objects.select_for_update().filter(
+                service_request=req, assigned_to=emp, status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]).order_by('pk').first()
+            task = transition_task_status(task, TaskStatus.IN_PROGRESS, user)
+        except ValidationError as exc:
+            raise ToolValidationError(" ".join(exc.messages)) from None
         from apps.audit.services import log_action
         log_action(
             workspace=workspace, actor_user=user, action="TECHNICIAN_DISPATCHED",

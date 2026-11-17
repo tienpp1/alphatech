@@ -2,11 +2,31 @@ from django.db import transaction
 
 from apps.approvals.executor import execute_tool
 from apps.approvals.models import ApprovalRequest
-from apps.approvals.registry import ToolValidationError
+from apps.approvals.registry import ToolValidationError, validate_action_contract
 from apps.approvals.registry import ToolRegistry
 from apps.recommendations.models import Recommendation, RecommendationStatus, RecommendationType
 from django.utils import timezone
 import datetime
+
+
+def dispatch_evidence_snapshot(workspace, ticket_id, employee_id):
+    from apps.service_ops.models import ServiceRequest, Employee, Task
+    ticket = ServiceRequest.objects.for_workspace(workspace).filter(pk=ticket_id).first()
+    employee = Employee.objects.for_workspace(workspace).filter(pk=employee_id).first()
+    if not ticket or not employee:
+        return None
+    return {
+        'ticket_status': ticket.status, 'assigned_employee_id': ticket.assigned_employee_id,
+        'ticket_location': ticket.location.ewkt if ticket.location else None,
+        'ticket_latitude': str(ticket.latitude), 'ticket_longitude': str(ticket.longitude),
+        'response_deadline_at': ticket.response_deadline_at.isoformat() if ticket.response_deadline_at else None,
+        'resolution_deadline_at': ticket.resolution_deadline_at.isoformat() if ticket.resolution_deadline_at else None,
+        'employee_location': employee.current_location.ewkt if employee.current_location else None,
+        'employee_available': employee.is_available, 'employee_active': employee.is_active,
+        'employee_skills': employee.skills,
+        'active_tasks': Task.objects.filter(service_request__workspace=workspace, assigned_to=employee,
+                                            status__in=['PENDING', 'IN_PROGRESS']).count(),
+    }
 
 
 def _stockout_evidence_is_current(supporting_data):
@@ -32,7 +52,7 @@ def _stockout_evidence_is_current(supporting_data):
     return True
 
 
-def _forecast_advisory_date_state(data):
+def _forecast_advisory_date_state(data, workspace):
     from apps.recommendations.forecast_rules import RULE_KEY
     if data.get('rule_key') != RULE_KEY:
         return None
@@ -45,8 +65,13 @@ def _forecast_advisory_date_state(data):
     today = timezone.localdate()
     if source > today or start != source+datetime.timedelta(days=1) or end != start+datetime.timedelta(days=6):
         return 'INVALID'
-    if start <= today or source < today-datetime.timedelta(days=7):
+    if start < today or source < today-datetime.timedelta(days=7):
         return 'HISTORICAL'
+    from apps.forecasting.models import ForecastRun
+    from apps.forecasting.diagnostics import assess_run_compatibility
+    run = ForecastRun.objects.for_workspace(workspace).filter(pk=data.get('forecast_run_id')).first()
+    if run is None or not assess_run_compatibility(run)['operational_eligible']:
+        return 'INVALID'
     return 'CURRENT_SNAPSHOT'
 
 
@@ -64,14 +89,31 @@ def recommendation_review_state(recommendation):
         except (TypeError, ValueError):
             outdated = True
     unverified_stockout = recommendation.recommendation_type == RecommendationType.RETAIL_STOCKOUT_RISK and not _stockout_evidence_is_current(recommendation.supporting_data)
-    forecast_state = _forecast_advisory_date_state(supporting_data)
+    forecast_state = _forecast_advisory_date_state(supporting_data, recommendation.workspace)
     historical = supporting_data.get('analysis_mode') == 'HISTORICAL' or forecast_state == 'HISTORICAL'
     invalid_forecast = forecast_state == 'INVALID'
-    return {"stale": expired or outdated or unverified_stockout or historical or invalid_forecast,
-            "label": "Snapshot dự báo thiếu ngày hoặc ngày không hợp lệ — cần đánh giá lại" if invalid_forecast else
+    invalid_action = None
+    if recommendation.proposed_action:
+        try:
+            tool = ToolRegistry.get(recommendation.proposed_action)
+            if tool is None or tool.classification != 'MUTATION':
+                raise ToolValidationError('Hành động không còn là contract thay đổi hợp lệ.')
+            validate_action_contract(tool, recommendation.workspace, recommendation.proposed_parameters)
+            snapshot = supporting_data.get('dispatch_snapshot')
+            if recommendation.proposed_action == 'dispatch_technician' and snapshot is not None:
+                current = dispatch_evidence_snapshot(recommendation.workspace,
+                    recommendation.proposed_parameters.get('ticket_id'), recommendation.proposed_parameters.get('employee_id'))
+                if snapshot != current:
+                    raise ToolValidationError('Điều kiện phiếu/kỹ thuật viên đã đổi từ snapshot; cần đánh giá lại.')
+        except ToolValidationError as exc:
+            invalid_action = str(exc)
+    stale = expired or outdated or unverified_stockout or historical or invalid_forecast or bool(invalid_action)
+    return {"stale": stale,
+            "current": recommendation.status == RecommendationStatus.PENDING and not stale,
+            "label": invalid_action or ("Snapshot dự báo thiếu ngày hoặc ngày không hợp lệ — cần đánh giá lại" if invalid_forecast else
             "Phân tích lịch sử — chỉ tham khảo, không chấp thuận như hành động hiện tại" if historical else
             "Tồn kho/nhu cầu cũ hoặc chưa xác minh — cần đánh giá lại; không đủ căn cứ chấp thuận" if unverified_stockout else
-            "Hết hạn / snapshot cũ — cần đánh giá lại" if expired or outdated else "Snapshot tại thời điểm tạo; cần đối chiếu trước khi quyết định",
+            "Hết hạn / snapshot cũ — cần đánh giá lại" if expired or outdated else "Snapshot tại thời điểm tạo; cần đối chiếu trước khi quyết định"),
             "period_end": period_end,
             "stockout_evidence_current": not unverified_stockout if recommendation.recommendation_type == RecommendationType.RETAIL_STOCKOUT_RISK else None,
             "actionable": bool(recommendation.proposed_action)}
@@ -80,7 +122,9 @@ def recommendation_review_state(recommendation):
 @transaction.atomic
 def reject_recommendation(recommendation: Recommendation):
     """Serialize rejection with acceptance; terminal decisions are immutable."""
-    recommendation = Recommendation.objects.select_for_update().get(pk=recommendation.pk)
+    from apps.workspaces.models import Workspace
+    Workspace.objects.select_for_update(no_key=True).get(pk=recommendation.workspace_id)
+    recommendation = Recommendation.objects.select_for_update().get(pk=recommendation.pk, workspace_id=recommendation.workspace_id)
     if recommendation.status == RecommendationStatus.REJECTED:
         return recommendation
     if recommendation.status != RecommendationStatus.PENDING:
@@ -94,7 +138,13 @@ def reject_recommendation(recommendation: Recommendation):
 
 @transaction.atomic
 def accept_recommendation(recommendation: Recommendation, user, decision_reason: str = ""):
-    recommendation = Recommendation.objects.select_for_update().get(pk=recommendation.pk)
+    from apps.workspaces.models import Workspace
+    from apps.approvals.executor import _check_user_tool_permission
+    Workspace.objects.select_for_update(no_key=True).get(pk=recommendation.workspace_id)
+    recommendation = Recommendation.objects.select_for_update().get(pk=recommendation.pk, workspace_id=recommendation.workspace_id)
+    if not _check_user_tool_permission(user, recommendation.workspace, 'recommendations.manage_recommendation'):
+        from apps.approvals.registry import ToolPermissionDenied
+        raise ToolPermissionDenied('Bạn không có quyền chấp thuận khuyến nghị trong workspace.')
     if recommendation.status == RecommendationStatus.ACCEPTED:
         return recommendation
     if recommendation.status != RecommendationStatus.PENDING:

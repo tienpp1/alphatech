@@ -17,6 +17,8 @@ from apps.mapping.services import (
     add_mapping_rule,
     generate_mapping_preview,
     apply_mapping_to_domain,
+    accept_ai_mapping_rule,
+    validate_source_binding,
 )
 
 
@@ -140,9 +142,7 @@ def mapping_studio_view(request, pk):
             rule_id = request.POST.get("rule_id")
             rule = profile.rules.filter(id=rule_id).first()
             if rule:
-                rule.ai_status = AIConfirmationStatus.ACCEPTED
-                rule.is_active = True
-                rule.save()
+                accept_ai_mapping_rule(rule, request.user)
                 messages.success(request, f"AI Rule '{rule.target_field}' accepted and activated.")
             return redirect("mapping_studio", pk=profile.id)
 
@@ -151,12 +151,16 @@ def mapping_studio_view(request, pk):
     import_job = None
     if selected_job_id:
         import_job = ImportJob.objects.for_workspace(workspace).filter(id=selected_job_id).first()
+    validate_source_binding(profile, import_job, workspace)
 
     discovery = discover_source_fields(import_job=import_job, data_source=profile.data_source)
     model_def = get_canonical_model(profile.target_entity)
 
     # Available jobs for preview / testing
-    jobs = ImportJob.objects.for_workspace(workspace).order_by("-created_at")[:15]
+    jobs = ImportJob.objects.for_workspace(workspace)
+    if profile.data_source_id:
+        jobs = jobs.filter(data_source_id=profile.data_source_id)
+    jobs = jobs.order_by('-created_at')[:15]
 
     context = {
         "workspace": workspace,

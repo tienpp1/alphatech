@@ -22,8 +22,19 @@ from apps.mapping.models import (
     ValidationStatus,
 )
 from apps.mapping.canonical import get_canonical_model
-from apps.mapping.engine.transformer import transform_single_record
+from apps.mapping.engine.transformer import transform_single_record, validate_transformation_config
 from apps.mapping.validators import validate_canonical_record
+from apps.integration.safety import redact
+
+
+def validate_source_binding(profile, import_job=None, workspace=None):
+    workspace_id = workspace.pk if workspace is not None else profile.workspace_id
+    if profile.workspace_id != workspace_id or (profile.data_source_id and profile.data_source.workspace_id != workspace_id):
+        raise PermissionDenied('Hồ sơ ánh xạ không thuộc workspace hiện tại.')
+    if import_job and (import_job.workspace_id != workspace_id or import_job.data_source.workspace_id != workspace_id or (profile.data_source_id and profile.data_source_id != import_job.data_source_id)):
+        raise PermissionDenied('Lần import không thuộc nguồn dữ liệu của hồ sơ ánh xạ.')
+    if import_job and import_job.raw_records.exclude(workspace_id=workspace_id).exists():
+        raise PermissionDenied('Bản ghi staging không thuộc workspace hiện tại.')
 
 # Domain Model Imports
 from apps.retail.models import Customer, Product, Category, Branch, Order, OrderItem, OrderStatus, PaymentMethod, CustomerSegment
@@ -51,12 +62,18 @@ def discover_source_fields(
     Powers the interactive Mapping Studio UI.
     """
     raw_records_qs = None
+    if import_job and data_source and (import_job.data_source_id != data_source.pk or import_job.workspace_id != data_source.workspace_id):
+        raise PermissionDenied('Lần import không thuộc nguồn dữ liệu đã chọn.')
     if import_job:
-        raw_records_qs = import_job.raw_records.all()
+        if import_job.raw_records.exclude(workspace_id=import_job.workspace_id).exists() or import_job.data_source.workspace_id != import_job.workspace_id:
+            raise PermissionDenied('Bản ghi staging không thuộc workspace hiện tại.')
+        raw_records_qs = import_job.raw_records.filter(workspace_id=import_job.workspace_id)
     elif data_source:
         last_job = data_source.import_jobs.order_by("-created_at").first()
         if last_job:
-            raw_records_qs = last_job.raw_records.all()
+            if last_job.workspace_id != data_source.workspace_id or last_job.raw_records.exclude(workspace_id=data_source.workspace_id).exists():
+                raise PermissionDenied('Bản ghi staging không thuộc workspace hiện tại.')
+            raw_records_qs = last_job.raw_records.filter(workspace_id=data_source.workspace_id)
 
     if not raw_records_qs or not raw_records_qs.exists():
         return {
@@ -66,7 +83,7 @@ def discover_source_fields(
             "total_staged_rows": 0,
         }
 
-    sample_records = [r.raw_data for r in raw_records_qs[:sample_limit]]
+    sample_records = [redact(r.raw_data) for r in raw_records_qs[:sample_limit]]
     total_staged = raw_records_qs.count()
 
     # Aggregate union of all column names
@@ -162,6 +179,7 @@ def add_mapping_rule(
     order: int = 0,
 ) -> MappingRule:
     """Adds a mapping rule to an existing profile."""
+    validate_transformation_config(transformation_config if transformation_config is not None else {})
     rule = MappingRule.objects.create(
         workspace=profile.workspace,
         profile=profile,
@@ -236,6 +254,7 @@ def generate_mapping_preview(
     """
     Read-only simulation preview. Transforms records and validates them without writing to the database.
     """
+    validate_source_binding(profile, import_job, workspace)
     if raw_records_data is not None:
         sample_raw = raw_records_data[:sample_count]
     elif import_job:
@@ -245,7 +264,8 @@ def generate_mapping_preview(
         ds = profile.data_source
         if ds and ds.import_jobs.exists():
             last_job = ds.import_jobs.order_by("-created_at").first()
-            sample_raw = [r.raw_data for r in last_job.raw_records.all()[:sample_count]]
+            validate_source_binding(profile, last_job, workspace)
+            sample_raw = [r.raw_data for r in last_job.raw_records.filter(workspace=workspace)[:sample_count]]
         else:
             sample_raw = []
 
@@ -287,7 +307,7 @@ def generate_mapping_preview(
             "errors": row_errors,
         })
 
-    return {
+    return redact({
         "profile_id": str(profile.id),
         "profile_name": profile.name,
         "target_entity": profile.target_entity,
@@ -297,7 +317,7 @@ def generate_mapping_preview(
         "is_valid": invalid_count == 0,
         "transformed_samples": transformed_samples,
         "errors": all_errors,
-    }
+    })
 
 
 def apply_mapping_to_domain(
@@ -315,6 +335,7 @@ def apply_mapping_to_domain(
     4. Atomically persists records into Retail or Service domain tables.
     5. Writes an immutable AuditLog entry.
     """
+    validate_source_binding(profile, import_job, workspace)
     if (profile.workspace_id != workspace.pk or import_job.workspace_id != workspace.pk
             or import_job.data_source.workspace_id != workspace.pk
             or (profile.data_source_id and profile.data_source.workspace_id != workspace.pk)):
@@ -342,6 +363,9 @@ def apply_mapping_to_domain(
             "failed_count": 0,
             "errors": [],
         }
+    if any(rule.ai_status != AIConfirmationStatus.ACCEPTED for rule in active_rules):
+        return {'status': 'FAILED', 'message': 'Cần xác nhận hoặc tắt các quy tắc chưa được chấp thuận trước khi nhập dữ liệu.',
+                'inserted_count': 0, 'failed_count': total_records, 'errors': [{'code': 'UNCONFIRMED_RULE'}]}
 
     target_entity = profile.target_entity
     valid_payloads = []
@@ -628,14 +652,14 @@ def apply_mapping_to_domain(
             action="MAPPING_FAILED",
             entity_type=target_entity,
             entity_id=str(profile.id),
-            changes={"error": str(e), "profile_id": str(profile.id), "import_job_id": str(import_job.id)},
+            changes={"error": 'Canonical persistence failed', "profile_id": str(profile.id), "import_job_id": str(import_job.id)},
         )
         return {
             "status": "FAILED",
-            "message": f"Database transaction failed: {str(e)}",
+            "message": 'Không thể ghi dữ liệu chuẩn hóa; giao dịch đã được hoàn tác.',
             "inserted_count": 0,
             "failed_count": total_records,
-            "errors": [{"error": str(e)}],
+            "errors": [{"error": 'Canonical persistence failed'}],
         }
 
     status_str = "COMPLETED" if len(import_errors) == 0 else "PARTIAL"
@@ -650,6 +674,7 @@ def apply_mapping_to_domain(
             "profile_name": profile.name,
             "target_entity": target_entity,
             "import_job_id": str(import_job.id),
+            "ingestion_provenance": redact(import_job.source_metadata.get('ingestion_provenance', {'version': 1, 'classification': 'UNKNOWN'})),
             "total_records": total_records,
             "inserted_count": inserted_count,
             "failed_count": len(import_errors),

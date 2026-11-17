@@ -19,6 +19,7 @@ from apps.approvals.serializers import (
 )
 from apps.approvals.registry import ToolRegistry, ToolException
 from apps.approvals.executor import execute_tool, process_approval_decision
+from apps.approvals.review import approval_review_state, review_queue
 
 
 def api_response(data=None, error=None, status_code=status.HTTP_200_OK):
@@ -42,6 +43,7 @@ class ApprovalRequestListAPIView(APIView):
         if status_filter:
             qs = qs.filter(status=status_filter)
 
+        qs = review_queue(qs, approval_review_state, request.query_params.get('queue', 'current'))
         serializer = ApprovalRequestSerializer(qs, many=True)
         return api_response(data=serializer.data)
 

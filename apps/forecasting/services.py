@@ -22,10 +22,12 @@ from apps.forecasting.models import (
     RunStatus,
 )
 from apps.forecasting.selectors import get_historical_timeseries
+from apps.forecasting.readiness import get_forecast_readiness
 from apps.forecasting.training import (
     train_forecast_model,
     validate_target_for_workspace,
     resolve_default_model_config,
+    configuration_fingerprint,
 )
 from apps.audit.services import log_audit_event
 from apps.forecasting.diagnostics import (
@@ -34,6 +36,8 @@ from apps.forecasting.diagnostics import (
     get_guarded_holdout_evidence,
     get_run_granularity,
     get_run_model_label,
+    assess_run_compatibility,
+    assess_run_snapshot,
 )
 
 
@@ -60,6 +64,7 @@ def execute_training_job(
     horizon_days: int = 14,
     is_async: bool = False,
     dimensions: Optional[dict] = None,
+    data_mode: str = "historical",
 ) -> ForecastRun:
     """
     Triggers model training. When is_async=True, persists a job for forecast_worker
@@ -68,6 +73,12 @@ def execute_training_job(
     if is_async and not settings.FORECAST_ASYNC_ENABLED:
         raise ValueError("Dự báo bất đồng bộ chưa được bật vì môi trường này chưa có worker vận hành.")
     validate_target_for_workspace(workspace, target_type)
+    if data_mode not in ("historical", "operational"):
+        raise ValueError("Unsupported forecast data_mode.")
+    if data_mode == "operational":
+        readiness = get_forecast_readiness(workspace, target_type, dimensions)
+        if not readiness["ready"]:
+            raise ValueError("OPERATIONAL_DATA_NOT_READY: " + readiness["message"] + " (" + ", ".join(readiness["reasons"]) + ")")
     config = get_or_create_default_config(workspace, target_type)
     if dimensions:
         get_historical_timeseries(workspace, target_type, dimensions=dimensions)
@@ -81,6 +92,7 @@ def execute_training_job(
             hyperparams=hyperparams,
             horizon_days=horizon_days,
             dimensions=dimensions,
+            data_mode=data_mode,
         )
         if user and hasattr(user, "is_authenticated") and user.is_authenticated:
             log_audit_event(
@@ -101,7 +113,9 @@ def execute_training_job(
         status=RunStatus.PENDING,
         created_by=user if user and user.is_authenticated else None,
         job_parameters={"hyperparams": hyperparams or {}, "horizon_days": horizon_days,
-                        "dimensions": dimensions or {}},
+                        "dimensions": dimensions or {}, "data_mode": data_mode,
+                        "configuration_fingerprint_sha256": configuration_fingerprint(config),
+                        **({"readiness": readiness} if data_mode == "operational" else {})},
     )
 
     return run
@@ -200,9 +214,9 @@ def get_forecast_chart_data(
             "mape": baseline_metrics.get(f"{comparison_prefix}_mape"),
         }
 
-    snapshot = assess_snapshot(latest_run.dataset_period_end if latest_run else None,
-                               [datetime.date.fromisoformat(point["date"]) for point in forecast_points],
-                               granularity)
+    snapshot = assess_run_snapshot(latest_run)
+    readiness = get_forecast_readiness(workspace, target_type, dimensions)
+    compatibility = assess_run_compatibility(latest_run, readiness) if latest_run else None
     return {
         "workspace_code": workspace.code,
         "target_type": target_type,
@@ -214,6 +228,11 @@ def get_forecast_chart_data(
         "forecast_start": forecast_points[0]["date"] if forecast_points else None,
         "forecast_end": forecast_points[-1]["date"] if forecast_points else None,
         "snapshot": snapshot,
+        "readiness": readiness,
+        "compatibility": compatibility,
+        "data_mode": (latest_run.job_parameters or {}).get("data_mode", "unknown") if latest_run else None,
+        "forecast_origin": latest_run.dataset_period_end.isoformat() if latest_run and latest_run.dataset_period_end else None,
+        "evaluation": provenance.get("evaluation", provenance.get("split", {})) if latest_run else {},
         "quality": assess_model_quality(model_metrics, baseline_metrics, model_label=model_label),
         "model_label": model_label,
         "effective_model": provenance.get("effective_model") if is_guarded else None,

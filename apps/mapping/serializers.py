@@ -11,6 +11,7 @@ from apps.mapping.models import (
     ValidationStatus,
 )
 from apps.mapping.canonical import CANONICAL_MODELS
+from apps.mapping.engine.transformer import validate_transformation_config
 
 
 class MappingRuleSerializer(serializers.ModelSerializer):
@@ -36,6 +37,12 @@ class MappingRuleSerializer(serializers.ModelSerializer):
 
 
 class MappingRuleCreateSerializer(serializers.ModelSerializer):
+    def validate_transformation_config(self, value):
+        try:
+            return validate_transformation_config(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
+
     class Meta:
         model = MappingRule
         fields = [
@@ -123,9 +130,23 @@ class MappingApplyRequestSerializer(serializers.Serializer):
 
 class AISuggestRequestSerializer(serializers.Serializer):
     target_entity = serializers.CharField(required=True)
-    source_columns = serializers.ListField(child=serializers.CharField(), required=True)
+    source_columns = serializers.ListField(child=serializers.CharField(max_length=100), required=True, min_length=1, max_length=100)
     sample_values = serializers.DictField(required=False, default=dict)
     inferred_types = serializers.DictField(required=False, default=dict)
+    mode = serializers.ChoiceField(choices=('heuristic', 'groq_schema'), default='heuristic')
+    allow_schema_export = serializers.BooleanField(default=False)
+    profile_id = serializers.UUIDField(required=False)
+
+    def validate(self, data):
+        if len(set(data['source_columns'])) != len(data['source_columns']):
+            raise serializers.ValidationError('Tên cột nguồn không được trùng nhau.')
+        if data['mode'] == 'groq_schema' and (not data.get('allow_schema_export') or not data.get('profile_id')):
+            raise serializers.ValidationError('Cần chọn hồ sơ và đồng ý gửi tên cột tới Groq; không gửi dữ liệu mẫu.')
+        if any(not isinstance(v, list) or len(v) > 50 for v in data['sample_values'].values()):
+            raise serializers.ValidationError('Dữ liệu mẫu phải là danh sách có giới hạn.')
+        if any(not isinstance(v, str) for v in data['inferred_types'].values()):
+            raise serializers.ValidationError('Kiểu dữ liệu suy luận không hợp lệ.')
+        return data
 
     def validate_target_entity(self, value):
         if value not in CANONICAL_MODELS:

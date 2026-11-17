@@ -24,6 +24,17 @@ from apps.mapping.engine.safe_evaluator import (
 from apps.mapping.canonical import get_canonical_model, CanonicalFieldType
 
 
+def validate_transformation_config(config):
+    if not isinstance(config, dict):
+        raise ValueError('Cấu hình chuyển đổi phải là đối tượng JSON.')
+    for key in ('target_type', 'type_conversion', 'format', 'expression'):
+        if key in config and config[key] is not None and not isinstance(config[key], str):
+            raise ValueError('Thuộc tính chuyển đổi không đúng kiểu dữ liệu.')
+    if 'value_map' in config and not isinstance(config['value_map'], dict):
+        raise ValueError('Bảng ánh xạ giá trị phải là đối tượng JSON.')
+    return config
+
+
 def transform_field_value(
     raw_val: Any,
     rule: MappingRule,
@@ -34,7 +45,12 @@ def transform_field_value(
     Applies the specific transformation rule logic to raw_val.
     Returns (transformed_val, error_message).
     """
-    cfg = rule.transformation_config or {}
+    try:
+        cfg = validate_transformation_config(rule.transformation_config)
+    except ValueError as exc:
+        return None, str(exc)
+    if rule.ai_status != AIConfirmationStatus.ACCEPTED:
+        return None, 'Quy tắc cần được con người xác nhận trước khi áp dụng.'
 
     try:
         if rule.rule_type == RuleType.FIELD_MAPPING:
@@ -68,6 +84,8 @@ def transform_field_value(
             v_map = cfg.get("value_map", {})
             default_val = cfg.get("default")
             res = apply_value_mapping(raw_val, v_map, default_val=default_val)
+            if cfg.get('reject_unmapped') and res is None:
+                return None, 'Giá trị enum chưa có ánh xạ được xác nhận; không tự gán trạng thái mặc định.'
             return res, None
 
         elif rule.rule_type == RuleType.BUSINESS_FORMULA:
@@ -122,7 +140,7 @@ def transform_single_record(
 
     for rule in sorted_rules:
         # Check human confirmation gate for AI rules
-        if rule.rule_type == RuleType.AI_ASSISTED_MAPPING and rule.ai_status != AIConfirmationStatus.ACCEPTED:
+        if rule.ai_status != AIConfirmationStatus.ACCEPTED:
             continue
 
         target_field = rule.target_field

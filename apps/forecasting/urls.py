@@ -12,6 +12,7 @@ from apps.forecasting.views import (
     ForecastResultListAPIView,
     ForecastChartDataAPIView,
     ForecastRunCancelAPIView,
+    ForecastReadinessAPIView,
 )
 from apps.forecasting.ui_views import forecasting_dashboard_view
 
@@ -28,4 +29,5 @@ urlpatterns = [
     path("api/v1/forecasting/train/", TrainForecastAPIView.as_view(), name="forecasting_train"),
     path("api/v1/forecasting/results/", ForecastResultListAPIView.as_view(), name="forecasting_result_list"),
     path("api/v1/forecasting/chart-data/", ForecastChartDataAPIView.as_view(), name="forecasting_chart_data"),
+    path("api/v1/forecasting/readiness/", ForecastReadinessAPIView.as_view(), name="forecasting_readiness"),
 ]

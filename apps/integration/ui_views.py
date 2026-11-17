@@ -13,6 +13,7 @@ from apps.workspaces.services import resolve_authorized_ui_workspace
 from apps.accounts.services import has_workspace_permission
 from apps.integration.models import DataSource, ImportJob, RawImportRecord, SourceType, EntityType, ImportStatus
 from apps.integration.services import create_data_source, execute_import_job, get_import_job_errors
+from apps.integration.safety import redact, display_source_metadata
 
 
 def _get_active_workspace(request):
@@ -106,6 +107,9 @@ def data_sources_list_view(request):
             messages.error(request, str(e))
 
     sources = DataSource.objects.for_workspace(workspace).select_related("created_by")
+    sources = list(sources)
+    for source in sources:
+        source.connection_config = redact(source.connection_config)
     context = {
         "workspace": workspace,
         "sources": sources,
@@ -215,6 +219,12 @@ def import_job_detail_view(request, pk):
 
     raw_records = job.raw_records.all()[:50]
     errors = get_import_job_errors(job)
+    job.source_metadata = display_source_metadata(job.source_metadata)
+    job.data_source.connection_config = redact(job.data_source.connection_config)
+    raw_records = list(raw_records)
+    for record in raw_records:
+        record.raw_data = redact(record.raw_data)
+    errors = redact(errors)
 
     context = {
         "workspace": workspace,

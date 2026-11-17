@@ -59,6 +59,10 @@ def suggest_mappings_for_fields(
 
         # 1. Exact or alias match against canonical fields
         for fname, fdef in model_def.fields.items():
+            if fname in assigned_targets:
+                continue
+            candidate_type = RuleType.FIELD_MAPPING
+            candidate_config = {}
             fname_clean = _clean_token(fname)
             aliases_clean = [_clean_token(a) for a in fdef.aliases]
 
@@ -88,31 +92,33 @@ def suggest_mappings_for_fields(
             if confidence > 0.6:
                 # Type alignment adjustments
                 if fdef.field_type == CanonicalFieldType.DECIMAL:
-                    suggested_rule_type = RuleType.TYPE_CONVERSION
-                    suggested_config = {"target_type": "DECIMAL"}
+                    candidate_type = RuleType.TYPE_CONVERSION
+                    candidate_config = {"target_type": "DECIMAL"}
                     if any(isinstance(s, str) and any(c in s for c in ("đ", "VND", "$", ",")) for s in samples):
                         confidence = min(1.0, confidence + 0.04)
                         reason += " Sample values contain monetary formatting."
 
                 elif fdef.field_type in (CanonicalFieldType.DATE, CanonicalFieldType.DATETIME):
-                    suggested_rule_type = RuleType.TYPE_CONVERSION
-                    suggested_config = {"target_type": fdef.field_type}
+                    candidate_type = RuleType.TYPE_CONVERSION
+                    candidate_config = {"target_type": fdef.field_type}
                     if any(isinstance(s, str) and any(sep in s for sep in ("/", "-", "T")) for s in samples):
                         confidence = min(1.0, confidence + 0.04)
                         reason += " Sample values contain calendar timestamp format."
 
                 elif fdef.field_type == CanonicalFieldType.BOOLEAN:
-                    suggested_rule_type = RuleType.TYPE_CONVERSION
-                    suggested_config = {"target_type": "BOOLEAN"}
+                    candidate_type = RuleType.TYPE_CONVERSION
+                    candidate_config = {"target_type": "BOOLEAN"}
 
                 elif fdef.field_type == CanonicalFieldType.ENUM:
-                    suggested_rule_type = RuleType.VALUE_MAPPING
-                    suggested_config = {"value_map": {}, "default": fdef.default}
+                    candidate_type = RuleType.VALUE_MAPPING
+                    candidate_config = {"value_map": {choice: choice for choice in (fdef.choices or [])}, 'reject_unmapped': True}
 
                 if confidence > highest_confidence:
                     highest_confidence = confidence
                     best_match = fname
                     match_reason = reason
+                    suggested_rule_type = candidate_type
+                    suggested_config = candidate_config
 
         if best_match and highest_confidence >= 0.70:
             suggestions.append({

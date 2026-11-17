@@ -16,7 +16,8 @@ from apps.audit.services import log_audit_event
 from apps.recommendations.models import Recommendation, RecommendationStatus
 from apps.recommendations.serializers import RecommendationSerializer, RecommendationDecisionSerializer
 from apps.recommendations.rules import evaluate_retail_recommendations, evaluate_service_recommendations
-from apps.recommendations.services import accept_recommendation, reject_recommendation
+from apps.recommendations.services import accept_recommendation, reject_recommendation, recommendation_review_state
+from apps.approvals.review import review_queue
 from apps.approvals.registry import ToolException
 
 
@@ -45,6 +46,7 @@ class RecommendationListAPIView(APIView):
         if type_filter:
             qs = qs.filter(recommendation_type=type_filter)
 
+        qs = review_queue(qs, recommendation_review_state, request.query_params.get('queue', 'current'))
         serializer = RecommendationSerializer(qs, many=True)
         return api_response(data=serializer.data)
 

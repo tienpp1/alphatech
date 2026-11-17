@@ -18,6 +18,7 @@ from apps.integration.parsers.csv_parser import parse_csv_file
 from apps.integration.parsers.excel_parser import parse_excel_file
 from apps.integration.parsers.api_parser import fetch_and_parse_api
 from apps.integration.parsers.preview_engine import generate_preview_metadata
+from apps.integration.safety import validate_connection_config, redact
 
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_FILE_EXTENSIONS = {".csv", ".xlsx", ".xls"}
@@ -56,6 +57,7 @@ def create_data_source(
     if source_type not in SourceType.values:
         raise ValueError(f"Invalid source_type '{source_type}'. Allowed: {SourceType.values}")
 
+    validate_connection_config(connection_config if connection_config is not None else {})
     clean_name = name.strip()
     if not clean_name:
         raise ValueError("Data source name cannot be empty.")
@@ -95,6 +97,10 @@ def update_data_source(
     Updates an existing DataSource configuration.
     """
     changes = {}
+    if connection_config is not None:
+        validate_connection_config(connection_config)
+    if is_active is not None and type(is_active) is not bool:
+        raise ValueError('is_active phải là giá trị boolean.')
     if name is not None:
         clean_name = name.strip()
         if not clean_name:
@@ -126,7 +132,7 @@ def update_data_source(
             action="UPDATE",
             entity_type="DataSource",
             entity_id=str(data_source.id),
-            changes=changes,
+            changes=redact(changes),
         )
 
     return data_source
@@ -165,19 +171,26 @@ def generate_import_preview(
     if effective_type == SourceType.CSV:
         if not file_obj:
             return {"is_valid": False, "error_message": "CSV file upload is required for preview.", "columns": [], "sample_rows": [], "detected_types": {}, "total_rows": 0, "warnings": [], "metadata": {}}
-        parse_result = parse_csv_file(file_obj)
+        config = data_source.connection_config if data_source else {}
+        validate_connection_config(config)
+        parse_result = parse_csv_file(file_obj, delimiter=config.get('delimiter'), encoding=config.get('encoding'))
 
     elif effective_type == SourceType.EXCEL:
         if not file_obj:
             return {"is_valid": False, "error_message": "Excel file upload is required for preview.", "columns": [], "sample_rows": [], "detected_types": {}, "total_rows": 0, "warnings": [], "metadata": {}}
-        parse_result = parse_excel_file(file_obj, sheet_name=sheet_name)
+        parse_result = parse_excel_file(file_obj, sheet_name=sheet_name or (data_source.connection_config.get('sheet_name') if data_source else None))
 
     elif effective_type == SourceType.MOCK_API:
         url = endpoint_url
         headers = None
         params = None
         if data_source and isinstance(data_source.connection_config, dict):
-            url = url or data_source.connection_config.get("url") or data_source.connection_config.get("endpoint_url")
+            configured_url = data_source.connection_config.get("url") or data_source.connection_config.get("endpoint_url")
+            if endpoint_url and endpoint_url.strip() != (configured_url or '').strip():
+                return {"is_valid": False, "error_message": "Không được đổi endpoint khi xem trước nguồn đã đăng ký. Vui lòng cập nhật nguồn bằng quyền quản lý dữ liệu.", "columns": [], "sample_rows": [], "detected_types": {}, "total_rows": 0, "warnings": [], "metadata": {}}
+            # A saved endpoint, headers and params form one audited configuration.
+            # execute_import permission never authorizes moving those credentials.
+            url = configured_url
             headers = data_source.connection_config.get("headers")
             params = data_source.connection_config.get("params")
 
@@ -211,6 +224,9 @@ def execute_import_job(
     """
     if data_source.workspace_id != workspace.pk:
         raise PermissionDenied("Nguồn dữ liệu không thuộc workspace hiện tại.")
+    validate_connection_config(data_source.connection_config)
+    if entity_type not in EntityType.values:
+        raise ValueError('Loại dữ liệu import không hợp lệ.')
     now = timezone.now()
 
     # Validate file upload safety before creating/running job
@@ -268,7 +284,7 @@ def execute_import_job(
             if not file_obj and not job.source_file:
                 raise ValueError("No CSV file provided for ingestion.")
             f = file_obj or job.source_file
-            parse_result = parse_csv_file(f)
+            parse_result = parse_csv_file(f, delimiter=data_source.connection_config.get('delimiter'), encoding=data_source.connection_config.get('encoding'))
 
         elif data_source.source_type == SourceType.EXCEL:
             if not file_obj and not job.source_file:
@@ -291,7 +307,7 @@ def execute_import_job(
     except Exception as e:
         job.status = ImportStatus.FAILED
         job.completed_at = timezone.now()
-        job.error_summary = [{"row": 0, "error_type": "FATAL_ERROR", "message": str(e), "raw": {}}]
+        job.error_summary = [{"row": 0, "error_type": "FATAL_ERROR", "message": 'Không thể đọc nguồn dữ liệu.', "raw": {}}]
         job.save()
 
         log_action(
@@ -300,11 +316,12 @@ def execute_import_job(
             action="IMPORT_FAILED",
             entity_type="ImportJob",
             entity_id=str(job.id),
-            changes={"reason": str(e)},
+            changes={"reason": 'Không thể đọc nguồn dữ liệu.'},
         )
         return job
 
     if not parse_result.get("is_valid", False):
+        job.source_metadata = {k: parse_result[k] for k in ('ingestion_provenance',) if k in parse_result}
         err_msg = parse_result.get("error_message") or "Failed to parse data source."
         job.status = ImportStatus.FAILED
         job.completed_at = timezone.now()
@@ -375,7 +392,7 @@ def execute_import_job(
         final_status = ImportStatus.FAILED
 
     meta = {}
-    for k in ("encoding", "delimiter", "sheet_name", "source_url", "columns"):
+    for k in ("encoding", "delimiter", "sheet_name", "source_url", "columns", "ingestion_provenance"):
         if k in parse_result:
             meta[k] = parse_result[k]
 
@@ -384,7 +401,7 @@ def execute_import_job(
     job.successful_rows = successful_count
     job.failed_rows = failed_count
     job.error_summary = error_summary
-    job.source_metadata = meta
+    job.source_metadata = redact(meta)
     job.completed_at = timezone.now()
     job.save()
 
@@ -410,7 +427,7 @@ def get_import_job_errors(import_job: ImportJob, limit: int = 100) -> List[Dict[
     Returns the list of error records from error_summary or failed RawImportRecords.
     """
     if import_job.error_summary:
-        return import_job.error_summary[:limit]
+        return redact(import_job.error_summary[:limit])
 
     failed_records = import_job.raw_records.filter(is_valid=False)[:limit]
     errors = []
@@ -421,4 +438,4 @@ def get_import_job_errors(import_job: ImportJob, limit: int = 100) -> List[Dict[
             "message": "; ".join(rec.validation_errors) if rec.validation_errors else "Validation failed",
             "raw": rec.raw_data,
         })
-    return errors
+    return redact(errors)

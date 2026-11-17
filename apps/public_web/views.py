@@ -1909,7 +1909,7 @@ def public_checkout_place_order_view(request):
         email=email, phone=phone, address=address,
     )
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     rand_suffix = uuid.uuid4().hex[:6].upper()
     order_number = f"ORD-{today.strftime('%Y%m%d')}-{rand_suffix}"
 

@@ -84,11 +84,14 @@ def generate_future_forecast(
     granularity = provenance.get("granularity", forecast_run.model_config.granularity)
     feature_config = provenance.get("feature_config", forecast_run.model_config.feature_config)
     # Snapshot configuration takes precedence over later edits to model_config.
-    ts_df = history_snapshot if guarded and history_snapshot is not None else get_historical_timeseries(
+    dataset = provenance.get("dataset") or {}
+    ts_df = history_snapshot if history_snapshot is not None else get_historical_timeseries(
         workspace,
         target_type,
         granularity=granularity,
         dimensions=provenance.get("dimensions", (forecast_run.job_parameters or {}).get("dimensions", {})),
+        data_mode=(forecast_run.job_parameters or {}).get("data_mode", "historical"),
+        as_of=datetime.date.fromisoformat(dataset["as_of"]) if dataset.get("as_of") else None,
     )
     if ts_df.empty:
         raise ValueError("No historical series available to anchor future predictions.")

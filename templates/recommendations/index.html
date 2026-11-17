@@ -230,6 +230,11 @@
     <p id="historical-forecast-help" style="color:#cbd5e1;font-size:0.85rem;">Luật dự báo doanh thu đối chiếu 7 ngày dự báo đã lưu với 7 ngày có đơn hoàn tất; chỉ tạo đề xuất khi đủ dữ liệu và giảm trên ngưỡng minh họa 10%. Snapshot lịch sử không được chấp thuận như hành động hiện tại. Không chạy huấn luyện hoặc tự thay đổi nghiệp vụ.</p>
     {% endif %}
     <p id="evaluation-status" role="status" aria-live="polite"></p>
+    <nav aria-label="Hàng đợi khuyến nghị">
+        <a href="?queue=current&amp;workspace={{ active_workspace.id }}"{% if selected_queue == 'current' %} aria-current="page"{% endif %}>Cần xem xét</a> ·
+        <a href="?queue=history&amp;workspace={{ active_workspace.id }}"{% if selected_queue == 'history' %} aria-current="page"{% endif %}>Lịch sử / không còn đủ điều kiện</a> ·
+        <a href="?queue=all&amp;workspace={{ active_workspace.id }}"{% if selected_queue == 'all' %} aria-current="page"{% endif %}>Tất cả</a>
+    </nav>
     <div class="kpi-grid">
         <div class="kpi-card">
             <div class="kpi-label">Không gian làm việc</div>

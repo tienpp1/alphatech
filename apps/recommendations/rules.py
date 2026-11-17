@@ -10,6 +10,7 @@ import datetime
 import math
 from django.utils import timezone
 from django.db.models import Sum, Count, Q, Max
+from django.db import transaction
 
 from apps.workspaces.models import Workspace, WorkspaceType
 from apps.recommendations.models import (
@@ -265,12 +266,14 @@ def evaluate_retail_stockout_recommendations(workspace: Workspace) -> List[Recom
     return created_recs
 
 
+@transaction.atomic
 def evaluate_service_recommendations(workspace: Workspace) -> List[Recommendation]:
     """
     Evaluates deterministic Service Ops rules for a workspace.
     """
     if workspace.workspace_type != WorkspaceType.SERVICE:
         return []
+    Workspace.objects.select_for_update(no_key=True).get(pk=workspace.pk)
 
     from apps.service_ops.models import ServiceRequest, ServiceRequestStatus, Employee, Task, TaskStatus
     from apps.service_ops.sla_engine import calculate_sla_status, SLAComplianceStatus
@@ -354,9 +357,9 @@ def evaluate_service_recommendations(workspace: Workspace) -> List[Recommendatio
         # requires a recorded ticket origin; never use GIS's default city origin.
         existing_gis = Recommendation.objects.for_workspace(workspace).filter(
             recommendation_type=RecommendationType.SERVICE_NEARBY_TECHNICIAN,
-            status=RecommendationStatus.PENDING, expires_at__gt=now,
             source_references__contains=[f"ticket:{target_ticket.id}"],
-        ).exists()
+        ).filter(Q(status=RecommendationStatus.PENDING, expires_at__gt=now) |
+                 Q(status=RecommendationStatus.ACCEPTED, approval_request__status='PENDING')).exists()
         origin_lon = target_ticket.location.x if target_ticket.location is not None else target_ticket.longitude
         origin_lat = target_ticket.location.y if target_ticket.location is not None else target_ticket.latitude
         has_origin = (origin_lon is not None and origin_lat is not None and
@@ -407,6 +410,7 @@ def evaluate_service_recommendations(workspace: Workspace) -> List[Recommendatio
                 top_candidate = scored_candidates[0] if scored_candidates else None
 
                 if top_candidate:
+                    from apps.recommendations.services import dispatch_evidence_snapshot
                     rec_gis = Recommendation.objects.create(
                         workspace=workspace,
                         recommendation_type=RecommendationType.SERVICE_NEARBY_TECHNICIAN,
@@ -427,6 +431,7 @@ def evaluate_service_recommendations(workspace: Workspace) -> List[Recommendatio
                             "expected_effect": "Hỗ trợ quản lý đối chiếu ứng viên trước phê duyệt; không tự đặt lịch, bảo đảm SLA hoặc tối ưu tuyến đường."
                         },
                         supporting_data={
+                            "dispatch_snapshot": dispatch_evidence_snapshot(workspace, target_ticket.pk, top_candidate['technician_id']),
                             "ticket_id": target_ticket.id,
                             "recommended_employee_id": top_candidate["technician_id"],
                             "top_candidates": scored_candidates[:3],

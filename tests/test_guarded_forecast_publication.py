@@ -10,6 +10,8 @@ from unittest.mock import patch
 from django.conf import settings
 from django.core.management import call_command, CommandError
 from django.test import TestCase, override_settings
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.audit.models import ActorType, AuditLog
@@ -200,6 +202,21 @@ class GuardedForecastPublicationTests(TestCase):
             "requests": ServiceRequest.objects.count(),
         }
         self.assertEqual(after, before)
+
+    def test_apply_keeps_scoped_workspace_serialization_with_fk_compatible_row_lock(self):
+        with CaptureQueriesContext(connection) as captured:
+            self.publish(release_id="release-workspace-lock", workspaces=[self.retail.code], apply=True)
+        gates = [query['sql'] for query in captured.captured_queries
+                 if f'FROM "{Workspace._meta.db_table}"' in query['sql']
+                 and ('FOR UPDATE' in query['sql'] or 'FOR NO KEY UPDATE' in query['sql'])]
+        self.assertEqual(len(gates), 1)
+        # This remains a row-level serialization gate for publishers. Unlike
+        # FOR UPDATE it does not conflict with unrelated FK KEY SHARE checks.
+        self.assertIn('FOR NO KEY UPDATE', gates[0])
+        self.assertIn('WHERE', gates[0])
+        self.assertIn(self.retail.pk.hex, gates[0].replace('-', ''))
+        self.assertNotIn(self.service.pk.hex, gates[0].replace('-', ''))
+        self.assertIn('ORDER BY', gates[0])
 
     def test_apply_appends_guarded_runs_and_replay_is_idempotent_without_rewriting_history(self):
         retail_config = self.create_legacy_config(self.retail, TargetType.RETAIL_REVENUE)

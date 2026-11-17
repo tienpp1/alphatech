@@ -14,6 +14,10 @@ import urllib.request
 import urllib.error
 from typing import Dict, Any, List, Optional, Tuple
 from django.test import Client
+from apps.integration.safety import validate_connection_config, consumed_receipt, safe_endpoint
+
+LOCAL_MOCK_ROUTES = frozenset('/api/v1/mock-external/' + route + '/' for route in (
+    'retail/orders', 'retail/customers', 'retail/products', 'service/tickets', 'service/technicians'))
 
 MAX_RESPONSE_SIZE = 5 * 1024 * 1024  # 5 MB
 DEFAULT_TIMEOUT = 10  # 10 seconds
@@ -80,6 +84,8 @@ def validate_safe_remote_url(url_str: str) -> Tuple[bool, Optional[str]]:
     hostname = (parsed.hostname or "").lower().strip()
     if not hostname:
         return False, "URL is missing a valid hostname."
+    if parsed.username or parsed.password or parsed.fragment:
+        return False, 'URL credentials and fragments are forbidden.'
 
     # Direct hostname check
     if hostname in FORBIDDEN_HOSTNAMES:
@@ -136,6 +142,13 @@ class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
         if self.redirect_count > self.max_redirects:
             raise urllib.error.HTTPError(req.full_url, code, "Excessive redirects encountered.", headers, fp)
 
+        original = urllib.parse.urlsplit(req.full_url)
+        destination = urllib.parse.urlsplit(newurl)
+        def origin(parsed):
+            return parsed.scheme.lower(), parsed.hostname, parsed.port or (443 if parsed.scheme == 'https' else 80)
+        if origin(original) != origin(destination):
+            raise urllib.error.HTTPError(req.full_url, code, 'Cross-origin redirect blocked.', headers, fp)
+
         is_safe, error_msg = validate_safe_remote_url(newurl)
         if not is_safe:
             raise urllib.error.HTTPError(req.full_url, code, f"Redirect to unsafe destination blocked: {error_msg}", headers, fp)
@@ -143,7 +156,7 @@ class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def fetch_and_parse_api(
+def _fetch_and_parse_api(
     endpoint_url: str,
     headers: Optional[Dict[str, str]] = None,
     params: Optional[Dict[str, Any]] = None,
@@ -169,7 +182,7 @@ def fetch_and_parse_api(
         "error_message": Optional[str],
     }
     """
-    if not endpoint_url or not endpoint_url.strip():
+    if not isinstance(endpoint_url, str) or not endpoint_url.strip():
         return {
             "columns": [],
             "rows": [],
@@ -181,9 +194,17 @@ def fetch_and_parse_api(
         }
 
     url = endpoint_url.strip()
+    try:
+        validate_connection_config({'headers': headers if headers is not None else {}, 'params': params if params is not None else {}})
+        if type(timeout) not in (int, float):
+            raise ValueError('Invalid timeout')
+    except ValueError:
+        return {'columns': [], 'rows': [], 'total_rows': 0, 'source_url': safe_endpoint(url), 'warnings': [], 'is_valid': False, 'error_message': 'Invalid HTTP request configuration.'}
     effective_timeout = max(1, min(timeout, MAX_TIMEOUT))
     raw_json = None
     warnings = []
+    content_bytes = b''
+    transport = 'REMOTE_HTTP'
 
     try:
         if url.startswith("http://") or url.startswith("https://"):
@@ -201,7 +222,10 @@ def fetch_and_parse_api(
                 }
 
             # 2. Execute remote request with SafeRedirectHandler & size streaming limit
-            req = urllib.request.Request(url, headers=headers or {})
+            parsed_url = urllib.parse.urlsplit(url)
+            query = urllib.parse.urlencode(params or {}, doseq=True)
+            request_url = urllib.parse.urlunsplit(parsed_url._replace(query='&'.join(q for q in (parsed_url.query, query) if q)))
+            req = urllib.request.Request(request_url, headers=headers or {})
             opener = urllib.request.build_opener(SafeRedirectHandler())
 
             with opener.open(req, timeout=effective_timeout) as response:
@@ -236,13 +260,14 @@ def fetch_and_parse_api(
                         }
                     chunks.append(chunk)
 
-                content = b"".join(chunks).decode("utf-8")
+                content_bytes = b"".join(chunks)
+                content = content_bytes.decode("utf-8")
                 raw_json = json.loads(content)
 
         elif url.startswith("/"):
             # Local / relative mock endpoint (e.g. /api/v1/mock-external/...)
             # Disallow scheme-relative URLs (//)
-            if url.startswith("//"):
+            if urllib.parse.urlsplit(url).path not in LOCAL_MOCK_ROUTES or url.startswith("//") or '\\' in url or '#' in url:
                 return {
                     "columns": [],
                     "rows": [],
@@ -250,7 +275,7 @@ def fetch_and_parse_api(
                     "source_url": url,
                     "warnings": [],
                     "is_valid": False,
-                    "error_message": "Invalid relative endpoint format.",
+                    "error_message": "Local mock route is unregistered (404)." if url.startswith('/api/v1/mock-external/') else "Invalid relative endpoint format.",
                 }
 
             client = Client()
@@ -265,7 +290,9 @@ def fetch_and_parse_api(
                     "is_valid": False,
                     "error_message": f"Local API endpoint returned HTTP status {resp.status_code}.",
                 }
-            raw_json = resp.json()
+            content_bytes = resp.content
+            raw_json = json.loads(content_bytes)
+            transport = 'LOCAL_MOCK'
         else:
             return {
                 "columns": [],
@@ -274,7 +301,7 @@ def fetch_and_parse_api(
                 "source_url": url,
                 "warnings": [],
                 "is_valid": False,
-                "error_message": f"Invalid URL scheme or format for '{url}'. Remote URLs must start with 'http://' or 'https://', and local endpoints must start with '/'.",
+                "error_message": "Invalid URL scheme or format. Remote URLs require HTTP(S); local URLs require a registered mock route.",
             }
 
     except urllib.error.HTTPError as e:
@@ -285,7 +312,7 @@ def fetch_and_parse_api(
             "source_url": url,
             "warnings": [],
             "is_valid": False,
-            "error_message": f"HTTP Error ({e.code}): {e.reason}",
+            "error_message": f"HTTP Error ({e.code}).",
         }
     except urllib.error.URLError as e:
         return {
@@ -295,7 +322,7 @@ def fetch_and_parse_api(
             "source_url": url,
             "warnings": [],
             "is_valid": False,
-            "error_message": f"Network Connection Error: {e.reason}",
+            "error_message": "Network Connection Error.",
         }
     except json.JSONDecodeError as e:
         return {
@@ -315,20 +342,23 @@ def fetch_and_parse_api(
             "source_url": url,
             "warnings": [],
             "is_valid": False,
-            "error_message": f"Network error connecting to endpoint: {str(e)}",
+            "error_message": "Network error connecting to endpoint.",
         }
 
     # Extract record array from raw_json
+    receipt = consumed_receipt(content_bytes, transport, url)
     records_list = []
     if isinstance(raw_json, list):
         records_list = raw_json
     elif isinstance(raw_json, dict):
         # Unpack envelope: check common container keys
+        found_envelope = False
         for key in ("data", "results", "items", "records", "orders", "customers", "products", "tickets", "technicians"):
             if key in raw_json and isinstance(raw_json[key], list):
                 records_list = raw_json[key]
+                found_envelope = True
                 break
-        if not records_list:
+        if not found_envelope:
             # Single object response: wrap as single record
             records_list = [raw_json]
     else:
@@ -340,6 +370,7 @@ def fetch_and_parse_api(
             "warnings": [],
             "is_valid": False,
             "error_message": "JSON response root must be an array or envelope object.",
+            "ingestion_provenance": receipt,
         }
 
     if not records_list:
@@ -351,6 +382,7 @@ def fetch_and_parse_api(
             "warnings": ["Endpoint returned an empty dataset."],
             "is_valid": False,
             "error_message": "External API returned zero records.",
+            "ingestion_provenance": receipt,
         }
 
     # Extract columns as the union of all keys across objects
@@ -370,6 +402,7 @@ def fetch_and_parse_api(
             "warnings": [],
             "is_valid": False,
             "error_message": "No structured dictionary records found in API response.",
+            "ingestion_provenance": receipt,
         }
 
     # Standardize rows into RawImportRecord representation
@@ -400,8 +433,15 @@ def fetch_and_parse_api(
         "columns": col_set,
         "rows": rows,
         "total_rows": len(rows),
-        "source_url": url,
+        "source_url": safe_endpoint(url),
+        "ingestion_provenance": receipt,
         "warnings": warnings,
         "is_valid": True,
         "error_message": None,
     }
+
+
+def fetch_and_parse_api(endpoint_url, headers=None, params=None, timeout=DEFAULT_TIMEOUT):
+    result = _fetch_and_parse_api(endpoint_url, headers=headers, params=params, timeout=timeout)
+    result['source_url'] = safe_endpoint(result.get('source_url', ''))
+    return result

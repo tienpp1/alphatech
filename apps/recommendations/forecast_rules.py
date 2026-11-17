@@ -8,7 +8,7 @@ from django.db import transaction
 from django.db.models import Count, Sum
 from django.utils import timezone
 
-from apps.forecasting.diagnostics import get_guarded_holdout_evidence, get_run_model_label
+from apps.forecasting.diagnostics import get_guarded_holdout_evidence, get_run_model_label, assess_run_compatibility
 from apps.forecasting.models import ForecastModelConfig, ForecastResult, ForecastRun
 from apps.recommendations.models import Recommendation, RecommendationPriority, RecommendationType
 from apps.retail.models import Order
@@ -85,7 +85,7 @@ def evaluate_forecast_recommendations(workspace, *, include_historical=False):
         raise ValueError('include_historical must be a boolean')
     if not workspace or workspace.workspace_type != 'RETAIL' or not workspace.is_active:
         return []
-    workspace = Workspace.objects.select_for_update().get(pk=workspace.pk)
+    workspace = Workspace.objects.select_for_update(no_key=True).get(pk=workspace.pk)
     if not workspace.is_active:
         return []
     config = (ForecastModelConfig.objects.for_workspace(workspace)
@@ -100,6 +100,9 @@ def evaluate_forecast_recommendations(workspace, *, include_historical=False):
         return []
     provenance = _eligible_provenance(run, config, workspace)
     if provenance is None:
+        return []
+    compatibility = assess_run_compatibility(run)
+    if not compatibility['operational_eligible'] and not include_historical:
         return []
     if Recommendation.objects.for_workspace(workspace).filter(
         supporting_data__rule_key=RULE_KEY, supporting_data__forecast_run_id=run.pk,
@@ -118,7 +121,8 @@ def evaluate_forecast_recommendations(workspace, *, include_historical=False):
     amounts = [_finite_amount(point.predicted_value) for point in points]
     if any(amount is None for amount in amounts):
         return []
-    historical = (today-end).days > 7 or any(day <= today for day in expected_dates)
+    historical = (not compatibility['operational_eligible'] or (today-end).days > 7
+                  or any(day < today for day in expected_dates))
     if historical and not include_historical:
         return []
     start = end-datetime.timedelta(days=6)
@@ -156,6 +160,7 @@ def evaluate_forecast_recommendations(workspace, *, include_historical=False):
         'observed_holdout_count': get_guarded_holdout_evidence(provenance)['observed_holdout_count'],
         'dataset_fingerprint_sha256': provenance['dataset']['fingerprint_sha256'],
         'operationally_validated': False,
+        'forecast_compatibility': compatibility,
     }
     recommendation = Recommendation.objects.create(
         workspace=workspace, recommendation_type=RecommendationType.RETAIL_DECLINING_REVENUE,

@@ -5,11 +5,14 @@ from decimal import Decimal
 
 from concurrent.futures import ThreadPoolExecutor
 import threading
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from django.db import connections, close_old_connections
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
+from django.conf import settings
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Permission, Role, User
@@ -35,34 +38,29 @@ class ForecastBackedRecommendationTests(TestCase):
             permission, _ = Permission.objects.get_or_create(codename=code, defaults={'name': code, 'module': 'recommendations'})
             role.permissions.add(permission)
         WorkspaceMembership.objects.create(user=cls.user, workspace=cls.workspace, role=role, is_default=True)
-        cls.end = timezone.localdate()
+        cls.end = timezone.localdate()-datetime.timedelta(days=1)
         cls.config = ForecastModelConfig.objects.create(
             workspace=cls.workspace, name='Guarded revenue', target_type='RETAIL_REVENUE',
             granularity='DAILY', training_config={'strategy': 'guarded_direct_v1'},
         )
-        cls.forecast_run = ForecastRun.objects.create(
-            workspace=cls.workspace, model_config=cls.config, target_type='RETAIL_REVENUE',
-            status='COMPLETED', dataset_period_start=cls.end-datetime.timedelta(days=125),
-            dataset_period_end=cls.end, dataset_row_count=126, test_row_count=28,
-            model_metrics={'mae': 5, 'rmse': 6, 'r2': -0.5},
-            job_parameters={'dimensions': {}, 'provenance': {
-                'workspace_code': cls.workspace.code, 'target_type': 'RETAIL_REVENUE',
-                'model_config_id': cls.config.pk, 'model_version': 1,
-                'granularity': 'DAILY', 'dimensions': {}, 'strategy': 'guarded_direct_v1',
-                'effective_model': 'MA7', 'deployment_qualification': True,
-                'dataset': {'period_start': (cls.end-datetime.timedelta(days=125)).isoformat(),
-                            'period_end': cls.end.isoformat(), 'fingerprint_sha256': '1'*64},
-                'evaluation': {'counts': {'observed_holdout': 20, 'holdout': 28}},
-            }},
-        )
-        for index in range(1, 8):
-            ForecastResult.objects.create(workspace=cls.workspace, forecast_run=cls.forecast_run,
-                target_type='RETAIL_REVENUE', forecast_date=cls.end+datetime.timedelta(days=index),
-                predicted_value=70, actual_value=99999)
-        for index in range(7):
+        for index in range(70):
             Order.objects.create(workspace=cls.workspace, customer=cls.customer,
                 order_number=f'FORECAST-BASE-{index}', order_date=cls.end-datetime.timedelta(days=index),
                 order_timestamp=timezone.now(), status='COMPLETED', total_amount=100)
+        # Real closed-period source/readiness/configuration fingerprints, not
+        # handwritten eligibility flags. Only TEST prediction/metric values are
+        # then frozen to hand-checked rule fixtures; not a quality benchmark.
+        from apps.forecasting.training import train_forecast_model
+        from apps.forecasting.diagnostics import assess_run_compatibility
+        with tempfile.TemporaryDirectory(prefix='TEST-action-forecast-', dir=Path(settings.BASE_DIR)/'ml_models'/'forecasting') as directory:
+            with override_settings(FORECASTING_ARTIFACTS_DIR=Path(directory)):
+                cls.forecast_run = train_forecast_model(cls.workspace, 'RETAIL_REVENUE',
+                    model_config=cls.config, data_mode='operational', horizon_days=7)
+        assert cls.forecast_run.status == 'COMPLETED', cls.forecast_run.error_message
+        assert assess_run_compatibility(cls.forecast_run)['operational_eligible'] is True
+        cls.forecast_run.results.update(predicted_value=70, actual_value=99999)
+        cls.forecast_run.model_metrics = {'mae': 5, 'rmse': 6, 'r2': -0.5}
+        cls.forecast_run.save(update_fields=['model_metrics'])
 
     def forecast_recs(self):
         return Recommendation.objects.filter(workspace=self.workspace, supporting_data__forecast_run_id=self.forecast_run.pk)
@@ -115,6 +113,28 @@ class ForecastBackedRecommendationTests(TestCase):
 
     def test_threshold_is_strictly_more_than_ten_percent(self):
         self.forecast_run.results.update(predicted_value=90)
+        evaluate_retail_recommendations(self.workspace)
+        self.assertFalse(self.forecast_recs().exists())
+
+    def test_recent_historical_mode_is_not_current_operational_evidence(self):
+        params = copy.deepcopy(self.forecast_run.job_parameters)
+        params['data_mode'] = 'historical'
+        self.forecast_run.job_parameters = params
+        self.forecast_run.save(update_fields=['job_parameters'])
+        evaluate_retail_recommendations(self.workspace)
+        self.assertFalse(self.forecast_recs().exists())
+
+    def test_saved_ineligible_readiness_is_not_current_operational_evidence(self):
+        params = copy.deepcopy(self.forecast_run.job_parameters)
+        params['readiness'] = {'ready': False}
+        self.forecast_run.job_parameters = params
+        self.forecast_run.save(update_fields=['job_parameters'])
+        evaluate_retail_recommendations(self.workspace)
+        self.assertFalse(self.forecast_recs().exists())
+
+    def test_edited_configuration_is_not_current_operational_evidence(self):
+        self.config.training_config = {'strategy': 'guarded_direct_v1', 'max_depth': 4}
+        self.config.save(update_fields=['training_config'])
         evaluate_retail_recommendations(self.workspace)
         self.assertFalse(self.forecast_recs().exists())
 
@@ -225,7 +245,7 @@ class ForecastBackedRecommendationTests(TestCase):
         self.assertFalse(Recommendation.objects.exists())
 
     def test_future_source_is_not_permitted_even_in_historical_mode(self):
-        self.forecast_run.dataset_period_end = self.end+datetime.timedelta(days=1)
+        self.forecast_run.dataset_period_end = self.end+datetime.timedelta(days=2)
         self.forecast_run.save(update_fields=['dataset_period_end'])
         self.alter_provenance(dataset={'period_end': self.forecast_run.dataset_period_end.isoformat(),
                                        'fingerprint_sha256': '1'*64})
@@ -266,13 +286,13 @@ class ForecastBackedRecommendationTests(TestCase):
         evaluate_retail_recommendations(self.workspace)
         self.assertFalse(self.forecast_recs().exists())
 
-    def test_pending_current_advice_becomes_historical_at_forecast_start(self):
+    def test_pending_current_advice_becomes_historical_after_first_forecast_day(self):
         evaluate_retail_recommendations(self.workspace)
         rec = self.forecast_recs().get()
         immutable = copy.deepcopy(rec.supporting_data)
         self.assertFalse(recommendation_review_state(rec)['stale'])
         with patch('apps.recommendations.services.timezone.localdate',
-                   return_value=self.end+datetime.timedelta(days=1)):
+                   return_value=self.end+datetime.timedelta(days=2)):
             self.assertTrue(recommendation_review_state(rec)['stale'])
             with self.assertRaises(ToolValidationError):
                 accept_recommendation(rec, self.user)

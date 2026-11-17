@@ -1,5 +1,28 @@
 # AI Business Platform — canonical project context
 
+Operational-integrity source update (2026-11-18):
+existing integration/mapping models retain their schema. New ingestion receipts
+observe consumed bytes/transport, not commercial truth. Explicit schema-only
+Groq proposals require reviewed column export and signed, current-scoped human
+confirmation; provider output never supplies executable formulas/business defaults.
+Pending/rejected mapping rules cannot silently mutate canonical data. Forecast
+operational mode uses closed-period readiness; historical mode stays compatible
+and never establishes operational eligibility. Saved provenance/fingerprints and
+actual evaluation horizons are exposed without rewriting historical results.
+Separate versioned observation-evidence fingerprints bind source-day/period
+masks, dimensions, bounds and missing-period policy; unchanged numeric values
+alone cannot establish compatibility. Legacy missing evidence stays unassessed.
+Approval execution rechecks current actor/contract/evidence under locks and
+uses canonical service transitions; cached authorized replay precedes mutable
+domain checks. Derived current/history queues do not expire or rewrite rows on
+GET. Workspace serialization uses NO KEY UPDATE and explicit domain-only row
+locks, avoiding accidental joined-Workspace/requester locks that oppose FK
+checks; stock balances follow the canonical branch order. Real concurrent TEST
+transactions exercise these boundaries, including canonical retail cancellation
+and stock rollback joins. Only exact-release receipts establish verification;
+the implementation itself is no deployment or model-quality certificate.
+Word and97ledger remain unchanged; no new domain tables or migration.
+
 Managed team chat (2026-11-17, source verified): chat only admits
 active non-Google, non-superuser MANAGER and explicitly invited EMPLOYEE members
 of the selected workspace; ADMIN/superuser no longer bypass this chat policy.

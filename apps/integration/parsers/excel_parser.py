@@ -9,6 +9,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Dict, Any, List, Optional
 import openpyxl
+from apps.integration.safety import consumed_receipt
 
 
 def _read_bytes_content(file_obj_or_path: Any) -> bytes:
@@ -211,6 +212,7 @@ def parse_excel_file(
 
     return {
         "columns": headers,
+        "ingestion_provenance": consumed_receipt(raw_bytes, 'UPLOAD_EXCEL'),
         "rows": parsed_rows,
         "total_rows": len(parsed_rows),
         "sheet_name": active_sheet_name,

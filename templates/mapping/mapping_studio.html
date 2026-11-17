@@ -69,6 +69,10 @@
             <button id="btnAiSuggest" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                 <span>✨</span> Gợi ý ánh xạ theo quy tắc
             </button>
+            <label style="font-size: .82rem; max-width: 440px; color: #cbd5e1;">
+                <input id="allowGroqSchemaExport" type="checkbox">
+                Đồng ý gửi tên cột tới Groq để gợi ý bằng LLM (không gửi dữ liệu mẫu, cấu hình nguồn hay thông tin workspace). Mặc định dùng quy tắc; thiếu khóa/lỗi sẽ báo fallback.
+            </label>
             <button id="btnOpenApplyModal" class="btn {% if not can_apply %}btn-apply-disabled{% else %}btn-apply-active{% endif %}" {% if not can_apply %}disabled title="Bạn không có quyền áp dụng ánh xạ"{% endif %}>
                 <span>🚀</span> Áp dụng Nhập Dữ liệu Chuẩn hóa
             </button>
@@ -356,6 +360,7 @@ document.addEventListener("DOMContentLoaded", function() {
         Object.keys(statsData).forEach(function(col) {
             sampleVals[col] = statsData[col].sample_values || [];
         });
+        const schemaExport = Boolean(document.getElementById("allowGroqSchemaExport")?.checked);
 
         fetch("/api/v1/mapping/ai-suggest/", {
             method: "POST",
@@ -366,7 +371,10 @@ document.addEventListener("DOMContentLoaded", function() {
             body: JSON.stringify({
                 target_entity: targetEntity,
                 source_columns: sourceCols,
-                sample_values: sampleVals,
+                profile_id: profileId,
+                mode: schemaExport ? "groq_schema" : "heuristic",
+                allow_schema_export: schemaExport,
+                sample_values: schemaExport ? {} : sampleVals,
             })
         })
         .then(r => r.json())
@@ -376,6 +384,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (res.success && res.suggestions && res.suggestions.length > 0) {
                 aiList.innerHTML = "";
+                const llm = res.provenance?.provider === "groq";
+                if (res.provenance?.fallback_reason) {
+                    const notice = document.createElement("div");
+                    notice.textContent = "Đang dùng gợi ý theo quy tắc (không phải LLM): " + res.provenance.fallback_reason;
+                    aiList.appendChild(notice);
+                }
                 res.suggestions.forEach((sug, idx) => {
                     const item = document.createElement("div");
                     item.style = "display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.3);";
@@ -384,11 +398,11 @@ document.addEventListener("DOMContentLoaded", function() {
                             <span style="color: #38bdf8; font-family: monospace; font-weight: 600;">${escapeMappingHtml(sug.source_field)}</span>
                             <span style="color: #a5b4fc; margin: 0 8px;">➔</span>
                             <span style="color: #34d399; font-weight: 600;">${escapeMappingHtml(sug.suggested_target_field)}</span>
-                            <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Điểm khớp quy tắc: ${(sug.confidence * 100).toFixed(0)}/100</span>
+                            <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">${llm ? "Gợi ý LLM từ tên cột — chưa đo độ chính xác" : "Điểm khớp quy tắc: " + (sug.confidence * 100).toFixed(0) + "/100"}</span>
                             <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 4px;">${escapeMappingHtml(sug.reason)}</div>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <button type="button" class="btn-accept-ai" data-src="${escapeMappingHtml(sug.source_field)}" data-tgt="${escapeMappingHtml(sug.suggested_target_field)}" data-type="${escapeMappingHtml(sug.suggested_rule_type)}" data-conf='${escapeMappingHtml(JSON.stringify(sug.transformation_config))}' data-score="${escapeMappingHtml(sug.confidence)}" style="background: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
+                            <button type="button" class="btn-accept-ai" {% if not can_manage %}disabled title="Bạn không có quyền quản lý ánh xạ"{% endif %} data-token="${escapeMappingHtml(sug.confirmation_token || '')}" data-src="${escapeMappingHtml(sug.source_field)}" data-tgt="${escapeMappingHtml(sug.suggested_target_field)}" data-type="${escapeMappingHtml(sug.suggested_rule_type)}" data-conf='${escapeMappingHtml(JSON.stringify(sug.transformation_config))}' data-score="${escapeMappingHtml(sug.confidence)}" style="background: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
                                 Chấp thuận Quy tắc
                             </button>
                         </div>
@@ -405,6 +419,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         const rType = this.getAttribute("data-type");
                         const rConf = JSON.parse(this.getAttribute("data-conf"));
                         const score = parseFloat(this.getAttribute("data-score"));
+                        const token = this.getAttribute("data-token");
 
                         fetch(`/api/v1/mapping/profiles/${profileId}/rules/`, {
                             method: "POST",
@@ -412,7 +427,7 @@ document.addEventListener("DOMContentLoaded", function() {
                                 "Content-Type": "application/json",
                                 "X-CSRFToken": csrfToken,
                             },
-                            body: JSON.stringify({
+                            body: JSON.stringify(token ? {confirmation_token: token, human_confirmed: true} : {
                                 source_field: src,
                                 target_field: tgt,
                                 rule_type: rType,

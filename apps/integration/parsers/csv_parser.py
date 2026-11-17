@@ -6,6 +6,7 @@ delimiter detection, header extraction, empty row handling, and fault-tolerant r
 
 import csv
 import io
+from apps.integration.safety import consumed_receipt
 from typing import Dict, Any, List, Optional, Union, Tuple
 
 
@@ -180,6 +181,7 @@ def parse_csv_file(
 
     return {
         "columns": cleaned_headers,
+        "ingestion_provenance": consumed_receipt(raw_bytes, 'UPLOAD_CSV'),
         "rows": parsed_rows,
         "total_rows": len(parsed_rows),
         "encoding": used_encoding,

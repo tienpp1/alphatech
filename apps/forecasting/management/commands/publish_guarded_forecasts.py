@@ -96,7 +96,9 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 locked_workspaces = list(
-                    Workspace.objects.select_for_update().filter(pk__in=[ws.pk for ws in workspaces]).order_by("pk")
+                    # Serialize publishers without blocking unrelated FK KEY
+                    # SHARE checks (e.g. retail/audit inserts) during fitting.
+                    Workspace.objects.select_for_update(no_key=True).filter(pk__in=[ws.pk for ws in workspaces]).order_by("pk")
                 )
                 if len(locked_workspaces) != len(workspaces) or any(not ws.is_active for ws in locked_workspaces):
                     raise CommandError("Workspace scope changed or became inactive before publication.")

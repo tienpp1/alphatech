@@ -2,6 +2,39 @@
 
 Do not log cosmetic edits.
 
+## 2026-11-17 — Operational data, mapping and controlled-action integrity
+
+- Correct API empty envelopes/query params, CSV delimiter, registered local feeds,
+  redirect and nested-secret boundaries; capture consumed-byte ingestion receipts.
+  Receipts observe transport, not commercial provenance; legacy rows stay unknown.
+- Repair heuristic target/config and enum/duplicate handling; require all-type
+  confirmation, same-source profile/job binding and signed current-scoped proposals.
+  Add explicit bounded Groq schema-only suggestions with truthful fallback; no raw
+  business samples or provider-supplied executable configurations.
+- Add closed-period operational forecast readiness, honest evaluation horizons,
+  source/config/history compatibility, denominator diagnostics, date-union charts
+  and local-business-day defaults. Historical scores and selected MA7 remain intact.
+- Recheck current actor/contract/evidence before approval, preserve authorized
+  cached replay before mutable checks, and reuse hardened canonical dispatch/task
+  transitions. Serialize actionable proposal generation and expose current/history
+  queues without writes on GET. No automatic real-world approvals.
+- Combined source/CI/browser verification is pending; focused branch receipts are
+  not production or model-quality certificates. No domain migration, database reset,
+  Word change or change to97-item progress/structure.
+
+Review follow-up18/11: bind registered-source previews to the exact configured
+endpoint before credentials/DNS/transport; redact nested secret values and error
+echoes only on presentation. Fingerprint actual source-day/observed-period evidence
+separately from numeric values; legacy absent evidence stays unassessed. Serialize
+same-workspace actions with NO KEY UPDATE, lock only intended joined domain rows,
+and align stock-lock ordering with canonical branch order. Real PostgreSQL
+deadlock REDs and unchanged-source focused GREENs are recorded; retail domain
+joins now lock OF self and pass independent scoped review. Reuse the existing
+RAG client User-Agent for mapper transport after a paired403/200 catalog probe;
+one unchanged-payload schema POST now returns200/valid expected mappings, not a
+general mapping-quality certificate. Stabilize the preexisting stockout test at
+an explicit UTC/Vietnam business-day boundary; production date logic unchanged.
+
 ## 2026-11-17 — Manager-controlled employee provisioning and chat invitation
 
 Restrict team chat UI/API/services/roster to active same-workspace MANAGER or

@@ -150,6 +150,17 @@ def delete_service(service: Service, user) -> None:
 # Employee / Technician Management
 # ==========================================
 
+
+def _lock_service_workspace(workspace_id):
+    """All workload/task writers take this gate before any domain row lock.
+
+    Approval execution already owns the same workspace lock. Reacquiring it is
+    safe inside its transaction; taking it after Task/Employee is not.
+    """
+    # NO KEY UPDATE still excludes peer gates but permits deferred audit/domain
+    # FK KEY SHARE checks by independent canonical writers.
+    return Workspace.objects.select_for_update(no_key=True).get(pk=workspace_id)
+
 def create_employee(workspace: Workspace, user, data: dict) -> Employee:
     code = (data.get("code") or "").strip().upper()
     full_name = (data.get("full_name") or "").strip()
@@ -209,7 +220,9 @@ def create_employee(workspace: Workspace, user, data: dict) -> Employee:
     return employee
 
 
+@transaction.atomic
 def update_employee(employee: Employee, user, data: dict) -> Employee:
+    _lock_service_workspace(employee.workspace_id)
     before = {
         "full_name": employee.full_name,
         "phone": employee.phone,
@@ -270,12 +283,16 @@ def update_employee(employee: Employee, user, data: dict) -> Employee:
     return employee
 
 
+@transaction.atomic
 def recalculate_employee_workload(employee: Employee) -> float:
     """
     Computes workload score: active_tasks + (overdue_tasks * 1.5).
     """
+    _lock_service_workspace(employee.workspace_id)
+    Employee.objects.select_for_update().get(pk=employee.pk, workspace_id=employee.workspace_id)
     now = timezone.now()
-    active_tasks = Task.objects.filter(assigned_to=employee, status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
+    active_tasks = Task.objects.filter(service_request__workspace_id=employee.workspace_id,
+                                       assigned_to=employee, status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
     active_count = active_tasks.count()
     overdue_count = active_tasks.filter(due_at__lt=now).count()
 
@@ -327,6 +344,7 @@ def create_service_request(workspace: Workspace, user, data: dict) -> ServiceReq
     """
     Creates a new service incident ticket with deterministic SLA deadlines.
     """
+    _lock_service_workspace(workspace.pk)
     customer_id = data.get("customer_id")
     service_id = data.get("service_id")
     title = (data.get("title") or "").strip()
@@ -445,10 +463,18 @@ def assign_service_request(service_request: ServiceRequest, employee: Employee, 
     """
     Assigns an employee/technician to a service request.
     """
+    _lock_service_workspace(service_request.workspace_id)
+    service_request = ServiceRequest.objects.select_for_update().get(
+        pk=service_request.pk, workspace_id=service_request.workspace_id)
+    employee = Employee.objects.select_for_update().get(pk=employee.pk, workspace_id=employee.workspace_id)
+    if service_request.status not in [ServiceRequestStatus.OPEN, ServiceRequestStatus.ASSIGNED, ServiceRequestStatus.IN_PROGRESS]:
+        raise ValidationError("Không thể phân công lại phiếu dịch vụ đã kết thúc.")
     if employee.workspace_id != service_request.workspace_id:
         raise ValidationError("Technician does not belong to the ticket workspace.")
     if not employee.is_active:
         raise ValidationError("Cannot assign inactive technician.")
+    if not employee.is_available:
+        raise ValidationError("Kỹ thuật viên hiện không khả dụng.")
 
     now = timezone.now()
     old_assigned = service_request.assigned_employee
@@ -465,7 +491,7 @@ def assign_service_request(service_request: ServiceRequest, employee: Employee, 
     service_request.save()
 
     # Create or update primary task
-    task = service_request.tasks.filter(status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]).first()
+    task = service_request.tasks.select_for_update().filter(status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS]).order_by('pk').first()
     if not task:
         Task.objects.create(
             service_request=service_request,
@@ -503,6 +529,8 @@ def transition_service_request_status(service_request: ServiceRequest, new_statu
     OPEN -> ASSIGNED -> IN_PROGRESS -> RESOLVED -> CLOSED
     Terminal cancellations: OPEN -> CANCELLED, ASSIGNED -> CANCELLED, IN_PROGRESS -> CANCELLED
     """
+    _lock_service_workspace(service_request.workspace_id)
+    service_request = ServiceRequest.objects.select_for_update().get(pk=service_request.pk, workspace_id=service_request.workspace_id)
     current = service_request.status
     if current == new_status:
         return service_request
@@ -549,7 +577,9 @@ def transition_service_request_status(service_request: ServiceRequest, new_statu
 # Task Management
 # ==========================================
 
+@transaction.atomic
 def create_task(service_request: ServiceRequest, user, data: dict) -> Task:
+    _lock_service_workspace(service_request.workspace_id)
     title = (data.get("title") or "").strip()
     if not title:
         raise ValidationError("Task title is required.")
@@ -587,7 +617,10 @@ def create_task(service_request: ServiceRequest, user, data: dict) -> Task:
     return task
 
 
+@transaction.atomic
 def transition_task_status(task: Task, new_status: str, user, actual_duration_minutes=None) -> Task:
+    _lock_service_workspace(task.workspace.pk)
+    task = Task.objects.select_for_update().get(pk=task.pk, service_request_id=task.service_request_id)
     current = task.status
     if current == new_status:
         return task

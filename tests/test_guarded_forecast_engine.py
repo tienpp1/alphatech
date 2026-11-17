@@ -27,7 +27,10 @@ class GuardedForecastEngineTests(unittest.TestCase):
         from apps.forecasting.guarded import _metrics
 
         metrics = _metrics([0., 2., 4.], [1., 1., 6.])
-        self.assertEqual(set(metrics), {'mae', 'rmse', 'mape', 'r2', 'bias', 'count'})
+        self.assertEqual(set(metrics), {'mae', 'rmse', 'mape', 'r2', 'bias', 'count', 'wape',
+            'wape_actual_absolute_sum', 'mape_denominator_count', 'mape_zero_excluded_count', 'scored_count'})
+        self.assertAlmostEqual(metrics['wape'], 200 / 3)
+        self.assertEqual(metrics['mape_denominator_count'], 2)
         self.assertAlmostEqual(metrics['mae'], 4 / 3)
         self.assertAlmostEqual(metrics['rmse'], np.sqrt(2))
         self.assertAlmostEqual(metrics['mape'], 50.)

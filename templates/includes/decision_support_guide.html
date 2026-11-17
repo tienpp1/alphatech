@@ -2,21 +2,25 @@
     {% if guide_page == 'integration' %}
     <h2 id="support-guide-title">Bước 1 — Tiếp nhận dữ liệu bên ngoài</h2>
     <p>Tệp CSV, Excel hoặc API được đọc và lưu vào vùng đệm dữ liệu thô (staging). Nhập thành công chưa cập nhật dữ liệu nghiệp vụ. Tỷ lệ dòng qua kiểm tra nhập không đo độ chính xác AI hay tính đúng đắn kinh doanh. Nhãn Mock API không tự chứng minh nguồn là mô phỏng hay đã kết nối đối tác thật; cần đối chiếu endpoint và dữ liệu thực tế.</p>
+    <p>Biên nhận của lô nhập mới ghi cách lấy dữ liệu và mã kiểm tra nội dung đã đọc. Biên nhận chứng minh lần tiếp nhận đó, không tự chứng nhận nguồn là giao dịch thương mại thật; lô cũ thiếu bằng chứng vẫn được ghi là chưa xác định.</p>
     <div class="support-guide-links"><a href="/noibo/mapping/">Bước tiếp theo: Ánh xạ và chuẩn hóa dữ liệu</a></div>
     {% elif guide_page == 'mapping' %}
     <h2 id="support-guide-title">Bước 2 — Xem trước, xác nhận rồi áp dụng ánh xạ</h2>
-    <p>Gợi ý dựa trên quy tắc đối sánh tên/bí danh cột, kiểu và dữ liệu mẫu; không gọi LLM. Điểm khớp không phải độ chính xác đã kiểm định. Cần xem xét và chấp thuận quy tắc trước khi dùng.</p>
+    <p>Chế độ quy tắc đối sánh tên/bí danh cột, kiểu và dữ liệu mẫu; không gọi LLM. Chế độ Groq chỉ gửi tên cột và lược đồ khi bạn chọn rõ, không gửi các dòng dữ liệu mẫu. Nguồn gợi ý và lý do chuyển về quy tắc được hiển thị đúng lượt chạy; câu trả lời LLM không có độ chính xác đã được chấm độc lập.</p>
+    <p>Điểm khớp quy tắc không phải độ chính xác AI. Mọi gợi ý vẫn cần xem xét và xác nhận trước khi trở thành quy tắc áp dụng; hệ thống kiểm tra lại hồ sơ, nguồn và quyền hiện tại.</p>
     <p>Xem trước chỉ kiểm tra mẫu, không phải toàn bộ lô. Áp dụng ánh xạ là thao tác có thể ghi dữ liệu nghiệp vụ và cần quyền riêng. Đơn hàng tạo trực tiếp trên website không bắt buộc qua hai bước nhập/ánh xạ này.</p>
     <div class="support-guide-links"><a href="/noibo/integration/">Xem nguồn và lô dữ liệu thô</a></div>
     {% elif guide_page == 'forecasting' %}
     <h2 id="support-guide-title">Cách đọc dự báo và kết quả đánh giá</h2>
     <p>Ô “Mô hình hiện hành” ghi mô hình thực tế của lượt chạy đã lưu. MA7 là đường cơ sở trung bình trượt 7 kỳ, không đồng nghĩa XGBoost đang được dùng. Việc chọn mô hình dựa trên kiểm định quá khứ, không bảo đảm luôn thắng trên dữ liệu mới.</p>
     <p>MAE là sai số theo đơn vị chỉ tiêu; MAPE là sai số phần trăm, không phải độ chính xác — càng thấp càng tốt. Kiểm tra ngày cuối dữ liệu, khoảng dự báo và số kỳ kiểm thử có quan sát thực; huấn luyện lại trên dữ liệu cũ không làm dữ liệu trở nên mới.</p>
+    <p>Chế độ vận hành kiểm tra dữ liệu đã chốt kỳ, độ mới và số kỳ có quan sát trước khi huấn luyện. Chế độ lịch sử phục vụ đối chiếu, không tự đủ điều kiện vận hành; ngày không có quan sát không được chứng nhận là ngày không bán được hàng.</p>
     <div class="support-guide-links"><a href="/noibo/recommendations/">Tiếp theo: Xem khuyến nghị có bằng chứng</a></div>
     {% elif guide_page == 'recommendations' %}
     <h2 id="support-guide-title">Từ số liệu đến đề xuất có thể giải trình</h2>
     <p>Quy tắc kinh doanh kết hợp số liệu, dự báo đủ điều kiện hoặc GIS để tạo đề xuất; không phải mọi khuyến nghị đều do LLM sinh ra. Ghi nhận đề xuất tham khảo không thay đổi nghiệp vụ.</p>
     <p>Chỉ đề xuất có hành động được hỗ trợ, còn hiệu lực và đủ điều kiện mới có thể tạo yêu cầu phê duyệt. Kiểm tra bằng chứng và độ mới; khuyến nghị hết hạn hoặc chỉ từ dữ liệu lịch sử không được thực thi như hành động hiện tại.</p>
+    <p>Hàng đợi hiện tại và lịch sử được tách để giữ dấu vết cũ mà không nhầm với công việc còn hợp lệ. Trước khi thực thi, hệ thống kiểm tra lại điều kiện nghiệp vụ; đề xuất đã được chấp nhận không có nghĩa được phép bỏ qua những thay đổi xảy ra sau đó.</p>
     <div class="support-guide-links"><a href="/noibo/forecasting/">Đối chiếu dự báo và sai số</a><a href="/noibo/approvals/">Xem yêu cầu phê duyệt hành động</a></div>
     {% elif guide_page == 'approvals' %}
     <h2 id="support-guide-title">Phê duyệt là thao tác có thể thay đổi dữ liệu thật</h2>

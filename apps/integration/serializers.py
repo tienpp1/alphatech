@@ -4,9 +4,18 @@ Data Integration & Ingestion Serializers.
 
 from rest_framework import serializers
 from apps.integration.models import DataSource, ImportJob, RawImportRecord, SourceType, EntityType, ImportStatus
+from apps.integration.safety import redact, validate_connection_config, display_source_metadata
 
 
-class DataSourceSerializer(serializers.ModelSerializer):
+class RedactedModelSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = redact(super().to_representation(instance))
+        if 'source_metadata' in data:
+            data['source_metadata'] = display_source_metadata(data['source_metadata'])
+        return data
+
+
+class DataSourceSerializer(RedactedModelSerializer):
     created_by_username = serializers.CharField(source="created_by.username", read_only=True, default=None)
     import_jobs_count = serializers.IntegerField(source="import_jobs.count", read_only=True, default=0)
 
@@ -28,20 +37,17 @@ class DataSourceSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         config = data.get("connection_config")
-        if isinstance(config, dict):
-            masked_config = dict(config)
-            for k, val in config.items():
-                k_lower = k.lower()
-                if any(sec in k_lower for sec in ("password", "secret", "token", "key", "auth")):
-                    if isinstance(val, str) and len(val) > 4:
-                        masked_config[k] = val[:2] + "******" + val[-2:]
-                    else:
-                        masked_config[k] = "******"
-            data["connection_config"] = masked_config
+        data['connection_config'] = redact(config)
         return data
 
 
 class DataSourceCreateSerializer(serializers.ModelSerializer):
+    def validate_connection_config(self, value):
+        try:
+            return validate_connection_config(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
+
     class Meta:
         model = DataSource
         fields = [
@@ -58,7 +64,7 @@ class DataSourceCreateSerializer(serializers.ModelSerializer):
         return clean
 
 
-class RawImportRecordSerializer(serializers.ModelSerializer):
+class RawImportRecordSerializer(RedactedModelSerializer):
     class Meta:
         model = RawImportRecord
         fields = [
@@ -71,7 +77,7 @@ class RawImportRecordSerializer(serializers.ModelSerializer):
         ]
 
 
-class ImportJobSerializer(serializers.ModelSerializer):
+class ImportJobSerializer(RedactedModelSerializer):
     data_source_name = serializers.CharField(source="data_source.name", read_only=True)
     data_source_type = serializers.CharField(source="data_source.source_type", read_only=True)
     created_by_username = serializers.CharField(source="created_by.username", read_only=True, default=None)
@@ -98,7 +104,7 @@ class ImportJobSerializer(serializers.ModelSerializer):
         ]
 
 
-class ImportJobDetailSerializer(serializers.ModelSerializer):
+class ImportJobDetailSerializer(RedactedModelSerializer):
     data_source = DataSourceSerializer(read_only=True)
     created_by_username = serializers.CharField(source="created_by.username", read_only=True, default=None)
     success_rate = serializers.FloatField(read_only=True)

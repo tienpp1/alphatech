@@ -7,6 +7,7 @@ generates sample rows, calculates row counts, and detects structural warnings.
 import re
 from datetime import datetime
 from typing import Dict, Any, List, Optional
+from apps.integration.safety import redact
 
 
 def _infer_value_type(val: Any) -> str:
@@ -138,11 +139,11 @@ def generate_preview_metadata(
         warnings.append(f"{invalid_rows_count} row(s) contain structural formatting issues or column mismatches.")
 
     metadata = {}
-    for k in ("encoding", "delimiter", "sheet_name", "available_sheets", "source_url"):
+    for k in ("encoding", "delimiter", "sheet_name", "available_sheets", "source_url", "ingestion_provenance"):
         if k in parse_result:
             metadata[k] = parse_result[k]
 
-    return {
+    return redact({
         "is_valid": True,
         "error_message": None,
         "columns": columns,
@@ -151,4 +152,4 @@ def generate_preview_metadata(
         "sample_rows": sample_rows,
         "warnings": warnings,
         "metadata": metadata,
-    }
+    }, secret_source=rows)

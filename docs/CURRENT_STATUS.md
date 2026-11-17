@@ -1,5 +1,37 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 18/11/2026 — Sửa luồng vận hành dữ liệu/AI (source đã kiểm chứng)
+
+Tiếp tục theo plan docs/superpowers/plans/2026-11-17-operational-ai.md.
+Ba nhánh source đã có focused evidence sau review: nhập/ánh xạ122,
+dự báo151, hành động195; không cộng các bộ chồng lặp thành tổng test.
+Full ổn định1779/1779 đạt464,808s,0failure/error/skip,hash giữ và TEST DB tự hủy;
+đây là bằng chứng trước hai sửa khóa join retail cuối. Hai join đã sửa với
+RED thựcSQL/deadlock và focused145/145đạt52,394s; scopedreview SPEC/QUALITY PASS.
+Một lượt full sau đó1781tests có1failure do teststockout nhầm ngàyUTC với ngày
+Việt Nam. Đã giữ logicproduction đúng, sửa test thành biên giờ cố định/literal,
+RED1tái hiện/GREEN35đạt1,940s, không bỏ/giảm assert. Full cuối1782/1782đạt
+404,197s,0failure/error/skip; receiptcompleted/source_unchanged=true, ownTESTDB
+9e5203180f824d2ftựhủy. Word/97/architecture/runtime/testhashgiữ tronglượtchạy.
+JS80/80 và5nhóm transport đạt, browser fixture18/18 đạt0pageerror,
+không tràn ngang ở375x812/812x375/1440x1000; không coi fixture là UAT production.
+Bandit apps/config0finding/0error; scan916sourcefiles0known-secret-pattern.
+Groq schema-only: ban đầu403; chẩn đoán cặp catalog cho thấy khác biệtUserAgent.
+Bổ sung cùng định danh ứng dụng củaRAG, RED1/GREEN120đạt9,612s; một request thật
+giữ nguyênpayload/schema đã nhậnHTTP200, ánh xạ đúng2cột, khôngfallback.
+Đây là smoke có đáp án biết trước, không phải accuracy độc lập/hệ thống đối tác.
+Provider/partner/live mutation không suy ra từ test có transport kiểm soát.
+Không migration, không reset/sửa giao dịch production, không sửa Word/ledger97.
+Census Neon qua Render đọc-only cho thấy dữ liệu có đến17/11 nhưng chỉ2đơn
+hoàn tất/28ngày; nguồn thương mại lịch sử UNKNOWN. Không tạo giao dịch thay thế.
+Kết quả cũ vẫn giữ; operational mode phải qua preflight/readiness và fingerprint
+bằng chứng quan sát, không chỉ hash số liệu. Offline fit từ snapshot canonical
+bị từ chối do holdout không có observed truth; không làm giả điểm hay dữ liệu.
+Hồ sơ docs/OPERATIONAL_DATA_AI_REPAIR_2026_11_18.md; bằng chứng và trạng thái
+ở output/operational_ai_20261117/progress.md. Đây là snapshot trước phát hành;
+trạng thái GitHub/CI/Render và browser production nằm trong receipt đúngSHA,
+không suy ra LIVE chỉ từ kết quả test hoặc đoạn văn này.
+
 ## 17/11/2026 — Tinh gọn giao diện dữ liệu và hỗ trợ quyết định (source đã kiểm chứng)
 
 Theo đề xuất người dùng duyệt, giữ cả năm chức năng thuộc teacher_review_v2.

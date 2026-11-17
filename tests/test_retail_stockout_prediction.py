@@ -4,7 +4,8 @@ Validates Mathematical Formulas, Demand Forecasting, Risk Level Tiers, and AI To
 """
 
 from decimal import Decimal
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone as utc_timezone
+from unittest.mock import patch
 from django.test import TestCase
 from django.utils import timezone
 
@@ -108,7 +109,7 @@ class RetailStockoutPredictionTestCase(TestCase):
         )
 
         # 5. Create Historical Completed Orders for Asus VivoBook (e.g. 2 units/day average over past 14 days)
-        today = timezone.now().date()
+        today = timezone.localdate()
         for i in range(1, 15):
             order_date_val = today - timedelta(days=i)
             order = Order.objects.create(
@@ -167,11 +168,17 @@ class RetailStockoutPredictionTestCase(TestCase):
             quantity_on_hand=0,
         )
 
-        analysis = evaluate_product_stockout_risk(self.workspace, self.prod_asus, self.branch_a)
-        self.assertEqual(analysis["risk_level"], "OUT_OF_STOCK")
-        self.assertEqual(analysis["risk_label_vi"], "Hết hàng")
-        self.assertEqual(analysis["days_to_stockout"], 0.0)
-        self.assertEqual(analysis["expected_stockout_date"], timezone.now().date().strftime("%Y-%m-%d"))
+        # 18:00 UTC is 01:00 on the NEXT business day in Vietnam. Keep this
+        # boundary deterministic rather than depending on the test-run clock.
+        with timezone.override("Asia/Ho_Chi_Minh"), patch(
+            "django.utils.timezone.now",
+            return_value=datetime(2026, 11, 17, 18, 0, tzinfo=utc_timezone.utc),
+        ):
+            analysis = evaluate_product_stockout_risk(self.workspace, self.prod_asus, self.branch_a)
+            self.assertEqual(analysis["risk_level"], "OUT_OF_STOCK")
+            self.assertEqual(analysis["risk_label_vi"], "Hết hàng")
+            self.assertEqual(analysis["days_to_stockout"], 0.0)
+            self.assertEqual(analysis["expected_stockout_date"], "2026-11-18")
 
     def test_stockout_risk_formulas_safe_stock(self):
         """Tests Low Risk / Safe Stock condition (current_stock = 100)."""

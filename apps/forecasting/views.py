@@ -203,6 +203,7 @@ class TrainForecastAPIView(APIView):
                 horizon_days=horizon_days,
                 is_async=is_async,
                 dimensions=vdata.get("dimensions", {}),
+                data_mode=vdata["data_mode"],
             )
             return api_response(
                 data=ForecastRunSerializer(run).data,
@@ -277,3 +278,25 @@ class ForecastChartDataAPIView(APIView):
             return api_response(data=data)
         except Exception as e:
             return api_response(error=str(e), status_code=status.HTTP_400_BAD_REQUEST)
+
+
+class ForecastReadinessAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+
+    def get(self, request):
+        ws = get_request_workspace(request)
+        if not ws:
+            return api_response(error="Workspace context required", status_code=status.HTTP_400_BAD_REQUEST)
+        if not check_view_permission(request, ws, "forecasting.view_forecast"):
+            return api_response(error="Permission denied", status_code=status.HTTP_403_FORBIDDEN)
+        query = ForecastChartQuerySerializer(data=request.query_params)
+        if not query.is_valid():
+            return api_response(error=query.errors, status_code=status.HTTP_400_BAD_REQUEST)
+        from .readiness import get_forecast_readiness
+        from .services import get_default_target_for_workspace
+        try:
+            result = get_forecast_readiness(ws, request.query_params.get("target_type") or get_default_target_for_workspace(ws),
+                dimensions={key: query.validated_data[key] for key in ("product_id", "category_id", "branch_id") if key in query.validated_data})
+            return api_response(data=result)
+        except ValueError as exc:
+            return api_response(error=str(exc), status_code=status.HTTP_400_BAD_REQUEST)

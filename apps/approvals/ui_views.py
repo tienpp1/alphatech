@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from apps.workspaces.services import resolve_authorized_ui_workspace
 from apps.accounts.services import has_workspace_permission
 from apps.approvals.models import ApprovalRequest, ApprovalStatus
+from apps.approvals.review import approval_review_state, review_queue
 
 
 @login_required
@@ -24,13 +25,19 @@ def approvals_dashboard_view(request):
 
     can_approve = has_workspace_permission(request.user, workspace, "approvals.manage_approval") or request.user.is_superuser
 
+    all_rows = review_queue(qs.select_related('workspace', 'requester', 'source_recommendation'), approval_review_state, 'all')
+    queue = request.GET.get('queue', 'current')
+    rows = [row for row in all_rows if queue == 'all' or (not row.review_state['current'] if queue == 'history' else row.review_state['current'])]
+    for row in rows:
+        row.can_review = can_approve and (row.requester_id != request.user.pk or request.user.is_superuser)
     context = {
         "active_workspace": workspace,
-        "approval_requests": qs,
+        "approval_requests": rows,
+        "selected_queue": queue,
         "selected_status": status_filter,
         "selected_risk": risk_filter,
         "can_approve": can_approve,
-        "pending_count": ApprovalRequest.objects.for_workspace(workspace).filter(status=ApprovalStatus.PENDING).count(),
-        "total_count": qs.count(),
+        "pending_count": sum(row.review_state['current'] for row in all_rows),
+        "total_count": len(rows),
     }
     return render(request, "approvals/index.html", context)

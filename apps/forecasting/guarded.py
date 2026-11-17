@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from . import adaptive
+from .evaluation import metric_denominators
 
 
 def _freq(granularity):
@@ -32,7 +33,8 @@ def _metrics(actual, predicted):
     if actual.shape != predicted.shape or actual.ndim != 1:
         raise ValueError('Metrics require paired one-dimensional actual and prediction arrays')
     if not len(actual):
-        return {'mae': None, 'rmse': None, 'mape': None, 'r2': None, 'bias': None, 'count': 0}
+        return {'mae': None, 'rmse': None, 'mape': None, 'r2': None, 'bias': None, 'count': 0,
+                **metric_denominators(actual, predicted)}
     if not np.isfinite(actual).all() or not np.isfinite(predicted).all():
         raise ValueError('Metrics require finite actual and prediction values')
     errors = predicted - actual
@@ -47,6 +49,7 @@ def _metrics(actual, predicted):
         if len(actual) >= 2 and np.var(actual) else None,
         'bias': float(np.mean(errors)),
         'count': int(len(actual)),
+        **metric_denominators(actual, predicted),
     }
 
 
@@ -174,6 +177,7 @@ def fit_guarded(series, *, horizon=14, granularity='DAILY', params=None, test_si
     valid_count = min(len(mode_losses['none']), len(mode_losses['full']))
     mode_details = None
     selection = {
+        'selection_horizon_periods': 14,
         'effective_model': 'MA7', 'reason': 'xgboost_ineligible',
         'eligible': bool(eligible), 'eligibility': {
             'granularity_daily': granularity == 'DAILY', 'horizon_at_most_14': horizon <= 14,
@@ -233,6 +237,13 @@ def fit_guarded(series, *, horizon=14, granularity='DAILY', params=None, test_si
     evaluation = {
         'method': 'chronological_validation_selection_then_separate_rolling_holdout',
         'granularity': granularity, 'horizon': horizon,
+        # `horizon` is retained as the legacy requested serving value. Frozen
+        # validation/holdout blocks have always scored 14 periods, not this value.
+        'requested_serving_horizon': horizon,
+        'evaluated_horizon_periods': 14,
+        'scored_steps': sorted({row['step'] for row in scored}),
+        'scored_calendar_periods': len(holdout_rows),
+        'observed_scoring_coverage': len(scored) / len(holdout_rows),
         'partitions': {'initial_fit': [series.index[0].date().isoformat(), series.index[initial_end - 1].date().isoformat()],
                        'validation': [series.index[initial_end].date().isoformat(), series.index[holdout_start - 1].date().isoformat()],
                        'holdout': [series.index[holdout_start].date().isoformat(), series.index[-1].date().isoformat()]},

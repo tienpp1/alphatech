@@ -7,6 +7,11 @@ from apps.approvals.models import ApprovalRequest, ApprovalStatus, RiskLevel
 
 
 class ApprovalRequestSerializer(serializers.ModelSerializer):
+    review_state = serializers.SerializerMethodField()
+
+    def get_review_state(self, obj):
+        from .review import approval_review_state
+        return getattr(obj, 'review_state', None) or approval_review_state(obj)
     requester_name = serializers.ReadOnlyField(source="requester.get_full_name")
     reviewer_name = serializers.ReadOnlyField(source="reviewer.get_full_name")
     status_display = serializers.CharField(source="get_status_display", read_only=True)
@@ -15,6 +20,7 @@ class ApprovalRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApprovalRequest
         fields = [
+            "review_state",
             "id",
             "workspace",
             "requester",

@@ -152,6 +152,11 @@
     </div>
 
     {% include "includes/decision_support_guide.html" with guide_page="approvals" only %}
+    <nav aria-label="Hàng đợi phê duyệt">
+        <a href="?queue=current&amp;workspace={{ active_workspace.id }}"{% if selected_queue == 'current' %} aria-current="page"{% endif %}>Cần xem xét</a> ·
+        <a href="?queue=history&amp;workspace={{ active_workspace.id }}"{% if selected_queue == 'history' %} aria-current="page"{% endif %}>Lịch sử / không còn đủ điều kiện</a> ·
+        <a href="?queue=all&amp;workspace={{ active_workspace.id }}"{% if selected_queue == 'all' %} aria-current="page"{% endif %}>Tất cả</a>
+    </nav>
 
     <div class="kpi-grid">
         <div class="kpi-card">
@@ -196,6 +201,7 @@
                             {% elif req.risk_level == 'MEDIUM' %}Trung bình
                             {% else %}Thấp{% endif %}
                         </span>
+                        <p>{{ req.review_state.label }}</p>
                     </td>
                     <td>
                         <pre style="margin: 0; font-size: 0.75rem; color: #cbd5e1; background: rgba(0,0,0,0.3); padding: 0.3rem 0.5rem; border-radius: 4px; max-width: 250px; overflow-x: auto;">{{ req.parameters }}</pre>
@@ -212,9 +218,9 @@
                     </td>
                     <td>{{ req.created_at|date:"d/m/Y H:i" }}</td>
                     <td>
-                        {% if req.status == 'PENDING' and can_approve %}
+                        {% if req.status == 'PENDING' and req.can_review %}
                         <div style="display: flex; gap: 0.35rem;">
-                            <button class="btn-approve" data-req-id="{{ req.id }}" onclick="decideApproval(this.dataset.reqId, 'APPROVED')">Phê duyệt</button>
+                            {% if req.review_state.current %}<button class="btn-approve" data-req-id="{{ req.id }}" onclick="decideApproval(this.dataset.reqId, 'APPROVED')">Phê duyệt</button>{% endif %}
                             <button class="btn-reject" data-req-id="{{ req.id }}" onclick="decideApproval(this.dataset.reqId, 'REJECTED')">Từ chối</button>
                         </div>
                         {% else %}
@@ -246,6 +252,7 @@ function decideApproval(id, decision) {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
+            'X-Workspace-ID': '{{ active_workspace.id|escapejs }}',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ decision: decision, decision_reason: reason })

@@ -47,6 +47,11 @@ class ForecastRunSerializer(serializers.ModelSerializer):
     job_parameters = serializers.SerializerMethodField()
     quality_assessment = serializers.SerializerMethodField()
     snapshot_assessment = serializers.SerializerMethodField()
+    compatibility_assessment = serializers.SerializerMethodField()
+
+    def get_compatibility_assessment(self, obj):
+        from .diagnostics import assess_run_compatibility
+        return assess_run_compatibility(obj)
 
     def get_quality_assessment(self, obj):
         from .diagnostics import assess_model_quality, get_run_model_label
@@ -69,8 +74,8 @@ class ForecastRunSerializer(serializers.ModelSerializer):
         return parameters
 
     def get_snapshot_assessment(self, obj):
-        from .diagnostics import assess_snapshot, get_run_granularity
-        return assess_snapshot(obj.dataset_period_end, granularity=get_run_granularity(obj))
+        from .diagnostics import assess_run_snapshot
+        return assess_run_snapshot(obj)
 
     class Meta:
         model = ForecastRun
@@ -100,7 +105,7 @@ class ForecastRunSerializer(serializers.ModelSerializer):
             "cancel_requested",
             "error_message",
             "created_at",
-            "quality_assessment", "snapshot_assessment",
+            "quality_assessment", "snapshot_assessment", "compatibility_assessment",
         ]
         read_only_fields = fields
 
@@ -123,6 +128,7 @@ class ForecastResultSerializer(serializers.ModelSerializer):
 
 
 class TrainForecastRequestSerializer(serializers.Serializer):
+    data_mode = serializers.ChoiceField(choices=("historical", "operational"), default="historical")
     dimensions = serializers.DictField(child=serializers.IntegerField(min_value=1), required=False)
     target_type = serializers.ChoiceField(choices=TargetType.choices)
     is_async = serializers.BooleanField(default=False)

@@ -365,7 +365,18 @@
         {% if chart_data.snapshot.period_end %} Ngày cuối dữ liệu: {{ chart_data.snapshot.period_end }}; đánh giá đến {{ chart_data.snapshot.as_of }} ({{ chart_data.snapshot.age_days }} ngày).{% endif %}
         <br>{{ chart_data.quality.message }} {{ chart_data.quality.r2_warning }}
         {% if chart_data.holdout_evidence_message %}<br><strong>{{ chart_data.holdout_evidence_message }}</strong>{% endif %}
+        {% if chart_data.evaluation.evaluated_horizon_periods %}<br>Tầm phục vụ yêu cầu: {{ chart_data.evaluation.requested_serving_horizon }} kỳ; tầm thực sự chấm điểm: {{ chart_data.evaluation.evaluated_horizon_periods }} kỳ. Không suy rộng điểm này sang tầm khác.{% endif %}
+        {% if chart_data.metrics.mape_denominator_count is not None %}<br>MAPE dùng {{ chart_data.metrics.mape_denominator_count }}/{{ chart_data.metrics.scored_count }} quan sát có giá trị khác 0. WAPE: {% if chart_data.metrics.wape is not None %}{{ chart_data.metrics.wape|floatformat:1 }}%{% else %}không xác định (tổng thực tế bằng 0){% endif %}.{% endif %}
         {% if chart_data.quality.comparisons.mae.best_baseline %}<br>Baseline tốt nhất theo MAE: {{ chart_data.quality.comparisons.mae.best_baseline }} ({{ chart_data.quality.comparisons.mae.baseline_value|floatformat:2 }}).{% endif %}
+    </div>
+    {% endif %}
+    {% if chart_data.readiness %}
+    <div class="card-panel" style="padding:1rem; margin-bottom:1rem;" role="status">
+        <strong>Điều kiện dữ liệu vận hành:</strong> {{ chart_data.readiness.message }}
+        <br>{{ chart_data.readiness.observed_period_count }}/{{ chart_data.readiness.period_count }} kỳ có quan sát; {{ chart_data.readiness.imputed_period_count }} kỳ được điền 0 để tính toán, không phải số 0 đã xác minh.
+        Nguồn từ {{ chart_data.readiness.source_period_start|default:"—" }} đến {{ chart_data.readiness.source_period_end|default:"—" }}; kỳ đóng gần nhất {{ chart_data.readiness.closed_period_end }}.
+        <br>Nguồn thương mại chưa xác minh; không suy ra dữ liệu thật/TEST từ tên. Chế độ lượt lưu: {{ chart_data.data_mode|default:"chưa xác định" }}.
+        {% if chart_data.compatibility %}<br>{{ chart_data.compatibility.message }}{% endif %}
     </div>
     {% endif %}
     <!-- KPI Summary Row -->
@@ -540,6 +551,13 @@
 
         <form id="trainForm" onsubmit="submitTraining(event)">
             <input type="hidden" id="modalTarget" value="{{ selected_target }}">
+            <div class="form-group">
+                <label class="form-label" for="modalDataMode">Mục đích huấn luyện</label>
+                <select id="modalDataMode" class="form-control">
+                    <option value="operational" selected>Dự báo vận hành — yêu cầu dữ liệu kỳ đóng, mới và đủ quan sát</option>
+                    <option value="historical">Đánh giá lịch sử — không coi là bằng chứng vận hành hiện tại</option>
+                </select>
+            </div>
 
             <div class="form-group">
                 <label class="form-label">Chỉ tiêu dự báo</label>
@@ -602,36 +620,15 @@ function initForecastChart() {
     const predData = chartPayload.forecast || [];
     const modelLabel = chartPayload.model_label || 'XGBoost';
 
-    // Merge dates
-    const labels = [];
-    const actualSeries = [];
-    const forecastSeries = [];
-    const lowerSeries = [];
-    const upperSeries = [];
-
-    histData.forEach(item => {
-        labels.push(item.date);
-        actualSeries.push(item.value);
-        forecastSeries.push(null);
-        lowerSeries.push(null);
-        upperSeries.push(null);
-    });
-
-    if (predData.length > 0 && histData.length > 0) {
-        // Connect the last historical point to the forecast line
-        const lastHist = histData[histData.length - 1];
-        forecastSeries[forecastSeries.length - 1] = lastHist.value;
-        lowerSeries[lowerSeries.length - 1] = lastHist.value;
-        upperSeries[upperSeries.length - 1] = lastHist.value;
-    }
-
-    predData.forEach(item => {
-        labels.push(item.date);
-        actualSeries.push(null);
-        forecastSeries.push(item.predicted);
-        lowerSeries.push(item.lower);
-        upperSeries.push(item.upper);
-    });
+    // Join by date. Actuals arriving after the saved origin must not create
+    // a synthetic connecting segment or duplicate/reorder forecast dates.
+    const actualByDate = new Map(histData.map(item => [item.date, item.value]));
+    const forecastByDate = new Map(predData.map(item => [item.date, item]));
+    const labels = [...new Set([...actualByDate.keys(), ...forecastByDate.keys()])].sort();
+    const actualSeries = labels.map(day => actualByDate.get(day) ?? null);
+    const forecastSeries = labels.map(day => forecastByDate.get(day)?.predicted ?? null);
+    const lowerSeries = labels.map(day => forecastByDate.get(day)?.lower ?? null);
+    const upperSeries = labels.map(day => forecastByDate.get(day)?.upper ?? null);
 
     const intervalDatasets = chartPayload.show_prediction_intervals === false ? [] : [
         {
@@ -773,6 +770,7 @@ async function submitTraining(event) {
         max_depth: parseInt(document.getElementById("modalDepth").value),
         learning_rate: parseFloat(document.getElementById("modalLR").value),
         horizon_days: parseInt(document.getElementById("modalHorizon").value),
+        data_mode: document.getElementById("modalDataMode").value,
         is_async: false,
         dimensions: chartPayload.dimensions || {},
     };

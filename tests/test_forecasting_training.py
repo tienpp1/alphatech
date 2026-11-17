@@ -213,7 +213,7 @@ class ForecastingTrainingTestCase(TestCase):
         self.assertEqual(provenance["split"]["validation"], "no_separate_validation_partition")
         self.assertIn("lag_14", provenance["feature_columns"])
         self.assertEqual(set(provenance["source_sha256"]),
-                         {"training.py", "selectors.py", "features.py", "evaluation.py"})
+                         {"training.py", "selectors.py", "features.py", "evaluation.py", "readiness.py"})
         for name, fingerprint in provenance["source_sha256"].items():
             self.assertEqual(fingerprint, hashlib.sha256(
                 (settings.BASE_DIR / "apps/forecasting" / name).read_bytes()).hexdigest())

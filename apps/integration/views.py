@@ -104,14 +104,16 @@ class DataSourceDetailAPIView(APIView):
         workspace = _resolve_request_workspace(request)
         _require_permission(request, workspace, "integration.manage_datasource")
         ds = get_object_or_404(DataSource.objects.for_workspace(workspace), id=pk)
+        serializer = DataSourceCreateSerializer(ds, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
 
         try:
             updated_ds = update_data_source(
                 data_source=ds,
                 user=request.user,
-                name=request.data.get("name"),
-                connection_config=request.data.get("connection_config"),
-                is_active=request.data.get("is_active"),
+                name=serializer.validated_data.get("name"),
+                connection_config=serializer.validated_data.get("connection_config"),
+                is_active=serializer.validated_data.get("is_active"),
             )
             return Response({"status": "success", "data": DataSourceSerializer(updated_ds).data}, status=status.HTTP_200_OK)
         except ValueError as e:
@@ -140,12 +142,15 @@ class ImportPreviewAPIView(APIView):
             return Response({"status": "error", "message": "No active workspace context."}, status=status.HTTP_400_BAD_REQUEST)
 
         _require_permission(request, workspace, "integration.execute_import")
-        file_obj = request.FILES.get("file")
-        ds_id = request.data.get("data_source_id")
-        source_type = request.data.get("source_type")
-        sheet_name = request.data.get("sheet_name")
-        endpoint_url = request.data.get("endpoint_url")
-        sample_count = int(request.data.get("sample_count", 5))
+        serializer = ImportPreviewRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = serializer.validated_data
+        file_obj = values.get("file")
+        ds_id = values.get("data_source_id")
+        source_type = values.get("source_type")
+        sheet_name = values.get("sheet_name")
+        endpoint_url = values.get("endpoint_url")
+        sample_count = values['sample_count']
 
         ds = None
         if ds_id:
@@ -198,14 +203,17 @@ class ImportJobListCreateAPIView(APIView):
 
         _require_permission(request, workspace, "integration.execute_import")
 
-        ds_id = request.data.get("data_source_id")
+        serializer = ImportExecutionRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = serializer.validated_data
+        ds_id = values['data_source_id']
         if not ds_id:
             return Response({"status": "error", "message": "Missing 'data_source_id'."}, status=status.HTTP_400_BAD_REQUEST)
 
         data_source = get_object_or_404(DataSource.objects.for_workspace(workspace), id=ds_id)
-        file_obj = request.FILES.get("file")
-        entity_type = request.data.get("entity_type", "GENERAL")
-        sheet_name = request.data.get("sheet_name")
+        file_obj = values.get("file")
+        entity_type = values.get("entity_type", "GENERAL")
+        sheet_name = values.get("sheet_name")
 
         if file_obj and file_obj.size > 50 * 1024 * 1024:
             return Response({"status": "error", "message": "File exceeds 50MB maximum upload limit."}, status=status.HTTP_400_BAD_REQUEST)

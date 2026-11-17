@@ -97,7 +97,7 @@ def execute_stock_transfer(workspace, user, data: Dict[str, Any]) -> StockTransf
 def rollback_stock_transfer(transfer: StockTransfer, user, reason: str) -> StockTransfer:
     """Compensate an executed transfer exactly once."""
     with transaction.atomic():
-        transfer = StockTransfer.objects.select_for_update().select_related("workspace").get(pk=transfer.pk)
+        transfer = StockTransfer.objects.select_for_update(of=("self",)).select_related("workspace").get(pk=transfer.pk)
         if transfer.status == StockTransferStatus.ROLLED_BACK:
             return transfer
         if transfer.status != StockTransferStatus.EXECUTED:
@@ -576,7 +576,10 @@ def create_order(workspace, user, data: Dict[str, Any], ip_address: Optional[str
         raise ValidationError({"order_number": f"Order number '{order_number}' already exists in this workspace."})
 
     order_timestamp = data.get("order_timestamp") or timezone.now()
-    order_date = data.get("order_date") or order_timestamp.date() if isinstance(order_timestamp, datetime) else date.today()
+    order_date = data.get("order_date")
+    if not order_date:
+        order_date = (timezone.localtime(order_timestamp).date() if timezone.is_aware(order_timestamp)
+                      else order_timestamp.date()) if isinstance(order_timestamp, datetime) else timezone.localdate()
 
     initial_status = data.get("status", OrderStatus.PENDING)
     if initial_status not in OrderStatus.values:
@@ -721,7 +724,7 @@ def transition_order_status(
 
     # Lock the canonical row so two admin actions cannot both release the same
     # reservation or race the state machine.
-    order = Order.objects.select_for_update().select_related("workspace").get(pk=order.pk)
+    order = Order.objects.select_for_update(of=("self",)).select_related("workspace").get(pk=order.pk)
     current = order.status
     allowed_targets = valid_transitions.get(current, [])
 

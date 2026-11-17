@@ -80,7 +80,19 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
         "rmse": round(compute_rmse(y_true, y_pred), 2),
         "mape": round(compute_mape(y_true, y_pred), 2),
         "r2": round(compute_r2(y_true, y_pred), 4),
+        **metric_denominators(y_true, y_pred),
     }
+
+
+def metric_denominators(y_true, y_pred):
+    """Add diagnostics without changing the frozen legacy metric definitions."""
+    actual, predicted = np.asarray(y_true, float), np.asarray(y_pred, float)
+    denominator = float(np.sum(np.abs(actual)))
+    return {"wape": float(np.sum(np.abs(actual - predicted)) / denominator * 100.) if denominator else None,
+            "wape_actual_absolute_sum": denominator,
+            "mape_denominator_count": int(np.count_nonzero(np.abs(actual) > 1e-3)),
+            "mape_zero_excluded_count": int(np.count_nonzero(np.abs(actual) <= 1e-3)),
+            "scored_count": int(len(actual))}
 
 
 def compute_interval_coverage(

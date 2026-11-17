@@ -9,10 +9,12 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
+from django.core import signing
 
 from apps.workspaces.permissions import IsWorkspaceMember
 from apps.accounts.services import has_workspace_permission
 from apps.integration.models import DataSource, ImportJob
+from apps.integration.safety import redact
 from apps.mapping.models import (
     MappingProfile,
     MappingRule,
@@ -36,8 +38,10 @@ from apps.mapping.services import (
     discover_source_fields,
     generate_mapping_preview,
     apply_mapping_to_domain,
+    validate_source_binding,
 )
 from apps.mapping.ai_suggester import suggest_mappings_for_fields
+from apps.mapping.schema_suggestions import build_suggestions, confirm_suggestion
 
 
 def _resolve_workspace(request):
@@ -199,6 +203,15 @@ class MappingProfileRulesAPIView(APIView):
         _require_permission(request, workspace, "mapping.manage_mapping")
         profile = get_object_or_404(MappingProfile.objects.for_workspace(workspace), id=pk)
 
+        if isinstance(request.data, dict) and 'confirmation_token' in request.data:
+            if request.data.get('human_confirmed') is not True or set(request.data) != {'confirmation_token', 'human_confirmed'} or not isinstance(request.data['confirmation_token'], str):
+                return Response({'success': False, 'error': 'Cần xác nhận trực tiếp; không được sửa nội dung gợi ý.'}, status=400)
+            try:
+                rule = confirm_suggestion(profile=profile, user=request.user, workspace=workspace, token=request.data['confirmation_token'])
+            except (signing.BadSignature, ValueError, TypeError, KeyError):
+                return Response({'success': False, 'error': 'Gợi ý không hợp lệ, hết hạn hoặc cấu trúc nguồn đã thay đổi.'}, status=400)
+            return Response({'success': True, 'data': MappingRuleSerializer(rule).data}, status=201)
+
         serializer = MappingRuleCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"success": False, "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -335,7 +348,7 @@ class MappingApplyAPIView(APIView):
         )
 
         http_status = status.HTTP_200_OK if result["status"] in ("COMPLETED", "PARTIAL") else status.HTTP_400_BAD_REQUEST
-        return Response({"success": result["status"] != "FAILED", "data": result}, status=http_status)
+        return Response({"success": result["status"] != "FAILED", "data": redact(result)}, status=http_status)
 
 
 class MappingAISuggestAPIView(APIView):
@@ -361,17 +374,26 @@ class MappingAISuggestAPIView(APIView):
         sample_values = serializer.validated_data.get("sample_values", {})
         inferred_types = serializer.validated_data.get("inferred_types", {})
 
-        suggestions = suggest_mappings_for_fields(
-            source_columns=source_columns,
-            target_entity=target_entity,
-            sample_values=sample_values,
-            inferred_types=inferred_types,
-        )
+        profile = None
+        if serializer.validated_data.get('profile_id'):
+            profile = get_object_or_404(MappingProfile.objects.for_workspace(workspace), pk=serializer.validated_data['profile_id'])
+            validate_source_binding(profile, workspace=workspace)
+            if profile.target_entity != target_entity:
+                return Response({'success': False, 'error': 'Hồ sơ không khớp mô hình đích.'}, status=400)
+        try:
+            suggestions, provenance = build_suggestions(
+                columns=source_columns, target_entity=target_entity,
+                sample_values=sample_values, inferred_types=inferred_types,
+                mode=serializer.validated_data['mode'], profile=profile, user=request.user, workspace=workspace,
+            )
+        except ValueError as exc:
+            return Response({'success': False, 'error': str(exc)}, status=400)
 
         return Response({
             "success": True,
             "target_entity": target_entity,
             "total_suggestions": len(suggestions),
             "suggestions": suggestions,
+            "provenance": provenance,
             "notice": "AI suggestions are advisory. Human review and acceptance are required before rules become active.",
         }, status=status.HTTP_200_OK)

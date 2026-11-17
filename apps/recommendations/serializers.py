@@ -15,7 +15,7 @@ class RecommendationSerializer(serializers.ModelSerializer):
 
     def get_review_state(self, obj):
         from .services import recommendation_review_state
-        return recommendation_review_state(obj)
+        return getattr(obj, 'review_state', None) or recommendation_review_state(obj)
 
     class Meta:
         model = Recommendation
