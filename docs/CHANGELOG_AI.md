@@ -2,6 +2,17 @@
 
 Do not log cosmetic edits.
 
+## 2026-11-17 — Owner-approved Django Admin and telemetry UI retirement
+
+Unmount /admin/** and /noibo/telemetry/, remove obsolete snapshot view/template
+and all runtime links. The owner explicitly accepts losing Django Admin account,
+permission and workspace maintenance screens required broadly by Word section6.
+Keep all persisted accounts/roles/workspaces/audit, Django admin app/migrations,
+business services, independent Command Center and redacted machine probe.
+Adapt retired-route test contracts to404 without dropping health, Google/public,
+workspace-scoping or active business-route protections. No DB/schema/97-ledger
+change and no replacement administration system.
+
 ## 2026-11-16 — Grounded catalog questions and bounded conversation context
 
 Repair polite-prefix skill misrouting and extend the existing catalog tool with

@@ -2,7 +2,6 @@
 URL configuration for AI Business Operations Platform project.
 """
 
-from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -11,7 +10,6 @@ from config.views import (
     root_dashboard_ui_view,
     executive_operational_report_ui_view,
     export_report_csv_view,
-    system_telemetry_ui_view,
     ai_command_center_ui_view,
 )
 from apps.workspaces.ui_views import switch_workspace_ui_view
@@ -27,7 +25,6 @@ urlpatterns = [
     path("noibo/ai-command-center/", ai_command_center_ui_view, name="noibo_ai_command_center"),
     path("noibo/bao-cao-dieu-hanh/", executive_operational_report_ui_view, name="noibo_executive_report"),
     path("noibo/bao-cao-dieu-hanh/export-csv/", export_report_csv_view, name="noibo_executive_report_csv"),
-    path("noibo/telemetry/", system_telemetry_ui_view, name="noibo_telemetry"),
     path("noibo/thong-bao/", include("apps.notifications.ui_urls")),
     path("noibo/bang-tin/", bulletin_board_ui_view, name="noibo_bulletin_board"),
     path("noibo/bang-tin/<int:pk>/sua/", bulletin_edit_ui, name="noibo_bulletin_edit"),
@@ -70,8 +67,6 @@ urlpatterns = [
     path("api/v1/retail/", include("apps.retail.urls")),
     path("api/v1/service-ops/", include("apps.service_ops.urls")),
 
-    # 7. Django Admin
-    path("admin/", admin.site.urls),
 ]
 
 if settings.DEBUG:

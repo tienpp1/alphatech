@@ -1,5 +1,24 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 17/11/2026 — Gỡ giao diện Giám sát AI & GIS và Django Admin
+
+Chủ dự án đã xác nhận gỡ cả hai, chấp nhận mất các màn hình Django Admin
+quản lý tài khoản/quyền/workspace. Đã bỏ URL /admin/ cùng mọi đường dẫn con,
+/noibo/telemetry/, menu, nút nhanh và CTA Admin ở trạng thái chưa có workspace;
+xóa view/template snapshot không còn dùng. Các URL đó trả404, không chỉ ẩn nút.
+Giữ tài khoản ADMIN/superuser, xác thực mật khẩu, RBAC, dữ liệu và audit,
+AI/RAG, dự báo, phê duyệt, bản đồ nghiệp vụ. Giữ app/migration Django Admin;
+không reset/sửa DB, không migration mới, không thêm UI thay thế.
+AI Command Center /ws/telemetry/ và APIhealth là thành phần độc lập, giữ nguyên.
+Đề cương teacher_review_v2 (SHA9daeefdb…1816) không yêu cầu riêng snapshot;
+mục6trang8 vẫn có nghiệp vụ quản trị nên ghi rõ đây là quyết định thu hẹp UI,
+không tự gọi là đáp ứng nguyên vẹn màn hình quản trị trong Word. Không sửa Word,
+không đổi tiến độ/cấu trúc97mục. RED7fail trước sửa, GREEN6/6 guard không DB;
+101/101 focused trên source phát hành đạt12,321s, primary101/101 đạt15,103s;
+hai DB TEST loopback random tự hủy, hash10file trước/sau giữ nguyên mỗi lượt.
+JS76/76 đạt2,141s và5transportgroups đạt; review độc lập không finding.
+Không gán các lượt focused là full1648. Push/deploy được ghi nhận riêng sau.
+
 ## 16/11/2026 — Sửa ngữ cảnh hỏi giá AI (local, đang chốt)
 
 Khắc phục “cho tôi biết” gọi nhầm kỹ năng nhân viên; mở rộng công cụ catalog

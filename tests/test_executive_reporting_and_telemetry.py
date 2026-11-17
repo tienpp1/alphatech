@@ -1,7 +1,7 @@
 """
-Tests for Executive Operational Reporting and Enterprise AI & GIS Telemetry Studio.
+Tests for Executive Operational Reporting and retired telemetry entry points.
 Verifies security isolation (unauthorized/customer-only redirection),
-HTTP 200 rendering, CSV export formatting, and PostGIS/AI telemetry metrics.
+HTTP 200 rendering, CSV export formatting, and telemetry retirement.
 """
 
 from django.test import TestCase, Client
@@ -74,7 +74,7 @@ class ExecutiveReportingAndTelemetryTests(TestCase):
         )
 
     def test_anonymous_access_redirects_to_login(self):
-        """Anonymous requests to reporting and telemetry must redirect to login."""
+        """Active reports require login; the retired studio must not be served."""
         res_report = self.client.get("/noibo/bao-cao-dieu-hanh/")
         self.assertEqual(res_report.status_code, 302)
         self.assertIn("/accounts/login/", res_report.url)
@@ -84,8 +84,7 @@ class ExecutiveReportingAndTelemetryTests(TestCase):
         self.assertIn("/accounts/login/", res_csv.url)
 
         res_telemetry = self.client.get("/noibo/telemetry/")
-        self.assertEqual(res_telemetry.status_code, 302)
-        self.assertIn("/accounts/login/", res_telemetry.url)
+        self.assertEqual(res_telemetry.status_code, 404)
 
     def test_dashboard_membership_does_not_grant_business_data(self):
         self.manager_role.permissions.clear()
@@ -133,8 +132,9 @@ class ExecutiveReportingAndTelemetryTests(TestCase):
     def test_role_name_without_permissions_does_not_grant_reporting(self):
         self.manager_role.permissions.clear()
         self.client.force_login(self.manager_user)
-        for path in ("/noibo/bao-cao-dieu-hanh/", "/noibo/bao-cao-dieu-hanh/export-csv/", "/noibo/telemetry/"):
+        for path in ("/noibo/bao-cao-dieu-hanh/", "/noibo/bao-cao-dieu-hanh/export-csv/", "/noibo/ai-command-center/"):
             self.assertEqual(self.client.get(path).status_code, 403)
+        self.assertEqual(self.client.get("/noibo/telemetry/").status_code, 404)
 
     def test_membership_without_permissions_does_not_leak_second_workspace(self):
         other = Workspace.objects.create(code="private-report", name="Private report", workspace_type=WorkspaceType.RETAIL)
@@ -158,7 +158,8 @@ class ExecutiveReportingAndTelemetryTests(TestCase):
         self.assertEqual(res_csv.status_code, 403)
 
         res_telemetry = self.client.get("/noibo/telemetry/")
-        self.assertEqual(res_telemetry.status_code, 403)
+        self.assertEqual(res_telemetry.status_code, 404)
+        self.assertEqual(self.client.get("/noibo/ai-command-center/").status_code, 403)
 
     def test_manager_can_access_executive_report(self):
         """Internal manager can access executive operational report with HTTP 200."""
@@ -184,18 +185,10 @@ class ExecutiveReportingAndTelemetryTests(TestCase):
         self.assertIn("ORD-TEST-001", content)
         self.assertIn("1,500,000", content)
 
-    def test_manager_can_access_telemetry_studio(self):
-        """Internal manager can access telemetry studio with PostGIS and AI model stats."""
+    def test_manager_cannot_reopen_retired_telemetry_studio(self):
+        """A bookmarked retired URL must not expose the old technical snapshot."""
         self.client.force_login(self.manager_user)
         response = self.client.get("/noibo/telemetry/")
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Bảng Giám sát Hiệu năng Mô hình AI & Hạ tầng Không gian GIS")
-        self.assertContains(response, "PostGIS")
-        self.assertContains(response, "SRID 4326")
-        self.assertContains(response, "XGBoost Time-Series Engine")
-        self.assertContains(response, "Grounded RAG & pgvector")
-        self.assertContains(response, "Human-in-the-loop & RBAC")
-        self.assertNotIn("inference_latency_ms", response.context["ml"])
-        self.assertNotIn("vector_search_latency_ms", response.context["rag"])
-        self.assertEqual(response.context["rag"]["retrieval_hit_rate"], "Chưa đo trong phiên này")
-        self.assertGreaterEqual(response.context["ml"]["count_query_latency_ms"], 0)
+        self.assertEqual(response.status_code, 404)
+        self.assertNotContains(response, "Bảng Giám sát Hiệu năng Mô hình AI & Hạ tầng Không gian GIS", status_code=404)
+        self.assertNotIn("dashboard/telemetry.html", [template.name for template in response.templates])

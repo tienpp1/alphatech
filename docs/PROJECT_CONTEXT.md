@@ -1,5 +1,16 @@
 # AI Business Platform — canonical project context
 
+Admin/telemetry UI retirement (2026-11-17): by explicit owner decision,
+/admin/ including all descendants and /noibo/telemetry/ are unregistered (404).
+Removed their menu/dashboard/empty-state links and the obsolete snapshot view/
+template. ADMIN accounts, roles, permissions, workspaces, audit storage and
+business APIs remain unchanged. No Django Admin UI or replacement account/
+role/workspace maintenance UI remains; this intentionally narrows the Word's
+administrator-screen coverage. Keep django.contrib.admin installed and its
+model registrations/migrations; unmounting its URL tree needs no DB migration.
+The independent AI Command Center/socket and /api/health/ stay protected as
+before. No change to the structure/progress of the97-item ledger.
+
 Assistant catalog/context repair (2026-11-16): current-price questions reuse
 the canonical scoped catalog tool, not sampled KB or sales totals. New price
 mode keeps retail.view_product, active/nondeleted same-workspace products and

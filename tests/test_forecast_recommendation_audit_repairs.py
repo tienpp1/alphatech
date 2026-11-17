@@ -200,16 +200,15 @@ class ForecastRuleRepairTests(TestCase):
         self.assertNotContains(revenue, "+-")
         self.assertNotContains(revenue, '<span class="kpi-badge-gain">')
 
-    def test_telemetry_does_not_publish_unmeasured_claims(self):
+    def test_retired_telemetry_does_not_publish_snapshot_or_unmeasured_claims(self):
         self.client.force_login(self.user)
         response = self.client.get("/noibo/telemetry/")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         for unsupported in ("OPTIMAL", "100% Tuân thủ", "Zero Polling Overhead", "Ping PostGIS Spatial Query", "PostGIS 3.4 &"):
-            self.assertNotContains(response, unsupported)
-        self.assertContains(response, "DATABASE SNAPSHOT")
-        self.assertContains(response, "không phải benchmark AI/GIS")
-        self.assertContains(response, "Đang kiểm tra HTTP /api/health/")
-        self.assertNotContains(response, "Đang gửi truy vấn benchmark đo lường")
+            self.assertNotContains(response, unsupported, status_code=404)
+        self.assertNotContains(response, "DATABASE SNAPSHOT", status_code=404)
+        self.assertNotContains(response, "Đang kiểm tra HTTP /api/health/", status_code=404)
+        self.assertNotContains(response, "Đang gửi truy vấn benchmark đo lường", status_code=404)
 
     def test_chart_weekly_actuals_follow_saved_run_granularity(self):
         self.order("weekly-a", datetime.date(2026, 1, 2), "20")

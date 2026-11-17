@@ -6,7 +6,7 @@ Verifies:
 1. Zero division safety (0 orders -> AOV = 0, 0 service tickets -> resolution rate = None).
 2. Clean metric fallback formatting without NoneType errors.
 3. Proper rendering of empty state cards with informative Vietnamese copy and navigation links.
-4. Export CSV and Telemetry resilience in a zero-record workspace environment.
+4. Export CSV, retained machine probe and retired telemetry in an empty workspace.
 """
 
 from decimal import Decimal
@@ -135,14 +135,12 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
         self.assertIn("BAO CAO TONG HOP DON HANG VA VAN HANH DOANH NGHIEP", content)
         self.assertIn("Ma don hang", content)
 
-    def test_telemetry_zero_records(self):
-        """Telemetry studio with 0 records must return HTTP 200 with zero geocoded entities."""
+    def test_retired_telemetry_stays_unavailable_for_empty_workspace_manager(self):
+        """An empty workspace does not revive the retired technical snapshot."""
         self.client.force_login(self.empty_manager)
         response = self.client.get("/noibo/telemetry/")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["spatial"]["branches_geocoded"], 0)
-        self.assertEqual(response.context["spatial"]["customers_geocoded"], 0)
-        self.assertEqual(response.context["spatial"]["technicians_geocoded"], 0)
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn("dashboard/telemetry.html", [template.name for template in response.templates])
 
     def test_accessibility_skip_link_and_aria_attributes(self):
         """Dashboard must contain WCAG AA skip-link, ARIA controls, and high-contrast focus rings."""
@@ -305,38 +303,13 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
         self.assertIn('window.print();', html)
         self.assertIn('class="exec-evaluation-card"', html)
 
-    def test_telemetry_studio_observability_and_exception_resilience(self):
-        """
-        Verify Telemetry Studio (/noibo/telemetry/) observability metrics,
-        PostGIS and AI latency benchmarking, safe DOM rendering, and RBAC isolation.
-        """
+    def test_machine_probe_redaction_survives_telemetry_retirement(self):
+        """Removing the studio preserves redacted machine health and internal fencing."""
         self.client.force_login(self.empty_manager)
         response = self.client.get("/noibo/telemetry/")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
 
-        # 1. Verify 4 Core Telemetry Pillars Context
-        self.assertIn("spatial", response.context)
-        self.assertIn("ml", response.context)
-        self.assertIn("rag", response.context)
-        self.assertIn("governance", response.context)
-
-        # 2. Verify Database Name Sanitization (no leaked filesystem paths)
-        safe_db = response.context["spatial"]["database"]
-        self.assertNotIn(":\\", safe_db)
-        self.assertNotIn("/home/", safe_db)
-        self.assertNotIn("/var/", safe_db)
-
-        # 3. Verify HTML & Safe DOM construction in live ping benchmark console
-        html = response.content.decode("utf-8")
-        self.assertIn('id="btn-ping-spatial"', html)
-        self.assertIn('id="btn-ping-rag"', html)
-        self.assertIn('id="btn-ping-xgb"', html)
-        self.assertIn('id="btn-telemetry-report"', html)
-        self.assertIn('id="btn-telemetry-dashboard"', html)
-        self.assertIn("term.replaceChildren(line1, line2, line3, line4);", html)
-        self.assertNotIn("term.innerHTML =", html)
-
-        # 4. Verify /api/health/ endpoint returns valid JSON with redacted credentials
+        # The probe remains separate from the removed user-facing snapshot.
         resp_health = self.client.get("/api/health/")
         self.assertIn(resp_health.status_code, (200, 503))
         health_json = resp_health.json()
@@ -346,7 +319,7 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
         self.assertEqual(health_json["database"]["host"], "redacted")
         self.assertEqual(health_json["database"]["port"], "redacted")
 
-        # 5. Separation of concerns: Public customer blocked from telemetry studio
+        # Customers see no retired snapshot and remain blocked from active internals.
         cust_user = User.objects.create_user(
             username="public_customer_telemetry",
             email="cust_telem@test.com",
@@ -354,7 +327,8 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
         )
         self.client.force_login(cust_user)
         resp_cust = self.client.get("/noibo/telemetry/")
-        self.assertEqual(resp_cust.status_code, 403)
+        self.assertEqual(resp_cust.status_code, 404)
+        self.assertEqual(self.client.get("/noibo/ai-command-center/").status_code, 403)
 
     def test_system_hardening_csv_none_guard_and_absolute_links(self):
         """
@@ -452,8 +426,7 @@ class NoiboEmptyStateAndBoundaryTests(TestCase):
             "/noibo/",
             "/noibo/bao-cao-dieu-hanh/",
             "/noibo/bao-cao-dieu-hanh/export-csv/",
-            "/noibo/telemetry/",
-            "/noibo/telemetry/",
+            "/noibo/ai-command-center/",
             "/noibo/bang-tin/",
             "/noibo/trao-doi/",
             "/noibo/retail/",

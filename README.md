@@ -152,7 +152,7 @@ ai_business_platform/
    * Khuyến nghị Vận hành: `http://127.0.0.1:8000/recommendations/`
    * Trung tâm Phê duyệt: `http://127.0.0.1:8000/approvals/`
    * JSON Health API: `http://127.0.0.1:8000/api/health/`
-   * Trang Quản trị Django Admin: `http://127.0.0.1:8000/admin/`
+   * Theo quyết định chủ đồ án ngày17/11/2026, giao diện Django Admin và Giám sát AI & GIS đã gỡ; `/admin/` (kể cả đường dẫn con) và `/noibo/telemetry/` trả404. Tài khoản ADMIN, phân quyền, dữ liệu và các API nghiệp vụ vẫn giữ nguyên. Không còn giao diện Django Admin để quản lý tài khoản/quyền/workspace; không có màn hình thay thế tự động.
 
 ---
 

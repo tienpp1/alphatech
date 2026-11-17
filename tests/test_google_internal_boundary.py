@@ -25,13 +25,16 @@ class GoogleInternalBoundaryTests(TestCase):
         session[AUTH_METHOD_KEY] = "google"
         session.save()
 
-    def test_google_superuser_denied_internal_ui_api_admin_and_token_disclosure(self):
+    def test_google_superuser_denied_active_internals_and_retired_surfaces(self):
         Token.objects.create(user=self.user)
         self.google_session()
-        for path in ("/noibo/", "/retail/products/", "/noibo/telemetry/", "/admin/",
+        for path in ("/noibo/", "/retail/products/", "/noibo/ai-command-center/",
                      "/api/v1/auth/me/", "/api/v1/retail/products/"):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 403)
+        for path in ("/noibo/telemetry/", "/admin/", "/admin/login/", "/admin/accounts/user/"):
+            with self.subTest(retired_path=path):
+                self.assertEqual(self.client.get(path).status_code, 404)
         response = self.client.get("/tai-khoan/")
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'href="/noibo/"')
@@ -45,7 +48,12 @@ class GoogleInternalBoundaryTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.client.session[AUTH_METHOD_KEY], "password")
         self.assertEqual(self.client.get("/api/v1/auth/me/").status_code, 200)
-        self.assertEqual(self.client.get("/noibo/").status_code, 200)
+        dashboard = self.client.get("/noibo/")
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertNotContains(dashboard, 'href="/admin/')
+        self.assertNotContains(dashboard, 'href="/noibo/telemetry/')
+        for path in ("/admin/", "/admin/login/", "/noibo/telemetry/"):
+            self.assertEqual(self.client.get(path).status_code, 404)
 
     def test_unknown_legacy_linked_session_is_public_only(self):
         SocialIdentity.objects.create(user=self.user, provider="GOOGLE", subject="legacy", provider_email=self.user.email)
@@ -74,8 +82,9 @@ class GoogleInternalBoundaryTests(TestCase):
         session = self.client.session
         session[AUTH_METHOD_KEY] = "password"
         session.save()
-        for path in ("/noibo/", "/admin/", "/api/v1/retail/products/"):
+        for path in ("/noibo/", "/noibo/ai-command-center/", "/api/v1/retail/products/"):
             self.assertEqual(self.client.get(path).status_code, 403)
+        self.assertEqual(self.client.get("/admin/").status_code, 404)
         self.assertNotContains(self.client.get("/tai-khoan/"), 'href="/noibo/"')
         self.assertFalse(may_view_telemetry.func(self.user.pk, session))
 
@@ -109,8 +118,9 @@ class GoogleInternalBoundaryTests(TestCase):
                 role.permissions.add(permission)
                 WorkspaceMembership.objects.update_or_create(user=self.user, workspace=self.ws, defaults={"role": role})
                 self.client.force_login(self.user)
-                for path in ("/retail/products/", "/noibo/retail/products/", "/admin/"):
+                for path in ("/retail/products/", "/noibo/retail/products/", "/noibo/ai-command-center/"):
                     self.assertEqual(self.client.get(path).status_code, 403)
+                self.assertEqual(self.client.get("/admin/").status_code, 404)
 
     def test_internal_password_login_role_matrix(self):
         self.user.is_superuser = False
