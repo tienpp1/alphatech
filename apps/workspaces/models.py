@@ -67,6 +67,7 @@ class WorkspaceMembership(models.Model):
     )
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True, db_index=True)
+    team_chat_enabled = models.BooleanField(default=False, db_default=False)
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

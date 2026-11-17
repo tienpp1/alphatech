@@ -3,30 +3,37 @@ Business service layer for Workspace Team Chat (Kênh Trao đổi Nội bộ Nh�
 Enforces tenant isolation, active workspace membership, and incremental message synchronization.
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from django.core.exceptions import PermissionDenied
-from django.utils import timezone
+from django.db.models import Q
 
 from apps.notifications.models import TeamChatMessage
 from apps.workspaces.models import Workspace, WorkspaceMembership
 
 
-def verify_chat_access(user, workspace: Workspace) -> bool:
-    """
-    Ensures user is an authenticated internal staff member with active membership in the workspace.
-    """
-    from apps.accounts.internal_access import has_internal_role
-    if not has_internal_role(user) or not workspace.is_active:
-        return False
-    if user.is_superuser:
-        return True
-
+def _chat_memberships():
+    """Re-read identity and membership state, never trust cached user flags."""
     return WorkspaceMembership.objects.filter(
-        user=user,
-        workspace=workspace,
-        is_active=True,
-        role__name__in=("ADMIN", "MANAGER", "EMPLOYEE"),
-    ).exists()
+        Q(role__name='MANAGER') | Q(role__name='EMPLOYEE', team_chat_enabled=True),
+        is_active=True, workspace__is_active=True,
+        user__is_active=True, user__is_superuser=False,
+    ).exclude(user__social_identities__provider='GOOGLE')
+
+
+def get_chat_workspaces(user):
+    if not user or not user.is_authenticated or not user.pk:
+        return Workspace.objects.none()
+    return Workspace.objects.filter(pk__in=_chat_memberships().filter(user_id=user.pk).values('workspace_id'))
+
+
+def verify_chat_access(user, workspace: Workspace) -> bool:
+    return bool(workspace and get_chat_workspaces(user).filter(pk=workspace.pk).exists())
+
+
+def can_manage_chat_members(user, workspace: Workspace) -> bool:
+    if not user or not user.is_authenticated or not workspace:
+        return False
+    return _chat_memberships().filter(user_id=user.pk, workspace_id=workspace.pk, role__name='MANAGER').exists()
 
 
 def send_team_message(
@@ -67,9 +74,9 @@ def get_recent_team_messages(
     If since_id is provided, returns only messages newer than since_id (for live polling).
     If before_id is provided instead, returns the nearest older page, still chronological.
     All pages are bounded to at most 50 messages.
-    Raises PermissionDenied if a user is supplied and has no active membership in the workspace.
+    Raises PermissionDenied for an omitted or ineligible actor.
     """
-    if user is not None and not verify_chat_access(user, workspace):
+    if not verify_chat_access(user, workspace):
         raise PermissionDenied("Bạn không có quyền truy cập kênh trao đổi của không gian làm việc này.")
 
     if since_id is not None and before_id is not None:
@@ -97,15 +104,14 @@ def get_recent_team_messages(
     return messages
 
 
-def get_workspace_colleagues(workspace: Workspace) -> List[dict]:
+def get_workspace_colleagues(workspace: Workspace, user=None) -> List[dict]:
     """
-    Returns the list of active team members in this workspace with their roles.
+    Returns eligible members only to an eligible actor in the same workspace.
     """
+    if not verify_chat_access(user, workspace):
+        raise PermissionDenied('Bạn không có quyền xem thành viên kênh trao đổi này.')
     memberships = (
-        WorkspaceMembership.objects.filter(workspace=workspace, is_active=True,
-            user__is_active=True, workspace__is_active=True,
-            role__name__in=("ADMIN", "MANAGER", "EMPLOYEE"))
-        .exclude(user__social_identities__provider="GOOGLE")
+        _chat_memberships().filter(workspace=workspace)
         .distinct()
         .select_related("user", "role")
         .order_by("role__name", "user__username")

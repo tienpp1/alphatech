@@ -97,8 +97,9 @@ python manage.py runserver 127.0.0.1:8000
    - Đọc riêng trạng thái phê duyệt và kết quả thực thi, đối chiếu dữ liệu trước/sau. Không suy ra thực thi thành công chỉ từ nhãn `APPROVED`.
 
 5. **Kiểm chứng Nhật ký Kiểm toán (Audit Log)**:
-   - Với tài khoản staff được phép đọc audit, truy cập `http://127.0.0.1:8000/admin/audit/auditlog/`. Không có trang `/noibo/audit/` trong routes hiện tại.
-   - Chỉ ra cho Hội đồng bản ghi kiểm toán vừa phát sinh:
+   - Từ17/11/2026, Django Admin đã được gỡ theo quyết định chủ đồ án; không còn giao diện danh sách audit tổng quát và không có trang `/noibo/audit/`. Nhật ký kiểm toán vẫn được lưu, không bị xóa cùng giao diện.
+   - Chuẩn bị bản trích xuất/biên bản audit của ca TEST được phép trước buổi demo, đối chiếu mã bản ghi với dữ liệu thật. Không dùng URL Admin đã gỡ hoặc nhận rằng đang xem một màn hình audit còn hoạt động.
+   - Chỉ ra cho Hội đồng các trường thực có trong bản ghi kiểm toán của ca vừa kiểm chứng:
      - `Actor`: `admin`
      - `Action`: `APPROVAL_ACTION`
      - `Target`: Mã đề xuất / Đơn hàng

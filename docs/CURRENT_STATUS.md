@@ -1,5 +1,28 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 17/11/2026 — Quản lý thành viên Trao đổi (source đã kiểm chứng)
+
+Theo phương án người dùng duyệt: chỉ MANAGER và EMPLOYEE được mời đúng workspace
+có quyền chat; ADMIN/superuser không được vào riêng chat. MANAGER tạo tài khoản
+EMPLOYEE mới bằng họ tên/email/username/mật khẩu xác nhận; sau đó dùng nút thêm
+nhân viên vào kênh. Chưa mời thì không được đọc/gửi tin. Không cấp manage_user,
+không sửa mật khẩu hoặc nâng quyền tài khoản khách hàng/Google đã có, không tạo
+hồ sơ kỹ thuật viên tự động. Thêm một flag vào membership và migration tiến tới,
+giữ quyền chat nhân viên cũ và giữ nguyên tin nhắn. Không reset DB, không đổi97mục.
+TDD role/provision/invite105/105đạt16,844s; rootUI7/7đạt0,313s. Chrome TEST
+7luồng đạt0pageerrors,375x812/812x375thao tác bàn phím/nút tạo/không tràn ngang
+đạt; database TEST riêng đã tự hủy. Full lượt đầu1684/423,827s có1ERROR do
+HOI_DONG_DEMO_GUIDE còn quảng bá /admin/audit/auditlog/ đã gỡ ở đợt trước.
+Sửa riêng hướng dẫn, giữ nguyên test; guard8/8đạt0,103s, full cuối1684/1684
+đạt339,437s, không fail/error/skip, DB TEST riêng tự hủy,18file giữ hash.
+JS76/76đạt3,677s+5transportgroups; Bandit9module0finding/error; scan902files
+0known-secret findings. Review độc lập backend/UI đạt; lỗi thông báo Anh đã
+sửa vi cục bộ, không đổi ngôn ngữ/validators toàn hệ thống. Không gán thành
+chứng chỉ production trước deploy. RenderFree build.sh đã kiểm đọc-only có
+migrate; không đổi Environment. Cấu hình DB primary hiện trỏ Render và probe
+Windows không kết nối được: chưa xác nhận schemaDBđó, không tự sửa.env/switchDB.
+Bằng chứng output/managed_team_chat_20261117/; xem MANAGED_TEAM_CHAT_2026_11_17.md.
+
 ## 17/11/2026 — Gỡ giao diện Giám sát AI & GIS và Django Admin
 
 Chủ dự án đã xác nhận gỡ cả hai, chấp nhận mất các màn hình Django Admin

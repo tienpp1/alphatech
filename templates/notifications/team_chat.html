@@ -186,10 +186,40 @@
     background: rgba(255, 255, 255, 0.1);
     color: #ffffff;
 }
+.chat-management {
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    color: #f1f5f9;
+}
+.chat-management > p { grid-column: 1 / -1; margin: 0; color: #cbd5e1; }
+.chat-management details { min-width: 0; background: #1e293b; border: 1px solid #475569; border-radius: 12px; }
+.chat-management summary { padding: 14px 16px; cursor: pointer; font-weight: 700; min-height: 44px; box-sizing: border-box; }
+.chat-management form { padding: 0 16px 16px; }
+.chat-management form > p { color: #cbd5e1; overflow-wrap: anywhere; }
+.chat-management-field { margin: 14px 0; }
+.chat-management label { display: block; margin-bottom: 6px; font-weight: 600; }
+.chat-management input:not([type="hidden"]), .chat-management select {
+    width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px;
+    background: #0f172a; color: #f8fafc; border: 1px solid #64748b; border-radius: 8px; padding: 10px 12px; font: inherit;
+}
+.chat-management .helptext { color: #cbd5e1; font-size: 0.85rem; margin-top: 6px; }
+.chat-management .errorlist { color: #fecaca; margin: 6px 0; padding-left: 20px; }
+.chat-management-errors { border: 2px solid #fca5a5; border-radius: 8px; padding: 12px; margin-top: 12px; overflow-wrap: anywhere; }
+.chat-management-errors h2 { font-size: 1rem; margin: 0 0 8px; }
+.chat-management-errors a { color: #fecaca; text-decoration: underline; }
+.chat-management :focus-visible, .chat-management-errors:focus { outline: 3px solid #a5b4fc; outline-offset: 3px; }
+.chat-management button { min-height: 44px; white-space: normal; }
+.chat-operation-notice { padding: 12px 16px; border: 1px solid #34d399; border-radius: 10px; color: #d1fae5; background: #1e293b; overflow-wrap: anywhere; }
+.chat-operation-error { border-color: #fca5a5; color: #fecaca; }
 @media (max-width: 900px) {
     .chat-sidebar { display: none; }
     .chat-bubble-row { max-width: 95%; }
     .chat-input-field { min-width: 0; }
+    .chat-management { grid-template-columns: minmax(0, 1fr); }
+    .chat-main-window { height: 70vh; min-height: 420px; }
+    .chat-messages-container { min-height: 0; }
 }
 </style>
 {% endblock %}
@@ -204,7 +234,7 @@
             <span>💬</span> Kênh Trao đổi Đồng nghiệp: {{ active_workspace.name }}
         </h1>
         <p style="color: #94a3b8; font-size: 0.9rem; margin: 4px 0 0;">
-            Kênh liên lạc trực tiếp, khép kín dành riêng cho các thành viên trong Workspace. Dữ liệu cách ly logic theo từng Workspace.
+            Kênh riêng dành cho quản lý và nhân viên đã được thêm vào trao đổi. Nội dung được cách ly theo từng không gian làm việc.
         </p>
     </div>
 
@@ -225,6 +255,64 @@
         {% endfor %}
     </div>
 </div>
+
+{% for message in messages %}
+<p class="chat-operation-notice{% if message.level >= 40 %} chat-operation-error{% endif %}" role="{% if message.level >= 40 %}alert{% else %}status{% endif %}">{{ message }}</p>
+{% endfor %}
+
+{% if can_manage_chat %}
+<section id="chat-management" class="chat-management" aria-label="Quản lý thành viên trao đổi">
+    <p>Tài khoản mới chưa có quyền trao đổi. Sau khi tạo, chọn “Thêm nhân viên vào chat” để cấp quyền riêng cho kênh này.</p>
+    <details id="chat-create-panel"{% if chat_management_panel == 'create' %} open{% endif %}>
+        <summary>Tạo tài khoản nhân viên</summary>
+        <form method="post" action="/noibo/trao-doi/nhan-vien/tao/">
+            {% csrf_token %}
+            <input type="hidden" name="workspace_id" value="{{ active_workspace.id }}">
+            <p>Không gian làm việc: <strong>{{ active_workspace.name }}</strong><br>Vai trò cố định: <strong>Nhân viên (EMPLOYEE)</strong></p>
+            {% if employee_form.errors %}
+            <div id="chat-create-errors" class="chat-management-errors" role="alert" tabindex="-1" aria-labelledby="chat-create-errors-title">
+                <h2 id="chat-create-errors-title">Chưa thể tạo tài khoản. Vui lòng kiểm tra:</h2>
+                {{ employee_form.non_field_errors }}
+                <ul>{% for field in employee_form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}</ul>
+            </div>
+            {% endif %}
+            {% for field in employee_form %}
+            <div class="chat-management-field">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.help_text %}<div class="helptext" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}
+                {{ field.errors }}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Tạo tài khoản nhân viên</button>
+        </form>
+    </details>
+    <details id="chat-add-panel"{% if chat_management_panel == 'add' %} open{% endif %}>
+        <summary>Thêm nhân viên vào chat</summary>
+        <form method="post" action="/noibo/trao-doi/thanh-vien/them/">
+            {% csrf_token %}
+            <input type="hidden" name="workspace_id" value="{{ active_workspace.id }}">
+            <p>Chỉ thêm nhân viên đang hoạt động trong <strong>{{ active_workspace.name }}</strong>, chưa được cấp quyền trao đổi.</p>
+            {% if add_employee_form.errors %}
+            <div id="chat-add-errors" class="chat-management-errors" role="alert" tabindex="-1" aria-labelledby="chat-add-errors-title">
+                <h2 id="chat-add-errors-title">Chưa thể thêm nhân viên. Vui lòng kiểm tra:</h2>
+                {{ add_employee_form.non_field_errors }}
+                <ul>{% for field in add_employee_form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}</ul>
+            </div>
+            {% endif %}
+            {% for field in add_employee_form %}
+            <div class="chat-management-field">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.help_text %}<div class="helptext" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}
+                {{ field.errors }}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Thêm nhân viên vào chat</button>
+        </form>
+    </details>
+</section>
+{% endif %}
 
 <div class="chat-page-layout">
     <!-- Left Sidebar: Workspace Colleagues Directory -->
@@ -325,4 +413,12 @@
 </div>
 
 <script src="{% static 'js/internal_team_chat.js' %}" defer></script>
+{% if can_manage_chat and chat_management_panel %}
+<script>
+(function () {
+    var summary = document.querySelector('#chat-management details[open] .chat-management-errors');
+    if (summary) summary.focus();
+})();
+</script>
+{% endif %}
 {% endblock %}

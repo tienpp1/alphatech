@@ -68,7 +68,7 @@ jobs:
       - name: Academic draft source and diagram contracts
         run: python manage.py test tests.test_academic_diagram_contract tests.test_academic_current_claims tests.test_academic_scope_contract --noinput
       - name: Internal collaboration and display-time regressions
-        run: python manage.py test tests.test_team_chat_display_time tests.test_bulletin_and_team_chat tests.test_collaboration_workspace_selection tests.test_bulletin_update --noinput
+        run: python manage.py test tests.test_team_chat_display_time tests.test_bulletin_and_team_chat tests.test_collaboration_workspace_selection tests.test_bulletin_update tests.test_managed_team_chat tests.test_managed_team_chat_ui --noinput
       - name: Knowledge context ingestion and retrieval regressions
         run: python manage.py test tests.test_rag_documents tests.test_rag_retrieval tests.test_rag_grounding_assistant tests.test_rag_chunking_embedding tests.test_embedding_space_isolation tests.test_catalog_price_context tests.test_assistant_catalog_context --noinput
       - name: Internal collaboration JavaScript transport regressions

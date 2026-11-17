@@ -25,7 +25,13 @@ def workspace_context(request):
 
     return {
         "can_access_internal": internal_access,
+        "can_use_team_chat": internal_access and _can_use_team_chat(request.user),
         "active_workspace": active_workspace,
         "active_membership": active_membership,
         "user_workspaces": user_workspaces,
     }
+
+
+def _can_use_team_chat(user):
+    from apps.notifications.chat_service import get_chat_workspaces
+    return get_chat_workspaces(user).exists()

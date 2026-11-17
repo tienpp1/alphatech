@@ -13,7 +13,7 @@ from apps.notifications.models import Notification, NotificationEventType
 from apps.workspaces.models import Workspace, WorkspaceMembership, WorkspaceType
 
 
-def resolve_collaboration_workspace(request, parameters, *, use_session=False):
+def resolve_collaboration_workspace(request, parameters, *, use_session=False, allowed_workspaces=None):
     """Resolve a collaboration selector; explicit invalid input never falls back.
 
     Reuse active-membership scoping and the middleware's canonical header result.
@@ -21,7 +21,8 @@ def resolve_collaboration_workspace(request, parameters, *, use_session=False):
     """
     from apps.workspaces.services import get_explicit_workspace_selector
 
-    allowed = get_user_authorized_workspaces(request.user)
+    allowed = (get_user_authorized_workspaces(request.user)
+               if allowed_workspaces is None else allowed_workspaces)
 
     def lookup(value):
         if not value:

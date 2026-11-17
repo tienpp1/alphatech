@@ -46,7 +46,7 @@ class CollaborationAuditRegressions(TestCase):
             if google:
                 SocialIdentity.objects.create(user=user, provider="GOOGLE", subject=username, provider_email="audit@example.test")
             self.assertFalse(verify_chat_access(user, self.ws))
-        self.assertEqual([m["user_id"] for m in get_workspace_colleagues(self.ws)], [self.manager.pk])
+        self.assertEqual([m["user_id"] for m in get_workspace_colleagues(self.ws, self.manager)], [self.manager.pk])
 
     def test_customer_denial_html_and_api_contract(self):
         SocialIdentity.objects.create(user=self.manager, provider="GOOGLE", subject="manager-linked", provider_email="linked@example.test")

@@ -2,6 +2,17 @@
 
 Do not log cosmetic edits.
 
+## 2026-11-17 — Manager-controlled employee provisioning and chat invitation
+
+Restrict team chat UI/API/services/roster to active same-workspace MANAGER or
+invited EMPLOYEE, excluding ADMIN/superuser and Google/public identities.
+Add membership chat flag with old-row compatibility and defaultFalse for new
+memberships. Manager-only fixed-role account creation and separate invitation
+reuse User/membership, preserve global RBAC and never convert an existing
+customer or grant staff/superuser/broad account administration. Atomic sanitized
+audit, ordinary CSRF-protected forms, field validation and password non-echo.
+Keep existing business data/messages, bulletin/poller contracts and97ledger.
+
 ## 2026-11-17 — Owner-approved Django Admin and telemetry UI retirement
 
 Unmount /admin/** and /noibo/telemetry/, remove obsolete snapshot view/template

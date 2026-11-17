@@ -15,6 +15,7 @@ from config.views import (
 from apps.workspaces.ui_views import switch_workspace_ui_view
 from apps.notifications.ui_views import bulletin_board_ui_view, bulletin_create_ui_view, team_chat_ui_view
 from apps.notifications.bulletin_edit_views import bulletin_edit_ui
+from apps.notifications.chat_member_views import chat_employee_create_view, chat_employee_add_view
 
 urlpatterns = [
     # 1. Public Business Website Layer (Root / & Customer-facing pages)
@@ -31,6 +32,8 @@ urlpatterns = [
     path("noibo/bang-tin/create/", bulletin_create_ui_view, name="noibo_bulletin_create"),
     path("noibo/bang-tin/tao/", bulletin_create_ui_view, name="noibo_bulletin_create_alt"),
     path("noibo/trao-doi/", team_chat_ui_view, name="noibo_team_chat"),
+    path("noibo/trao-doi/nhan-vien/tao/", chat_employee_create_view, name="noibo_chat_employee_create"),
+    path("noibo/trao-doi/thanh-vien/them/", chat_employee_add_view, name="noibo_chat_employee_add"),
     path("noibo/retail/", include("apps.retail.ui_urls")),
     path("noibo/services/", include("apps.service_ops.ui_urls")),
     path("noibo/", include("apps.gis.ui_urls")),

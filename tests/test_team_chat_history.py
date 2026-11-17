@@ -15,7 +15,7 @@ class TeamChatHistoryTests(TestCase):
         self.manager = User.objects.create_user(username='history-manager', email='manager@history.example', password='test-only')
         self.employee = User.objects.create_user(username='history-employee', email='employee@history.example', password='test-only')
         for user, role in ((self.manager, 'MANAGER'), (self.employee, 'EMPLOYEE')):
-            WorkspaceMembership.objects.create(user=user, workspace=self.ws, role=Role.objects.get_or_create(name=role)[0])
+            WorkspaceMembership.objects.create(user=user, workspace=self.ws, role=Role.objects.get_or_create(name=role)[0], team_chat_enabled=True)
         self.manager_client, self.employee_client = Client(), Client()
         self.manager_client.force_login(self.manager)
         self.employee_client.force_login(self.employee)

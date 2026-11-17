@@ -4,7 +4,7 @@ Verifies:
 1. Workspace Isolation: Bulletins and Chat messages are strictly partitioned by Workspace.
 2. Role-Based Access Control (RBAC):
    - Only ADMIN, MANAGER, and Superuser can publish/pin bulletins.
-   - EMPLOYEE and VIEWER can view bulletins and participate in Team Chat.
+   - MANAGER and invited EMPLOYEE participate in Team Chat; ADMIN/VIEWER cannot.
    - Public Customer accounts and unauthenticated requests are strictly denied (401/403/Redirect).
 3. Chat Polling & Incremental Fetching:
    - `since_id` parameter correctly fetches only newer messages.
@@ -87,7 +87,13 @@ class BulletinAndTeamChatTestCase(TestCase):
             role=self.role_employee,
             is_default=True,
             is_active=True,
+            team_chat_enabled=True,
         )
+
+        self.retail_mgr = User.objects.create_user(
+            username='retail_manager_chat', email='retail_manager_chat@test.vn', password='Password123!',
+        )
+        WorkspaceMembership.objects.create(workspace=self.ws_retail, user=self.retail_mgr, role=self.role_manager)
 
         # 4. Users in WS Service
         self.service_mgr = User.objects.create_user(
@@ -114,6 +120,7 @@ class BulletinAndTeamChatTestCase(TestCase):
             role=self.role_employee,
             is_default=True,
             is_active=True,
+            team_chat_enabled=True,
         )
 
         # 5. Public Customer
@@ -260,7 +267,7 @@ class BulletinAndTeamChatTestCase(TestCase):
         """
         msg_retail = send_team_message(
             workspace=self.ws_retail,
-            sender=self.retail_admin,
+            sender=self.retail_mgr,
             message="Xin chào team bán lẻ!",
         )
 
@@ -271,12 +278,12 @@ class BulletinAndTeamChatTestCase(TestCase):
         )
 
         # Verify Retail messages
-        retail_msgs = list(get_recent_team_messages(self.ws_retail))
+        retail_msgs = list(get_recent_team_messages(self.ws_retail, self.retail_mgr))
         self.assertIn(msg_retail, retail_msgs)
         self.assertNotIn(msg_service, retail_msgs)
 
         # Verify Service messages
-        service_msgs = list(get_recent_team_messages(self.ws_service))
+        service_msgs = list(get_recent_team_messages(self.ws_service, self.service_mgr))
         self.assertIn(msg_service, service_msgs)
         self.assertNotIn(msg_retail, service_msgs)
 
@@ -284,12 +291,12 @@ class BulletinAndTeamChatTestCase(TestCase):
         """
         Polling with since_id must return only messages strictly greater than since_id.
         """
-        msg1 = send_team_message(self.ws_retail, self.retail_admin, "Tin nhắn 1")
+        msg1 = send_team_message(self.ws_retail, self.retail_mgr, "Tin nhắn 1")
         msg2 = send_team_message(self.ws_retail, self.retail_staff, "Tin nhắn 2")
-        msg3 = send_team_message(self.ws_retail, self.retail_admin, "Tin nhắn 3")
+        msg3 = send_team_message(self.ws_retail, self.retail_mgr, "Tin nhắn 3")
 
         # Poll since msg2
-        polled = list(get_recent_team_messages(self.ws_retail, since_id=msg2.id))
+        polled = list(get_recent_team_messages(self.ws_retail, self.retail_mgr, since_id=msg2.id))
         self.assertEqual(len(polled), 1)
         self.assertEqual(polled[0].id, msg3.id)
 
@@ -318,9 +325,10 @@ class BulletinAndTeamChatTestCase(TestCase):
         """
         Roster must return only colleagues in the active workspace.
         """
-        colleagues = get_workspace_colleagues(self.ws_retail)
+        colleagues = get_workspace_colleagues(self.ws_retail, self.retail_mgr)
         colleague_users = [c["user"] for c in colleagues]
-        self.assertIn(self.retail_admin, colleague_users)
+        self.assertNotIn(self.retail_admin, colleague_users)
+        self.assertIn(self.retail_mgr, colleague_users)
         self.assertIn(self.retail_staff, colleague_users)
         self.assertNotIn(self.service_mgr, colleague_users)
         self.assertNotIn(self.service_staff, colleague_users)

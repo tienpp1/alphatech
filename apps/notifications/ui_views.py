@@ -149,9 +149,7 @@ from apps.notifications.bulletin_service import (
     can_manage_bulletins,
 )
 from apps.notifications.chat_service import (
-    get_recent_team_messages,
     send_team_message,
-    get_workspace_colleagues,
     verify_chat_access,
 )
 from apps.notifications.models import BulletinPriority
@@ -238,21 +236,23 @@ def team_chat_ui_view(request):
     Internal Team Chat Page (GET & POST /noibo/trao-doi/).
     Enables workspace-scoped real-time messaging between colleagues.
     """
-    if not _ensure_internal_access(request):
-        return redirect("/tai-khoan/?notice=customer_only")
-
-    authorized_workspaces = get_user_authorized_workspaces(request.user)
-    if not authorized_workspaces.exists():
-        return render(request, "retail/no_workspace.html", {"message": "Bạn chưa được cấp quyền truy cập không gian làm việc nào."})
-
-    target_workspace = resolve_collaboration_workspace(request, request.GET, use_session=True)
+    from apps.notifications.chat_service import get_chat_workspaces
+    from apps.notifications.chat_member_views import team_chat_page_context
+    target_workspace = resolve_collaboration_workspace(
+        request, request.GET, use_session=True,
+        allowed_workspaces=get_chat_workspaces(request.user))
     if target_workspace is None:
         raise PermissionDenied("Không gian làm việc không hợp lệ hoặc không được cấp quyền.")
 
     # Verify access to this specific workspace
     if not verify_chat_access(request.user, target_workspace):
-        messages.error(request, "Bạn không có quyền tham gia kênh trao đổi của không gian làm việc này.")
-        return redirect("/noibo/")
+        raise PermissionDenied("Bạn không có quyền tham gia kênh trao đổi của không gian làm việc này.")
+
+    if request.method == 'POST' and 'workspace_id' in request.POST:
+        posted_workspace = resolve_collaboration_workspace(
+            request, request.POST, allowed_workspaces=get_chat_workspaces(request.user))
+        if not posted_workspace or posted_workspace.pk != target_workspace.pk:
+            raise PermissionDenied('Không gian làm việc không hợp lệ.')
 
     # Handle standard form POST message submission (fallback when JS disabled)
     if request.method == "POST":
@@ -264,20 +264,5 @@ def team_chat_ui_view(request):
             except ValueError:
                 messages.error(request, "Nội dung tin nhắn không hợp lệ.")
 
-    messages_list = get_recent_team_messages(target_workspace, request.user, limit=50)
-    oldest_message_id = messages_list[0].id if messages_list else 0
-    has_older_messages = bool(messages_list and get_recent_team_messages(
-        target_workspace, request.user, limit=1, before_id=oldest_message_id,
-    ))
-    colleagues = get_workspace_colleagues(target_workspace)
-
-    context = {
-        "active_workspace": target_workspace,
-        "authorized_workspaces": authorized_workspaces,
-        "messages_list": messages_list,
-        "colleagues": colleagues,
-        "latest_message_id": messages_list[-1].id if messages_list else 0,
-        "oldest_message_id": oldest_message_id,
-        "has_older_messages": has_older_messages,
-    }
+    context = team_chat_page_context(request, target_workspace)
     return render(request, "notifications/team_chat.html", context)

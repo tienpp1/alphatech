@@ -193,6 +193,7 @@ from apps.notifications.chat_service import (
     get_recent_team_messages,
     send_team_message,
     verify_chat_access,
+    get_chat_workspaces,
 )
 
 
@@ -307,7 +308,8 @@ def team_chat_messages_api(request):
     if not valid:
         return err_resp
 
-    target_ws = resolve_collaboration_workspace(request, request.GET)
+    target_ws = resolve_collaboration_workspace(
+        request, request.GET, allowed_workspaces=get_chat_workspaces(request.user))
 
     if not target_ws:
         return JsonResponse({"error": "Không tìm thấy hoặc không có quyền truy cập workspace."}, status=403)
@@ -383,7 +385,8 @@ def team_chat_send_api(request):
     if not message_text:
         return JsonResponse({"error": "Thiếu nội dung tin nhắn."}, status=400)
 
-    target_ws = resolve_collaboration_workspace(request, body)
+    target_ws = resolve_collaboration_workspace(
+        request, body, allowed_workspaces=get_chat_workspaces(request.user))
 
     if not target_ws:
         return JsonResponse({"error": "Không tìm thấy hoặc không có quyền truy cập workspace."}, status=403)

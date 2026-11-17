@@ -478,7 +478,9 @@
                         <a href="/noibo/bao-cao-dieu-hanh/" class="nav-link {% if active_tab == 'executive_report' %}active{% endif %}">📄 Báo cáo Điều hành</a>
                         <a href="/noibo/thong-bao/" class="nav-link {% if active_tab == 'notifications' %}active{% endif %}">🔔 Thông báo</a>
                         <a href="/noibo/bang-tin/" class="nav-link {% if active_tab == 'bulletin_board' %}active{% endif %}" id="nav-direct-bulletin">📢 Bảng tin</a>
+                        {% if can_use_team_chat %}
                         <a href="/noibo/trao-doi/" class="nav-link {% if active_tab == 'team_chat' %}active{% endif %}" id="nav-direct-chat">💬 Trao đổi</a>
+                        {% endif %}
 
                         <!-- BÁN LẺ Menu Mở rộng -->
                         <div class="nav-dropdown" id="nav-dropdown-retail">

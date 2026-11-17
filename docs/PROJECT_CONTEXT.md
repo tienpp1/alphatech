@@ -1,5 +1,17 @@
 # AI Business Platform — canonical project context
 
+Managed team chat (2026-11-17, source verified): chat only admits
+active non-Google, non-superuser MANAGER and explicitly invited EMPLOYEE members
+of the selected workspace; ADMIN/superuser no longer bypass this chat policy.
+WorkspaceMembership.team_chat_enabled separates employment from chat access.
+One forward migration preserves historical memberships' chat flag; new rows
+defaultFalse. Only MANAGER can create a fresh fixed EMPLOYEE User+membership,
+then separately invite an eligible same-workspace employee. This grants no broad
+account-management permission, never promotes/resets existing identities and
+creates no service-technician profile. Creation/invitation use transactional
+sanitized audit. Other internal ADMIN privileges and public boundaries remain.
+Historical messages, polling/history/drafts and97ledger remain unchanged.
+
 Admin/telemetry UI retirement (2026-11-17): by explicit owner decision,
 /admin/ including all descendants and /noibo/telemetry/ are unregistered (404).
 Removed their menu/dashboard/empty-state links and the obsolete snapshot view/
