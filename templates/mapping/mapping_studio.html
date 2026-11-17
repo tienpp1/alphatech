@@ -67,13 +67,15 @@
 
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button id="btnAiSuggest" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                <span>✨</span> Gợi ý Ánh xạ Tự động bằng AI
+                <span>✨</span> Gợi ý ánh xạ theo quy tắc
             </button>
             <button id="btnOpenApplyModal" class="btn {% if not can_apply %}btn-apply-disabled{% else %}btn-apply-active{% endif %}" {% if not can_apply %}disabled title="Bạn không có quyền áp dụng ánh xạ"{% endif %}>
                 <span>🚀</span> Áp dụng Nhập Dữ liệu Chuẩn hóa
             </button>
         </div>
     </div>
+
+    {% include "includes/decision_support_guide.html" with guide_page="mapping" only %}
 
     <!-- Messages -->
     {% if messages %}
@@ -91,7 +93,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 1.2rem;">🤖</span>
-                <h3 style="color: #c7d2fe; font-size: 1rem; font-weight: 700; margin: 0;">Khuyến nghị Ánh xạ từ AI (Xem xét &amp; Xác nhận)</h3>
+                <h3 style="color: #c7d2fe; font-size: 1rem; font-weight: 700; margin: 0;">Gợi ý đối sánh theo quy tắc (Xem xét &amp; Xác nhận)</h3>
             </div>
             <span style="color: #a5b4fc; font-size: 0.75rem;">Yêu cầu người dùng phê duyệt trước khi kích hoạt quy tắc</span>
         </div>
@@ -203,7 +205,7 @@
                 </div>
                 {% else %}
                 <div style="padding: 30px; text-align: center; color: #94a3b8; font-size: 0.9rem;">
-                    Chưa có quy tắc ánh xạ nào được cấu hình. Sử dụng biểu mẫu Thêm nhanh bên dưới hoặc nhấp <strong>Gợi ý Ánh xạ Tự động bằng AI</strong>.
+                    Chưa có quy tắc ánh xạ nào được cấu hình. Sử dụng biểu mẫu Thêm nhanh bên dưới hoặc nhấp <strong>Gợi ý ánh xạ theo quy tắc</strong>.
                 </div>
                 {% endif %}
             </div>
@@ -263,7 +265,7 @@
                     <span>🔬</span> Xem trước Chuyển đổi Trực tiếp &amp; Bộ Mô phỏng Kiểm duyệt
                 </h3>
                 <p style="color: #94a3b8; font-size: 0.8rem; margin: 4px 0 0 0;">
-                    Kiểm tra các quy tắc ánh xạ trên các dòng trong bộ đệm staging ngay trong bộ nhớ (chế độ chỉ đọc, không ghi dữ liệu vào cơ sở dữ liệu).
+                    Kiểm tra quy tắc trên tối đa 5 dòng mẫu trong staging, không phải toàn bộ lô (chỉ đọc, không ghi cơ sở dữ liệu).
                 </p>
             </div>
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -370,7 +372,7 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(r => r.json())
         .then(res => {
             btnAiSuggest.disabled = false;
-            btnAiSuggest.innerHTML = "<span>✨</span> Gợi ý Ánh xạ Tự động bằng AI";
+            btnAiSuggest.innerHTML = "<span>✨</span> Gợi ý ánh xạ theo quy tắc";
 
             if (res.success && res.suggestions && res.suggestions.length > 0) {
                 aiList.innerHTML = "";
@@ -382,7 +384,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             <span style="color: #38bdf8; font-family: monospace; font-weight: 600;">${escapeMappingHtml(sug.source_field)}</span>
                             <span style="color: #a5b4fc; margin: 0 8px;">➔</span>
                             <span style="color: #34d399; font-weight: 600;">${escapeMappingHtml(sug.suggested_target_field)}</span>
-                            <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Độ tin cậy: ${(sug.confidence * 100).toFixed(0)}%</span>
+                            <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Điểm khớp quy tắc: ${(sug.confidence * 100).toFixed(0)}/100</span>
                             <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 4px;">${escapeMappingHtml(sug.reason)}</div>
                         </div>
                         <div style="display: flex; gap: 8px;">
@@ -435,7 +437,7 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .catch(err => {
             btnAiSuggest.disabled = false;
-            btnAiSuggest.innerHTML = "<span>✨</span> Gợi ý Ánh xạ Tự động bằng AI";
+            btnAiSuggest.innerHTML = "<span>✨</span> Gợi ý ánh xạ theo quy tắc";
             alert("Lỗi khi yêu cầu gợi ý: " + err);
         });
     });

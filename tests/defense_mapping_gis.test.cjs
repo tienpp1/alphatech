@@ -70,6 +70,9 @@ test('mapping suggestions safely render text and quoted configuration attributes
   app.get('source-columns-data').textContent='[]'; app.get('column-stats-data').textContent='{}';
   app.get('btnAiSuggest').trigger('click'); await settle();
   safeHTML(app.get('aiSuggestionsList').innerHTML);
+  assert.match(app.get('aiSuggestionsList').innerHTML, /Điểm khớp quy tắc: 80\/100/);
+  assert.doesNotMatch(app.get('aiSuggestionsList').innerHTML, /Độ tin cậy:/);
+  assert.match(app.get('btnAiSuggest').innerHTML, /theo quy tắc/);
   const [button]=app.context.document.querySelectorAll('.btn-accept-ai');
   assert.ok(button,'the escaped suggestion retains its usable accept button');
   button.trigger('click'); await settle();

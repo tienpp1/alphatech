@@ -17,7 +17,7 @@
                 <span>🔄</span> Động cơ Ánh xạ Dữ liệu & Mô hình Chuẩn hóa (SDM)
             </h1>
             <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">
-                Chuyển đổi các lược đồ thô bên ngoài thành Mô hình Dữ liệu Chuẩn hóa (Standard Data Model) với gợi ý từ AI và mô phỏng trực tiếp.
+                Chuẩn hóa dữ liệu thô về mô hình dữ liệu chung, với gợi ý theo quy tắc và xem trước trên mẫu.
             </p>
         </div>
         <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
@@ -32,6 +32,8 @@
             </a>{% endif %}
         </div>
     </div>
+
+    {% include "includes/decision_support_guide.html" with guide_page="mapping" only %}
 
     <!-- Messages -->
     {% if messages %}

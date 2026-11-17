@@ -317,6 +317,23 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
 
+        .support-guide {
+            margin: 0 0 1.5rem;
+            padding: 1rem 1.25rem;
+            border: 1px solid #475569;
+            border-radius: 12px;
+            background: #111b2e;
+            color: #cbd5e1;
+            font-size: 0.875rem;
+            line-height: 1.65;
+            overflow-wrap: anywhere;
+        }
+        .support-guide h2 { margin: 0 0 0.5rem; color: #f8fafc; font-size: 1rem; }
+        .support-guide p { margin: 0.5rem 0; }
+        .support-guide a { color: #93c5fd; text-underline-offset: 3px; }
+        .support-guide-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+        .support-guide-warning { border-left: 4px solid #fbbf24; }
+
         /* Accessibility: WCAG 2.4.1 Bypass Blocks (Skip to Main Content) */
         .skip-link {
             position: absolute;
@@ -520,18 +537,27 @@
 
                         <!-- AI & DỮ LIỆU Menu Mở rộng -->
                         <div class="nav-dropdown" id="nav-dropdown-ai">
-                            <button type="button" class="nav-dropdown-btn {% if active_nav in 'knowledge,integration,mapping,forecasting,recommendations,approvals' %}active{% endif %}" id="btn-dropdown-ai" aria-haspopup="true" aria-expanded="false" title="Công cụ AI & Dữ liệu nâng cao">
-                                <span>🧠 Công cụ AI & Data</span>
+                            <button type="button" class="nav-dropdown-btn {% if active_nav == 'ai' or active_nav == 'knowledge' or active_nav == 'forecasting' or active_nav == 'recommendations' or active_nav == 'approvals' or '/noibo/recommendations/' in request.path or '/noibo/approvals/' in request.path %}active{% endif %}" id="btn-dropdown-ai" aria-haspopup="true" aria-expanded="false" aria-controls="menu-dropdown-ai" title="Trợ lý, dự báo và hỗ trợ quyết định">
+                                <span>🧠 Công cụ AI</span>
                                 <span class="dropdown-arrow">▼</span>
                             </button>
                             <div class="nav-dropdown-menu" id="menu-dropdown-ai" role="menu">
                                 <a href="/noibo/ai/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'ai' %}active{% endif %}" id="nav-item-ai-assistant">🤖 Trợ lý AI Thông minh</a>
                                 <a href="/noibo/knowledge/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'knowledge' %}active{% endif %}" id="nav-item-ai-knowledge">📚 Kho tri thức RAG</a>
-                                <a href="/noibo/integration/" role="menuitem" class="nav-dropdown-item {% if 'integration' in active_nav %}active{% endif %}">📥 Tích hợp dữ liệu</a>
-                                <a href="/noibo/mapping/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'mapping' %}active{% endif %}">🔄 Ánh xạ dữ liệu</a>
-                                <a href="/noibo/forecasting/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'forecasting' %}active{% endif %}">📈 Dự báo XGBoost</a>
-                                <a href="/noibo/recommendations/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'recommendations' %}active{% endif %}">💡 Khuyến nghị</a>
-                                <a href="/noibo/approvals/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'approvals' %}active{% endif %}">🛡️ Phê duyệt kiểm toán</a>
+                                <a href="/noibo/forecasting/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'forecasting' %}active{% endif %}">📈 Dự báo &amp; đánh giá</a>
+                                <a href="/noibo/recommendations/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'recommendations' or '/noibo/recommendations/' in request.path %}active{% endif %}">💡 Khuyến nghị</a>
+                                <a href="/noibo/approvals/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'approvals' or '/noibo/approvals/' in request.path %}active{% endif %}">🛡️ Phê duyệt hành động</a>
+                            </div>
+                        </div>
+
+                        <div class="nav-dropdown" id="nav-dropdown-data">
+                            <button type="button" class="nav-dropdown-btn {% if 'integration' in active_nav or active_nav == 'mapping' or '/noibo/integration/' in request.path or '/noibo/mapping/' in request.path %}active{% endif %}" id="btn-dropdown-data" aria-haspopup="true" aria-expanded="false" aria-controls="menu-dropdown-data" title="Tiếp nhận và chuẩn hóa dữ liệu bên ngoài">
+                                <span>Quản lý dữ liệu nâng cao</span>
+                                <span class="dropdown-arrow" aria-hidden="true">▼</span>
+                            </button>
+                            <div class="nav-dropdown-menu" id="menu-dropdown-data" role="menu">
+                                <a href="/noibo/integration/" role="menuitem" class="nav-dropdown-item {% if 'integration' in active_nav or '/noibo/integration/' in request.path %}active{% endif %}">📥 Tích hợp dữ liệu</a>
+                                <a href="/noibo/mapping/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'mapping' or '/noibo/mapping/' in request.path %}active{% endif %}">🔄 Ánh xạ dữ liệu</a>
                             </div>
                         </div>
 

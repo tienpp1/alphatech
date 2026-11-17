@@ -347,6 +347,8 @@
         </div>
     </div>
 
+    {% include "includes/decision_support_guide.html" with guide_page="forecasting" only %}
+
     {% if selected_target == 'RETAIL_PRODUCT_DEMAND' %}
     <form method="get" class="card-panel" style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
         <input type="hidden" name="target" value="{{ selected_target }}">

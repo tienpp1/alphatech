@@ -2,9 +2,9 @@
 
 {% block title %}Trung tâm Phê duyệt — {{ active_workspace.name }}{% endblock %}
 
-{% block extra_css %}
+{% block extra_head %}
 <style>
-.app-container {
+.approval-container {
     padding: 1.5rem;
     color: #f8fafc;
 }
@@ -129,7 +129,7 @@
 }
 
 @media (max-width: 600px) {
-    .app-container {
+    .approval-container {
         padding: 0.75rem 0.5rem;
     }
     .studio-header {
@@ -140,7 +140,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="app-container">
+<div class="approval-container">
     <div class="studio-header">
         <div class="studio-title">
             <h1>🛡️ Trung tâm Phê duyệt &amp; Hành động Có kiểm soát</h1>
@@ -150,6 +150,8 @@
             <a href="/noibo/" id="btn-back-dashboard" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; background: rgba(255,255,255,0.08);">← Bảng điều khiển</a>
         </div>
     </div>
+
+    {% include "includes/decision_support_guide.html" with guide_page="approvals" only %}
 
     <div class="kpi-grid">
         <div class="kpi-card">

@@ -1648,3 +1648,11 @@ chồng lặp và không sửa cấu trúc hoặc tiến độ checklist 97.
 - `test_retired_status_surfaces.py` thuộc CROSS-CUTTING / INTEGRITY:
   gỡ đăng ký/status/health cũ, không render khối hạ tầng/menu liên kết,
   giữ endpoint máy /api/health/. Inventory không tự chứng minh PASS.
+
+### Bổ sung inventory17/11/2026 — giao diện hỗ trợ quyết định
+
+- `test_decision_support_ui.py` thuộc CROSS-CUTTING / UI INTEGRITY:
+  render nhóm menu dữ liệu nâng cao tách khỏi AI, trạng thái điều hướng,
+  hướng dẫn giới hạn bằng chứng trên năm trang, giữ nhãn MA7/sai số lớn
+  và CSS của khuyến nghị/phê duyệt trong head. Không truy cập database.
+  Inventory không chứng minh live production, năng lực AI hoặc tiến độ97mục.

@@ -1,5 +1,32 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 17/11/2026 — Tinh gọn giao diện dữ liệu và hỗ trợ quyết định (source đã kiểm chứng)
+
+Theo đề xuất người dùng duyệt, giữ cả năm chức năng thuộc teacher_review_v2.
+Tách Tích hợp/Ánh xạ vào “Quản lý dữ liệu nâng cao”; Công cụ AI giữ trợ lý,
+tri thức, “Dự báo & đánh giá”, khuyến nghị và phê duyệt. Giữ URL, cơ chế menu,
+workspace/RBAC và mọi hành động nghiệp vụ. Hướng dẫn ngắn phân biệt staging
+với dữ liệu nghiệp vụ, điểm khớp heuristic với độ chính xác AI, MA7 với XGBoost,
+MAPE với accuracy và đề xuất tham khảo với hành động được hỗ trợ. Không phân loại
+nguồn thực/mô phỏng từ tên hoặc nhãn Mock API; không tự gán TEST/live từ bản ghi.
+Phê duyệt cảnh báo có thể thực thi thay đổi thật ngay. Giữ nguyên số liệu xấu,
+ngày lịch sử, cảnh báo và mô hình đã chọn; không tạo giao dịch để cải thiện điểm.
+Sửa hai block CSS con không được base render, scope approval-container để tránh
+ảnh hưởng shell và xếp dọc header khuyến nghị trên điện thoại. Không migration,
+không sửa DB/thuật toán/Word/ledger97. RED6tests/13subcasefail trước sửa,
+GREEN6/6; bổ sung real-path case, focused80/80 đạt6,731s. Full đầu1691/
+337,383s có1failure vì test mới thiếu inventory; bổ sung inventory, giữ guard.
+Full cuối1691/1691 đạt359,948s,0failure/error/skip, TEST DB loopback random
+tự hủy; hash templates/migrations/Word/ledger được bảo toàn trong lượt chạy.
+UI+inventory13/13 đạt2,039s; JS76/76 đạt3,116s và5transportgroups đạt.
+Chrome fixture tổng hợp15/15trang-kíchthước đạt375x812/812x375/1440x1000,
+0pageerror,0trànngang, menu bàn phím dùng được; đây không phải UAT production.
+Review độc lập đã sửa CSS rò shell, bố cục phone và suy luận sai từ tên nguồn.
+Chủ dự án đồng ý push/deploy sau test; chỉ tái sử dụng RenderFree hiện hữu.
+Bằng chứng source và receipt phát hành được tách tại
+output/decision_support_ui_20261117/; không suy ra LIVE chỉ từ đoạn này.
+Không ghi đè primary đang có nhiều thay đổi dở: bản phát hành từ worktree sạch.
+
 ## 17/11/2026 — Quản lý thành viên Trao đổi (source đã kiểm chứng)
 
 Theo phương án người dùng duyệt: chỉ MANAGER và EMPLOYEE được mời đúng workspace

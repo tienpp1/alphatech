@@ -2,7 +2,7 @@
 
 {% block title %}Khuyến nghị Vận hành — {{ active_workspace.name }}{% endblock %}
 
-{% block extra_css %}
+{% block extra_head %}
 <style>
 .rec-container {
     padding: 1.5rem;
@@ -185,6 +185,9 @@
     }
     .studio-header {
         padding: 1rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
     }
     .rec-header {
         flex-direction: column;
@@ -220,6 +223,8 @@
             {% endif %}
         </div>
     </div>
+
+    {% include "includes/decision_support_guide.html" with guide_page="recommendations" only %}
 
     {% if can_manage and active_workspace.workspace_type == 'RETAIL' %}
     <p id="historical-forecast-help" style="color:#cbd5e1;font-size:0.85rem;">Luật dự báo doanh thu đối chiếu 7 ngày dự báo đã lưu với 7 ngày có đơn hoàn tất; chỉ tạo đề xuất khi đủ dữ liệu và giảm trên ngưỡng minh họa 10%. Snapshot lịch sử không được chấp thuận như hành động hiện tại. Không chạy huấn luyện hoặc tự thay đổi nghiệp vụ.</p>

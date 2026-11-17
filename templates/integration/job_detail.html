@@ -81,7 +81,7 @@
             <div class="{% if job.failed_rows > 0 %}stat-val-danger{% else %}stat-val-muted{% endif %}" style="font-size: 1.6rem; font-weight: 800; margin-top: 4px;">{{ job.failed_rows }}</div>
         </div>
         <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px;">
-            <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Tỷ lệ Thành công</div>
+            <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Tỷ lệ dòng qua kiểm tra nhập</div>
             <div style="font-size: 1.6rem; font-weight: 800; color: #60a5fa; margin-top: 4px;">{{ job.success_rate }}%</div>
         </div>
     </div>
@@ -176,7 +176,7 @@
         <div style="padding: 32px; text-align: center; color: #34d399;">
             <div style="font-size: 2rem; margin-bottom: 8px;">🎉</div>
             <strong>Không Phát hiện Lỗi nào</strong>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">Tất cả các bản ghi trong tập dữ liệu này đã vượt qua kiểm tra cấu trúc một cách hoàn hảo.</p>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">Không ghi nhận lỗi trong bước đọc và kiểm tra nhập; chưa xác minh tính đúng đắn nghiệp vụ hoặc độ chính xác AI.</p>
         </div>
         {% endif %}
     </div>
