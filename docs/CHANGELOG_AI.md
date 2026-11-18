@@ -1486,3 +1486,8 @@ not recorded as success; a fresh release must verify the runtime repair first.
 Cho phép đọc ảnh sản phẩm được tham chiếu với DEBUG tắt, giới hạn đường dẫn và
 loại ảnh; không thay đổi schema hay biến môi trường. Lưu local vẫn tạm thời.
 
+# 18/11/2026 — Đánh giá SLA thủ công
+
+Thêm lựa chọn Đạt/Không đạt theo quyền xử lý, ghi audit theo workspace; giữ riêng
+kết quả SLA tự động và thống kê hiện có, không thay schema.
+

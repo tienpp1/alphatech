@@ -365,6 +365,7 @@
         <!-- SLA Compliance Card -->
         <div class="card {% if not req.response_deadline_at or not req.resolution_deadline_at %}sla-card-border-default{% elif sla.overall_status == 'ON_TIME' %}sla-card-border-ontime{% elif sla.overall_status == 'AT_RISK' %}sla-card-border-atrisk{% else %}sla-card-border-breached{% endif %}">
             <h3 class="card-title">Tình trạng Tuân thủ Cam kết SLA</h3>
+            <p class="text-secondary">Kết quả tự động theo thời hạn:</p>
             <div style="margin-bottom: 1rem;">
                 {% if not req.response_deadline_at or not req.resolution_deadline_at %}
                 <span class="badge bg-secondary">CHƯA ĐỦ DỮ LIỆU ĐÁNH GIÁ SLA</span>
@@ -378,6 +379,23 @@
             </div>
 
             <div style="font-size: 0.875rem; line-height: 1.8;">
+                <p><strong>Đánh giá thủ công:</strong>
+                    {% if manual_sla.changes.assessment == 'PASS' %}Đạt{% elif manual_sla.changes.assessment == 'FAIL' %}Không đạt{% else %}Chưa đánh giá{% endif %}
+                    {% if manual_sla %}<br><span class="text-secondary">{{ manual_sla.actor_user.username|default:"Tài khoản đã xóa" }} · {{ manual_sla.timestamp|date:"d/m/Y H:i" }}</span>{% endif %}
+                </p>
+                <p class="text-secondary">Đánh giá thủ công không thay thế kết quả tự động hoặc thay đổi thống kê SLA.</p>
+                {% if can_manage_request %}
+                <form method="post">
+                    {% csrf_token %}<input type="hidden" name="action" value="assess_sla">
+                    <label for="sla-assessment">Chọn đánh giá SLA</label>
+                    <select id="sla-assessment" name="assessment" required>
+                        <option value="">-- Chọn --</option>
+                        <option value="PASS" {% if manual_sla.changes.assessment == 'PASS' %}selected{% endif %}>Đạt</option>
+                        <option value="FAIL" {% if manual_sla.changes.assessment == 'FAIL' %}selected{% endif %}>Không đạt</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary">Lưu đánh giá</button>
+                </form>
+                {% endif %}
                 <div>
                     <span class="text-secondary">Chính sách:</span>
                     <strong>{{ req.sla.name|default:"Chưa gắn chính sách SLA" }}</strong>

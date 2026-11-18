@@ -9,6 +9,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.utils import timezone, dateparse
+from apps.audit.models import AuditLog
+from apps.audit.services import log_action
 
 from apps.accounts.services import has_workspace_permission
 from apps.workspaces.models import WorkspaceType
@@ -187,11 +189,21 @@ def request_detail_view(request, pk):
             "resolve": "service.manage_request",
             "close": "service.manage_request",
             "cancel": "service.manage_request",
+            "assess_sla": "service.manage_request",
         }.get(action)
         if action_permission and not has_workspace_permission(request.user, workspace, action_permission):
             raise PermissionDenied(f"Missing workspace permission: {action_permission}")
         try:
-            if action == "assign":
+            if action == "assess_sla":
+                assessment = request.POST.get("assessment")
+                if assessment not in ("PASS", "FAIL"):
+                    messages.error(request, "Vui lòng chọn Đạt hoặc Không đạt.")
+                else:
+                    log_action(workspace=workspace, actor_user=request.user,
+                               action="SERVICE_SLA_MANUAL_ASSESSMENT", entity_type="ServiceRequest",
+                               entity_id=str(req.pk), changes={"assessment": assessment})
+                    messages.success(request, "Đã lưu đánh giá SLA thủ công.")
+            elif action == "assign":
                 emp_id = request.POST.get("employee_id")
                 emp = get_object_or_404(Employee, pk=emp_id, workspace=workspace)
                 assign_service_request(req, emp, request.user)
@@ -244,6 +256,8 @@ def request_detail_view(request, pk):
     tasks = req.tasks.select_related("assigned_to").prefetch_related("labor_entries__employee").order_by("created_at")
     now = timezone.now()
     sla_info = calculate_sla_status(req, reference_time=now)
+    manual_sla = AuditLog.objects.filter(workspace=workspace, entity_type="ServiceRequest",
+        entity_id=str(req.pk), action="SERVICE_SLA_MANUAL_ASSESSMENT").select_related("actor_user").order_by("-timestamp", "-pk").first()
     cost_info = get_service_request_cost_breakdown(req)
     available_technicians = Employee.objects.filter(workspace=workspace, is_active=True).order_by("full_name")
     can_assign = has_workspace_permission(request.user, workspace, "service.assign_request")
@@ -264,6 +278,7 @@ def request_detail_view(request, pk):
             "req": req,
             "tasks": tasks,
             "sla": sla_info,
+            "manual_sla": manual_sla,
             "cost_summary": cost_info,
             "technicians": available_technicians,
             "can_assign": can_assign,

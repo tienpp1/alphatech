@@ -55,6 +55,40 @@ class ServiceRequestTests(TestCase):
         self.service = Service.objects.create(workspace=self.workspace, code="HVAC-01", name="Chiller Maintenance", standard_duration_minutes=120)
         self.tech = Employee.objects.create(workspace=self.workspace, code="TECH-01", full_name="Minh Tran", phone="0901222333")
 
+    def test_manual_sla_assessment_is_scoped_audited_and_separate(self):
+        req = ServiceRequest.objects.create(workspace=self.workspace, customer=self.customer,
+            service=self.service, request_number="MANUAL-01", title="Test", description="")
+        self.client.force_login(self.user)
+        url = reverse("services_ui_request_detail", kwargs={"pk": req.pk})
+        for value in ("PASS", "FAIL"):
+            response = self.client.post(url, {"action": "assess_sla", "assessment": value})
+            self.assertEqual(response.status_code, 302)
+        entries = AuditLog.objects.filter(workspace=self.workspace, entity_type="ServiceRequest",
+            entity_id=str(req.pk), action="SERVICE_SLA_MANUAL_ASSESSMENT").order_by("pk")
+        self.assertEqual([entry.changes["assessment"] for entry in entries], ["PASS", "FAIL"])
+        self.assertEqual(entries.last().actor_user, self.user)
+        response = self.client.get(url)
+        self.assertContains(response, "Không đạt")
+        self.assertContains(response, "CHƯA ĐỦ DỮ LIỆU ĐÁNH GIÁ SLA")
+        self.client.post(url, {"action": "assess_sla", "assessment": "INVALID"})
+        self.assertEqual(entries.count(), 2)
+        self.admin_role.permissions.remove(self.perm_manage)
+        self.assertEqual(self.client.post(url, {"action": "assess_sla", "assessment": "PASS"}).status_code, 403)
+        self.assertEqual(entries.count(), 2)
+
+    def test_manual_sla_rejects_other_workspace_request(self):
+        other = Workspace.objects.create(name="Other", code="other-sla", workspace_type=WorkspaceType.SERVICE)
+        customer = Customer.objects.create(workspace=other, code="OTHER", name="Other")
+        service = Service.objects.create(workspace=other, code="OTHER", name="Other", standard_duration_minutes=60)
+        req = ServiceRequest.objects.create(workspace=other, customer=customer, service=service,
+            request_number="OTHER-1", title="Other", description="")
+        self.client.force_login(self.user)
+        url = reverse("services_ui_request_detail", kwargs={"pk": req.pk})
+        response = self.client.post(url, {"action": "assess_sla", "assessment": "PASS"},
+                                    HTTP_X_WORKSPACE_ID=str(self.workspace.pk))
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(AuditLog.objects.filter(action="SERVICE_SLA_MANUAL_ASSESSMENT").exists())
+
     def test_create_service_request_and_audit(self):
         req = create_service_request(
             self.workspace,

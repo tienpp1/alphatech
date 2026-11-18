@@ -1,5 +1,10 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 18/11/2026 — Đánh giá SLA thủ công (source)
+
+Người có quyền xử lý yêu cầu chọn Đạt/Không đạt; lựa chọn được lưu trong nhật ký
+kiểm toán theo workspace, tách biệt tính toán và thống kê SLA tự động. Không migration.
+
 ## 18/11/2026 — Hiển thị ảnh sản phẩm (source)
 
 Phục vụ ảnh sản phẩm đã được tham chiếu qua đường dẫn media giới hạn khi DEBUG tắt;

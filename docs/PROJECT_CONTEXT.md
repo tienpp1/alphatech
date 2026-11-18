@@ -1,5 +1,9 @@
 # AI Business Platform — canonical project context
 
+Manual SLA assessments (2026-11-18): users with service.manage_request can append
+a workspace-scoped PASS/FAIL audit event; the latest appears on request detail.
+It is a human judgment, never a replacement for calculated SLA or its statistics.
+
 Internal online AI lab (2026-11-18, source): `/noibo/mo-phong-ai/` renders
 fixed scenarios without computation; a CSRF-protected, bounded POST runs
 one allowlisted synthetic case at a time per process. Navigation and both
