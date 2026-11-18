@@ -65,11 +65,12 @@
         <p class="demo-muted">Không gian làm việc hiện tại: <strong>{{ active_workspace.name }} ({{ active_workspace.code }})</strong></p>
         <p class="demo-reading">Chọn một kịch bản và bấm chạy để xem kết quả mới do hệ thống tính.
             Phòng mô phỏng dùng bộ mẫu cố định, tách biệt với dữ liệu và thao tác nghiệp vụ.</p>
+        <p id="demo-caveat" class="demo-reading demo-muted">Kịch bản và dữ liệu mẫu đã biết trước. Đây không phải kiểm thử mù hay bằng chứng thương mại.</p>
     </header>
 
     <section class="demo-card" aria-labelledby="demo-controls">
         <h2 id="demo-controls">Chạy một kịch bản</h2>
-        <form class="demo-form" id="demo-form" action="{% url 'noibo_ai_demo_run' %}" method="post">
+        <form class="demo-form" id="demo-form" action="{% url 'noibo_ai_demo_run' %}?workspace_id={{ active_workspace.pk }}" method="post">
             {% csrf_token %}
             <div class="demo-form-field">
                 <label for="demo-case">Kịch bản mô phỏng</label>

@@ -6,6 +6,7 @@
     if (!form) return;
     const select = $('case'), run = $('run'), panel = $('panel'), status = $('status');
     const output = $('result'), error = $('error'), previous = $('previous'), empty = $('empty');
+    const caveat = $('caveat').textContent;
     const formatter = new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 4});
     const number = value => Number.isFinite(value) ? formatter.format(value) : '—';
     const yesNo = value => value ? 'Có' : 'Không';
@@ -158,7 +159,7 @@
         const warnings = node('ul');
         warnings.append(...result.warnings.map(warning => node('li', warning)));
         content.append(node('h3', label), node('p', 'Chế độ: ' + result.execution_mode), generated,
-            node('p', 'Thời gian xử lý máy chủ: ' + number(result.elapsed_seconds) + ' giây.'), warnings);
+            node('p', 'Thời gian xử lý máy chủ: ' + number(result.elapsed_seconds) + ' giây.'), node('p', caveat), warnings);
         renderers.get(caseKey)(content, result.data);
         // Commit the UI update only after all fields render successfully.
         output.replaceChildren(content);
@@ -174,7 +175,7 @@
 
     const messages = {
         400: 'Biểu mẫu không hợp lệ. Tải lại trang rồi thử lại.',
-        403: 'Không có quyền chạy hoặc phiên đã hết hạn. Tải lại trang để kiểm tra.',
+        403: 'Không có quyền chạy, phiên đã hết hạn hoặc không gian làm việc đã đổi. Hãy tải lại trang.',
         409: 'Phòng mô phỏng đang bận. Bấm chạy lại khi sẵn sàng.',
         503: 'Chưa thể chạy kịch bản mô phỏng. Vui lòng thử lại sau.',
     };

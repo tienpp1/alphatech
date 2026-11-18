@@ -11,6 +11,7 @@ from apps.accounts.models import Permission, Role, User
 from apps.forecasting.demo_lab import DEMO_CASES
 from apps.public_web.models import SocialIdentity
 from apps.workspaces.models import Workspace, WorkspaceMembership
+from tests.test_decision_support_ui import PageElements
 
 
 LAB = "/noibo/mo-phong-ai/"
@@ -103,13 +104,34 @@ class OnlineAiDemoAccessTests(TestCase):
         self.assert_status_no_store(response, 200)
         run.assert_not_called()
         self.assertContains(response, f'href="{LAB}"')
-        self.assertContains(response, f'action="{RUN}"')
+        action = PageElements(response.content.decode()).ids["demo-form"]["action"]
+        self.assertEqual(action, f"{RUN}?workspace_id={self.primary.pk}")
         self.assertContains(response, 'for="demo-case"')
         self.assertContains(response, "Workspace A")
         self.assertContains(response, "không ghi dữ liệu nghiệp vụ")
         self.assertContains(response, "không gọi dịch vụ AI")
+        self.assertContains(response, "Kịch bản và dữ liệu mẫu đã biết trước.")
+        self.assertContains(response, "Đây không phải kiểm thử mù hay bằng chứng thương mại.")
         for case in DEMO_CASES:
             self.assertContains(response, f'value="{case}"')
+
+    def test_rendered_form_cannot_run_after_switch_to_another_eligible_workspace(self):
+        WorkspaceMembership.objects.filter(pk=self.secondary_member.pk).update(role=self.manager)
+        client = self.client_for(self.user, csrf=True, workspace=self.primary)
+        response = client.get(LAB)
+        self.assert_status_no_store(response, 200)
+        action = PageElements(response.content.decode()).ids["demo-form"]["action"]
+        csrf_header = {"HTTP_X_CSRFTOKEN": client.cookies["csrftoken"].value}
+        self.assert_status_no_store(self.post(client, endpoint=action, **csrf_header), 200)
+        session = client.session
+        session["active_workspace_id"] = str(self.secondary.pk)
+        session.save()
+        self.assert_status_no_store(client.get(LAB), 200)
+        with patch("apps.forecasting.demo_views.run_demo_case") as run:
+            denied = self.post(client, endpoint=action, **csrf_header)
+        self.assert_status_no_store(denied, 403)
+        self.assertEqual(denied.json()["error"], "access_denied")
+        run.assert_not_called()
 
     def test_admin_and_existing_superuser_need_current_verified_workspace(self):
         WorkspaceMembership.objects.filter(pk=self.primary_member.pk).update(role=self.admin)

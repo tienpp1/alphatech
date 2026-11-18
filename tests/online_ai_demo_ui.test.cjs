@@ -5,6 +5,8 @@ const vm = require('node:vm');
 
 const stamp = '2026-11-18T01:23:45.678+00:00';
 const untrusted = '<img src=x onerror=alert(1)>';
+const action = 'https://example.test/noibo/mo-phong-ai/run/?workspace_id=46b86bdd-d16f-4f11-abe2-8ca8f5ca4303';
+const caveat = 'Kịch bản và dữ liệu mẫu đã biết trước. Đây không phải kiểm thử mù hay bằng chứng thương mại.';
 
 class Element {
     constructor(tag = '') {
@@ -31,9 +33,10 @@ class Element {
 
 function lab(fetch) {
     const elements = Object.fromEntries(
-        ['form', 'case', 'run', 'panel', 'status', 'result', 'error', 'previous'].map(id => [id, new Element()]),
+        ['form', 'case', 'run', 'panel', 'status', 'result', 'error', 'previous', 'caveat'].map(id => [id, new Element()]),
     );
-    elements.form.action = 'https://example.test/noibo/mo-phong-ai/run/';
+    elements.form.action = action;
+    elements.caveat.textContent = caveat;
     elements.case.value = 'retrieval';
     elements.case.selectedOptions = [{textContent: 'Truy xuất'}];
     elements.previous.hidden = true;
@@ -81,7 +84,7 @@ test('posts a real CSRF form to the lab once and exposes an accessible busy stat
     await page.submit();
     assert.equal(requests.length, 1);
     const {url, options} = requests[0];
-    assert.equal(url, 'https://example.test/noibo/mo-phong-ai/run/');
+    assert.equal(url, action);
     assert.equal(options.method, 'POST');
     assert.equal(options.credentials, 'same-origin');
     assert.equal(options.headers['X-CSRFToken'], 'test-token');
@@ -93,6 +96,7 @@ test('posts a real CSRF form to the lab once and exposes an accessible busy stat
     assert.match(elements.status.textContent, /Hoàn tất/);
     assert.equal(elements.result.hidden, false);
     assert.match(elements.result.textContent, /không gọi LLM/i);
+    assert.ok(elements.result.textContent.includes(caveat));
     assert.ok(elements.result.textContent.includes(untrusted));
     assert.ok(elements.result.textContent.includes(stamp));
 });
@@ -164,6 +168,7 @@ test('forecast, mapping and schema-only approval render actual case values in re
         elements.case.value = caseKey;
         await submit();
         assert.equal(elements.error.hidden, true, caseKey);
+        assert.ok(elements.result.textContent.includes(caveat), caseKey);
         for (const pattern of expected) assert.match(elements.result.textContent, pattern);
     }
 });

@@ -6,13 +6,15 @@ Thêm `/noibo/mo-phong-ai/` với năm kịch bản cố định và POST có CS
 giới hạn 512 byte, một lượt chạy mỗi process. Chỉ ADMIN/MANAGER có
 `forecasting.manage_forecast` ở workspace hoạt động đã xác minh, hoặc
 superuser nội bộ hợp lệ ở workspace hoạt động. Không chọn workspace khác
-để tìm quyền. GET chỉ dựng giao diện; kết quả không cache và lỗi không
+để tìm quyền. Nếu workspace hiện tại không còn khớp trang đã mở, biểu mẫu
+không được chạy. GET chỉ dựng giao diện; kết quả không cache và lỗi không
 tiết lộ chi tiết hệ thống. Giao diện đánh dấu kết quả trước kèm thời điểm
 gốc nếu chạy lại lỗi, không tự thử lại.
 Dự báo dùng mô hình huấn luyện ngoại tuyến đã chốt trước holdout, suy luận
 và tính lại sai số trên 140/146 ngày của chuỗi mô phỏng 730 ngày. Truy xuất
 trích đoạn không gọi LLM; ánh xạ chỉ trong bộ nhớ; phê duyệt chỉ xem trước
-schema. Không ghi dữ liệu nghiệp vụ, không migration, không đổi Word/sổ97.
+schema. Các trường hợp đã biết trước, không phải kiểm thử mù hay bằng
+chứng thương mại. Không ghi dữ liệu nghiệp vụ, không migration, không đổi Word/sổ97.
 Full-suite, CI, kiểm tra trình duyệt và Render LIVE cần receipt riêng.
 
 ## 18/11/2026 — Sửa luồng vận hành dữ liệu/AI (source đã kiểm chứng)
