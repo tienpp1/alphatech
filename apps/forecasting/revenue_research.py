@@ -30,7 +30,7 @@ def evaluate_revenue_xgboost(workspace):
         raise ValueError("Không có quan sát thực trong 28 kỳ kiểm thử.")
     actual = [row["actual"] for row in scored]
     metrics = {name: guarded._metrics(actual, [row[field] for row in scored])
-               for name, field in (("xgboost", "prediction"), ("ma7", "ma7"))}
+               for name, field in (("xgboost", "prediction"), ("ma7", "ma7"), ("lag7", "naive"))}
     final = adaptive.fit_direct(history, "none", params, Granularity.DAILY)
     future_dates = pd.date_range(history.index[-1] + pd.Timedelta(days=1), periods=14, freq="D")
     predictions = adaptive.predict_direct(final, values, history.index[-1], future_dates, Granularity.DAILY, "none")
@@ -39,6 +39,9 @@ def evaluate_revenue_xgboost(workspace):
         "start": history.index[0].date().isoformat(), "end": history.index[-1].date().isoformat(),
         "periods": len(history), "observed": len(observed), "imputed": len(history) - len(observed),
         "holdout_periods": 28, "holdout_observed": len(scored), "metrics": metrics,
+        "training_end": history.index[cutoff - 1].date().isoformat(),
+        "training_periods": cutoff, "holdout_start": history.index[cutoff].date().isoformat(),
+        "holdout_end": history.index[-1].date().isoformat(), "holdout_rows": scored,
         "forecast": [{"date": day.date().isoformat(), "value": float(value)} for day, value in zip(future_dates, predictions)],
         "warning": "Thử nghiệm tham khảo: nguồn thương mại chưa xác minh; ngày thiếu được điền 0 chưa được xác thực; không dùng làm quyết định vận hành.",
     }

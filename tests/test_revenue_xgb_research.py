@@ -17,6 +17,12 @@ class RevenueResearchTests(SimpleTestCase):
         self.assertEqual(result['holdout_observed'], 2)
         self.assertEqual(result['metrics']['xgboost']['count'], 2)
         self.assertEqual(result['metrics']['ma7']['count'], 2)
+        self.assertEqual(result['metrics']['lag7']['count'], 2)
+        self.assertEqual(len(result['holdout_rows']), 2)
+        self.assertTrue(all(row['observed'] for row in result['holdout_rows']))
+        for name, field in [('xgboost', 'prediction'), ('ma7', 'ma7'), ('lag7', 'naive')]:
+            expected = sum(abs(row['actual'] - row[field]) for row in result['holdout_rows']) / 2
+            self.assertAlmostEqual(result['metrics'][name]['mae'], expected)
         self.assertEqual(len(result['forecast']), 14)
         self.assertEqual(result['data_mode'], 'EXPERIMENTAL_NOT_OPERATIONAL')
         self.assertEqual(result['imputed'], 28)

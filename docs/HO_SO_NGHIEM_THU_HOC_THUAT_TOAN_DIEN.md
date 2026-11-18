@@ -1685,6 +1685,7 @@ chồng lặp và không sửa cấu trúc hoặc tiến độ checklist 97.
   xung đột chạy đồng thời và lỗi an toàn; POST cả năm kịch bản qua thành phần
   thật mà không ghi DB nghiệp vụ, huấn luyện hoặc kết nối dịch vụ AI.
 - `test_revenue_xgb_research.py`: thử nghiệm XGBoost theo thời gian và chỉ chấm ngày có quan sát.
+- `revenue_xgb_research_ui.test.cjs`: bảng so sánh ba phương pháp, các ngày có quan sát và dự báo thử nghiệm.
 - `online_ai_demo_ui.test.cjs`: gửi POST có CSRF, trạng thái bận/lỗi, giữ riêng
   kết quả thành công trước kèm thời điểm gốc, bảng kết quả và hiển thị bằng text.
   Kiểm thử này không thay thế xác minh trình duyệt hoặc UAT online.
