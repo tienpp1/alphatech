@@ -1481,3 +1481,8 @@ not recorded as success; a fresh release must verify the runtime repair first.
 - Scoped atomic SYSTEM_JOB audit113 records before/after and source/plan scope;
   retry is no-op without another audit. This is configuration reconciliation,
   not a new permission model or schema migration; customer/Google isolation stays.
+# 18/11/2026 — Ảnh sản phẩm production
+
+Cho phép đọc ảnh sản phẩm được tham chiếu với DEBUG tắt, giới hạn đường dẫn và
+loại ảnh; không thay đổi schema hay biến môi trường. Lưu local vẫn tạm thời.
+

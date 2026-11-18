@@ -1497,6 +1497,7 @@ Hồ sơ này là bản làm việc của đề tài **"Xây dựng nền tảng
 - `test_retail_isolation.py`
 - `test_retail_orders.py`
 - `test_retail_product_management.py`
+- `test_public_product_media.py`
 - `test_retail_products.py`
 - `test_retail_rbac.py`
 - `test_retail_stockout_prediction.py`

@@ -17,8 +17,10 @@ from apps.notifications.ui_views import bulletin_board_ui_view, bulletin_create_
 from apps.notifications.bulletin_edit_views import bulletin_edit_ui
 from apps.notifications.chat_member_views import chat_employee_create_view, chat_employee_add_view
 from apps.forecasting.demo_views import DEMO_PAGE_NAME, DEMO_RUN_NAME, ai_demo_page, ai_demo_run
+from apps.public_web.product_media import product_image
 
 urlpatterns = [
+    path("media/<path:image_path>", product_image, name="public_product_image"),
     # 1. Public Business Website Layer (Root / & Customer-facing pages)
     path("", include("apps.public_web.urls")),
 
