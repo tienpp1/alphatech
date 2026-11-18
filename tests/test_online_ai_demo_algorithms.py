@@ -143,3 +143,24 @@ class OnlineAiDemoAlgorithmTests(SimpleTestCase):
                   patch.object(guarded, 'predict_artifact', side_effect=AssertionError('Unsafe cutoff reached prediction')),
                   self.assertRaises(ValueError)):
                 self.lab.run_demo_case('forecast')
+
+    def test_forecast_rejects_changed_manifest_before_parsing(self):
+        original_asset_bytes = self.lab._asset_bytes
+        original = original_asset_bytes('manifest.json', 8192)
+        changed = json.loads(original)
+        del changed['build_runtime'], changed['engine_source_sha256']
+        changed.update(archived_holdout_parity_rows=0, validation_blocks=False)
+        manifests = {
+            'erased build evidence': json.dumps(changed).encode('utf-8'),
+            'deep JSON within the byte cap': original.rstrip()[:-1] + b',"extra":' + (
+                b'[' * 2000 + b'0' + b']' * 2000 + b'}'),
+        }
+        for label, raw in manifests.items():
+            with (self.subTest(label=label),
+                  patch.object(self.lab, '_asset_bytes', side_effect=lambda name, limit: (
+                      raw if name == 'manifest.json' else original_asset_bytes(name, limit)))):
+                try:
+                    with self.assertRaisesRegex(ValueError, 'manifest SHA-256 mismatch'):
+                        self.lab.run_demo_case('forecast')
+                except RecursionError:
+                    self.fail('Unverified manifest reached recursive JSON parsing.')

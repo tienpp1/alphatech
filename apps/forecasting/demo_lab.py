@@ -23,6 +23,7 @@ SCOPE = 'SYNTHETIC_DEMO'
 CASE_ID = 'weekly_calendar__2026110121'
 HISTORY_SHA256 = '656bf978afa8918f6a251ff5d8114cc6b3b6c2f4d9898140ef8bf7a11d4abe49'
 EVALUATION_MODEL_SHA256 = '31f9d3b13e896f83b80e3307d5d882131d099d2379562026c9f36b9450159b2e'
+MANIFEST_SHA256 = '67560a3bcc8eb3c95ea114f25a394fbfddcf29fa27441aab3718ff346ae141e0'
 HISTORY_ROWS = 730
 TRAINING_ROWS = 584
 HORIZON = 14
@@ -51,8 +52,10 @@ def _asset_bytes(name, limit):
 
 
 def _load_forecast_assets():
-    manifest = json.loads(_asset_bytes('manifest.json', 8_192),
-                          object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+    manifest_raw = _asset_bytes('manifest.json', 8_192)
+    if hashlib.sha256(manifest_raw).hexdigest() != MANIFEST_SHA256:
+        raise ValueError('Demo forecast manifest SHA-256 mismatch')
+    manifest = json.loads(manifest_raw, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
     if not isinstance(manifest, dict) or any(manifest.get(k) != v for k, v in MANIFEST_FIELDS.items()):
         raise ValueError('Invalid demo forecast manifest or training cutoff')
     _check_finite(manifest)
