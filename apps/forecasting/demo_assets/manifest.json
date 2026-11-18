@@ -1,0 +1,40 @@
+{
+  "archived_holdout_parity_rows": 140,
+  "archived_reference_sha256": {
+    "dataset.csv": "656bf978afa8918f6a251ff5d8114cc6b3b6c2f4d9898140ef8bf7a11d4abe49",
+    "holdout.csv": "64a6636379bf1648fa41245e4d6baffcb0e948915909ed40f1fdcc19960ae91d",
+    "result.json": "f3356c0aecf3bc8398fc08e507794f8a084d2d5a0fe375af94ad013fa0673610"
+  },
+  "build_runtime": {
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "python": "3.14.5",
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1"
+  },
+  "calendar_mode": "full",
+  "case_id": "weekly_calendar__2026110121",
+  "engine_source_sha256": {
+    "apps/forecasting/adaptive.py": "6303027871c6525d0d37475348a906c7c27bd047e617d3c183748b499ecc1855",
+    "apps/forecasting/artifacts.py": "354405838b11415b82656837eb6c99e00a7eb80862760f85295e0a01c294fecc",
+    "apps/forecasting/guarded.py": "b4128da50a1f894a8723257768b67a83c42ebb40857837e330480d9c15199b1f",
+    "scripts/forecast_guarded_benchmark.py": "0313682d06db2c37e9d773f132b600107d54a1e876eb9c3b5f6d360a4a87abc6"
+  },
+  "files_sha256": {
+    "evaluation_model.json": "31f9d3b13e896f83b80e3307d5d882131d099d2379562026c9f36b9450159b2e",
+    "history.csv": "656bf978afa8918f6a251ff5d8114cc6b3b6c2f4d9898140ef8bf7a11d4abe49"
+  },
+  "format": "online_guarded_demo_v1",
+  "history_rows": 730,
+  "holdout": [
+    "2025-08-07",
+    "2025-12-30"
+  ],
+  "horizon": 14,
+  "model": "XGBOOST_DIRECT",
+  "scope": "SYNTHETIC_DEMO",
+  "selection_reason": "validation_gates_passed",
+  "training_cutoff": "2025-08-06",
+  "training_rows": 584,
+  "validation_blocks": 10
+}

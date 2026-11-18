@@ -1671,3 +1671,11 @@ chồng lặp và không sửa cấu trúc hoặc tiến độ checklist 97.
   ghi nghiệp vụ chỉ trong database TEST độc lập, không phải UAT production.
 - `forecast_operational_ui.test.cjs`: đồ thị hợp nhất ngày và chế độ huấn luyện.
   Đây là inventory bổ sung, không thay số lượng/trạng thái/cấu trúc97mục.
+
+### Bổ sung inventory18/11/2026 — thuật toán mô phỏng AI
+
+- `test_online_ai_demo_algorithms.py`: suy luận từ mô hình đã chốt trước holdout,
+  đối chiếu và tính lại sai số XGBoost/MA7/lag-7, chặn tài sản sai SHA hoặc mốc
+  huấn luyện; truy xuất hai trích đoạn, ánh xạ trong bộ nhớ và chấm điểm kỹ thuật
+  viên kèm xem trước schema. Không dùng cơ sở dữ liệu nghiệp vụ, kết nối AI,
+  huấn luyện khi chạy hoặc thực thi phê duyệt; không đổi sổ97mục.
