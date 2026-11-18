@@ -282,6 +282,12 @@ class RetailProductManagementTestCase(TestCase):
         )
 
         self.assertEqual(prod.images.count(), 2)
+        self.assertGreater(len(bytes(img1.durable_content.content)), 0)
+        from unittest.mock import patch
+        with patch("django.core.files.storage.FileSystemStorage.open", side_effect=FileNotFoundError):
+            response = self.client.get(img1.image.url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(b"".join(response.streaming_content).startswith(b"\x89PNG"))
         self.assertTrue(img1.is_primary)
         self.assertFalse(img2.is_primary)
         self.assertEqual(prod.primary_image.id, img1.id)
@@ -299,6 +305,20 @@ class RetailProductManagementTestCase(TestCase):
         img1.refresh_from_db()
         self.assertTrue(img1.is_primary)
         self.assertEqual(prod.images.count(), 1)
+
+    def test_new_upload_replaces_missing_legacy_primary(self):
+        from unittest.mock import patch
+        prod = create_product(workspace=self.ws_retail, user=self.admin_user,
+            data={"name": "Recovery", "sku": "RECOVER-01", "category_id": self.cat_accessories.id,
+                  "unit_price": Decimal("100")})
+        old = ProductImage.objects.create(workspace=self.ws_retail, product=prod,
+            image="products/2026/11/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png", is_primary=True)
+        with patch("django.core.files.storage.FileSystemStorage.exists", return_value=False):
+            new = save_product_image(self.ws_retail, prod, create_test_image("new.png", format="PNG"))
+        old.refresh_from_db()
+        self.assertFalse(old.is_primary)
+        self.assertTrue(new.is_primary)
+        self.assertTrue(new.durable_content.content)
 
     def test_image_security_validation_rejections(self):
         """Test rejecting executable files, invalid mime types, and corrupted images."""

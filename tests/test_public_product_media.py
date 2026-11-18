@@ -13,13 +13,30 @@ class PublicProductMediaTests(SimpleTestCase):
         data = buffer.getvalue()
         url = "/media/products/2026/11/" + "a" * 32 + ".png"
         with (patch("apps.public_web.product_media.ProductImage.objects.filter") as query,
+              patch("apps.public_web.product_media.ProductImageContent.objects.filter") as content,
               patch("apps.public_web.product_media.ProductImage._meta.get_field") as field):
             query.return_value.exists.return_value = True
+            content.return_value.values_list.return_value.first.return_value = None
             field.return_value.storage.open.return_value = io.BytesIO(data)
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response["Content-Type"], "image/png")
             self.assertEqual(b"".join(response.streaming_content), data)
+
+    def test_database_image_survives_missing_local_file(self):
+        buffer = io.BytesIO()
+        Image.new("RGB", (2, 2)).save(buffer, format="PNG")
+        data = buffer.getvalue()
+        url = "/media/products/2026/11/" + "a" * 32 + ".png"
+        with (patch("apps.public_web.product_media.ProductImage.objects.filter") as query,
+              patch("apps.public_web.product_media.ProductImageContent.objects.filter") as content,
+              patch("apps.public_web.product_media.ProductImage._meta.get_field") as field):
+            query.return_value.exists.return_value = True
+            content.return_value.values_list.return_value.first.return_value = data
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(b"".join(response.streaming_content), data)
+            field.return_value.storage.open.assert_not_called()
 
     def test_unreferenced_and_other_media_are_not_served(self):
         with patch("apps.public_web.product_media.ProductImage.objects.filter") as query:

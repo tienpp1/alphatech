@@ -20,6 +20,25 @@ FORM = "application/x-www-form-urlencoded"
 
 
 class OnlineAiDemoAccessTests(TestCase):
+    def test_real_research_requires_current_retail_scope_csrf_and_does_not_write(self):
+        endpoint = LAB + 'doanh-thu-xgboost/?workspace_id=' + str(self.primary.pk)
+        client = self.client_for(self.user, csrf=True)
+        response = client.get(LAB)
+        self.assertEqual(response.status_code, 200)
+        token = client.cookies['csrftoken'].value
+        with patch('apps.forecasting.revenue_research.evaluate_revenue_xgboost', return_value={'data_mode': 'EXPERIMENTAL_NOT_OPERATIONAL'}) as evaluate:
+            self.assert_status_no_store(client.post(endpoint, 'run=1', content_type=FORM), 403)
+            self.assert_status_no_store(client.post(endpoint, 'run=1&extra=1', content_type=FORM, HTTP_X_CSRFTOKEN=token), 400)
+            result = client.post(endpoint, 'run=1', content_type=FORM, HTTP_X_CSRFTOKEN=token)
+            self.assert_status_no_store(result, 200)
+            self.assertEqual(result.json()['data_mode'], 'EXPERIMENTAL_NOT_OPERATIONAL')
+            evaluate.assert_called_once()
+            evaluate.reset_mock()
+            result = client.post(endpoint, 'run=1', content_type=FORM, HTTP_X_CSRFTOKEN=token,
+                                 HTTP_X_WORKSPACE_ID=str(self.secondary.pk))
+            self.assert_status_no_store(result, 403)
+            evaluate.assert_not_called()
+
     @classmethod
     def setUpTestData(cls):
         permission, _ = Permission.objects.get_or_create(

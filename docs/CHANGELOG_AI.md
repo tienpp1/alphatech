@@ -1491,3 +1491,9 @@ loại ảnh; không thay đổi schema hay biến môi trường. Lưu local v�
 Thêm lựa chọn Đạt/Không đạt theo quyền xử lý, ghi audit theo workspace; giữ riêng
 kết quả SLA tự động và thống kê hiện có, không thay schema.
 
+# 18/11/2026 — Ảnh PostgreSQL và XGBoost thử nghiệm
+
+Lưu bytes ảnh mới vào bảng riêng, giữ đường đọc ảnh local cũ. Cho phép thử XGBoost
+trên doanh thu đơn hoàn tất trong phạm vi workspace, tách khỏi mô phỏng cố định
+và điều kiện vận hành; công khai số kỳ thiếu và sai số theo ngày có quan sát.
+

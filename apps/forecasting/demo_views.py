@@ -22,6 +22,7 @@ from apps.workspaces.models import Workspace, WorkspaceMembership
 
 DEMO_PAGE_NAME = "noibo_ai_demo"
 DEMO_RUN_NAME = "noibo_ai_demo_run"
+REVENUE_RESEARCH_NAME = "noibo_revenue_research"
 MAX_BODY_BYTES = 512
 FORECAST_PERMISSION = "forecasting.manage_forecast"
 WORKSPACE_QUERY_FIELDS = {"workspace_id", "workspace"}
@@ -40,7 +41,7 @@ class AiDemoBoundaryMiddleware(MiddlewareMixin):
     """Bound the lab body before CSRF form parsing; mark even early errors no-store."""
 
     def process_view(self, request, view_func, view_args, view_kwargs):
-        if request.resolver_match.url_name != DEMO_RUN_NAME or request.method != "POST":
+        if request.resolver_match.url_name not in (DEMO_RUN_NAME, REVENUE_RESEARCH_NAME) or request.method != "POST":
             return None
         length = request.META.get("CONTENT_LENGTH", "")
         if not re.fullmatch(r"[0-9]{1,3}", length) or not 1 <= int(length) <= MAX_BODY_BYTES:
@@ -53,7 +54,7 @@ class AiDemoBoundaryMiddleware(MiddlewareMixin):
 
     def process_response(self, request, response):
         match = request.resolver_match
-        if match and match.url_name in (DEMO_PAGE_NAME, DEMO_RUN_NAME):
+        if match and match.url_name in (DEMO_PAGE_NAME, DEMO_RUN_NAME, REVENUE_RESEARCH_NAME):
             add_never_cache_headers(response)
         return response
 
@@ -101,6 +102,28 @@ def can_use_ai_demo(request):
 
 def _denied():
     return _problem(403, "access_denied", "Bạn không có quyền dùng phòng mô phỏng ở không gian làm việc hiện tại.")
+
+
+@require_POST
+def revenue_research(request):
+    if not can_use_ai_demo(request) or request.active_workspace.workspace_type != "RETAIL":
+        return _denied()
+    if set(request.GET) - WORKSPACE_QUERY_FIELDS or request.content_type != "application/x-www-form-urlencoded":
+        return _invalid_form()
+    if request.body != b"run=1":
+        return _invalid_form()
+    if not _execution_lock.acquire(blocking=False):
+        return _problem(409, "busy", "Hệ thống đang bận; vui lòng thử lại sau.")
+    try:
+        from apps.forecasting.revenue_research import evaluate_revenue_xgboost
+        result = evaluate_revenue_xgboost(request.active_workspace)
+        return JsonResponse(result, json_dumps_params={"allow_nan": False})
+    except ValueError:
+        return _problem(400, "insufficient_data", "Không đủ dữ liệu hợp lệ để chạy thử nghiệm XGBoost.")
+    except Exception:
+        return _problem(503, "unavailable", "Không thể chạy thử nghiệm XGBoost lúc này.")
+    finally:
+        _execution_lock.release()
 
 
 @require_GET

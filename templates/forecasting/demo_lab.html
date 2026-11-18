@@ -94,6 +94,18 @@
         <p id="demo-empty" class="demo-muted">Kết quả sẽ xuất hiện ở đây sau lần chạy thành công.</p>
     </section>
 
+    {% if active_workspace.workspace_type == 'RETAIL' %}
+    <section class="demo-card" aria-labelledby="research-heading">
+        <h2 id="research-heading">Thử nghiệm XGBoost trên doanh thu trong hệ thống</h2>
+        <p>Dùng đơn bán lẻ hoàn tất của workspace hiện tại, không tạo đơn hoặc lưu mô hình. Đây là thử nghiệm riêng, không phải kết quả mô phỏng phía trên.</p>
+        <p>Ngày thiếu quan sát được tạm điền 0, chưa xác nhận thực tế; nguồn thương mại chưa xác minh. Kết quả chỉ tham khảo, không đủ điều kiện ra quyết định vận hành.</p>
+        <form id="revenue-research-form" action="{% url 'noibo_revenue_research' %}?workspace_id={{ active_workspace.pk }}" method="post">
+            {% csrf_token %}<button type="submit" id="revenue-research-run">Chạy thử XGBoost và so sánh MA7</button>
+        </form>
+        <p id="revenue-research-status" role="status" aria-live="polite"></p>
+        <div id="revenue-research-result"></div>
+    </section>
+    {% endif %}
     <aside class="demo-card" aria-labelledby="demo-real">
         <h2 id="demo-real">Phân biệt với chức năng nghiệp vụ</h2>
         <p class="demo-reading">Xem trước phê duyệt ở đây chỉ kiểm tra cấu trúc tham số:
@@ -111,4 +123,5 @@
 
 {% block extra_js %}
 <script src="{% static 'js/ai_demo_lab.js' %}" defer></script>
+<script src="{% static 'js/revenue_xgb_research.js' %}" defer></script>
 {% endblock %}

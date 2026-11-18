@@ -17,6 +17,7 @@ from apps.notifications.ui_views import bulletin_board_ui_view, bulletin_create_
 from apps.notifications.bulletin_edit_views import bulletin_edit_ui
 from apps.notifications.chat_member_views import chat_employee_create_view, chat_employee_add_view
 from apps.forecasting.demo_views import DEMO_PAGE_NAME, DEMO_RUN_NAME, ai_demo_page, ai_demo_run
+from apps.forecasting.demo_views import revenue_research, REVENUE_RESEARCH_NAME
 from apps.public_web.product_media import product_image
 
 urlpatterns = [
@@ -46,6 +47,7 @@ urlpatterns = [
     path("noibo/", include("apps.forecasting.ui_urls")),
     path("noibo/mo-phong-ai/", ai_demo_page, name=DEMO_PAGE_NAME),
     path("noibo/mo-phong-ai/run/", ai_demo_run, name=DEMO_RUN_NAME),
+    path("noibo/mo-phong-ai/doanh-thu-xgboost/", revenue_research, name=REVENUE_RESEARCH_NAME),
     path("noibo/", include("apps.recommendations.ui_urls")),
     path("noibo/", include("apps.approvals.ui_urls")),
 

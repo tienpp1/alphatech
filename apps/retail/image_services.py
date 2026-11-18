@@ -11,7 +11,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from PIL import Image
 
-from apps.retail.models import Product, ProductImage
+from apps.retail.models import Product, ProductImage, ProductImageContent
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +82,11 @@ def save_product_image(
     Validates and stores a product image with automatic primary management.
     """
     validate_product_image_file(uploaded_file)
+    uploaded_file.seek(0)
+    image_bytes = uploaded_file.read(MAX_IMAGE_SIZE_BYTES + 1)
+    if not image_bytes or len(image_bytes) > MAX_IMAGE_SIZE_BYTES:
+        raise ValidationError("Tệp ảnh rỗng hoặc vượt giới hạn 5 MB.")
+    uploaded_file.seek(0)
 
     # Sanitize and assign safe filename
     safe_name = generate_safe_image_filename(uploaded_file.name)
@@ -92,6 +97,17 @@ def save_product_image(
     # If first image or explicitly marked primary, manage primary state
     if existing_images_count == 0:
         is_primary = True
+
+    # A prior ephemeral Render file may have disappeared while its database
+    # reference remained. A replacement upload must not stay hidden behind it.
+    if not is_primary:
+        previous = ProductImage.objects.filter(product=product, is_primary=True).first()
+        if previous and not ProductImageContent.objects.filter(image=previous).exists():
+            try:
+                if not previous.image.storage.exists(previous.image.name):
+                    is_primary = True
+            except OSError:
+                logger.warning("PRODUCT_IMAGE_LEGACY_AVAILABILITY_UNKNOWN")
 
     if is_primary:
         ProductImage.objects.filter(product=product, is_primary=True).update(is_primary=False)
@@ -107,6 +123,7 @@ def save_product_image(
         is_primary=is_primary,
         alt_text=alt_text or product.name,
     )
+    ProductImageContent.objects.create(image=product_image, content=image_bytes)
     return product_image
 
 

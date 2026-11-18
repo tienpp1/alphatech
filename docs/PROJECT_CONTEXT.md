@@ -1,5 +1,11 @@
 # AI Business Platform — canonical project context
 
+Product images (2026-11-18): new uploads store validated image bytes in a separate
+database row, while legacy local files remain supported; lost files require reupload.
+Experimental revenue XGBoost uses only completed orders in the selected retail
+workspace, scores observed holdout days, marks imputed gaps and never changes
+operational readiness or claims commercial provenance; results are not persisted.
+
 Manual SLA assessments (2026-11-18): users with service.manage_request can append
 a workspace-scoped PASS/FAIL audit event; the latest appears on request detail.
 It is a human judgment, never a replacement for calculated SLA or its statistics.

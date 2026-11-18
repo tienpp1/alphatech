@@ -1,10 +1,11 @@
 """Serve only validated, referenced public product images from local storage."""
+import io
 import re
 
 from django.http import FileResponse, Http404
 from PIL import Image, UnidentifiedImageError
 
-from apps.retail.models import ProductImage
+from apps.retail.models import ProductImage, ProductImageContent
 
 
 def product_image(request, image_path):
@@ -14,7 +15,9 @@ def product_image(request, image_path):
         raise Http404
     field = ProductImage._meta.get_field("image")
     try:
-        handle = field.storage.open(image_path, "rb")
+        stored = ProductImageContent.objects.filter(image__image=image_path,
+            image__product__deleted_at__isnull=True).values_list("content", flat=True).first()
+        handle = io.BytesIO(bytes(stored)) if stored is not None else field.storage.open(image_path, "rb")
         with Image.open(handle) as image:
             content_type = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}.get(image.format)
         if not content_type:

@@ -158,6 +158,12 @@ class ProductImage(WorkspaceScopedModel):
         return f"Image for {self.product.name} (Primary: {self.is_primary})"
 
 
+class ProductImageContent(models.Model):
+    """Durable image bytes; isolated from frequently fetched product metadata."""
+    image = models.OneToOneField(ProductImage, on_delete=models.CASCADE, related_name="durable_content")
+    content = models.BinaryField()
+
+
 class Branch(WorkspaceScopedModel):
     """
     Physical Retail Outlet / Store Branch.
