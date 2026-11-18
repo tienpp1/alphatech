@@ -553,17 +553,6 @@
                             </div>
                         </div>
 
-                        <div class="nav-dropdown" id="nav-dropdown-data">
-                            <button type="button" class="nav-dropdown-btn {% if 'integration' in active_nav or active_nav == 'mapping' or '/noibo/integration/' in request.path or '/noibo/mapping/' in request.path %}active{% endif %}" id="btn-dropdown-data" aria-haspopup="true" aria-expanded="false" aria-controls="menu-dropdown-data" title="Tiếp nhận và chuẩn hóa dữ liệu bên ngoài">
-                                <span>Quản lý dữ liệu nâng cao</span>
-                                <span class="dropdown-arrow" aria-hidden="true">▼</span>
-                            </button>
-                            <div class="nav-dropdown-menu" id="menu-dropdown-data" role="menu">
-                                <a href="/noibo/integration/" role="menuitem" class="nav-dropdown-item {% if 'integration' in active_nav or '/noibo/integration/' in request.path %}active{% endif %}">📥 Tích hợp dữ liệu</a>
-                                <a href="/noibo/mapping/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'mapping' or '/noibo/mapping/' in request.path %}active{% endif %}">🔄 Ánh xạ dữ liệu</a>
-                            </div>
-                        </div>
-
                         <!-- Public Website -->
                         <a href="/" target="_blank" class="nav-link" style="color: #38bdf8;" title="Mở trang chủ Website công khai">🌐 Website ↗</a>
                     </nav>

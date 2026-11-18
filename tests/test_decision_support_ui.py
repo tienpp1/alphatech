@@ -60,26 +60,23 @@ class DecisionSupportUITests(SimpleTestCase):
         context.update(extra)
         return render_to_string(template, context)
 
-    def test_external_data_links_are_grouped_separately_without_losing_ai_routes(self):
+    def test_advanced_data_menu_removed_without_losing_ai_routes(self):
         html = self.render_page()
         page = PageElements(html)
-        self.assertEqual(page.menu_links.get("menu-dropdown-data"), [
-            "/noibo/integration/", "/noibo/mapping/",
-        ])
+        self.assertNotIn("menu-dropdown-data", page.menu_links)
+        self.assertNotIn("btn-dropdown-data", page.ids)
         self.assertEqual(page.menu_links["menu-dropdown-ai"], [
             "/noibo/ai/", "/noibo/knowledge/", "/noibo/forecasting/",
             "/noibo/recommendations/", "/noibo/approvals/",
         ])
-        self.assertIn("Quản lý dữ liệu nâng cao", html)
+        self.assertNotIn("Quản lý dữ liệu nâng cao", html)
         self.assertNotIn("Dự báo XGBoost</a>", html)
 
-    def test_data_navigation_is_active_for_import_subpages_and_mapping(self):
+    def test_removed_menu_stays_absent_on_data_pages(self):
         for active_nav in ("integration", "integration_sources", "mapping"):
             with self.subTest(active_nav=active_nav):
                 page = PageElements(self.render_page(active_nav=active_nav))
-                button = page.ids.get("btn-dropdown-data", {})
-                self.assertIn("active", button.get("class", "").split())
-                self.assertEqual(button.get("aria-controls"), "menu-dropdown-data")
+                self.assertNotIn("btn-dropdown-data", page.ids)
                 self.assertNotIn("active", page.ids["btn-dropdown-ai"].get("class", "").split())
 
     def test_ai_navigation_is_active_for_assistant_and_decision_pages(self):
@@ -89,14 +86,19 @@ class DecisionSupportUITests(SimpleTestCase):
                 self.assertIn("active", page.ids["btn-dropdown-ai"].get("class", "").split())
 
     def test_navigation_uses_real_paths_when_views_omit_active_nav(self):
-        for path, button_id in (("/noibo/integration/jobs/12/", "btn-dropdown-data"),
-                                ("/noibo/mapping/profiles/new/", "btn-dropdown-data"),
-                                ("/noibo/recommendations/", "btn-dropdown-ai"),
+        for path, button_id in (("/noibo/recommendations/", "btn-dropdown-ai"),
                                 ("/noibo/approvals/", "btn-dropdown-ai")):
             with self.subTest(path=path):
                 request = SimpleNamespace(path=path, user=SimpleNamespace(is_authenticated=True))
                 page = PageElements(self.render_page(request=request))
                 self.assertIn("active", page.ids[button_id].get("class", "").split())
+
+    def test_dashboard_scope_card_removed_but_data_links_remain(self):
+        html = self.render_page("dashboard/main.html", health={}, retail={}, service={}, ai={})
+        self.assertNotIn("Phạm vi Quản trị Hợp nhất", html)
+        self.assertNotIn("btn-quick-report", html)
+        self.assertIn('href="/noibo/integration/"', html)
+        self.assertIn('href="/noibo/mapping/"', html)
 
     def test_help_is_visible_on_all_five_pages_with_existing_destinations(self):
         cases = [
