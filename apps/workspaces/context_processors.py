@@ -4,6 +4,7 @@ Django Template Context Processors for Workspace data.
 
 from apps.workspaces.services import get_user_workspaces
 from apps.accounts.internal_access import can_access_internal
+from apps.forecasting.demo_views import can_use_ai_demo
 
 
 def workspace_context(request):
@@ -26,6 +27,7 @@ def workspace_context(request):
     return {
         "can_access_internal": internal_access,
         "can_use_team_chat": internal_access and _can_use_team_chat(request.user),
+        "can_use_ai_demo": internal_access and can_use_ai_demo(request),
         "active_workspace": active_workspace,
         "active_membership": active_membership,
         "user_workspaces": user_workspaces,

@@ -1,5 +1,19 @@
 # AI Business Platform — canonical project context
 
+Internal online AI lab (2026-11-18, source): `/noibo/mo-phong-ai/` renders
+fixed scenarios without computation; a CSRF-protected, bounded POST runs
+one allowlisted synthetic case at a time per process. Navigation and both
+endpoints require canonical internal identity and the verified active
+workspace, with current active ADMIN/MANAGER membership plus
+`forecasting.manage_forecast` (or canonical internal superuser with active
+workspace). Explicit selectors can confirm but never replace that verified
+selection. Canonical middleware may recover a revoked session selection
+to an authorized default as before. No business data, persistence, live LLM,
+provider calls or approval executor. Forecasting reloads the checked
+pre-holdout artifact and recomputes inference/metrics offline-model only;
+retrieval, mapping and approval schema are component previews, not
+operational/accuracy certificates. No new schema, Word or97-ledger change.
+
 Operational-integrity source update (2026-11-18):
 existing integration/mapping models retain their schema. New ingestion receipts
 observe consumed bytes/transport, not commercial truth. Explicit schema-only

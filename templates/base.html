@@ -537,7 +537,7 @@
 
                         <!-- AI & DỮ LIỆU Menu Mở rộng -->
                         <div class="nav-dropdown" id="nav-dropdown-ai">
-                            <button type="button" class="nav-dropdown-btn {% if active_nav == 'ai' or active_nav == 'knowledge' or active_nav == 'forecasting' or active_nav == 'recommendations' or active_nav == 'approvals' or '/noibo/recommendations/' in request.path or '/noibo/approvals/' in request.path %}active{% endif %}" id="btn-dropdown-ai" aria-haspopup="true" aria-expanded="false" aria-controls="menu-dropdown-ai" title="Trợ lý, dự báo và hỗ trợ quyết định">
+                            <button type="button" class="nav-dropdown-btn {% if active_nav == 'ai' or active_nav == 'knowledge' or active_nav == 'forecasting' or active_nav == 'recommendations' or active_nav == 'approvals' or active_nav == 'ai_demo' or '/noibo/recommendations/' in request.path or '/noibo/approvals/' in request.path %}active{% endif %}" id="btn-dropdown-ai" aria-haspopup="true" aria-expanded="false" aria-controls="menu-dropdown-ai" title="Trợ lý, dự báo và hỗ trợ quyết định">
                                 <span>🧠 Công cụ AI</span>
                                 <span class="dropdown-arrow">▼</span>
                             </button>
@@ -547,6 +547,9 @@
                                 <a href="/noibo/forecasting/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'forecasting' %}active{% endif %}">📈 Dự báo &amp; đánh giá</a>
                                 <a href="/noibo/recommendations/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'recommendations' or '/noibo/recommendations/' in request.path %}active{% endif %}">💡 Khuyến nghị</a>
                                 <a href="/noibo/approvals/" role="menuitem" class="nav-dropdown-item {% if active_nav == 'approvals' or '/noibo/approvals/' in request.path %}active{% endif %}">🛡️ Phê duyệt hành động</a>
+                                {% if can_use_ai_demo %}
+                                <a href="{% url 'noibo_ai_demo' %}" role="menuitem" class="nav-dropdown-item {% if active_nav == 'ai_demo' %}active{% endif %}"{% if active_nav == 'ai_demo' %} aria-current="page"{% endif %}>Mô phỏng AI</a>
+                                {% endif %}
                             </div>
                         </div>
 

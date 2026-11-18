@@ -186,6 +186,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "config.middleware.RequestCorrelationIdMiddleware",
     "config.middleware.SecurityHeadersMiddleware",
+    "apps.forecasting.demo_views.AiDemoBoundaryMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "apps.accounts.internal_access.InternalAccessMiddleware",

@@ -1,5 +1,20 @@
 > **HIỆN HÀNH 09/10/2026:** Đã xử lý đủ 97/97 công việc theo phạm vi đồ án và các quyết định của chủ dự án; đọc FINAL_97_CLOSURE_2026_10_09.md cho từng ID và loại bằng chứng. Full tracked source 1207 tests/335.450s OK, 0 failure/error/skip; 13 guard tài liệu/6.997s và 12 guard untracked/0.153s OK được ghi riêng. check 0 issues, migration drift không có thay đổi trên DB test mới. Runtime source không đổi so với release 0c618c7; CI37286413162 success và Render dep-db1mb8vavr4c73ckipfg live được kiểm lại 09/10. Word duyệt/ledger giữ hash. Hoàn thành theo phạm vi đã chốt không là chứng nhận production hoặc bản báo cáo/slide nộp mới đã được thầy duyệt.
 
+## 18/11/2026 — Phòng mô phỏng AI nội bộ (source)
+
+Thêm `/noibo/mo-phong-ai/` với năm kịch bản cố định và POST có CSRF,
+giới hạn 512 byte, một lượt chạy mỗi process. Chỉ ADMIN/MANAGER có
+`forecasting.manage_forecast` ở workspace hoạt động đã xác minh, hoặc
+superuser nội bộ hợp lệ ở workspace hoạt động. Không chọn workspace khác
+để tìm quyền. GET chỉ dựng giao diện; kết quả không cache và lỗi không
+tiết lộ chi tiết hệ thống. Giao diện đánh dấu kết quả trước kèm thời điểm
+gốc nếu chạy lại lỗi, không tự thử lại.
+Dự báo dùng mô hình huấn luyện ngoại tuyến đã chốt trước holdout, suy luận
+và tính lại sai số trên 140/146 ngày của chuỗi mô phỏng 730 ngày. Truy xuất
+trích đoạn không gọi LLM; ánh xạ chỉ trong bộ nhớ; phê duyệt chỉ xem trước
+schema. Không ghi dữ liệu nghiệp vụ, không migration, không đổi Word/sổ97.
+Full-suite, CI, kiểm tra trình duyệt và Render LIVE cần receipt riêng.
+
 ## 18/11/2026 — Sửa luồng vận hành dữ liệu/AI (source đã kiểm chứng)
 
 Tiếp tục theo plan docs/superpowers/plans/2026-11-17-operational-ai.md.

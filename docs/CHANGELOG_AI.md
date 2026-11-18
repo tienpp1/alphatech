@@ -2,6 +2,18 @@
 
 Do not log cosmetic edits.
 
+## 2026-11-18 — Synthetic online AI lab
+
+Add a Vietnamese internal lab using canonical current-workspace access
+for navigation, render and run. CSRF-protected bounded form POSTs, a
+nonblocking process lock, no-store responses and sanitized failures keep
+the lab independent of real business actions. Demonstrate inference and
+new MAE/RMSE calculation from checked pre-holdout offline-model assets,
+deterministic retrieval, pending/confirmed in-memory mapping and technician
+scoring with schema-only approval preview. No live training, provider calls,
+domain writes, migration, Word or97-ledger change. Source verification is
+separate from deployment, operational performance and model quality.
+
 ## 2026-11-17 — Operational data, mapping and controlled-action integrity
 
 - Correct API empty envelopes/query params, CSV delimiter, registered local feeds,

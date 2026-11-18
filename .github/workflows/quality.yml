@@ -60,9 +60,9 @@ jobs:
       - name: Guarded forecast selection and portable artifact regressions
         run: coverage run --branch manage.py test tests.test_guarded_forecast_engine tests.test_guarded_forecast_artifacts tests.test_guarded_forecast_benchmark tests.test_guarded_forecast_integration tests.test_guarded_forecast_publication --noinput
       - name: Proposal-aligned defense regression contracts
-        run: coverage run --append --branch manage.py test tests.test_defense_public_flows tests.test_defense_mapping_gis tests.test_team_chat_history tests.test_forecast_backed_recommendations tests.test_decision_support_ui tests.test_operational_ingestion_mapping apps.forecasting.tests.test_operational tests.test_action_freshness tests.test_retail_stockout_prediction --noinput
+        run: coverage run --append --branch manage.py test tests.test_defense_public_flows tests.test_defense_mapping_gis tests.test_team_chat_history tests.test_forecast_backed_recommendations tests.test_decision_support_ui tests.test_operational_ingestion_mapping apps.forecasting.tests.test_operational tests.test_action_freshness tests.test_retail_stockout_prediction tests.test_online_ai_demo_algorithms tests.test_online_ai_demo_access --noinput
       - name: Defense user-interaction regressions
-        run: node --test --test-concurrency=1 tests/js/public_defense_flows.test.js tests/defense_mapping_gis.test.cjs tests/team_chat_history.test.cjs tests/forecast_recommendations_ui.test.cjs tests/forecast_operational_ui.test.cjs
+        run: node --test --test-concurrency=1 tests/js/public_defense_flows.test.js tests/defense_mapping_gis.test.cjs tests/team_chat_history.test.cjs tests/forecast_recommendations_ui.test.cjs tests/forecast_operational_ui.test.cjs tests/online_ai_demo_ui.test.cjs
       - name: Grounded source disagreement regressions
         run: python manage.py test tests.test_rag_source_authority tests.test_adversarial_rag_execution tests.test_rag_independent_execution tests.test_rag_review_packet --noinput
       - name: Academic draft source and diagram contracts

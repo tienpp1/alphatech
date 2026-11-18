@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Phòng mô phỏng AI · Nền tảng Doanh nghiệp AI{% endblock %}
+
+{% block extra_head %}
+<style>
+    .demo-lab { min-width: 0; overflow-wrap: anywhere; color: #e2e8f0; }
+    .demo-lab [hidden] { display: none !important; }
+    .demo-lab h1 { margin: .4rem 0; font-size: clamp(1.6rem, 4vw, 2.4rem); }
+    .demo-lab h2 { margin: 0 0 .45rem; font-size: 1.25rem; }
+    .demo-lab h3 { margin: 1.2rem 0 .4rem; font-size: 1.04rem; }
+    .demo-lab p { margin: .4rem 0 .7rem; }
+    .demo-lab .demo-scope { color: #fde68a; font-weight: 700; }
+    .demo-lab .demo-muted { color: #cbd5e1; }
+    .demo-lab .demo-card {
+        min-width: 0; margin-top: 1rem; padding: clamp(.85rem, 2.5vw, 1.5rem);
+        border: 1px solid #334155; border-radius: 14px; background: #101a2e;
+    }
+    .demo-lab .demo-form { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; }
+    .demo-lab .demo-form-field { flex: 1 1 17rem; min-width: 0; }
+    .demo-lab label { display: block; font-weight: 700; margin-bottom: .35rem; }
+    .demo-lab select, .demo-lab button {
+        min-height: 44px; max-width: 100%; padding: .6rem .75rem; border-radius: 8px;
+        border: 1px solid #64748b; font: inherit;
+    }
+    .demo-lab select { width: 100%; color: #f8fafc; background: #1e293b; }
+    .demo-lab button { color: #fff; background: #4338ca; font-weight: 700; cursor: pointer; }
+    .demo-lab button:disabled { opacity: .7; cursor: wait; }
+    .demo-lab :focus-visible { outline: 2px solid #c4b5fd !important; outline-offset: 3px; }
+    .demo-lab #demo-error { color: #fecaca; }
+    .demo-lab #demo-previous { color: #fde68a; font-weight: 700; }
+    .demo-lab .demo-facts {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+        gap: .6rem; margin: .8rem 0;
+    }
+    .demo-lab .demo-facts > div { min-width: 0; padding: .65rem; background: #17243a; border-radius: 8px; }
+    .demo-lab dt { color: #cbd5e1; font-size: .88rem; }
+    .demo-lab dd { margin: .25rem 0 0; font-weight: 650; }
+    .demo-lab .demo-scroll { max-width: 100%; overflow-x: auto; }
+    .demo-lab table { border-collapse: collapse; width: 100%; margin-bottom: .35rem; }
+    .demo-lab caption { text-align: start; font-weight: 700; margin: .6rem 0 .35rem; }
+    .demo-lab th, .demo-lab td {
+        padding: .5rem .6rem; text-align: start; border-bottom: 1px solid #334155;
+        font-variant-numeric: tabular-nums;
+    }
+    .demo-lab th { color: #c7d2fe; background: #17243a; }
+    .demo-lab th { min-width: 6rem; }
+    .demo-lab .demo-reading { max-width: 76ch; }
+    .demo-lab ol, .demo-lab ul { margin: .5rem 0; padding-inline-start: 1.35rem; }
+    .demo-lab a { color: #c7d2fe; text-decoration: underline; }
+    @media (prefers-reduced-motion: reduce) {
+        .demo-lab *, .demo-lab *::before, .demo-lab *::after {
+            animation: none !important; transition: none !important; scroll-behavior: auto !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="demo-lab" aria-labelledby="demo-heading">
+    <header>
+        <p class="demo-scope">DEMO — dữ liệu mô phỏng; không ghi dữ liệu nghiệp vụ; không gọi dịch vụ AI</p>
+        <h1 id="demo-heading">Phòng mô phỏng AI</h1>
+        <p class="demo-muted">Không gian làm việc hiện tại: <strong>{{ active_workspace.name }} ({{ active_workspace.code }})</strong></p>
+        <p class="demo-reading">Chọn một kịch bản và bấm chạy để xem kết quả mới do hệ thống tính.
+            Phòng mô phỏng dùng bộ mẫu cố định, tách biệt với dữ liệu và thao tác nghiệp vụ.</p>
+    </header>
+
+    <section class="demo-card" aria-labelledby="demo-controls">
+        <h2 id="demo-controls">Chạy một kịch bản</h2>
+        <form class="demo-form" id="demo-form" action="{% url 'noibo_ai_demo_run' %}" method="post">
+            {% csrf_token %}
+            <div class="demo-form-field">
+                <label for="demo-case">Kịch bản mô phỏng</label>
+                <select id="demo-case" name="case">
+                    {% for key, label in demo_cases %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" id="demo-run">Chạy mô phỏng</button>
+        </form>
+        <noscript><p>Bật JavaScript để xem các bảng kết quả trên trang này.</p></noscript>
+        <p id="demo-status" role="status" aria-live="polite" aria-atomic="true">Chưa chạy kịch bản.</p>
+        <p id="demo-error" role="alert" hidden></p>
+    </section>
+
+    <section id="demo-panel" class="demo-card" aria-labelledby="demo-output-heading" aria-busy="false">
+        <h2 id="demo-output-heading">Kết quả mô phỏng</h2>
+        <p id="demo-previous" hidden></p>
+        <div id="demo-result" hidden></div>
+        <p id="demo-empty" class="demo-muted">Kết quả sẽ xuất hiện ở đây sau lần chạy thành công.</p>
+    </section>
+
+    <aside class="demo-card" aria-labelledby="demo-real">
+        <h2 id="demo-real">Phân biệt với chức năng nghiệp vụ</h2>
+        <p class="demo-reading">Xem trước phê duyệt ở đây chỉ kiểm tra cấu trúc tham số:
+            không tra cứu đối tượng, không tạo yêu cầu duyệt và không thực thi phân công.
+            Các màn hình nghiệp vụ dùng dữ liệu thật và kiểm tra quyền riêng.</p>
+        {% if demo_can_view_recommendations or demo_can_view_approvals %}
+        <ul>
+            {% if demo_can_view_recommendations %}<li><a href="{% url 'noibo_recommendations_dashboard' %}">Khuyến nghị nghiệp vụ</a></li>{% endif %}
+            {% if demo_can_view_approvals %}<li><a href="{% url 'noibo_approvals_dashboard' %}">Phê duyệt hành động nghiệp vụ</a></li>{% endif %}
+        </ul>
+        {% endif %}
+    </aside>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/ai_demo_lab.js' %}" defer></script>
+{% endblock %}

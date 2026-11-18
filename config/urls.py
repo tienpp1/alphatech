@@ -16,6 +16,7 @@ from apps.workspaces.ui_views import switch_workspace_ui_view
 from apps.notifications.ui_views import bulletin_board_ui_view, bulletin_create_ui_view, team_chat_ui_view
 from apps.notifications.bulletin_edit_views import bulletin_edit_ui
 from apps.notifications.chat_member_views import chat_employee_create_view, chat_employee_add_view
+from apps.forecasting.demo_views import DEMO_PAGE_NAME, DEMO_RUN_NAME, ai_demo_page, ai_demo_run
 
 urlpatterns = [
     # 1. Public Business Website Layer (Root / & Customer-facing pages)
@@ -41,6 +42,8 @@ urlpatterns = [
     path("noibo/", include("apps.mapping.ui_urls")),
     path("noibo/", include("apps.knowledge.ui_urls")),
     path("noibo/", include("apps.forecasting.ui_urls")),
+    path("noibo/mo-phong-ai/", ai_demo_page, name=DEMO_PAGE_NAME),
+    path("noibo/mo-phong-ai/run/", ai_demo_run, name=DEMO_RUN_NAME),
     path("noibo/", include("apps.recommendations.ui_urls")),
     path("noibo/", include("apps.approvals.ui_urls")),
 
